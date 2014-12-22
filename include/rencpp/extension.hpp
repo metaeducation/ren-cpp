@@ -76,27 +76,54 @@ private:
         REBCPP, std::tuple<Engine &, size_t, FunType const>
     > table;
 
-public:
+    // Function used to create Ts... on the fly and apply a
+    // given function to them
 
-    template <typename A>
-    static std::tuple<A> params(Engine & engine, RenCell * cell)
+    template<typename Func, std::size_t... Indices>
+    static auto applyFuncImpl(Func && func,
+                              Engine & engine,
+                              REBVAL * ds,
+                              utility::indices<Indices...>)
+        -> decltype(
+            std::forward<Func>(func)(
+                typename utility::type_at<Indices, Ts...>::type{
+                    engine,
+                    ds[Indices]
+                }...
+            )
+        )
     {
-      return std::forward_as_tuple<A>(A (engine, *cell));
+        return std::forward<Func>(func)(
+            typename utility::type_at<Indices, Ts...>::type{
+                engine,
+                ds[Indices]
+            }...
+        );
     }
 
     template <
-        typename A,
-        typename... As,
-        // http://stackoverflow.com/a/24875556/211160
-        typename = typename std::enable_if<sizeof...(As) != 0, bool>::type
+        typename Func,
+        typename Indices = utility::make_indices<sizeof...(Ts)>
     >
-    static std::tuple<A, As...> params(Engine & engine, RenCell * cells)
+    static auto applyFunc(Func && func, Engine & engine, REBVAL * ds)
+        -> decltype(
+            applyFuncImpl(
+                std::forward<Func>(func),
+                engine,
+                ds,
+                Indices {}
+            )
+        )
     {
-        return std::tuple_cat(
-            std::forward_as_tuple(A {engine, cells[0]}),
-            params<As...>(engine, cells + 1)
+        return applyFuncImpl(
+            std::forward<Func>(func),
+            engine,
+            ds,
+            Indices {}
         );
-    }
+}
+
+public:
 
     Extension (Engine & engine, Block const & spec, FunType const & fun) :
         Value (Dont::Initialize)
@@ -119,10 +146,7 @@ public:
                 size_t & N = std::get<1>(entry);
                 FunType const & fun = std::get<2>(entry);
 
-                auto&& result = utility::apply(
-                    fun,
-                    params<Ts...>(engine, ds)
-                );
+                auto && result = applyFunc(fun, engine, ds);
 
                 // Like R_RET in a native function
 
