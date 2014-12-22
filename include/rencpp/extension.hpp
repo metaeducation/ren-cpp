@@ -93,7 +93,7 @@ public:
     static std::tuple<A, As...> params(Engine & engine, RenCell * cells)
     {
         return std::tuple_cat(
-            std::forward_as_tuple(A (engine, cells[0])),
+            std::forward_as_tuple(A {engine, cells[0]}),
             params<As...>(engine, cells + 1)
         );
     }
