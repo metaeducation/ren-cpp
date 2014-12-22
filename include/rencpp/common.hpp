@@ -158,6 +158,29 @@ auto apply(Func && func, Tuple && args)
 }
 
 
+
+///
+/// PARAMETER PACKS MANIPULATION
+///
+
+//
+// This is a clone of the proposed std::type_at
+//
+
+template <unsigned N, typename T, typename... R>
+struct type_at
+{
+    using type = typename type_at<N-1, R...>::type;
+};
+
+template <typename T, typename... R>
+struct type_at<0, T, R...>
+{
+    using type = T;
+};
+
+
+
 } // end namespace utility
 
 } // end namespace ren
