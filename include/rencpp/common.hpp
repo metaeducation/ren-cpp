@@ -116,31 +116,6 @@ struct function_traits<Ret(C::*)(Args...) const>
 
 
 ///
-/// FREAKY GENERAL MAGIC FOR TUPLE UNPACKING
-///
-
-//
-// It would be nice to be able to store a set of parameters to something and
-// then call it later with those parameters, right?  Yes, but... trickier
-// than it looks.  Johannes Schaub (@litb) to the rescue:
-//
-//     http://stackoverflow.com/a/7858971/211160
-//
-
-template<int ...>
-struct seq { };
-
-template<int N, int ...S>
-struct gens : gens<N-1, N-1, S...> { };
-
-template<int ...S>
-struct gens<0, S...> {
-  typedef seq<S...> type;
-};
-
-
-
-///
 /// MORE FREAKY MAGIC
 ///
 
