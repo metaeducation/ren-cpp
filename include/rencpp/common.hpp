@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
+#include <tuple>
 
 
 // http://stackoverflow.com/a/4030983/211160
@@ -139,6 +140,25 @@ struct gens<0, S...> {
 };
 
 
+
+///
+/// Apply function to tuples (clone of std::apply)
+///
+
+template<typename Func, typename Tuple, std::size_t... Indices>
+auto apply_impl(Func&& func, Tuple&& args, indices<Indices...>)
+    -> decltype(std::forward<Func>(func)(std::get<Indices>(std::forward<Tuple>(args))...))
+{
+    return std::forward<Func>(func)(std::get<Indices>(std::forward<Tuple>(args))...);
+}
+
+template<typename Func, typename Tuple,
+         typename Indices = make_indices<std::tuple_size<Tuple>::value>>
+auto apply(Func&& func, Tuple&& args)
+    -> decltype(apply_impl(std::forward<Func>(func), std::forward<Tuple>(args), Indices{}))
+{
+    return apply_impl(std::forward<Func>(func), std::forward<Tuple>(args), Indices{});
+}
 
 ///
 /// MORE FREAKY MAGIC
