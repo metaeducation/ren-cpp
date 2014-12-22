@@ -66,6 +66,12 @@ project(rencpp)
 cmake_minimum_required(VERSION 2.8)
 
 
+# Simplify appending additional flags to CMAKE_CXX_FLAGS.
+
+macro(add_cxx_flags flags)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
+endmacro()
+
 
 # Default to looking for the runtime installation up one level
 
@@ -80,7 +86,7 @@ endif()
 # --std=c++11
 #
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+add_cxx_flags("-std=c++11")
 
 
 #
@@ -93,28 +99,28 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 # Also, -pedantic and -Wold-style-cast are disabled in the Rebol build
 #
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-conversion")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wcast-align")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wcast-qual")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wctor-dtor-privacy")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdisabled-optimization")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat=2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Winit-self")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wlogical-op")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wmissing-declarations")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wmissing-include-dirs")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnoexcept")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wredundant-decls")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-promo")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wstrict-null-sentinel")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wstrict-overflow=5")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wswitch-default")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wundef")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused")
+add_cxx_flags("-Wall")
+add_cxx_flags("-Wsign-conversion")
+add_cxx_flags("-Wextra")
+add_cxx_flags("-Wcast-align")
+add_cxx_flags("-Wcast-qual")
+add_cxx_flags("-Wctor-dtor-privacy")
+add_cxx_flags("-Wdisabled-optimization")
+add_cxx_flags("-Wformat=2")
+add_cxx_flags("-Winit-self")
+add_cxx_flags("-Wlogical-op")
+add_cxx_flags("-Wmissing-declarations")
+add_cxx_flags("-Wmissing-include-dirs")
+add_cxx_flags("-Wnoexcept")
+add_cxx_flags("-Woverloaded-virtual")
+add_cxx_flags("-Wredundant-decls")
+add_cxx_flags("-Wsign-promo")
+add_cxx_flags("-Wstrict-null-sentinel")
+add_cxx_flags("-Wstrict-overflow=5")
+add_cxx_flags("-Wswitch-default")
+add_cxx_flags("-Wundef")
+add_cxx_flags("-Werror")
+add_cxx_flags("-Wno-unused")
 
 
 #
@@ -185,7 +191,7 @@ elseif(RUNTIME STREQUAL "red")
     # can have some complaints if the warnings are set too high.  The Red
     # binding has these warnings turned on because there's no old C headers
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wold-style-cast")
+    add_cxx_flags("-pedantic -Wold-style-cast")
 
     # Add any extra includes for the project browser
 
@@ -221,7 +227,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # rebol in the include directory.  So worst case scenario, do that.
     # This should work for most cases.
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${RUNTIME_PATH}/../")
+    add_cxx_flags("-I${RUNTIME_PATH}/../")
 
     # Include all the sources specific to the Rebol Binding
     # (Exclude the Red ones for this build)
