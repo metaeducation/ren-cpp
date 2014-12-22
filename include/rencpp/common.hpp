@@ -117,67 +117,46 @@ struct function_traits<Ret(C::*)(Args...) const>
 
 
 ///
-/// FREAKY GENERAL MAGIC FOR TUPLE UNPACKING
+/// APPLY FUNCTION TO TUPLES
 ///
 
 //
-// It would be nice to be able to store a set of parameters to something and
-// then call it later with those parameters, right?  Yes, but... trickier
-// than it looks.  Johannes Schaub (@litb) to the rescue:
-//
-//     http://stackoverflow.com/a/7858971/211160
+// This is a clone of std::apply
 //
 
-template<int ...>
-struct seq { };
-
-template<int N, int ...S>
-struct gens : gens<N-1, N-1, S...> { };
-
-template<int ...S>
-struct gens<0, S...> {
-  typedef seq<S...> type;
-};
-
-
-
-///
-/// Apply function to tuples (clone of std::apply)
-///
-
-template<typename Func, typename Tuple, std::size_t... Indices>
-auto apply_impl(Func&& func, Tuple&& args, indices<Indices...>)
-    -> decltype(std::forward<Func>(func)(std::get<Indices>(std::forward<Tuple>(args))...))
+template <typename Func, typename Tuple, std::size_t... Indices>
+auto apply_impl(Func && func, Tuple && args, indices<Indices...>)
+    -> decltype(
+        std::forward<Func>(func)(
+            std::get<Indices>(std::forward<Tuple>(args))...)
+        )
 {
-    return std::forward<Func>(func)(std::get<Indices>(std::forward<Tuple>(args))...);
+    return std::forward<Func>(func)(
+        std::get<Indices>(std::forward<Tuple>(args))...
+    );
 }
 
-template<typename Func, typename Tuple,
-         typename Indices = make_indices<std::tuple_size<Tuple>::value>>
-auto apply(Func&& func, Tuple&& args)
-    -> decltype(apply_impl(std::forward<Func>(func), std::forward<Tuple>(args), Indices{}))
+template <
+    typename Func,
+    typename Tuple,
+    typename Indices = make_indices<std::tuple_size<Tuple>::value>
+>
+auto apply(Func && func, Tuple && args)
+    -> decltype(
+        apply_impl(
+            std::forward<Func>(func),
+            std::forward<Tuple>(args),
+            Indices {}
+        )
+    )
 {
-    return apply_impl(std::forward<Func>(func), std::forward<Tuple>(args), Indices{});
+    return apply_impl(
+        std::forward<Func>(func),
+        std::forward<Tuple>(args),
+        Indices {}
+    );
 }
 
-///
-/// MORE FREAKY MAGIC
-///
-
-template<std::size_t N, typename T, typename F, std::size_t... Indices>
-auto apply_from_array_impl(F&& func, T (&arr)[N], indices<Indices...>)
-    -> decltype(std::forward<F>(func)(arr[Indices]...))
-{
-    return std::forward<F>(func)(arr[Indices]...);
-}
-
-template<std::size_t N, typename T, typename F,
-         typename Indices = make_indices<N>>
-auto apply_from_array(F&& func, T (&arr)[N])
-    -> decltype(apply_from_array_impl(std::forward<F>(func), arr, Indices()))
-{
-    return apply_from_array_impl(std::forward<F>(func), arr, Indices());
-}
 
 } // end namespace utility
 
