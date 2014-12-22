@@ -7,7 +7,7 @@
 using namespace ren;
 
 static void dump(std::string name, Value value) {
-    static auto type_of = Word ("type?");
+    static auto type_of = Word {"type?"};
 
     std::cout << name << " is of type " << type_of(value)
         << " and has value " << value << "\n";

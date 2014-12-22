@@ -12,47 +12,28 @@
 namespace ren {
 
 ///
-/// IN-PROGRESS DESIGN ON MAKING RED EXTENSION FUNCTIONS
+/// EXTENSION FUNCTION TEMPLATE
 ///
 
-template<typename Ret, typename... Args>
-class Foo
-{
-private:
-    std::function<Ret(Args...)> _func;
-
-public:
-    Foo(const std::function<Ret(Args...)>& func):
-        _func(func)
-    {}
-
-    auto operator()(Args... args)
-        -> Ret
-    {
-        return _func(args...);
-    }
-};
-
-
-
 //
-// Initial attempt to try and understand how one might use modern variadic
-// templates to automatically pack up a bit of C++ code to run as the body of
-// a function provided to Red.  I'm not sure what the limits of such an
-// approach are as I've never tried, so I'll just see what happens.
+// While calling Ren and the runtime from C++ is interesting (such as to
+// accomplish tasks like "running PARSE from C++"), a potentially even
+// more relevant task is to make it simple to call C++ code from inside
+// the Rebol or Red system.  Goals for such an interface would be type-safety,
+// brevity, efficiency, etc.
 //
-// First plan was to try inheriting from std::function, but add some more
-// general magic to pick apart the parameter types.  Inheriting is probably
-// not the best idea; but it's a start:
+// This is a "modern" C++11 take on that process.  It uses template
+// metaprogramming to analyze the type signature of a lambda function (or,
+// if you prefer, anything else with an operator()) to be called for the
+// implementation, and unpacks the parameters to call it with.  See the
+// tests for the notation, but it is rather pretty.
 //
-//     http://stackoverflow.com/q/27263092/211160
-//
-
-
 // There may be ways of making the spec block automatically, but naming
 // the parameters would be difficult.  A version that took a single
 // argument and just called them arg1 arg2 etc and built the type
-// strings may be possible in the future.
+// strings may be possible in the future, but that's really not a good
+// way to document your work even if it's technically achievable.
+//
 
 template<class R, class... Ts>
 class Extension : public Value {
@@ -65,11 +46,34 @@ private:
     typedef std::function<R(Ts...)> FunType;
     typedef std::tuple<Ts...> ParamsType;
 
+    //
+    // We need to be able to produce a function value in order to wire this
+    // together to call C++ functions from within the runtime.  Rebol natives
+    // worked like:
+    //
+    //     int  (* REBFUN)(REBVAL * ds);
+    //
+    // In order to make this remotely tractable, I created an extension
+    // function type which passes itself as a first parameter.  That way we
+    // can map to find the function object we want to use.  Also, it assumes
+    // the return convention of R_RET, so the return value cell is to be
+    // written into the array under the DS_RETURN address:
+    //
+    //     void  (* REBFUN)(REBVAL * cpp, REBVAL * ds);
+    //
     // If we had more than 96 bits, it might store more for us and keep
-    // us from having to look up the shim.
+    // us from having to look up the shim.  It would be technically possible
+    // to poke the bits into the args series (for instance) and then
+    // SPEC-OF would give you a series position after that odd value...but
+    // that would expose it to users who might look at the head of the series
+    //
+    // Note that inheriting from std::function would probably be a bad idea:
+    //
+    //     http://stackoverflow.com/q/27263092/211160
+    //
 
     static std::unordered_map<
-        REBCPP, std::tuple<Engine *, size_t, FunType>
+        REBCPP, std::tuple<Engine &, size_t, FunType const>
     > table;
 
 public:
@@ -82,6 +86,26 @@ public:
         return fun(std::get<S>(params) ...);
     }
 
+    template <typename A>
+    static std::tuple<A> params(Engine & engine, RenCell * cell)
+    {
+      return std::forward_as_tuple<A>(A (engine, *cell));
+    }
+
+    template <
+        typename A,
+        typename... As,
+        // http://stackoverflow.com/a/24875556/211160
+        typename = typename std::enable_if<sizeof...(As) != 0, bool>::type
+    >
+    static std::tuple<A, As...> params(Engine & engine, RenCell * cells)
+    {
+        return std::tuple_cat(
+            std::forward_as_tuple(A (engine, cells[0])),
+            params<As...>(engine, cells + 1)
+        );
+    }
+
     Extension (Engine & engine, Block const & spec, FunType const & fun) :
         Value (Dont::Initialize)
     {
@@ -92,47 +116,35 @@ public:
 
         cell.data.func.func.cpp =
             [] (REBVAL * cpp, REBVAL * ds) -> void {
-            // Assumption is you will only ever register an extension with
-            // one engine (for the moment).  This gets trickier if you can
-            // do that.  Of course, as long as there's only one engine this
-            // will not be possible anyway, so the sloppy assumption isn't
-            // so bad.
 
-            auto it = table.find(VAL_FUNC_CPP(cpp));
+                // Do the table lookup and create references for the pieces.
+                // As they are all references; the compiler will optimize this
+                // out, but it helps for readability.
 
-            // we need to proxy this array of cells in so that it actually
-            // is an array of values; this can't be done at compile time
-            // unfortunately.  We have to take for granted that the number
-            // of function parameters is equal to what we expect.
+                auto & entry = (*table.find(VAL_FUNC_CPP(cpp))).second;
 
-            size_t N = std::get<1>((*it).second);
+                Engine & engine = std::get<0>(entry);
+                size_t & N = std::get<1>(entry);
+                FunType const & fun = std::get<2>(entry);
 
-            std::tuple<Ts...> params;
-            /*
-            Value arr[N];
+                R result = callFunc(
+                    fun,
+                    params<Ts...>(engine, ds),
+                    typename utility::gens<sizeof...(Ts)>::type()
+                );
 
-            for (size_t index = 0; index < 2; index++) {
-                arr[index].cell = *D_ARG(index + 1);
-                arr[index].finishInit(std::get<0>((*it).second)->getHandle());
-                arr[index].trackLifetime();
-            }*/
+                // Like R_RET in a native function
 
+                *DS_RETURN = result.cell;
+            };
 
-            UNUSED(ds);
-            UNUSED(cpp);
-            R result = callFunc(
-                std::get<2>((*it).second),
-                params,
-                typename utility::gens<sizeof...(Ts)>::type()
-            );
+        table.insert(
+            make_pair(
+                cell.data.func.func.cpp,
+                std::forward_as_tuple(engine, sizeof...(Ts), fun)
+            )
+        );
 
-            // Like R_RET in a native function
-
-            *DS_RETURN = result.cell;
-        };
-
-        table[cell.data.func.func.cpp]
-            = std::make_tuple(&engine, sizeof...(Ts), fun);
         finishInit(engine.getHandle());
     }
 
@@ -155,39 +167,15 @@ public:
     void addRefDebug();
 #endif
 
-    // We need to be able to produce a function value in order to wire this
-    // together to call C++ functions from within the runtime.  Rebol natives
-    // worked like:
-    //
-    //     int  (*REBFUN)(REBVAL *ds);
-    //
-    // In order to make this remotely tractable, I created an extension
-    // function type which passes itself as a first parameter.  That way we
-    // can map to find the function object we want to use.
-    //
-    // Clearly that's not what we get in, so we have to make one of those.
-    // It is dependent on the stack.  So what you get is:
-    //
-    // enum {
-    //    R_RET = 0,
-    //    R_TOS,
-    //    R_TOS1,
-    //    R_NONE,
-    //    R_UNSET,
-    //    R_TRUE,
-    //    R_FALSE,
-    //    R_ARG1,
-    //    R_ARG2,
-    //    R_ARG3
-    // };
-    //
-    // So to shim this together we need to write that function.
+
+
 };
 
 
 template<class R, class... Ts>
 std::unordered_map<
-    REBCPP, std::tuple<Engine *, size_t, typename Extension<R, Ts...>::FunType>
+    REBCPP,
+    std::tuple<Engine &, size_t, typename Extension<R, Ts...>::FunType const>
 > Extension<R, Ts...>::table;
 
 
@@ -236,22 +224,6 @@ auto make_Extension(char const * specCstr, Fun && fun)
 {
     return make_Extension_(specCstr, std::forward<Fun>(fun), Indices());
 }
-
-
-
-// Extending via object is probably a popular thing, I think a good notation
-// for that is desirable.
-
-class ExtensionObject {
-public:
-    ExtensionObject(
-        std::initializer_list<
-            std::pair<internal::Loadable, internal::Loadable>
-        > pairs
-    ) {
-        UNUSED(pairs);
-    }
-};
 
 }
 

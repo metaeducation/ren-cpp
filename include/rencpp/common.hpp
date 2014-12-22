@@ -76,7 +76,8 @@ inline T * evilMutablePointerCast(T const * somePointer) {
 //     http://stackoverflow.com/a/19934080/211160
 //
 // But putting it in use is as ugly as any standard library implementation
-// code, though.  :-P
+// code, though.  :-P  If you're dealing with "Generic Lambdas" from C++14
+// it breaks, but should work for the straightforward case it was designed for.
 //
 
 namespace ren {
@@ -137,6 +138,26 @@ struct gens<0, S...> {
   typedef seq<S...> type;
 };
 
+
+
+///
+/// MORE FREAKY MAGIC
+///
+
+template<std::size_t N, typename T, typename F, std::size_t... Indices>
+auto apply_from_array_impl(F&& func, T (&arr)[N], indices<Indices...>)
+    -> decltype(std::forward<F>(func)(arr[Indices]...))
+{
+    return std::forward<F>(func)(arr[Indices]...);
+}
+
+template<std::size_t N, typename T, typename F,
+         typename Indices = make_indices<N>>
+auto apply_from_array(F&& func, T (&arr)[N])
+    -> decltype(apply_from_array_impl(std::forward<F>(func), arr, Indices()))
+{
+    return apply_from_array_impl(std::forward<F>(func), arr, Indices());
+}
 
 } // end namespace utility
 

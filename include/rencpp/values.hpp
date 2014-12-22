@@ -65,6 +65,7 @@ namespace internal {
    class Loadable;
 }
 
+template <class R, class... Ts> class Extension;
 
 
 ///
@@ -84,7 +85,7 @@ namespace internal {
 class Value {
 protected:
     friend class Runtime;
-    friend class Context; // used for FORM; should all go through runtime?
+    friend class Context; // Value::Dont::Initialize
 public: // temporary for the lambda in function, find better way
     RenCell cell;
 
@@ -133,7 +134,8 @@ protected:
     // set up correctly OR if they are not, then the cast operator is tasked
     // with checking their invalidity and throwing an exception
     //
-    explicit Value (RenCell const & cell, Engine & engine);
+    template <class R, class... Ts> friend class Extension;
+    explicit Value (Engine & engine, RenCell const & cell);
 
 
 #ifndef DEBUG
@@ -479,11 +481,12 @@ public:
 // expecting a Value.  However, a static_cast<> must be used if you want
 // to go the other way (which may throw an exception on a bad cast).
 //
-// At minimum, each derived class must provide three things, like this:
+// At minimum, each derived class must provide these methods:
 //
 // protected:
 //    friend class Value;
-//    Unset (Dont const &) : Value (Dont::Initialize) {}
+//    Foo (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
+//    Foo (Dont const &) : Value (Dont::Initialize) {}
 //    inline bool isValid() const { return ...; }
 //
 // These are needed by the base class casting operator in Value, which has
@@ -497,6 +500,8 @@ public:
 class Unset final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Unset (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Unset (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
@@ -511,6 +516,8 @@ public:
 class None final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    None (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     None (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
@@ -531,6 +538,8 @@ extern None none;
 class Logic final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Logic (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Logic (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
@@ -547,6 +556,8 @@ public:
 class Integer final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Integer (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Integer (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
@@ -563,6 +574,8 @@ public:
 class Float final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Float (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Float (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
@@ -579,6 +592,8 @@ public:
 class Date final : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Date (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Date (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 
@@ -612,7 +627,9 @@ public:
 class AnyWord : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     AnyWord (Dont const &) : Value (Dont::Initialize) {}
+    AnyWord (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     inline bool isValid() const { return isAnyWord(); }
 
 protected:
@@ -648,6 +665,8 @@ protected:
 class Series : public Value {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Series (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Series (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 };
@@ -658,6 +677,8 @@ class AnyString : public Series
 {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    AnyString (Engine & engine, RenCell const & cell) : Series(engine, cell) {}
     AnyString (Dont const &) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyString(); }
 
@@ -700,6 +721,8 @@ public:
 class AnyBlock : public Series {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    AnyBlock (Engine & engine, RenCell const & cell) : Series(engine, cell) {}
     AnyBlock (Dont const &) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyBlock(); }
 
@@ -754,6 +777,8 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyWordSubtype : public AnyWord {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    AnyWordSubtype (Engine & engine, RenCell const & cell) : AnyWord(engine, cell) {}
     AnyWordSubtype (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
@@ -782,6 +807,8 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyStringSubtype : public AnyString {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    AnyStringSubtype (Engine & engine, RenCell const & cell) : AnyString(engine, cell) {}
     AnyStringSubtype (Dont const &) : AnyString (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
@@ -818,6 +845,8 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyBlockSubtype : public AnyBlock {
 protected:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    AnyBlockSubtype (Engine & engine, RenCell const & cell) : AnyBlock(engine, cell) {}
     AnyBlockSubtype (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
@@ -883,6 +912,7 @@ class Word final :
     public internal::AnyWordSubtype<&Value::isWord> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isWord>::AnyWordSubtype;
 };
 
@@ -892,6 +922,7 @@ class SetWord final :
     public internal::AnyWordSubtype<&Value::isSetWord> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isSetWord>::AnyWordSubtype;
 };
 
@@ -901,6 +932,7 @@ class GetWord final :
     public internal::AnyWordSubtype<&Value::isGetWord> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isGetWord>::AnyWordSubtype;
 };
 
@@ -910,6 +942,7 @@ class LitWord final :
     public internal::AnyWordSubtype<&Value::isLitWord> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isLitWord>::AnyWordSubtype;
 };
 
@@ -919,6 +952,7 @@ class Refinement final :
     public internal::AnyWordSubtype<&Value::isRefinement> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isRefinement>::AnyWordSubtype;
 };
 
@@ -927,6 +961,7 @@ public:
 class String final : public internal::AnyStringSubtype<&Value::isString> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyStringSubtype<&Value::isString>::AnyStringSubtype;
 
 public:
@@ -951,6 +986,7 @@ public:
 class Block final : public internal::AnyBlockSubtype<&Value::isBlock> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isBlock>::AnyBlockSubtype;
 };
 
@@ -959,6 +995,7 @@ public:
 class Paren final : public internal::AnyBlockSubtype<&Value::isParen> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isParen>::AnyBlockSubtype;
 };
 
@@ -967,6 +1004,7 @@ public:
 class Path final : public internal::AnyBlockSubtype<&Value::isPath> {
 public:
     friend class Value;
+    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isPath>::AnyBlockSubtype;
 };
 

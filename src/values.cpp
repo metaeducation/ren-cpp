@@ -11,7 +11,7 @@ bool Value::needsRefcount() const {
 }
 
 
-Value::Value (RenCell const & cell, Engine & engine) :
+Value::Value (Engine & engine, RenCell const & cell) :
     cell (cell)
 {
     finishInit(engine.handle);
