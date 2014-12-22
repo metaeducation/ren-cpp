@@ -77,14 +77,6 @@ private:
     > table;
 
 public:
-    template<int ...S>
-    static R callFunc(
-        FunType const & fun,
-        ParamsType const & params,
-        utility::seq<S...>
-    ) {
-        return fun(std::get<S>(params) ...);
-    }
 
     template <typename A>
     static std::tuple<A> params(Engine & engine, RenCell * cell)
@@ -127,10 +119,9 @@ public:
                 size_t & N = std::get<1>(entry);
                 FunType const & fun = std::get<2>(entry);
 
-                R result = callFunc(
+                auto&& result = utility::apply(
                     fun,
-                    params<Ts...>(engine, ds),
-                    typename utility::gens<sizeof...(Ts)>::type()
+                    params<Ts...>(engine, ds)
                 );
 
                 // Like R_RET in a native function
