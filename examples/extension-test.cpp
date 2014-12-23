@@ -13,7 +13,7 @@ int main(int, char **) {
         "blk [block!] {The block to print}"
         "str [string!] {The string to print}",
 
-        [](Block & blk, String & str) -> Logic {
+        [](Block blk, String str) -> Logic {
             print("EXTENSION CALLED!\n");
             print("blk is", blk);
             print("str is", str);

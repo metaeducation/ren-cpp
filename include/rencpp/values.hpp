@@ -67,6 +67,8 @@ namespace internal {
 
 template <class R, class... Ts> class Extension;
 
+struct none_t;
+
 
 ///
 /// VALUE BASE CLASS
@@ -187,15 +189,19 @@ public: // temporary until the lambdas are friended in Extension
 
 
 public:
-    // For why there's no special None implicit constructor, see this:
+    //
+    // Constructing from nullptr is so ugly we disable it, but it's nice
+    // to be able to just assign from "none".
     //
     // https://github.com/hostilefork/rencpp/issues/3
     //
-    // In fact, constructing from nullptr is so ugly we disable it.
 
     bool isNone() const;
 
     Value (nullptr_t) = delete;
+
+    Value (Engine & engine, none_t const &);
+    Value (none_t const &);
 
 
 public:
@@ -472,6 +478,30 @@ public:
 
 
 ///
+/// NONE CONSTRUCTION FUNCTION
+///
+
+//
+// Can't use an extern variable of None statically initialized, because the
+// engine handle wouldn't be set...and static constructor ordering is
+// indeterminate anyway.
+//
+// Should you be able to "apply" a none directly, as none(arg1, arg2) etc?
+// It seems okay to disallow it.  But if you want that (just so it can fail
+// if you ever gave it parameters, for the sake of completeness) there'd
+// have to be an operator() here.
+//
+
+struct none_t
+{
+  struct init {};
+  constexpr none_t(init) {}
+};
+constexpr none_t none {none_t::init{}};
+
+
+
+///
 /// LEAF VALUE CLASS PROXIES
 ///
 
@@ -525,14 +555,6 @@ public:
     explicit None (Engine & engine);
     explicit None ();
 };
-
-
-// Not sure if this is a good long term idea, but including because `None {}`
-// is not as short as `none`.  The idea is that there's only one None and
-// you don't bother constructing it over and over again.  Does this matter?
-//
-//     https://github.com/hostilefork/rencpp/issues/3
-extern None none;
 
 
 class Logic final : public Value {

@@ -23,7 +23,8 @@ int main(int, char **) {
     assert(result.isNone());
 
     try {
-        none(10);
+        // technical note: explicit none(arg1, arg2...) is now illegal
+        result(10);
     }
     catch (too_many_args const & e) {
         print("generalized apply for none cannot have any arguments");

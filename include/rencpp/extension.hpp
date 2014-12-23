@@ -88,7 +88,7 @@ private:
             std::forward<Func>(func)(
                 typename utility::type_at<Indices, Ts...>::type{
                     engine,
-                    ds[Indices]
+                    *D_ARG(Indices + 1)
                 }...
             )
         )
@@ -96,7 +96,7 @@ private:
         return std::forward<Func>(func)(
             typename utility::type_at<Indices, Ts...>::type{
                 engine,
-                ds[Indices]
+                *D_ARG(Indices + 1)
             }...
         );
     }

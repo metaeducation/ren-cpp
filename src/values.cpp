@@ -40,6 +40,10 @@ Value::Value (Dont const &)
 }
 
 
+Value::Value (none_t const &) :
+    Value (Engine::runFinder(), none)
+{
+}
 
 
 Value::Value (bool const & someBool) :
@@ -88,14 +92,6 @@ ren::Value ren::Value::apply(
     );
     return result;
 }
-
-
-None::None () :
-    None (Engine::runFinder())
-{
-}
-
-None none {};
 
 
 AnyBlock::AnyBlock (

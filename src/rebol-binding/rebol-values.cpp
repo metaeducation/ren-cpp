@@ -13,6 +13,12 @@ Value::Value (Engine & engine) :
     finishInit(engine.getHandle());
 }
 
+Value::Value (Engine & engine, none_t const &) :
+    Value (Dont::Initialize)
+{
+    SET_NONE(&cell);
+    finishInit(engine.getHandle());
+}
 
 Value::Value (Engine & engine, bool const & someBool) :
     Value (Dont::Initialize)
