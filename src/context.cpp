@@ -103,12 +103,10 @@ void Context::constructOrApplyInitializeCore(
 
     if (constructOutUninitialized) {
         constructOutUninitialized->finishInit(engineHandle);
-        constructOutUninitialized->trackLifetime();
     }
 
     if (applyOutUninitialized) {
         applyOutUninitialized->finishInit(engineHandle);
-        applyOutUninitialized->trackLifetime();
     }
 
     switch (result) {

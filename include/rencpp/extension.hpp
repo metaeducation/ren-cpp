@@ -72,8 +72,13 @@ private:
     //     http://stackoverflow.com/q/27263092/211160
     //
 
+    struct TableEntry {
+        Engine & engine;
+        FunType const fun;
+    };
+
     static std::unordered_map<
-        REBCPP, std::tuple<Engine &, size_t, FunType const>
+        REBCPP, TableEntry
     > table;
 
     // Function used to create Ts... on the fly and apply a
@@ -140,13 +145,9 @@ public:
                 // As they are all references; the compiler will optimize this
                 // out, but it helps for readability.
 
-                auto & entry = (*table.find(VAL_FUNC_CPP(cpp))).second;
+                TableEntry & entry = (*table.find(VAL_FUNC_CPP(cpp))).second;
 
-                Engine & engine = std::get<0>(entry);
-                size_t & N = std::get<1>(entry);
-                FunType const & fun = std::get<2>(entry);
-
-                auto && result = applyFunc(fun, engine, ds);
+                auto && result = applyFunc(entry.fun, entry.engine, ds);
 
                 // Like R_RET in a native function
 
@@ -154,16 +155,13 @@ public:
             };
 
         table.insert(
-            make_pair(
-                cell.data.func.func.cpp,
-                std::forward_as_tuple(engine, sizeof...(Ts), fun)
-            )
+            std::make_pair(cell.data.func.func.cpp, TableEntry {engine, fun})
         );
 
         finishInit(engine.getHandle());
     }
 
-    Extension (Block spec, FunType const & fun) :
+    Extension (Block const & spec, FunType const & fun) :
         Extension (Engine::runFinder(), spec, fun)
     {
     }
@@ -177,20 +175,13 @@ public:
         Extension (Engine::runFinder(), specCstr, fun)
     {
     }
-
-#ifndef NDEBUG
-    void addRefDebug();
-#endif
-
-
-
 };
 
 
 template<class R, class... Ts>
 std::unordered_map<
     REBCPP,
-    std::tuple<Engine &, size_t, typename Extension<R, Ts...>::FunType const>
+    typename Extension<R, Ts...>::TableEntry
 > Extension<R, Ts...>::table;
 
 

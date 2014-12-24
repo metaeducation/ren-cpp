@@ -42,20 +42,34 @@ Value::Value (Engine & engine, double const & someDouble) :
     finishInit(engine.getHandle());
 }
 
+//
+// The only way the client can get handles of types that need some kind of
+// garbage collection participation right now is if the system gives it to
+// them.  So on the C++ side, they never create series (for instance).  It's
+// a good check of the C++ wrapper to do some reference counting of the
+// series that have been handed back.
+//
 
-#ifndef NDEBUG
-void Value::trackLifetime() {
-    if (ANY_SERIES(&cell)) {
-        auto it = internal::nodes[origin.data].find(VAL_SERIES(&cell));
-        if (it == internal::nodes[origin.data].end())
-            internal::nodes[origin.data].insert(
+void Value::finishInit(RenEngineHandle engine) {
+    if (needsRefcount()) {
+        refcountPtr = new RefcountType (1);
+
+    #ifndef NDEBUG
+        auto it = internal::nodes[engine.data].find(VAL_SERIES(&cell));
+        if (it == internal::nodes[engine.data].end())
+            internal::nodes[engine.data].insert(
                 std::make_pair(VAL_SERIES(&cell), 1)
             );
         else
             (*it).second++;
+    #endif
+
+    } else {
+        refcountPtr = nullptr;
     }
+
+    origin = engine;
 }
-#endif
 
 
 ///

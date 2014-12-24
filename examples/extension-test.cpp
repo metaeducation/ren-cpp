@@ -13,8 +13,8 @@ int main(int, char **) {
         "blk [block!] {The block to print}"
         "str [string!] {The string to print}",
 
-        [](Block blk, String str) -> Logic {
-            print("EXTENSION CALLED!\n");
+        [](Block && blk, String && str) -> Logic {
+            print("EXTENSION CALLED!");
             print("blk is", blk);
             print("str is", str);
             return true;
@@ -33,10 +33,19 @@ int main(int, char **) {
             print("EXTENSION RETURNED FALSE!");
     }
 
-    // Add extension to the environment
-    SetWord {"some-ext:"}(someExt);
+    // Add extension to the environment.  It shouldn't require the proxy;
+    // seems a Rebol bug...function *values* should be inert:
+    //
+    //    http://stackoverflow.com/questions/27641809/
+    //
+    // So you *should* be able to just write:
+    //
+    //    SetWord {"some-ext:"}(someExt);
+
+    SetWord {"some-ext:"}("func [blk str]", Block {someExt, "blk str"});
 
     // Call the extension under its new name
+
     runtime("some-ext [1 2 3] {foo}");
 
 }

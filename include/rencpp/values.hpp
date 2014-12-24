@@ -140,11 +140,6 @@ protected:
     explicit Value (Engine & engine, RenCell const & cell);
 
 
-#ifndef DEBUG
-public:
-    void trackLifetime();
-#endif
-
     //
     // At first the only user-facing constructor that was exposed directly
     // from Value was the default constructor, used to make an UNSET!
@@ -185,7 +180,7 @@ protected:
     Value (Dont const &);
 
 public: // temporary until the lambdas are friended in Extension
-    void finishInit(RenEngineHandle engineHandle);
+    void finishInit(RenEngineHandle engine);
 
 
 public:
@@ -419,7 +414,7 @@ protected:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Context & context, Ts... args) {
+    inline Value operator()(Context & context, Ts const &... args) {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)
@@ -428,7 +423,7 @@ public:
     }
 
     template <typename... Ts>
-    inline Value operator()(Ts... args) {
+    inline Value operator()(Ts const &... args) {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)

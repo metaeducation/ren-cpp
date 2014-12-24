@@ -15,10 +15,12 @@ namespace ren {
 
 namespace internal {
 
-std::unordered_map<
-    decltype(RebolEngineHandle::data),
-    std::unordered_map<REBSER const *, unsigned int>
-> nodes;
+#ifndef DEBUG
+    std::unordered_map<
+        decltype(RebolEngineHandle::data),
+        std::unordered_map<REBSER const *, unsigned int>
+    > nodes;
+#endif
 
 class RebolHooks {
 
@@ -33,7 +35,6 @@ public:
         allocatedContexts (nullptr)
     {
     }
-
 
 
 ///
@@ -346,14 +347,13 @@ public:
                 if (result == REN_SUCCESS)
                     *applyOut = *DS_TOP;
                 else
-                    SET_UNSET(DS_TOP);
+                    SET_UNSET(applyOut);
             } else {
                 // Assume that nullptr for applicand means "just do the block
                 // that was in the loadables".  This keeps us from having to
                 // export a version of DO separately.
 
-                Do_Blk(aggregate, 0);
-                *applyOut = *DS_TOP; // result is volatile
+                *applyOut = *Do_Blk(aggregate, 0); // result is volatile
             }
         }
 

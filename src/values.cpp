@@ -18,16 +18,6 @@ Value::Value (Engine & engine, RenCell const & cell) :
 }
 
 
-void Value::finishInit(RenEngineHandle engineHandle) {
-    if (needsRefcount()) {
-        refcountPtr = new RefcountType (1);
-    } else {
-        refcountPtr = nullptr;
-    }
-    origin = engineHandle;
-}
-
-
 
 Value::Value () :
     Value (Engine::runFinder())
