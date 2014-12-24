@@ -44,13 +44,13 @@ public:
     }
 
     template <typename T>
-    void writeArgs(bool spaced, T t) {
+    void writeArgs(bool spaced, T const & t) {
         UNUSED(spaced);
         dest << t;
     }
 
     template <typename T, typename... Ts>
-    void writeArgs(bool spaced, T t, Ts... args) {
+    void writeArgs(bool spaced, T const & t, Ts const &... args) {
         writeArgs(spaced, t);
         if (spaced)
             dest << " ";
@@ -58,19 +58,19 @@ public:
     }
 
     template <typename... Ts>
-    void corePrint(bool spaced, bool linefeed, Ts... args) {
+    void corePrint(bool spaced, bool linefeed, Ts const &... args) {
         writeArgs(spaced, args...);
         if (linefeed)
             dest << std::endl;
     }
 
     template <typename... Ts>
-    void operator()(Ts... args) {
+    void operator()(Ts const &... args) {
         corePrint(true, true, args...);
     }
 
     template <typename... Ts>
-    void only(Ts... args) {
+    void only(Ts const &... args) {
         corePrint(false, false, args...);
     }
 
