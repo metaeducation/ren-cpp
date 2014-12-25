@@ -177,20 +177,6 @@ public:
     }
 
 
-    int GetEngineForContext(
-        RebolContextHandle context,
-        RebolEngineHandle * engineOut
-    ) {
-        engineOut->data = theEngine.data;
-
-    #ifndef NDEBUG
-        auto it = nodes.find(engineOut->data);
-        assert(it != std::end(nodes));
-        assert((*it).second.find(context.series) != (*it).second.end());
-    #endif
-        return REN_SUCCESS;
-    }
-
 
 ///
 /// GENERALIZED APPLY
@@ -433,8 +419,8 @@ public:
 
 
     RenResult FormAsUtf8(
-        RenEngineHandle engine,
-        RenCell const * value,
+        RebolEngineHandle engine,
+        REBVAL const * value,
         char * buffer,
         size_t bufSize,
         size_t * numBytesOut
@@ -526,14 +512,6 @@ RenResult RenFindContext(
     RenContextHandle *contextOut
 ) {
     return ren::internal::hooks.FindContext(engine, name, contextOut);
-}
-
-
-RenResult RenGetEngineForContext(
-    RenContextHandle context,
-    RenEngineHandle * engineOut
-) {
-    return ren::internal::hooks.GetEngineForContext(context, engineOut);
 }
 
 

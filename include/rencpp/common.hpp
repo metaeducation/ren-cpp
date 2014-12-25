@@ -60,26 +60,9 @@ inline T * evilMutablePointerCast(T const * somePointer) {
 
 
 ///
-/// GENERAL MAGIC FOR INFERRING TYPES OF LAMBDAS
+/// HELPERS FOR MAGIC USED IN EXTENSION.HPP
 ///
 
-//
-// This craziness is due to a seeming-missing feature in C++11, which is a
-// convenient way to use type inference from a lambda.  Lambdas are the most
-// notationally convenient way of making functions, and yet you can't make
-// a template which picks up their signature.  This creates an annoying
-// repetition where you wind up typing the signature twice.
-//
-// We are trusting here that it's not a "you shouldn't do it" but rather a
-// "the standard library didn't cover it".  This helpful adaptation from
-// Morwenn on StackOverflow does the trick.
-//
-//     http://stackoverflow.com/a/19934080/211160
-//
-// But putting it in use is as ugly as any standard library implementation
-// code, though.  :-P  If you're dealing with "Generic Lambdas" from C++14
-// it breaks, but should work for the straightforward case it was designed for.
-//
 
 namespace ren {
 

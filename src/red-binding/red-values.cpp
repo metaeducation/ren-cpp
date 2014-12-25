@@ -1,8 +1,24 @@
-#include "redcpp/values.hpp"
+#include "rencpp/values.hpp"
 
-#include "redcpp/red.hpp"
+#include "rencpp/red.hpp"
 
 namespace ren {
+
+
+///
+/// INITIALIZATION FINISHER
+///
+
+void Value::finishInit(RenEngineHandle engine) {
+    if (needsRefcount()) {
+        refcountPtr = new RefcountType (1);
+    } else {
+        refcountPtr = nullptr;
+    }
+
+    origin = engine;
+}
+
 
 ///
 /// VALUE BASE CLASS CONSTRUCTIONS FROM CORRESPONDING C++ TYPES
@@ -14,30 +30,36 @@ namespace ren {
 // initialize itself, it calls the red::Value base class initializer for a
 // boolean)
 //
-//     https://github.com/hostilefork/redcpp/issues/2
+//     https://github.com/hostilefork/rencpp/issues/2
 //
 
 
 Value::Value (Engine & engine) :
-    Value (RedRuntime::makeCell4(RedRuntime::TYPE_UNSET, 0, 0, 0), engine)
+    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_UNSET, 0, 0, 0))
+{
+}
+
+
+Value::Value (Engine & engine, none_t const &) :
+    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0))
 {
 }
 
 
 Value::Value (Engine & engine, bool const & b) :
-    Value (RedRuntime::makeCell4(RedRuntime::TYPE_LOGIC, b, 0, 0), engine)
+    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_LOGIC, b, 0, 0))
 {
 } // not 64-bit aligned, historical accident, TBD before 1.0
 
 
 Value::Value (Engine & engine, int const & i) :
-    Value (RedRuntime::makeCell4(RedRuntime::TYPE_INTEGER, 0, i, 0), engine)
+    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_INTEGER, 0, i, 0))
 {
 } // 64-bit aligned for the someInt value
 
 
 Value::Value (Engine & engine, double const & d) :
-    Value (RedRuntime::makeCell3(RedRuntime::TYPE_FLOAT, 0, d), engine)
+    Value (engine, RedRuntime::makeCell3(RedRuntime::TYPE_FLOAT, 0, d))
 {
 }
 
@@ -269,7 +291,7 @@ bool Value::isString(RedCell * init) const {
 //
 
 None::None (Engine & engine) :
-    Value (RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0), engine)
+    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0))
 {
 }
 
@@ -278,5 +300,29 @@ Integer::operator int () const {
     return cell.s.data2;
 }
 
+
+
+///
+/// FUNCTION FINALIZER FOR EXTENSION
+///
+
+//
+// This is a work in progress on the Rebol branch, as Extensions and such are
+// even more bleeding edge than the rest...but this would be how a RedCell
+// would stow a pointer into a function if it worked.
+//
+
+void Function::finishInit(
+    Engine & engine,
+    Block const & spec,
+    RenShimPointer const & shim
+) {
+    throw std::runtime_error("No way to make RedCell from C++ function yet.");
+
+    UNUSED(spec);
+    UNUSED(shim);
+
+    Value::finishInit(engine.getHandle());
+}
 
 } // end namespace ren

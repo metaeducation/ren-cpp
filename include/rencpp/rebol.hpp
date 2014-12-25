@@ -2,6 +2,8 @@
 #define RENCPP_REBOL_HPP
 
 #include "ren.hpp"
+#include "runtime.hpp"
+#include "extension.hpp"
 
 #ifndef NDEBUG
 #include <unordered_map>

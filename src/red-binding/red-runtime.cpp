@@ -4,10 +4,9 @@
 #ifndef NDEBUG
 #include <map>
 #include <stdexcept>
-#include <sstream>
 #endif
 
-#include "redcpp/red.hpp"
+#include "rencpp/red.hpp"
 
 
 namespace ren {
@@ -26,7 +25,7 @@ internal::Loadable::Loadable (char const * sourceCstr) :
         0, 0
     );
     refcountPtr = nullptr;
-    engine = REN_ENGINE_HANDLE_INVALID;
+    origin = REN_ENGINE_HANDLE_INVALID;
 }
 
 
@@ -92,20 +91,6 @@ bool Runtime::needsRefcount(RenCell const & cell) {
     };
 
     return needsRefcountTable[RedRuntime::getDatatypeID(cell)];
-}
-
-
-std::string Runtime::form(Value const & value) {
-
-    // Forming should be Engine-independent under these assumptions
-
-    std::stringstream ss;
-#ifndef NDEBUG
-    ss << "Formed(" << RedRuntime::getDatatypeID(value) << ")";
-#else
-    ss << "Formed(" << static_cast<int>(RedRuntime::getDatatypeID(value)) << ")";
-#endif
-    return ss.str();
 }
 
 

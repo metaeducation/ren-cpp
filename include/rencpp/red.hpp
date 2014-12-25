@@ -2,6 +2,8 @@
 #define RENCPP_RED_HPP
 
 #include "ren.hpp"
+#include "runtime.hpp"
+#include "extension.hpp"
 
 namespace ren {
 

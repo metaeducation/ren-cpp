@@ -42,7 +42,7 @@ int main(int, char **) {
     //
     //    SetWord {"some-ext:"}(someExt);
 
-    SetWord {"some-ext:"}("func [blk str]", Block {someExt, "blk str"});
+    runtime("some-ext: first", Block {someExt});
 
     // Call the extension under its new name
 

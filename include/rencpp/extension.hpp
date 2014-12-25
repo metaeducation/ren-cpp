@@ -55,7 +55,7 @@ namespace internal {
 }
 
 template<class R, class... Ts>
-class Extension : public Value {
+class Extension : public Function {
 private:
 
     //
@@ -93,10 +93,10 @@ private:
     };
 
     static std::unordered_map<
-        REBFUN, TableEntry
+        RenShimPointer, TableEntry
     > table;
 
-    static void tableAdd(REBFUN shim, TableEntry && entry) {
+    static void tableAdd(RenShimPointer shim, TableEntry && entry) {
         using internal::extensionTablesMutex;
 
         std::lock_guard<std::mutex> lock {extensionTablesMutex};
@@ -104,12 +104,12 @@ private:
         table.insert(std::make_pair(shim, entry));
     }
 
-    static TableEntry tableFindAndRemove(REBFUN shim) {
+    static TableEntry tableFindAndRemove(RenCell * stack) {
         using internal::extensionTablesMutex;
 
         std::lock_guard<std::mutex> lock {extensionTablesMutex};
 
-        auto it = table.find(shim);
+        auto it = table.find(REN_STACK_SHIM(stack));
 
         TableEntry result = (*it).second;
         table.erase(it);
@@ -123,14 +123,14 @@ private:
     static auto applyFunImpl(
         FunType const & fun,
         Engine & engine,
-        REBVAL * ds,
+        RenCell * stack,
         utility::indices<Indices...>
     )
         -> decltype(
             std::forward<FunType const &>(fun)(
                 typename utility::type_at<Indices, Ts...>::type{
                     engine,
-                    *D_ARG(Indices + 1)
+                    *REN_STACK_ARGUMENT(stack, Indices)
                 }...
             )
         )
@@ -138,7 +138,7 @@ private:
         return std::forward<FunType const &>(fun)(
             typename utility::type_at<Indices, Ts...>::type{
                 engine,
-                *D_ARG(Indices + 1)
+                *REN_STACK_ARGUMENT(stack, Indices)
             }...
         );
     }
@@ -146,12 +146,12 @@ private:
     template <
         typename Indices = utility::make_indices<sizeof...(Ts)>
     >
-    static auto applyFun(FunType const & fun, Engine & engine, REBVAL * ds)
+    static auto applyFun(FunType const & fun, Engine & engine, RenCell * stack)
         -> decltype(
             applyFunImpl(
                 std::forward<FunType const &>(fun),
                 engine,
-                ds,
+                stack,
                 Indices {}
             )
         )
@@ -159,35 +159,40 @@ private:
         return applyFunImpl(
             std::forward<FunType const &>(fun),
             engine,
-            ds,
+            stack,
             Indices {}
         );
-}
+    }
 
 public:
-
     Extension (Engine & engine, Block const & spec, FunType const & fun) :
-        Value (Dont::Initialize)
+        Function (Dont::Initialize)
     {
-        REBFUN const & shim  =
-            [] (REBVAL * ds) -> int {
-
-                // Do the table lookup.  Rebol places the function value on
-                // the stack between where we store the return value and
-                // the arguments.  See DSF_XXX for the other definitions.
-
+        RenShimPointer const & shim  =
+            [] (RenCell * stack) -> int {
                 // We only need to do this lookup once.  Though the static
                 // variable initialization is thread-safe, the table access
                 // itself is not...so it is protected via mutex.
 
-                static TableEntry entry = tableFindAndRemove(
-                    VAL_FUNC_CODE(DSF_FUNC(ds - DS_Base))
-                );
+                static TableEntry entry = tableFindAndRemove(stack);
 
-                auto && result = applyFun(entry.fun, entry.engine, ds);
+                // Our applyFun helper does the magic to recursively forward
+                // the Value classes that we generate to the function that
+                // interfaces us with the Callable the extension author wrote
+                // (who is blissfully unaware of the stack convention and
+                // writing using high-level types...)
 
-                *DS_RETURN = result.cell;
-                return R_RET;
+                auto && result = applyFun(entry.fun, entry.engine, stack);
+
+                // The return result is written into a location that is known
+                // according to the protocol of the stack
+
+                *REN_STACK_RETURN(stack) = result.cell;
+
+                // Note: trickery!  R_RET is 0, but all other R_ values are
+                // meaningless to Red.  So we only use that one here.
+
+                return REN_SUCCESS;
             };
 
         // Insert the shim into the mapping table so it can find itself while
@@ -197,11 +202,11 @@ public:
 
         tableAdd(shim, TableEntry {engine, fun});
 
-        // Reuse the Make_Native function to set the values up
+        // We've got what we need, but depending on the runtime it will have
+        // a different encoding of the shim and type into the bits of the
+        // cell.  We defer to a function provided by each runtime.
 
-        Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
-
-        finishInit(engine.getHandle());
+        Function::finishInit(engine, spec, shim);
     }
 
     Extension (Block const & spec, FunType const & fun) :
@@ -226,9 +231,10 @@ public:
 // header file.  So each specialization of the Extension type gets its own
 // copy and there are no duplicate symbols arising from multiple includes
 //
+
 template<class R, class... Ts>
 std::unordered_map<
-    REBFUN,
+    RenShimPointer,
     typename Extension<R, Ts...>::TableEntry
 > Extension<R, Ts...>::table;
 
@@ -238,6 +244,23 @@ std::unordered_map<
 /// UGLY LAMBDA INFERENCE NIGHTMARE
 ///
 
+//
+// This craziness is due to a seeming-missing feature in C++11, which is a
+// convenient way to use type inference from a lambda.  Lambdas are the most
+// notationally convenient way of making functions, and yet you can't make
+// a template which picks up their signature.  This creates an annoying
+// repetition where you wind up typing the signature twice.
+//
+// We are trusting here that it's not a "you shouldn't do it" but rather a
+// "the standard library didn't cover it".  This helpful adaptation from
+// Morwenn on StackOverflow does the trick.
+//
+//     http://stackoverflow.com/a/19934080/211160
+//
+// But putting it in use is as ugly as any standard library implementation
+// code, though.  :-P  If you're dealing with "Generic Lambdas" from C++14
+// it breaks, but should work for the straightforward case it was designed for.
+//
 
 template<typename Fun, std::size_t... Ind>
 auto make_Extension_(char const * specCstr, Fun && fun, utility::indices<Ind...>)

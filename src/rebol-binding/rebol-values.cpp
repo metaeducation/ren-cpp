@@ -258,4 +258,19 @@ Float::operator double() const {
     return VAL_DECIMAL(&cell);
 }
 
+
+///
+/// FUNCTION FINALIZER FOR EXTENSION
+///
+
+void Function::finishInit(
+    Engine & engine,
+    Block const & spec,
+    RenShimPointer const & shim
+) {
+    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
+
+    Value::finishInit(engine.getHandle());
+}
+
 } // end namespace ren

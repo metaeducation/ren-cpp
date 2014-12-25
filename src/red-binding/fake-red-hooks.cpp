@@ -1,10 +1,19 @@
 //
 // This is a fake implementation of the hook API as implemented against the
-// RedCell type.  It was used to do basic diagnostics and ensure that the
-// reference counting and everything was being handled smoothly.
+// RedCell type.  It was used initially to do basic diagnostics, to test
+// the reference counting and other general ideas about what would be
+// "on the other side of the fence" from the C++ binding.
 //
-// It is very hacky, and just gives fake answers back.  (Such as every
-// evaluation resulting in a string, just to test the reference counts.)
+// However, its hacky beginings led to the idea of switching over and using
+// Rebol as a test engine that would actually work.  Being more complete, and
+// written in C and able to debug-step-into it--it was an easier first target
+// than Red.
+//
+// So this file's destiny is the trash bin, and it's getting trashier as that
+// time comes closer.  It no longer needs to check the client side because
+// the client is already checked well enough by the Rebol implementation.
+// It just needs to be enough code to test to make sure the binding can
+// be built without a Rebol dependency when you use -DRUNTIME=red
 //
 
 #ifndef LINKED_WITH_RED_AND_NOT_A_TEST
@@ -12,87 +21,108 @@
 #ifndef NDEBUG
 #include <unordered_set>
 #include <unordered_map>
+
+#include <cstring>
+#include <sstream>
 #endif
 #include <cassert>
 
-#include "redcpp/red.hpp"
+#include "rencpp/red.hpp"
 
 
 namespace ren {
 
+namespace internal {
+
 class FakeRedHooks {
-#ifndef NDEBUG
-    std::unordered_map<
-        RedEngineHandle,
-        std::unordered_set<int32_t>
-    > nodes;
-#endif
 
 public:
     FakeRedHooks () {
     }
 
-    int AllocEngine(RedEngineHandle * handleOut) {
-        // make unique handle for each call, identity by pointer
-        *handleOut = evilPointerToInt32Cast(new int(1020));
-#ifndef NDEBUG
-        assert(nodes.find(*handleOut) == nodes.end());
-        nodes[*handleOut] = std::unordered_set<int32_t> {};
-#endif
+
+    RenResult AllocEngine(RedEngineHandle * engineOut) {
+        engineOut->data = 1020;
         return REN_SUCCESS;
     }
 
-    int FreeEngine(RedEngineHandle handle) {
-#ifndef NDEBUG
-        auto it = nodes.find(handle);
 
-        assert(it != nodes.end());
-
-        std::unordered_set<int32_t> & leftovers = (*it).second;
-        assert (leftovers.empty());
-
-        nodes.erase(it);
-#endif
-
-        delete evilInt32ToPointerCast<int *>(handle);
-        return 0;
+    RenResult FreeEngine(RedEngineHandle engine) {
+        UNUSED(engine);
+        return REN_SUCCESS;
     }
 
-    int ConstructOrApply(
-        RedEngineHandle handle,
-        RedCell * valuePtr,
-        RedCell * loadablesPtr,
-        int32_t numLoadables,
-        int32_t sizeofLoadable,
+
+    RenResult AllocContext(
+        RedEngineHandle engine,
+        RedContextHandle * contextOut
+    ) {
+        UNUSED(engine);
+        contextOut->pointer = nullptr;
+        return REN_SUCCESS;
+    }
+
+
+    RenResult FreeContext(
+        RedEngineHandle engine,
+        RenContextHandle context
+    ) {
+        UNUSED(engine);
+        UNUSED(context);
+        return REN_SUCCESS;
+    }
+
+
+    RenResult FindContext(
+        RedEngineHandle engine,
+        char const * name,
+        RedContextHandle * contextOut
+    ) {
+        UNUSED(engine);
+        UNUSED(name);
+        contextOut->pointer = nullptr;
+        return REN_SUCCESS;
+    }
+
+
+    RenResult ConstructOrApply(
+        RedEngineHandle engine,
+        RedContextHandle context,
+        RedCell const * applicand,
+        RedCell loadables[],
+        size_t numLoadables,
+        size_t sizeofLoadable,
         RedCell * constructOutDatatypeIn,
         RedCell * applyOut
     ) {
+        UNUSED(context);
         print("--->[FakeRed::ConstructOrApply]--->");
-        print("RedEngineHandle is", handle);
 
-        if (valuePtr) {
-            print("Value is", Value(*reinterpret_cast<Value*>(valuePtr)));
+        if (applicand) {
+            char buffer[256];
+            size_t length;
+            RenFormAsUtf8(engine, applicand, buffer, 256, &length);
+            print("Applicand is", buffer);
         } else {
-            print("valuePtr is nullptr");
+            print("applicand is nullptr");
         }
 
         print("There are", numLoadables, "loadable entries:");
 
-        char * currentPtr = reinterpret_cast<char*>(loadablesPtr);
-        for (int32_t index = 0; index < numLoadables; index++) {
-            Value valueTemp (Value::Dont::Initialize);
-            valueTemp.cell = reinterpret_cast<Value *>(currentPtr)->cell;
-            valueTemp.refcountPtr = nullptr;
-            valueTemp.engine = REN_ENGINE_HANDLE_INVALID;
+        char * currentPtr = reinterpret_cast<char*>(loadables);
+        for (size_t index = 0; index < numLoadables; index++) {
+            auto & cell = *reinterpret_cast<RenCell *>(currentPtr);
 
-            if (
-                RedRuntime::getDatatypeID(valueTemp) != runtime.TYPE_ALIEN
-            ) {
-                print("LOADED:", valueTemp);
-            } else {
+            if (RedRuntime::getDatatypeID(cell) != runtime.TYPE_ALIEN) {
+                char buffer[256];
+                size_t length;
+                RenFormAsUtf8(engine, &cell, buffer, 256, &length);
+                print("LOADED:", buffer);
+            }
+            else {
                 print(
                     "PENDING:",
-                    evilInt32ToPointerCast<char*>(valueTemp.cell.data1)
+                    evilInt32ToPointerCast<char*>(cell.data1)
                 );
             }
 
@@ -109,122 +139,157 @@ public:
             // the data will be garbage.
             constructOutDatatypeIn->data1 = 0;
             constructOutDatatypeIn->s.data2 = 0;
-
-            if (runtime.needsRefcount(*constructOutDatatypeIn)) {
-                constructOutDatatypeIn->s.data3 = evilPointerToInt32Cast(
-                    new int(304)
-                );
-#ifndef NDEBUG
-                nodes[handle].insert(constructOutDatatypeIn->s.data3);
-#endif
-            } else {
-                constructOutDatatypeIn->s.data3 = 0;
-            }
-        } else {
+            constructOutDatatypeIn->s.data3 = 0;
+        }
+        else {
             print("No construction requested.");
         }
 
         if (!applyOut) {
             print("No apply requested.");
-        } else {
+        }
+        else {
             print("Apply requested.");
 
-            // We will fabricate a result for any applies and return
-            // a string.  This way we exercise the reference counting.
             applyOut->header = RedRuntime::TYPE_STRING;
             applyOut->data1 = 1;
             applyOut->s.data2 = 0;
-
-            applyOut->s.data3 = evilPointerToInt32Cast(
-                new int {304}
-            );
-#ifndef NDEBUG
-            nodes[handle].insert(applyOut->s.data3);
-#endif
+            applyOut->s.data3 = 0;
         }
 
         print("<---[FakeRed::ConstructOrApply]<---");
         return REN_SUCCESS;
     }
 
-    int ReleaseCells(
-        RedEngineHandle handle,
-        RedCell *cellsPtr,
-        int32_t numCells,
-        int32_t sizeofCellBlock
+    RenResult ReleaseCells(
+        RedEngineHandle engine,
+        RedCell cells[],
+        size_t numCells,
+        size_t sizeofCellBlock
     ) {
-        char * currentPtr = reinterpret_cast<char*>(cellsPtr);
-        for (int32_t index = 0; index < numCells; index++) {
-            Value valueTemp {Value::Dont::Initialize};
-            valueTemp.cell = reinterpret_cast<Value *>(currentPtr)->cell;
-            valueTemp.refcountPtr = nullptr;
+        UNUSED(engine);
+        UNUSED(cells);
+        UNUSED(numCells);
+        UNUSED(sizeofCellBlock);
+        return REN_SUCCESS;
+    }
 
-            assert(valueTemp.needsRefcount());
+    RenResult FormAsUtf8(
+        RedEngineHandle engine,
+        RedCell const * value,
+        char * buffer,
+        size_t bufSize,
+        size_t * lengthOut
+    ) {
+        UNUSED(engine);
 
-#ifndef NDEBUG
-            auto it = nodes.find(handle);
-            assert(it != nodes.end());
+        std::stringstream ss;
+    #ifndef NDEBUG
+        ss << "Formed(" << RedRuntime::getDatatypeID(value) << ")";
+    #else
+        ss << "Formed("
+            << static_cast<int>(RedRuntime::getDatatypeID(value))
+            << ")";
+    #endif
+        assert(bufSize > ss.str().length());
+        std::strcpy(buffer, ss.str().c_str());
+        *lengthOut = ss.str().length();
 
-            size_t numErased = (*it).second.erase(valueTemp.cell.s.data3);
-            assert(numErased == 1);
-#else
-            UNUSED(handle);
-#endif
-
-            delete evilInt32ToPointerCast<int *>(valueTemp.cell.s.data3);
-
-            currentPtr += sizeofCellBlock;
-        }
         return REN_SUCCESS;
     }
 
     ~FakeRedHooks() {
-        assert(nodes.empty());
     }
 };
 
 FakeRedHooks hooks;
 
+} // end namespace internal
+
 } // end namespace ren
 
 
-int RenAllocEngine(RedEngineHandle * handleOut) {
-    return ren::hooks.AllocEngine(handleOut);
+RenResult RenAllocEngine(RenEngineHandle * handleOut) {
+    return ren::internal::hooks.AllocEngine(handleOut);
 }
 
-int RenFreeEngine(RedEngineHandle handle) {
-    return ren::hooks.FreeEngine(handle);
+
+RenResult RenFreeEngine(RenEngineHandle handle) {
+    return ren::internal::hooks.FreeEngine(handle);
 }
 
-int RenConstructOrApply(
-    RedEngineHandle handle,
-    RedCell * valuePtr,
-    RedCell * loadablesPtr,
-    int32_t numLoadables,
-    int32_t sizeofLoadable,
-    RedCell * constructOutWithDatatype,
-    RedCell * applyOut
+
+RenResult RenAllocContext(
+    RenEngineHandle engine,
+    RenContextHandle * contextOut
 ) {
-    return ren::hooks.ConstructOrApply(
-        handle,
-        valuePtr,
-        loadablesPtr,
+    return ren::internal::hooks.AllocContext(engine, contextOut);
+}
+
+
+RenResult RenFreeContext(RenEngineHandle engine, RenContextHandle context) {
+    return ren::internal::hooks.FreeContext(engine, context);
+}
+
+
+RenResult RenFindContext(
+    RenEngineHandle engine,
+    char const * name,
+    RenContextHandle * contextOut
+) {
+    return ren::internal::hooks.FindContext(engine, name, contextOut);
+}
+
+
+RenResult RenConstructOrApply(
+    RenEngineHandle engine,
+    RenContextHandle context,
+    RenCell const * applicand,
+    RenCell loadables[],
+    size_t numLoadables,
+    size_t sizeofLoadable,
+    RenCell * constructOutDatatypeIn,
+    RenCell * applyOut
+) {
+    return ren::internal::hooks.ConstructOrApply(
+        engine,
+        context,
+        applicand,
+        loadables,
         numLoadables,
         sizeofLoadable,
-        constructOutWithDatatype,
+        constructOutDatatypeIn,
         applyOut
     );
 
 }
 
-int RenReleaseCells(
-    RedEngineHandle handle,
-    RedCell *cellsPtr,
-    int32_t numCells,
-    int32_t sizeofCellBlock
+
+RenResult RenReleaseCells(
+    RenEngineHandle handle,
+    RenCell cells[],
+    size_t numCells,
+    size_t sizeofCellBlock
 ) {
-    return ren::hooks.ReleaseCells(
-        handle, cellsPtr, numCells, sizeofCellBlock
+    return ren::internal::hooks.ReleaseCells(
+        handle, cells, numCells, sizeofCellBlock
+    );
+}
+
+
+RenResult RenFormAsUtf8(
+    RenEngineHandle engine,
+    RenCell const * value,
+    char * buffer,
+    size_t bufSize,
+    size_t * lengthOut
+) {
+    return ren::internal::hooks.FormAsUtf8(
+        engine,
+        value,
+        buffer,
+        bufSize,
+        lengthOut
     );
 }
 
