@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
-#include <tuple>
+#include <type_traits>
 
 
 // http://stackoverflow.com/a/4030983/211160
@@ -60,7 +60,7 @@ inline T * evilMutablePointerCast(T const * somePointer) {
 
 
 ///
-/// HELPERS FOR MAGIC USED IN EXTENSION.HPP
+/// COMPILE TIME INTEGER SEQUENCES
 ///
 
 
@@ -81,6 +81,36 @@ struct make_indices<0, Ind...>:
     indices<Ind...>
 {};
 
+
+
+///
+/// PARAMETER PACKS MANIPULATION
+///
+
+//
+// This is a clone of the proposed std::type_at
+//
+
+template <unsigned N, typename T, typename... R>
+struct type_at
+{
+    using type = typename type_at<N-1, R...>::type;
+};
+
+template <typename T, typename... R>
+struct type_at<0, T, R...>
+{
+    using type = T;
+};
+
+
+
+///
+/// FUNCTION TRAITS
+///
+
+
+
 template<typename T>
 struct function_traits:
     function_traits<decltype(&T::operator())>
@@ -94,7 +124,7 @@ struct function_traits<Ret(C::*)(Args...) const>
     using result_type = Ret;
 
     template<std::size_t N>
-    using arg = typename std::tuple_element<N, std::tuple<Args...>>::type;
+    using arg = typename type_at<N, Args...>::type;
 };
 
 
@@ -139,28 +169,6 @@ auto apply(Func && func, Tuple && args)
         Indices {}
     );
 }
-
-
-
-///
-/// PARAMETER PACKS MANIPULATION
-///
-
-//
-// This is a clone of the proposed std::type_at
-//
-
-template <unsigned N, typename T, typename... R>
-struct type_at
-{
-    using type = typename type_at<N-1, R...>::type;
-};
-
-template <typename T, typename... R>
-struct type_at<0, T, R...>
-{
-    using type = T;
-};
 
 
 

@@ -24,7 +24,7 @@
 //
 //     ren::print.only("This", "won't", "be", "spaced");
 //
-// Since this is only an experiment, and being used to try and make 
+// Since this is only an experiment, and being used to try and make
 // debugging more natural and faster... it flushes lines with std::endl.
 // The risk of the experiment is that it might wind up being a
 // reimplementation on the C++ side and not do *exactly* what the internal
@@ -44,34 +44,34 @@ public:
     }
 
     template <typename T>
-    void writeArgs(bool spaced, T const & t) {
+    void writeArgs(bool spaced, T && t) {
         UNUSED(spaced);
-        dest << t;
+        dest << std::forward<T>(t);
     }
 
     template <typename T, typename... Ts>
-    void writeArgs(bool spaced, T const & t, Ts const &... args) {
-        writeArgs(spaced, t);
+    void writeArgs(bool spaced, T && t, Ts &&... args) {
+        writeArgs(spaced, std::forward<T>(t));
         if (spaced)
             dest << " ";
-        writeArgs(spaced, args...);
+        writeArgs(spaced, std::forward<Ts>(args)...);
     }
 
     template <typename... Ts>
-    void corePrint(bool spaced, bool linefeed, Ts const &... args) {
-        writeArgs(spaced, args...);
+    void corePrint(bool spaced, bool linefeed, Ts &&... args) {
+        writeArgs(spaced, std::forward<Ts>(args)...);
         if (linefeed)
             dest << std::endl;
     }
 
     template <typename... Ts>
-    void operator()(Ts const &... args) {
-        corePrint(true, true, args...);
+    void operator()(Ts &&... args) {
+        corePrint(true, true, std::forward<Ts>(args)...);
     }
 
     template <typename... Ts>
-    void only(Ts const &... args) {
-        corePrint(false, false, args...);
+    void only(Ts &&... args) {
+        corePrint(false, false, std::forward<Ts>(args)...);
     }
 
     ~Printer () {
