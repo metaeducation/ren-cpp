@@ -57,9 +57,7 @@ void Value::finishInit(RenEngineHandle engine) {
     #ifndef NDEBUG
         auto it = internal::nodes[engine.data].find(VAL_SERIES(&cell));
         if (it == internal::nodes[engine.data].end())
-            internal::nodes[engine.data].insert(
-                std::make_pair(VAL_SERIES(&cell), 1)
-            );
+            internal::nodes[engine.data].emplace(VAL_SERIES(&cell), 1);
         else
             (*it).second++;
     #endif

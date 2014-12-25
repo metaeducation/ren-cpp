@@ -101,7 +101,7 @@ private:
 
         std::lock_guard<std::mutex> lock {extensionTablesMutex};
 
-        table.insert(std::make_pair(shim, entry));
+        table.emplace(shim, entry);
     }
 
     static TableEntry tableFindAndRemove(RenCell * stack) {
