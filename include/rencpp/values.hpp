@@ -1044,7 +1044,7 @@ class Function : public Value {
 protected:
     friend class Value;
     template <class R, class... Ts> friend class Extension;
-    Function (Engine & engine, RenCell const & cell) : Function(engine, cell) {}
+    Function (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Function (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFunction(); }
 

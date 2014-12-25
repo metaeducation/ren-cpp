@@ -101,7 +101,7 @@ private:
 
         std::lock_guard<std::mutex> lock {extensionTablesMutex};
 
-        table.insert(std::make_pair(shim, entry));
+        table.emplace(shim, entry);
     }
 
     static TableEntry tableFindAndRemove(RenCell * stack) {
@@ -127,7 +127,7 @@ private:
         utility::indices<Indices...>
     )
         -> decltype(
-            std::forward<FunType const &>(fun)(
+            fun(
                 typename utility::type_at<Indices, Ts...>::type{
                     engine,
                     *REN_STACK_ARGUMENT(stack, Indices)
@@ -135,7 +135,7 @@ private:
             )
         )
     {
-        return std::forward<FunType const &>(fun)(
+        return fun(
             typename utility::type_at<Indices, Ts...>::type{
                 engine,
                 *REN_STACK_ARGUMENT(stack, Indices)
@@ -149,7 +149,7 @@ private:
     static auto applyFun(FunType const & fun, Engine & engine, RenCell * stack)
         -> decltype(
             applyFunImpl(
-                std::forward<FunType const &>(fun),
+                fun,
                 engine,
                 stack,
                 Indices {}
@@ -157,7 +157,7 @@ private:
         )
     {
         return applyFunImpl(
-            std::forward<FunType const &>(fun),
+            fun,
             engine,
             stack,
             Indices {}
