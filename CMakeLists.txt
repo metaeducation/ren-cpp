@@ -332,11 +332,14 @@ if(NOT RUNTIME STREQUAL "none")
     add_executable(parse-test-2 examples/parse-test-2.cpp ${SRC_ALL})
     target_link_libraries(parse-test-2 ${LIBS_ALL})
 
-    add_executable(extension-test examples/extension-test.cpp ${SRC_ALL})
-    target_link_libraries(extension-test ${LIBS_ALL})
-
     add_executable(context-test examples/context-test.cpp ${SRC_ALL})
     target_link_libraries(context-test ${LIBS_ALL})
+
+    add_executable(extension-test-1 examples/extension-test-1.cpp ${SRC_ALL})
+    target_link_libraries(extension-test-1 ${LIBS_ALL})
+
+    add_executable(extension-test-2 examples/extension-test-2.cpp ${SRC_ALL})
+    target_link_libraries(extension-test-2 ${LIBS_ALL})
 
 endif()
 
