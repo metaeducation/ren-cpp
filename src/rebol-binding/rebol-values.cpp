@@ -231,8 +231,8 @@ bool Value::isString(REBVAL * init) const {
     return IS_STRING(&cell);
 }
 
-bool Value::isExtension() const {
-    return IS_CPPHOOK(&cell);
+bool Value::isFunction() const {
+    return IS_FUNCTION(&cell);
 }
 
 //////////////////////////////////////////////////////////////////////////////

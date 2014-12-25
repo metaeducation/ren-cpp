@@ -294,7 +294,7 @@ public:
     bool isString(RenCell * = nullptr) const;
 
 public:
-    bool isExtension() const;
+    bool isFunction() const;
 
 protected:
     bool needsRefcount() const;
@@ -616,6 +616,30 @@ protected:
 
 public:
     explicit Date (std::string const & str);
+};
+
+
+
+///
+/// FUNCTION TYPE(S?)
+///
+
+//
+// In the current implementation, an Extension is really just a FUNCTION!
+// where the native function pointer (that processes the argument stack) is
+// built automatically by the system.  It's not possible to have a term be
+// both a template and a class, so if Extension was going to be Function
+// then Function would have to be written Function<> and be specialized
+// for that.
+//
+
+class Function : public Value {
+protected:
+    friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    Function (Engine & engine, RenCell const & cell) : Function(engine, cell) {}
+    Function (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isFunction(); }
 };
 
 

@@ -3,5 +3,9 @@
 
 namespace ren {
 
+namespace internal {
+    std::mutex extensionTablesMutex;
+}
+
 }
 

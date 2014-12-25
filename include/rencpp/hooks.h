@@ -118,19 +118,34 @@ struct RedCell {
     };
 };
 
-typedef int32_t RedEngineHandle;
-#define RED_ENGINE_HANDLE_INVALID 0
+struct RedEngineHandle {
+    int data;
+};
+const struct RedEngineHandle RED_ENGINE_HANDLE_INVALID = {-1};
+#define RED_IS_ENGINE_HANDLE_INVALID(handle) \
+    ((handle).data == RED_ENGINE_HANDLE_INVALID.data)
 
-typedef int32_t RedContextHandle;
-#define RED_CONTEXT_HANDLE_INVALID 0
+struct RedContextHandle {
+    void * pointer;
+};
+const struct RedContextHandle RED_CONTEXT_HANDLE_INVALID = {nullptr};
+#define RED_IS_CONTEXT_HANDLE_INVALID(handle) \
+    ((handle).pointer == RED_CONTEXT_HANDLE_INVALID.pointer)
+
+
+//
+// Map the types to their Ren equivalents
+//
 
 typedef RedCell RenCell;
 
 typedef RedEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID RED_ENGINE_HANDLE_INVALID
+#define REN_IS_ENGINE_HANDLE_INVALID RED_IS_ENGINE_HANDLE_INVALID
 
 typedef RedContextHandle RenContextHandle;
 #define REN_CONTEXT_HANDLE_INVALID RED_ENGINE_HANDLE_INVALID
+#define REN_IS_CONTEXT_HANDLE_INVALID RED_IS_CONTEXT_HANDLE_INVALID
 
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
 
@@ -151,8 +166,6 @@ typedef RedContextHandle RenContextHandle;
 // we are only sharing header files and macros, and linking through extern "C"
 //
 
-typedef REBVAL RenCell;
-
 struct RebolEngineHandle {
     int data;
 };
@@ -160,16 +173,22 @@ const struct RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
 #define REBOL_IS_ENGINE_HANDLE_INVALID(handle) \
     ((handle).data == REBOL_ENGINE_HANDLE_INVALID.data)
 
-typedef RebolEngineHandle RenEngineHandle;
-#define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
-#define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
-
 struct RebolContextHandle {
     REBSER * series;
 };
 const struct RebolContextHandle REBOL_CONTEXT_HANDLE_INVALID = {nullptr};
 #define REBOL_IS_CONTEXT_HANDLE_INVALID(handle) \
     ((handle).series == REBOL_CONTEXT_HANDLE_INVALID.series)
+
+//
+// Map the types to their Ren equivalents
+//
+
+typedef REBVAL RenCell;
+
+typedef RebolEngineHandle RenEngineHandle;
+#define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
+#define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
 typedef RebolContextHandle RenContextHandle;
 #define REN_CONTEXT_HANDLE_INVALID REBOL_CONTEXT_HANDLE_INVALID

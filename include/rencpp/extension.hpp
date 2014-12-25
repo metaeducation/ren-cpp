@@ -4,6 +4,9 @@
 #include <functional>
 #include <utility>
 #include <unordered_map>
+#include <cassert>
+
+#include <mutex> // global table must be protected for thread safety
 
 #include "values.hpp"
 #include "engine.hpp"
@@ -35,41 +38,53 @@ namespace ren {
 // way to document your work even if it's technically achievable.
 //
 
+//
+// Note that inheriting from std::function would probably be a bad idea:
+//
+//     http://stackoverflow.com/q/27263092/211160
+//
+
+//
+// Limits of the type system and specialization force us to have a table
+// of functions on a per-template specialization basis.  However, there's
+// no good reason to have one mutex per table.  One for all will do.
+//
+
+namespace internal {
+    extern std::mutex extensionTablesMutex;
+}
+
 template<class R, class... Ts>
 class Extension : public Value {
-protected:
-    friend class Value;
-    Extension (Dont const &) : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isExtension(); }
-
 private:
-    typedef std::function<R(Ts...)> FunType;
-    typedef std::tuple<Ts...> ParamsType;
 
     //
-    // We need to be able to produce a function value in order to wire this
-    // together to call C++ functions from within the runtime.  Rebol natives
-    // worked like:
+    // Rebol natives take in a pointer to the stack of REBVALs.  This stack
+    // has protocol for the offsets of arguments, offsets for other
+    // information (like where the value for the function being called is
+    // written), and an offset where to write the return value:
     //
     //     int  (* REBFUN)(REBVAL * ds);
     //
-    // In order to make this remotely tractable, I created an extension
-    // function type which passes itself as a first parameter.  That way we
-    // can map to find the function object we want to use.  Also, it assumes
-    // the return convention of R_RET, so the return value cell is to be
-    // written into the array under the DS_RETURN address:
+    // That's too low level for a C++ library.  We wish to allow richer
+    // function signatures that can be authored with lambdas (or objects with
+    // operator() overloaded, any "Callable").  That means this C-like
+    // interface hook ("shim") needs to be generated automatically from
+    // examining the type signature, so that it can call the C++ hook.
     //
-    //     void  (* REBFUN)(REBVAL * cpp, REBVAL * ds);
+
+    typedef std::function<R(Ts...)> FunType;
+
+    typedef std::tuple<Ts...> ParamsType;
+
+
     //
-    // If we had more than 96 bits, it might store more for us and keep
-    // us from having to look up the shim.  It would be technically possible
-    // to poke the bits into the args series (for instance) and then
-    // SPEC-OF would give you a series position after that odd value...but
-    // that would expose it to users who might look at the head of the series
-    //
-    // Note that inheriting from std::function would probably be a bad idea:
-    //
-    //     http://stackoverflow.com/q/27263092/211160
+    // Although templates can be parameterized with function pointers (or
+    // pointer-to-member) there is no way for us to get a std::function
+    // object passed as a parameter to the constructor into the C-style shim.
+    // The shim, produced by a lambda, must not capture anything from its
+    // environment...only accessing global data.  We make a little global
+    // map and then capture the data into a static.
     //
 
     struct TableEntry {
@@ -78,8 +93,28 @@ private:
     };
 
     static std::unordered_map<
-        REBCPP, TableEntry
+        REBFUN, TableEntry
     > table;
+
+    static void tableAdd(REBFUN shim, TableEntry && entry) {
+        using internal::extensionTablesMutex;
+
+        std::lock_guard<std::mutex> lock {extensionTablesMutex};
+
+        table.insert(std::make_pair(shim, entry));
+    }
+
+    static TableEntry tableFindAndRemove(REBFUN shim) {
+        using internal::extensionTablesMutex;
+
+        std::lock_guard<std::mutex> lock {extensionTablesMutex};
+
+        auto it = table.find(shim);
+
+        TableEntry result = (*it).second;
+        table.erase(it);
+        return result;
+    }
 
     // Function used to create Ts... on the fly and apply a
     // given function to them
@@ -134,30 +169,37 @@ public:
     Extension (Engine & engine, Block const & spec, FunType const & fun) :
         Value (Dont::Initialize)
     {
-        // Reuse the Make_Native function, but set the function pointer to
-        // nullptr (we'll overwrite it with our hook in cell's .cpp)
+        REBFUN const & shim  =
+            [] (REBVAL * ds) -> int {
 
-        Make_Native(&cell, VAL_SERIES(&spec.cell), nullptr, REB_CPPHOOK);
+                // Do the table lookup.  Rebol places the function value on
+                // the stack between where we store the return value and
+                // the arguments.  See DSF_XXX for the other definitions.
 
-        cell.data.func.func.cpp =
-            [] (REBVAL * cpp, REBVAL * ds) -> void {
+                // We only need to do this lookup once.  Though the static
+                // variable initialization is thread-safe, the table access
+                // itself is not...so it is protected via mutex.
 
-                // Do the table lookup and create references for the pieces.
-                // As they are all references; the compiler will optimize this
-                // out, but it helps for readability.
+                static TableEntry entry = tableFindAndRemove(
+                    VAL_FUNC_CODE(DSF_FUNC(ds - DS_Base))
+                );
 
-                TableEntry & entry = (*table.find(VAL_FUNC_CPP(cpp))).second;
-
-                auto && result = applyFunc(entry.fun, entry.engine, ds);
-
-                // Like R_RET in a native function
+                auto && result = applyFun(entry.fun, entry.engine, ds);
 
                 *DS_RETURN = result.cell;
+                return R_RET;
             };
 
-        table.insert(
-            std::make_pair(cell.data.func.func.cpp, TableEntry {engine, fun})
-        );
+        // Insert the shim into the mapping table so it can find itself while
+        // the shim code is running.  Note that the tableAdd code has
+        // to be thread-safe in case two threads try to modify the global
+        // table at the same time...
+
+        tableAdd(shim, TableEntry {engine, fun});
+
+        // Reuse the Make_Native function to set the values up
+
+        Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
 
         finishInit(engine.getHandle());
     }
@@ -179,9 +221,14 @@ public:
 };
 
 
+//
+// There is some kind of voodoo that makes this work, even though it's in a
+// header file.  So each specialization of the Extension type gets its own
+// copy and there are no duplicate symbols arising from multiple includes
+//
 template<class R, class... Ts>
 std::unordered_map<
-    REBCPP,
+    REBFUN,
     typename Extension<R, Ts...>::TableEntry
 > Extension<R, Ts...>::table;
 
