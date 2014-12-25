@@ -84,13 +84,15 @@ private:
     // Function used to create Ts... on the fly and apply a
     // given function to them
 
-    template<typename Func, std::size_t... Indices>
-    static auto applyFuncImpl(Func && func,
-                              Engine & engine,
-                              REBVAL * ds,
-                              utility::indices<Indices...>)
+    template <std::size_t... Indices>
+    static auto applyFunImpl(
+        FunType const & fun,
+        Engine & engine,
+        REBVAL * ds,
+        utility::indices<Indices...>
+    )
         -> decltype(
-            std::forward<Func>(func)(
+            std::forward<FunType const &>(fun)(
                 typename utility::type_at<Indices, Ts...>::type{
                     engine,
                     *D_ARG(Indices + 1)
@@ -98,7 +100,7 @@ private:
             )
         )
     {
-        return std::forward<Func>(func)(
+        return std::forward<FunType const &>(fun)(
             typename utility::type_at<Indices, Ts...>::type{
                 engine,
                 *D_ARG(Indices + 1)
@@ -107,21 +109,20 @@ private:
     }
 
     template <
-        typename Func,
         typename Indices = utility::make_indices<sizeof...(Ts)>
     >
-    static auto applyFunc(Func && func, Engine & engine, REBVAL * ds)
+    static auto applyFun(FunType const & fun, Engine & engine, REBVAL * ds)
         -> decltype(
-            applyFuncImpl(
-                std::forward<Func>(func),
+            applyFunImpl(
+                std::forward<FunType const &>(fun),
                 engine,
                 ds,
                 Indices {}
             )
         )
     {
-        return applyFuncImpl(
-            std::forward<Func>(func),
+        return applyFunImpl(
+            std::forward<FunType const &>(fun),
             engine,
             ds,
             Indices {}
