@@ -60,7 +60,7 @@ inline T * evilMutablePointerCast(T const * somePointer) {
 
 
 ///
-/// COMPILE TIME INTEGER SEQUENCES
+/// COMPILE-TIME INTEGER SEQUENCES
 ///
 
 
@@ -68,15 +68,15 @@ namespace ren {
 
 namespace utility {
 
-template<std::size_t...>
+template <std::size_t... Ind>
 struct indices {};
 
-template<std::size_t N, std::size_t... Ind>
+template <std::size_t N, std::size_t... Ind>
 struct make_indices:
     make_indices<N-1, N-1, Ind...>
 {};
 
-template<std::size_t... Ind>
+template <std::size_t... Ind>
 struct make_indices<0, Ind...>:
     indices<Ind...>
 {};
@@ -111,12 +111,12 @@ struct type_at<0, T, R...>
 
 
 
-template<typename T>
+template <typename T>
 struct function_traits:
     function_traits<decltype(&T::operator())>
 {};
 
-template<typename C, typename Ret, typename... Args>
+template <typename C, typename Ret, typename... Args>
 struct function_traits<Ret(C::*)(Args...) const>
 {
     enum { arity = sizeof...(Args) };
