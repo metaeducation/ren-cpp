@@ -9,7 +9,7 @@
 class FakeStdoutResources {
 public:
     FakeStdoutResources(size_t s) :
-        buffer_ (s + 1)
+        buffer_ (s + 1) // for null terminator...
     {
     }
 
@@ -34,8 +34,9 @@ public:
         FakeStdoutResources (buff_sz),
         mdi(mdi)
     {
-        // "-1 to make overflow() easier" (?)
-        setp(buffer_.data(), buffer_.data() + buffer_.size() - 1);
+        // -1 makes authoring of overflow() easier, so it can put the character
+        // into the buffer when it happens.
+        setp(buffer_.data(), buffer_.data() + buff_sz - 1);
     }
 
 protected:
