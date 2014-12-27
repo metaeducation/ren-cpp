@@ -8,8 +8,11 @@
 
 #include <vector>
 
-
+extern "C" {
 #include "rebol/src/include/sys-value.h"
+#include "rebol/src/include/sys-state.h"
+}
+
 
 namespace ren {
 
@@ -28,6 +31,9 @@ private:
     RebolEngineHandle theEngine; // currently only support one "Engine"
     REBSER * allocatedContexts;
 
+public:
+    // in reality would have to be per-thread
+    static jmp_buf * Halt_State;
 
 public:
     RebolHooks () :
@@ -124,7 +130,7 @@ public:
             }
         }
 
-        if (!removed)
+        if (not removed)
             throw std::runtime_error("Couldn't find context in FreeContext");
 
         if (BLK_LEN(allocatedContexts) == 0) {
@@ -222,6 +228,29 @@ public:
 /// CONSTRUCT OR APPLY HOOK
 ///
 
+    void Fake_Halt_Code(REBINT kind, REBVAL *arg)
+    {
+        REBVAL *err = TASK_THIS_ERROR;
+
+        if (!Halt_State) return;
+
+        if (arg) {
+            if (IS_NONE(arg)) {
+                SET_INTEGER(TASK_THIS_VALUE, 0);
+            } else
+                *TASK_THIS_VALUE = *arg;	// save the value
+        } else {
+            SET_NONE(TASK_THIS_VALUE);
+        }
+
+        VAL_SET(err, REB_ERROR);
+        VAL_ERR_NUM(err) = kind;
+        VAL_ERR_VALUE(err) = TASK_THIS_VALUE;
+        VAL_ERR_SYM(err) = 0;
+
+        longjmp(*Halt_State, 1);
+    }
+
     //
     // The ConstructOrApply hook was designed to be a primitive that
     // allows for efficiency in calling the "Generalized Apply" from
@@ -244,6 +273,33 @@ public:
         REBVAL * applyOut
     ) {
         UNUSED(engine);
+
+        REBOL_STATE state;
+        // Copied from c-do.c and Do_String.
+        // Unfortunately, the real Halt_State used by QUIT is a global shared
+        // between Do_String and the exiting function Halt_Code.  And it's
+        // static to c-do.c - so as long as that is the case we can't catch
+        // QUIT unless we hook it ourself and add our own native to replace
+        // QUIT.  (Entirely DO-able...)
+
+        PUSH_STATE(state, Halt_State);
+        if (SET_JUMP(state)) {
+            POP_STATE(state, Halt_State);
+            Saved_State = Halt_State;
+            Catch_Error(DS_NEXT); // Stores error value here
+            REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
+            *val = *DS_NEXT;
+            if (VAL_ERR_NUM(val) == RE_QUIT) {
+                throw exit_command (VAL_INT32(VAL_ERR_VALUE(DS_NEXT)));
+            }
+            throw evaluation_error (Value (engine, *val));
+        }
+        SET_STATE(state, Halt_State);
+        // Use this handler for both, halt conditions (QUIT, HALT) and error
+        // conditions. As this is a top-level handler, simply overwriting
+        // Saved_State is safe.
+        Saved_State = Halt_State;
+
 
         int result = REN_SUCCESS;
 
@@ -382,6 +438,12 @@ public:
         // be written taking the binding refs into account
 
         UNSAVE_SERIES(aggregate);
+
+        // Pop our error trapping state
+
+        POP_STATE(state, Halt_State);
+        Saved_State = Halt_State;
+
         return result;
     }
 
@@ -459,7 +521,8 @@ public:
         if (len > bufSize) {
             len = bufSize;
             result = REN_BUFFER_TOO_SMALL;
-        } {
+        }
+        else {
             result = REN_SUCCESS;
         }
 
@@ -476,7 +539,27 @@ public:
     }
 };
 
+jmp_buf * RebolHooks::Halt_State = nullptr;
+
 RebolHooks hooks;
+
+int Fake_Quit(REBVAL *ds);
+
+int Fake_Quit(REBVAL *ds) {
+    REBVAL *val = D_ARG(2);
+
+    if (D_REF(3)) {
+        REBINT n = 0;
+        if (D_REF(1)) {
+            if (IS_INTEGER(val)) n = Int32(val);
+            else if (IS_TRUE(val)) n = 100;
+        }
+        OS_EXIT(n);
+    }
+
+    hooks.Fake_Halt_Code(RE_QUIT, val); // NONE if /return not set
+    DEAD_END;
+}
 
 } // end namespace internal
 

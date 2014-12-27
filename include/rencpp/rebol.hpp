@@ -11,6 +11,12 @@
 
 namespace ren {
 
+namespace internal {
+
+class RebolHooks;
+
+}
+
 // Not only is Runtime implemented on a per-binding basis
 // (hence not requiring virtual methods) but you can add more
 // specialized methods that are peculiar to just this runtime
@@ -20,7 +26,8 @@ private:
     Context * defaultContext;
     bool initialized;
 
-    REBVAL rebvalLoadFunction; // can it be garbage collected?
+    std::ostream * osPtr;
+    std::istream * isPtr;
 
 private:
     static REBVAL loadAndBindWord(
@@ -33,12 +40,23 @@ private:
 public:
     friend class internal::Loadable;
 
+private:
+    friend class internal::RebolHooks;
+    void lazyInitializeIfNecessary();
+
+
 public:
     RebolRuntime (bool someExtraInitFlag);
 
     void doMagicOnlyRebolCanDo();
 
-    void lazyInitializeIfNecessary();
+    std::ostream & setOutputStream(std::ostream & os);
+
+    std::istream & setInputStream(std::istream & is);
+
+    std::ostream & getOutputStream();
+
+    std::istream & getInputStream();
 
     ~RebolRuntime() override;
 };

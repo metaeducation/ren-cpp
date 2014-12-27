@@ -1,7 +1,16 @@
 #include <iostream>
 #include <sstream>
 
+#include <csignal>
+
 #include "rencpp/rebol.hpp"
+
+// Implemented in rebol-runtime.cpp - we don't really do anything other than
+// keep the Rebol request states of open/closed happy, it's a stub and we
+// feed to the C++ iostreams which take care of opening themselves
+
+extern "C" void Open_StdIO();
+
 
 namespace ren {
 
@@ -9,9 +18,13 @@ namespace ren {
 RebolRuntime runtime {true};
 Runtime & runtimeRef = runtime;
 
+namespace internal {
 
+// Implemented in rebol-hooks.cpp
 
-internal::Loadable::Loadable (char const * sourceCstr) :
+extern int Fake_Quit(REBVAL *ds);
+
+Loadable::Loadable (char const * sourceCstr) :
     Value (Value::Dont::Initialize)
 {
     // using REB_END as our "alien"
@@ -21,6 +34,8 @@ internal::Loadable::Loadable (char const * sourceCstr) :
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
 }
+
+} // end namespace internal
 
 
 bool Runtime::needsRefcount(REBVAL const & cell) {
@@ -33,15 +48,10 @@ bool Runtime::needsRefcount(REBVAL const & cell) {
 /// HOST BARE BONES HOOKS
 ///
 
-
-// Host bare-bones stdio functs:
-extern "C" void Open_StdIO(void);
-extern "C" void Put_Str(char *buf);
-extern "C" REBYTE *Get_Str();
-
 // This is redundant with the host lib crash hook...except it takes one
 // parameter.  It seems to be called only from those bare-bones I/O
 // functions in order to avoid a dependency on the host lib itself
+
 extern "C" void Host_Crash(REBYTE * message);
 void Host_Crash(REBYTE * message) {
     throw std::runtime_error(
@@ -69,7 +79,9 @@ void Host_Crash(REBYTE * message) {
 
 RebolRuntime::RebolRuntime (bool someExtraInitFlag) :
     Runtime (),
-    initialized (false)
+    initialized (false),
+    osPtr (&std::cout),
+    isPtr (&std::cin)
 {
     UNUSED(someExtraInitFlag);
 
@@ -82,16 +94,13 @@ RebolRuntime::RebolRuntime (bool someExtraInitFlag) :
 
     Host_Lib->os_crash =
         [](REBYTE const * title, REBYTE const * content) {
-            // This is our only error hook, and if we want to break errors
-            // down more specifically (without touching Rebol source) we'd
-            // have to parse the error strings to translate them into
-            // exception classes.  Left as an exercise for the reader
-            //
-            // We do throw it as an evaluation_error, so you at least know
-            // it was something wrong with the code you were evaluating and
-            // not something else
+            // This is our only error hook for certain types of "crashes"
+            // (evaluation_error is caught elsewhere).  If we want to
+            // break crashes down more specifically (without touching Rebol
+            // source) we'd have to parse the error strings to translate them
+            // into exception classes.  Left as an exercise for the reader
 
-            throw evaluation_error(
+            throw std::runtime_error(
                 std::string(reinterpret_cast<char const *>(title))
                 + " : " + reinterpret_cast<char const *>(content)
             );
@@ -212,10 +221,29 @@ void RebolRuntime::lazyInitializeIfNecessary() {
         Trace_Flags = 1;
     }
 
-    // Must be done before an console I/O can occur. Does not use reb-lib,
-    // so this device should open even if there are other problems.
+    // In the old way of thinking, this must be done before a console I/O can
+    // occur.  However now that we are hooking through to C++ iostreams with
+    // a replacement rebol-stdio.cpp (instead of os/posix/dev-stdio.cpp) that
+    // isn't really necessary.
 
-    Open_StdIO();  // also sets up interrupt handler
+    Open_StdIO();
+
+    // Set up the interrupt handler for things like Ctrl-C (which had
+    // previously been stuck in with stdio, because that's where the signals
+    // were coming from...like Ctrl-C at the keyboard).  Rencpp is more
+    // general, and if you are performing an evaluation in a GUI and want
+    // to handle a Ctrl-C on the gui thread during an infinite loop you need
+    // to be doing the evaluation on a worker thread and signal it from GUI
+
+    auto signalHandler = [](int sig) {
+        UNUSED(sig);
+        std::cout << "[escape]";
+        SET_SIGNAL(SIG_ESCAPE);
+    };
+
+    signal(SIGINT, signalHandler);
+    signal(SIGHUP, signalHandler);
+    signal(SIGTERM, signalHandler);
 
     // Initialize the REBOL library (reb-lib):
     if (!CHECK_STRUCT_ALIGN)
@@ -252,14 +280,17 @@ void RebolRuntime::lazyInitializeIfNecessary() {
     if (Init_Mezz(0) != 0 /* "zero for success" */)
         throw std::runtime_error("RebolHooks: Mezzanine startup failure");
 
-    // Now that the mezzanine is loaded, we rely somewhat on LOAD for
-    // functionality and it's not in the box.  So we need to save the
-    // REBVAL for it, and maybe some others.
+    // There is an unfortunate property of QUIT which is that it calls
+    // Halt_Code, which uses a jump buffer Halt_State which is static to
+    // c-do.c - hence we cannot catch QUIT.  Unless...we rewrite the value
+    // it is set to, to use a "fake quit" that shares the jump buffer we
+    // use for execution...
 
-    REBVAL loadWord = loadAndBindWord(Lib_Context, "load");
-    rebvalLoadFunction = *Get_Var(&loadWord);
+    REBVAL quitWord = loadAndBindWord(Lib_Context, "quit");
 
-    if (!IS_FUNCTION(&rebvalLoadFunction)) {
+    REBVAL quitNative = *Get_Var(&quitWord);
+
+    if (not IS_NATIVE(&quitNative)) {
 
         // If you look at sys-value.h and check out the definition of
         // REBHDR, you will see that the order of fields depends on the
@@ -270,7 +301,7 @@ void RebolRuntime::lazyInitializeIfNecessary() {
         // we can't find "load" in the Mezzanine, we look for the
         // scrambling in question and tell you that's what the problem is
 
-        if (rebvalLoadFunction.flags.flags.resv == REB_FUNCTION) {
+        if (quitNative.flags.flags.resv == REB_NATIVE) {
             throw std::runtime_error(
                 "Bit field order swap detected..."
                 " Did you compile Rebol with a different setting for"
@@ -281,9 +312,13 @@ void RebolRuntime::lazyInitializeIfNecessary() {
         // If that wasn't the problem, it was something else.
 
         throw std::runtime_error(
-            "Couldn't get LOAD function from Mezzanine for unknown reason"
+            "Couldn't get QUIT native for unknown reason"
         );
     }
+
+    // Tweak the bits to put our fake quit function in and save it back
+    quitNative.data.func.func.code = &internal::Fake_Quit;
+    Set_Var(&quitWord, &quitNative);
 
     initialized = true;
 }
@@ -295,9 +330,31 @@ void RebolRuntime::doMagicOnlyRebolCanDo() {
 }
 
 
+std::ostream & RebolRuntime::setOutputStream(std::ostream & os) {
+    auto temp = osPtr;
+    osPtr = &os;
+    return *temp;
+}
+
+
+std::istream & RebolRuntime::setInputStream(std::istream & is) {
+    auto temp = isPtr;
+    isPtr = &is;
+    return *temp;
+}
+
+
+std::ostream & RebolRuntime::getOutputStream() {
+    return *osPtr;
+}
+
+
+std::istream & RebolRuntime::getInputStream() {
+    return *isPtr;
+}
+
 
 RebolRuntime::~RebolRuntime () {
-    //OS_Call_Device(RDI_STDIO, RDC_CLOSE);
     OS_QUIT_DEVICES(0);
 }
 

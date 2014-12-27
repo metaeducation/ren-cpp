@@ -18,7 +18,7 @@ Runtime::Runtime() {
 std::string Runtime::form(Value const & value) {
     const size_t defaultBufLen = 100;
 
-    std::vector<char> buffer {defaultBufLen};
+    std::vector<char> buffer (defaultBufLen);
 
     size_t numBytes;
 
@@ -58,7 +58,8 @@ std::string Runtime::form(Value const & value) {
             throw std::runtime_error("Unknown error in RenFormAsUtf8");
     }
 
-    return std::string(buffer.data(), numBytes);
+    auto result = std::string(buffer.data(), numBytes);
+    return result;
 }
 
 }

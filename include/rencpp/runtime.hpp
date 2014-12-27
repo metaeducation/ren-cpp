@@ -5,6 +5,7 @@
 
 #include "common.hpp"
 #include "values.hpp"
+#include "exceptions.hpp"
 #include "context.hpp"
 #include "engine.hpp"
 

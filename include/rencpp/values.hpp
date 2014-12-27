@@ -10,9 +10,9 @@
 #include <type_traits>
 #include <array>
 
-#include "common.hpp"
+#include <typeinfo> // std::bad_cast
 
-#include "exceptions.hpp"
+#include "common.hpp"
 
 
 extern "C" {
@@ -62,12 +62,49 @@ namespace internal {
     // seem more obvious that users shouldn't be creating instances of it
     // themselves, despite the requirement of public construction functions.
     //
-   class Loadable;
+    class Loadable;
+
+#ifndef REN_RUNTIME
+#elif REN_RUNTIME == REN_RUNTIME_RED
+    class FakeRedHooks;
+#elif REN_RUNTIME == REN_RUNTIME_REBOL
+    class RebolHooks;
+#else
+    static_assert(false, "Invalid runtime setting")
+#endif
+
 }
 
 template <class R, class... Ts> class Extension;
 
 struct none_t;
+
+
+
+///
+/// CAST EXCEPTION
+///
+
+//
+// Although we can define most of the exceptions in exceptions.hpp, this one
+// is thrown by Value itself in templated code and needs to be here
+//
+
+class bad_value_cast final : public std::bad_cast {
+private:
+    std::string whatString;
+
+public:
+    bad_value_cast (std::string const & whatString) :
+        whatString (whatString)
+    {
+    }
+
+    char const * what() const noexcept override {
+        return whatString.c_str();
+    }
+};
+
 
 
 ///
@@ -91,8 +128,13 @@ protected:
 public: // temporary for the lambda in function, find better way
     RenCell cell;
 
-#ifndef LINKED_WITH_RED_AND_NOT_A_TEST
+#ifndef REN_RUNTIME
+#elif REN_RUNTIME == REN_RUNTIME_RED
     friend class FakeRedHooks;
+#elif REN_RUNTIME == REN_RUNTIME_REBOL
+    friend class internal::RebolHooks;
+#else
+    static_assert(false, "Invalid runtime setting")
 #endif
 
     //
@@ -137,6 +179,7 @@ protected:
     // with checking their invalidity and throwing an exception
     //
     template <class R, class... Ts> friend class Extension;
+    explicit Value (RenEngineHandle engine, RenCell const & cell);
     explicit Value (Engine & engine, RenCell const & cell);
 
 
