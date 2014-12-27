@@ -4,6 +4,8 @@
 #include <QMainWindow>
 
 class RenConsole;
+class WatchList;
+
 QT_BEGIN_NAMESPACE
 class QAction;
 class QMenu;
@@ -40,8 +42,15 @@ private:
     void readSettings();
     void writeSettings();
 
-    RenConsole *console;
+    // Should be private but just doing hack-and-slash testing right now
+    // of Rencpp, not overly concerned about the elegance of this program
+    // until that is assuredly elegant...!
+public:
+    RenConsole * console;
+    QDockWidget * dockWatch;
+    WatchList * watchList;
 
+private:
     QMenu *fileMenu;
     QMenu *editMenu;
     QMenu *windowMenu;

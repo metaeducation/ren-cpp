@@ -2,6 +2,7 @@
 
 #include "mainwindow.h"
 #include "renconsole.h"
+#include "watchlist.h"
 
 #include "rencpp/ren.hpp"
 
@@ -13,6 +14,15 @@ MainWindow::MainWindow()
 //    console->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 //    console->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setCentralWidget(console);
+
+    dockWatch = new QDockWidget(tr("watch"), this);
+    dockWatch->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+
+    watchList = new WatchList (this);
+    dockWatch->setWidget(watchList);
+
+    addDockWidget(Qt::RightDockWidgetArea, dockWatch);
+    dockWatch->hide();
 
     createActions();
     createMenus();

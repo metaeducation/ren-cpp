@@ -1,11 +1,12 @@
 #include <QtWidgets>
 
+#include "rencpp/ren.hpp"
+#include "rencpp/runtime.hpp"
+
 #include "renconsole.h"
 #include "mainwindow.h"
 #include "fakestdio.h"
-
-#include "rencpp/ren.hpp"
-#include "rencpp/runtime.hpp"
+#include "watchlist.h"
 
 
 
@@ -83,41 +84,56 @@ RenConsole::RenConsole(MainWindow * parent) :
 
     Worker * worker = new Worker;
     worker->moveToThread(&workerThread);
-    connect(&workerThread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(this, &RenConsole::operate, worker, &Worker::doWork);
-    connect(worker, &Worker::resultReady, this, &RenConsole::handleResults);
+    connect(
+        &workerThread, &QThread::finished,
+        worker, &QObject::deleteLater,
+        Qt::DirectConnection
+    );
+    connect(
+        this, &RenConsole::operate,
+        worker, &Worker::doWork,
+        Qt::QueuedConnection
+    );
+    connect(
+        worker, &Worker::resultReady,
+        this, &RenConsole::handleResults,
+        // technically it can't handle more results...but better perhaps
+        // to crash than to block if some new invariant is introduced and
+        // make it look like it's working.
+        Qt::QueuedConnection
+    );
     workerThread.start();
 
     // Now do the banner using images packed into the resource file
 
     QTextCursor cursor = textCursor();
+
+    cursor.insertImage(QImage (":/images/red-logo.png"));
+
     cursor.insertImage(QImage (":/images/rebol-logo.png"));
+
+    cursor.insertText("\n");
 
     QTextCharFormat headerFormat;
     headerFormat.setFont(QFont("Helvetica", 24, QFont::Bold));
     cursor.insertText("Ren [人] Workbench", headerFormat);
-
-    cursor.insertImage(QImage (":/images/red-logo.png"));
 
     QTextCharFormat subheadingFormat;
     subheadingFormat.setForeground(Qt::darkGray);
     cursor.insertText("\n", subheadingFormat);
 
     std::vector<char const *> components = {
-        "<i><b>Red</b> is Copyright 2014 Nenad Rakocevic,"
-        " BSD License</i>",
+        "<i><b>Red</b> is © 2014 Nenad Rakocevic, BSD License</i>",
 
-        "<i><b>Rebol</b> is Copyright 2014 REBOL Technologies,"
-        " Apache 2 License</i>",
+        "<i><b>Rebol</b> is © 2014 REBOL Technologies, Apache 2 License</i>",
 
-        "<i><b>Rencpp</b></b> binding is Copyright 2014 HostileFork.com,"
-        " Boost Software License</i>",
+        "<i><b>Rencpp</b></b> is © 2014 HostileFork.com, Boost License</i>",
 
-        "<i><b>Qt</b> is Copyright 2014 Digia Plc and/or its subsidiary(-ies),"
-        " LGPL 2.1 or GPL 3.0 License</i>",
+        "<i><b>Qt</b> is © 2014 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
 
-        "<i><b>Ren Workbench</b> is Copyright 2014 HostileFork.com,"
-        " GPL 3.0 License</i>"
+        "",
+
+        "<i><b>Ren Workbench</b> is © 2014 HostileFork.com, GPL 3 License</i>"
     };
 
     // A quick shout-out to C++11's "range-based for"
@@ -342,6 +358,8 @@ void RenConsole::handleResults(
             + static_cast<std::string>(delta).c_str()
         );
     }
+
+    parent->watchList->updateWatches();
 }
 
 
@@ -351,6 +369,7 @@ void RenConsole::handleResults(
 ///
 
 RenConsole::~RenConsole() {
+    ren::runtime.cancel();
     workerThread.quit();
     workerThread.wait();
 }
