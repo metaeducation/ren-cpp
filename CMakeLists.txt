@@ -73,10 +73,24 @@ macro(add_cxx_flags flags)
 endmacro()
 
 
+# Allow removing of flags from CMAKE_CXX_FLAGS
+#
+# http://stackoverflow.com/a/18234926/211160
+
+macro(remove_cxx_flag flag)
+    string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endmacro()
+
+
+#
 # Default to looking for the runtime installation up one level
+#
+# We use absolute paths here to find almost all files so that the directories
+# which inherit this file's settings vs add_subdirectory will still work
+#
 
 if (RUNTIME AND NOT RUNTIME_PATH)
-    set(RUNTIME_PATH "../${RUNTIME}")
+    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${RUNTIME})
 endif()
 
 
@@ -89,15 +103,11 @@ endif()
 add_cxx_flags("-std=c++11")
 
 
-#
 # Turn up the warnings very high.
 # Currently not adding in -Wshadow, because I like naming constructor
 # arguments the same thing as the variables they initialize.
 #
 # http://stackoverflow.com/a/9862800/211160
-#
-# Also, -pedantic and -Wold-style-cast are disabled in the Rebol build
-#
 
 add_cxx_flags("-Wall")
 add_cxx_flags("-Wsign-conversion")
@@ -121,29 +131,30 @@ add_cxx_flags("-Wswitch-default")
 add_cxx_flags("-Wundef")
 add_cxx_flags("-Werror")
 add_cxx_flags("-Wno-unused")
+add_cxx_flags("-pedantic")
+add_cxx_flags("-Wold-style-cast")
 
 
-#
 # Include files intended to be used by clients of the binding are under
 # %include/rencpp/ so that includes are prefixed as:
 #
 #     #include "rencpp/feature.hpp"
 #
 # The implementation cpp files and *internal* headers are in src/
-#
 
-include_directories(. include src)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 
-#
 # We build all the sources in the %src/ directory regardless of which
 # binding is being used.
-#
 
-aux_source_directory(src SRC_LIST)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_LIST)
 
 
-#
 # Include files aren't technically necessary for the make, but you have
 # to point them out to show up in QtCreator/VisualStudio/Xcode in your
 # project tree.
@@ -156,10 +167,12 @@ aux_source_directory(src SRC_LIST)
 # http://stackoverflow.com/questions/1167154/#comment10556582_5843681
 #
 # Better ideas welcome.
-#
 
-file(GLOB INC_LIST "${CMAKE_CURRENT_SOURCE_DIR}/include/rencpp/*.h*"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h*")
+file(
+    GLOB INC_LIST
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/rencpp/*.h*
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h*
+)
 
 
 
@@ -180,22 +193,19 @@ elseif(RUNTIME STREQUAL "red")
     # Include all the sources specific to the Red Binding
     # (Exclude the Rebol ones for this build)
 
-    aux_source_directory(src/red-binding SRC_BINDING_LIST)
+    aux_source_directory(
+        ${CMAKE_CURRENT_SOURCE_DIR}src/red-binding
+        SRC_BINDING_LIST
+    )
 
     # The CMake variable for "RUNTIME" is distinct from the flag we use in
     # the headers, and controls more things (as you can see)
 
     add_definitions("-DREN_RUNTIME=REN_RUNTIME_RED")
 
-    # Rebol is written in "old" ANSI C, so when we include its headers then it
-    # can have some complaints if the warnings are set too high.  The Red
-    # binding has these warnings turned on because there's no old C headers
-
-    add_cxx_flags("-pedantic -Wold-style-cast")
-
     # Add any extra includes for the project browser
 
-    file(GLOB INC_BINDING "${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding/*.h*")
+    file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding/*.h*)
     set(INC_LIST ${INC_LIST} ${INC_BINDING})
 
 elseif(RUNTIME STREQUAL "rebol")
@@ -227,20 +237,31 @@ elseif(RUNTIME STREQUAL "rebol")
     # rebol in the include directory.  So worst case scenario, do that.
     # This should work for most cases.
 
-    add_cxx_flags("-I${RUNTIME_PATH}/../")
+    add_cxx_flags(-I${RUNTIME_PATH}/../)
 
     # Include all the sources specific to the Rebol Binding
     # (Exclude the Red ones for this build)
 
-    aux_source_directory(src/rebol-binding SRC_BINDING_LIST)
+    aux_source_directory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/rebol-binding
+        SRC_BINDING_LIST
+    )
 
     # Put the Rebol headers in so you can search them in the project
 
-    file(GLOB INC_REBOL "${RUNTIME_PATH}/src/include/*.h")
+    file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
+
+    # Rebol is written in "old" ANSI C, so when we include its headers then it
+    # can have some complaints if the warnings are set too high.  We tone the
+    # strictness down a little so the headers will work.
+
+    remove_cxx_flag("-pedantic")
+    remove_cxx_flag("-Wold-style-cast")
+    remove_cxx_flag("-Wsign-conversion")
 
     # Add any extra includes for the project browser
 
-    file(GLOB INC_BINDING "${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*")
+    file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
     set(INC_LIST ${INC_LIST} ${INC_BINDING} ${INC_REBOL})
 
     # The CMake variable for "RUNTIME" is distinct from the flag we use in
@@ -258,15 +279,8 @@ elseif(RUNTIME STREQUAL "rebol")
     # instance so that the program you link with the binding is
     # the entry point.
 
-    file(
-        GLOB EXTRA_OBJS
-        RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-        "${CMAKE_CURRENT_SOURCE_DIR}/${RUNTIME_PATH}/make/objs/*.o"
-    )
+    file(GLOB EXTRA_OBJS ${RUNTIME_PATH}/make/objs/*.o)
     list(REMOVE_ITEM EXTRA_OBJS ${RUNTIME_PATH}/make/objs/host-main.o)
-
-    message(STATUS "path" "${CMAKE_CURRENT_SOURCE_DIR}/${RUNTIME_PATH}")
-    message(STATUS "extra_objs" ${EXTRA_OBJS})
 
     # Speaking of things to rip out, the great-wall-of-Rebol-lib
     # is one of them.  It's a fairly anemic interface; the binding
@@ -274,10 +288,21 @@ elseif(RUNTIME STREQUAL "rebol")
     # could have done.  Don't have to remove them...but they're
     # not useful when you have the full interpreter internals available
 
-    list(REMOVE_ITEM EXTRA_OBJS
-        "{$RUNTIME_PATH}/make/objs/a-lib2.o"
-        "{$RUNTIME_PATH}/make/objs/a-lib.o"
-    )
+    #list(REMOVE_ITEM EXTRA_OBJS
+    #    ${RUNTIME_PATH}/make/objs/a-lib2.o
+    #    ${RUNTIME_PATH}/make/objs/a-lib.o
+    #)
+
+    # The binding could replace the entirety of the "host", implementing all
+    # the network calls in "Rebolese" using its ioctl system.  That's work
+    # one should only do selectively.  One thing you can't really punt on
+    # if you're going to do an interesting demo is capturing the stdio, so
+    # the hooks are reimplemented to speak to the C++ iostreams and we axe
+    # the host kit one.
+
+    list(REMOVE_ITEM EXTRA_OBJS ${RUNTIME_PATH}/make/objs/dev-stdio.o)
+
+    message(STATUS "extra_objs" ${EXTRA_OBJS})
 
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
@@ -292,72 +317,15 @@ else()
 endif()
 
 
-set(SRC_ALL ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST} ${EXTRA_OBJS})
-
-
-
-#
-# These tests do not require an evaluator, and simply test Ren values
-#
-
-add_executable(literals-test examples/literals-test.cpp ${SRC_ALL})
-target_link_libraries(literals-test ${LIBS_ALL})
-
-add_executable(cast-test examples/cast-test.cpp ${SRC_ALL})
-target_link_libraries(cast-test ${LIBS_ALL})
-
-add_executable(block-test examples/block-test.cpp ${SRC_ALL})
-target_link_libraries(block-test ${LIBS_ALL})
-
-add_executable(assign-test examples/assign-test.cpp ${SRC_ALL})
-target_link_libraries(assign-test ${LIBS_ALL})
-
-add_executable(form-test examples/form-test.cpp ${SRC_ALL})
-target_link_libraries(form-test ${LIBS_ALL})
-
+set(SRC_ALL ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST})
 
 
 #
-# These tests should work with any evaluator, assuming there is one
+# examples/ has its own CMakeLists.txt, with settings pertinent to each
+# case (e.g. OpenGL configuration, etc.), but inherits the settings
+# from this file.
+#
+#     http://stackoverflow.com/q/7979963/211160
 #
 
-if(NOT RUNTIME STREQUAL "none")
-
-    add_executable(apply-test examples/apply-test.cpp ${SRC_ALL})
-    target_link_libraries(apply-test ${LIBS_ALL})
-
-    add_executable(parse-test-1 examples/parse-test-1.cpp ${SRC_ALL})
-    target_link_libraries(parse-test-1 ${LIBS_ALL})
-
-    add_executable(parse-test-2 examples/parse-test-2.cpp ${SRC_ALL})
-    target_link_libraries(parse-test-2 ${LIBS_ALL})
-
-    add_executable(context-test examples/context-test.cpp ${SRC_ALL})
-    target_link_libraries(context-test ${LIBS_ALL})
-
-    add_executable(extension-test-1 examples/extension-test-1.cpp ${SRC_ALL})
-    target_link_libraries(extension-test-1 ${LIBS_ALL})
-
-    add_executable(extension-test-2 examples/extension-test-2.cpp ${SRC_ALL})
-    target_link_libraries(extension-test-2 ${LIBS_ALL})
-
-endif()
-
-
-
-#
-# These tests can call methods on the runtime object that are specific to
-# the evaluator in use.
-#
-
-if(RUNTIME STREQUAL "red")
-
-    add_executable(red-test examples/red-test.cpp ${SRC_ALL})
-    target_link_libraries(red-test ${LIBS_ALL})
-
-elseif(RUNTIME STREQUAL "rebol")
-
-    add_executable(rebol-test examples/rebol-test.cpp ${SRC_ALL})
-    target_link_libraries(rebol-test ${LIBS_ALL})
-
-endif()
+add_subdirectory(examples)
