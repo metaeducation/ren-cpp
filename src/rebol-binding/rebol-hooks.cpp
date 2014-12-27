@@ -7,12 +7,17 @@
 #include "rencpp/rebol.hpp"
 
 #include <vector>
+#include <algorithm>
+
+#include <thread>
 
 extern "C" {
 #include "rebol/src/include/sys-value.h"
 #include "rebol/src/include/sys-state.h"
 
 extern jmp_buf * Halt_State;
+void Init_Task_Context();	// Special REBOL values per task
+
 }
 
 
@@ -43,6 +48,98 @@ public:
 
 
 ///
+/// THREAD INITIALIZATION
+///
+
+//
+// There are some thread-local pieces of state that need to be initialized
+// or Rebol will complain.  However, we also want to be able to initialize
+// on demand from whichever thread calls first.  This means we need to
+// keep a list of which threads have been initialized and which not.
+//
+// REVIEW: what if threads die and don't tell us?  Is there some part of
+// the puzzle to ensure any thread that communicates with some form of
+// allocation must come back with a free?
+//
+
+    std::vector<std::thread::id> threadsSeen;
+
+    void lazyThreadInitializeIfNeeded(RebolEngineHandle engine) {
+        if (
+            std::find(
+                threadsSeen.begin(),
+                threadsSeen.end(),
+                std::this_thread::get_id()
+            )
+            == std::end(threadsSeen)
+        ) {
+            int marker;
+            REBCNT bounds = OS_CONFIG(1, 0);
+
+            if (bounds == 0)
+                bounds = STACK_BOUNDS;
+
+        #ifdef OS_STACK_GROWS_UP
+            Stack_Limit = (REBCNT)(&marker) + bounds;
+        #else
+            if (bounds > (REBCNT)(&marker))
+                Stack_Limit = 100;
+            else
+                Stack_Limit = (REBCNT)(&marker) - bounds;
+        #endif
+
+            REBOL_STATE state;
+            // Copied from c-do.c and Do_String.
+
+            // Unfortunate fact #1: setjmp and longjmp do not play well with
+            // C++ or anything requiring stack-unwinding.
+            //
+            //     http://stackoverflow.com/a/1376099/211160
+            //
+            // This means an error has a good chance of skipping destructors
+            // here, and really everything would need to be written in pure C
+            // to be safe.
+
+            // Unfortunate fact #2, the real Halt_State used by QUIT is a global
+            // shared between Do_String and the exiting function Halt_Code.  And
+            // it's static to c-do.c - that has to be edited to communicate with
+            // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
+            // with a new function, but evaluation interrupts can't.)
+
+            PUSH_STATE(state, Halt_State);
+            if (SET_JUMP(state)) {
+                POP_STATE(state, Halt_State);
+                Saved_State = Halt_State;
+                Catch_Error(DS_NEXT); // Stores error value here
+                REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
+                *val = *DS_NEXT;
+                if (VAL_ERR_NUM(val) == RE_QUIT) {
+                    throw exit_command (VAL_INT32(VAL_ERR_VALUE(DS_NEXT)));
+                }
+                if (VAL_ERR_NUM(val) == RE_HALT) {
+                    throw evaluation_cancelled {};
+                }
+                throw evaluation_error (Value (engine, *val));
+            }
+            SET_STATE(state, Halt_State);
+
+            // Use this handler for both, halt conditions (QUIT, HALT) and error
+            // conditions. As this is a top-level handler, simply overwriting
+            // Saved_State is safe.
+            Saved_State = Halt_State;
+
+            Init_Task();	// Special REBOL values per task
+
+            // Pop our error trapping state
+
+            POP_STATE(state, Halt_State);
+            Saved_State = Halt_State;
+
+            threadsSeen.push_back(std::this_thread::get_id());
+        }
+    }
+
+///
 /// ENGINE ALLOCATION AND FREEING
 ///
 
@@ -55,6 +152,9 @@ public:
             );
 
         runtime.lazyInitializeIfNecessary();
+
+        // The root initialization initializes its thread-locals
+        threadsSeen.push_back(std::this_thread::get_id());
 
         theEngine.data = 1020;
         *engineOut = theEngine;
@@ -81,6 +181,8 @@ public:
         RebolEngineHandle engine,
         RebolContextHandle * contextOut
     ) {
+        lazyThreadInitializeIfNeeded(engine);
+
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
@@ -113,6 +215,7 @@ public:
         RebolEngineHandle engine,
         RebolContextHandle context
     ) {
+        lazyThreadInitializeIfNeeded(engine);
 
         assert(allocatedContexts);
 
@@ -159,6 +262,8 @@ public:
         char const * name,
         RebolContextHandle * contextOut
     ) {
+        lazyThreadInitializeIfNeeded(engine);
+
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
@@ -205,7 +310,23 @@ public:
 
             Apply_Block(applicand, &block, reduce);
 
-        } else {
+        }
+        else if (IS_ERROR(applicand)) {
+            if (SERIES_LEN(args) - 1 != 0)
+                return REN_ERROR_TOO_MANY_ARGS;
+
+            // from REBNATIVE(do) ?  What's the difference?  How return?
+            if (IS_THROW(applicand)) {
+                DS_PUSH(applicand);
+            } else {
+                Throw_Error(VAL_ERR_OBJECT(applicand));
+
+                throw std::runtime_error(
+                    "Threw error from Generalized_Apply but it kept running"
+                );
+            }
+        }
+        else {
             assert(not reduce); // To be added?
 
             Insert_Series(args, 0, reinterpret_cast<REBYTE *>(applicand), 1);
@@ -250,13 +371,20 @@ public:
     ) {
         UNUSED(engine);
 
+        lazyThreadInitializeIfNeeded(engine);
+
         REBOL_STATE state;
-        // Copied from c-do.c and Do_String.
-        // Unfortunately, the real Halt_State used by QUIT is a global shared
-        // between Do_String and the exiting function Halt_Code.  And it's
-        // static to c-do.c - so as long as that is the case we can't catch
-        // QUIT unless we hook it ourself and add our own native to replace
-        // QUIT.  (Entirely DO-able...)
+
+        // Haphazardly copied from c-do.c and Do_String; review needed now
+        // that it is understood better.
+        //
+        //     https://github.com/hostilefork/rencpp/issues/21
+
+        // Unfortunate fact #2, the real Halt_State used by QUIT is a global
+        // shared between Do_String and the exiting function Halt_Code.  And
+        // it's static to c-do.c - that has to be edited to communicate with
+        // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
+        // with a new function, but evaluation interrupts can't.)
 
         PUSH_STATE(state, Halt_State);
         if (SET_JUMP(state)) {
@@ -274,11 +402,11 @@ public:
             throw evaluation_error (Value (engine, *val));
         }
         SET_STATE(state, Halt_State);
+
         // Use this handler for both, halt conditions (QUIT, HALT) and error
         // conditions. As this is a top-level handler, simply overwriting
         // Saved_State is safe.
         Saved_State = Halt_State;
-
 
         int result = REN_SUCCESS;
 
@@ -291,6 +419,9 @@ public:
         }
 
         char * current = reinterpret_cast<char *>(loadablesPtr);
+
+        // Vector is bad to use with setjmp/longjmp, fix this
+
         std::vector<std::pair<REBSER *, REBVAL *>> tempSeriesOrValues;
 
         // For the initial state of the binding we'll focus on correctness
@@ -432,6 +563,8 @@ public:
         size_t numCells,
         size_t sizeofCellBlock
     ) {
+        lazyThreadInitializeIfNeeded(engine);
+
         char * current = reinterpret_cast<char *>(cellsPtr);
         for (size_t index = 0; index < numCells; index++) {
             REBVAL * cell = reinterpret_cast<REBVAL *>(current);
@@ -466,6 +599,8 @@ public:
         size_t bufSize,
         size_t * numBytesOut
     ) {
+        lazyThreadInitializeIfNeeded(engine);
+
 #ifndef NDEBUG
         if (ANY_SERIES(value)) {
             auto it = nodes.find(engine.data);

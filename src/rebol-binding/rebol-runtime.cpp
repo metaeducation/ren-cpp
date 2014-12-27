@@ -102,6 +102,28 @@ RebolRuntime::RebolRuntime (bool someExtraInitFlag) :
                 + " : " + reinterpret_cast<char const *>(content)
             );
         };
+
+    int marker;
+    REBCNT bounds = OS_CONFIG(1, 0);
+
+    if (bounds == 0)
+        bounds = STACK_BOUNDS;
+
+#ifdef OS_STACK_GROWS_UP
+    Stack_Limit = (REBCNT)(&marker) + bounds;
+#else
+    if (bounds > (REBCNT)(&marker))
+        Stack_Limit = 100;
+    else
+        Stack_Limit = (REBCNT)(&marker) - bounds;
+#endif
+
+    // Rebytes, version numbers
+    // REBOL_VER
+    // REBOL_REV
+    // REBOL_UPD
+    // REBOL_SYS
+    // REBOL_VAR
 }
 
 
@@ -156,36 +178,6 @@ REBVAL RebolRuntime::loadAndBindWord(
 bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
         return false;
-
-    //
-    // I thought this stack measuring thing could be done in the constructor,
-    // but Rebol isn't prepared to have more than one thread, maybe?  It
-    // seems maybe something is setup when you call init and if you try to
-    // call Make_Series from another thread it complains.  Look into it.
-    //
-
-    int marker;
-    REBCNT bounds = OS_CONFIG(1, 0);
-
-    if (bounds == 0)
-        bounds = STACK_BOUNDS;
-
-#ifdef OS_STACK_GROWS_UP
-    Stack_Limit = (REBCNT)(&marker) + bounds;
-#else
-    if (bounds > (REBCNT)(&marker))
-        Stack_Limit = 100;
-    else
-        Stack_Limit = (REBCNT)(&marker) - bounds;
-#endif
-
-    // Rebytes, version numbers
-    // REBOL_VER
-    // REBOL_REV
-    // REBOL_UPD
-    // REBOL_SYS
-    // REBOL_VAR
-
 
     // Although you can build and pass a REBARGS structure yourself and
     // set appropriate defaults, the easiest idea is to formulate your
@@ -251,7 +243,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     signal(SIGTERM, signalHandler);
 
     // Initialize the REBOL library (reb-lib):
-    if (!CHECK_STRUCT_ALIGN)
+    if (not CHECK_STRUCT_ALIGN)
         throw std::runtime_error(
             "RebolHooks: Incompatible struct alignment"
         );
