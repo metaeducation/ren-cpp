@@ -239,7 +239,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     };
 
     signal(SIGINT, signalHandler);
+#ifdef SIGHUP
     signal(SIGHUP, signalHandler);
+#endif
     signal(SIGTERM, signalHandler);
 
     // Initialize the REBOL library (reb-lib):
