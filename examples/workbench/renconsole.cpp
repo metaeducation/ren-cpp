@@ -7,6 +7,19 @@
 #include "rencpp/ren.hpp"
 #include "rencpp/runtime.hpp"
 
+///
+/// CONSOLE CONSTRUCTOR
+///
+
+//
+// Right now the console constructor is really mostly about setting up a
+// long graphical banner.  Because spending time on things of that sort is
+// like what Penn and Teller say about smoking:
+//
+//     "Don't do it.
+//        (...unless you want to look cool.)"
+//
+
 RenConsole::RenConsole(MainWindow * parent) :
     parent (parent),
     prompt (">>"),
@@ -17,7 +30,7 @@ RenConsole::RenConsole(MainWindow * parent) :
 
     QTextCharFormat headerFormat;
     headerFormat.setFont(QFont("Helvetica", 24, QFont::Bold));
-    cursor.insertText("[Ren] Workbench", headerFormat);
+    cursor.insertText("Ren [人] Workbench", headerFormat);
 
     cursor.insertImage(QImage (":/images/red-logo.png"));
 
@@ -25,35 +38,29 @@ RenConsole::RenConsole(MainWindow * parent) :
     subheadingFormat.setForeground(Qt::darkGray);
     cursor.insertText("\n", subheadingFormat);
 
-    cursor.insertHtml(
+    std::vector<char const *> components = {
         "<i><b>Red</b> is Copyright 2014 Nenad Rakocevic,"
-        " BSD License</i>"
-    );
-    cursor.insertText("\n");
+        " BSD License</i>",
 
-    cursor.insertHtml(
         "<i><b>Rebol</b> is Copyright 2014 REBOL Technologies,"
-        " Apache 2 License</i>"
-    );
-    cursor.insertText("\n");
+        " Apache 2 License</i>",
 
-    cursor.insertHtml(
         "<i><b>Rencpp</b></b> binding is Copyright 2014 HostileFork.com,"
-        " Boost Software License</i>"
-    );
-    cursor.insertText("\n");
+        " Boost Software License</i>",
 
-    cursor.insertHtml(
         "<i><b>Qt</b> is Copyright 2014 Digia Plc and/or its subsidiary(-ies),"
-        " LGPL 2.1 or GPL 3.0 License</i>"
-    );
-    cursor.insertText("\n");
+        " LGPL 2.1 or GPL 3.0 License</i>",
 
-    cursor.insertHtml(
-        "<i><b>[Ren] Workbench</b> is Copyright 2014 HostileFork.com,"
+        "<i><b>Ren Workbench</b> is Copyright 2014 HostileFork.com,"
         " GPL 3.0 License</i>"
-    );
-    cursor.insertText("\n");
+    };
+
+    // A quick shout-out to C++11's "range-based for"
+
+    for (auto & credit : components) {
+        cursor.insertHtml(credit);
+        cursor.insertText("\n");
+    }
 
     // Center all that stuff
 
@@ -70,15 +77,14 @@ RenConsole::RenConsole(MainWindow * parent) :
 
     // Now let's put out a prompt
 
-    cursor.insertText("\n");
-
     promptFormat.setForeground(Qt::darkGray);
     promptFormat.setFontWeight(QFont::Bold);
-    cursor.insertText(prompt, promptFormat);
 
+    cursor.insertText("\n");
+    cursor.insertText(prompt, promptFormat);
     cursor.insertText(" ", QTextCharFormat ());
 
-    // move the cursor to the end of the text, and remember it
+    // move the cursor to the end of the text, and remember its position
 
     inputPos = cursor.position();
 

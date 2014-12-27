@@ -3,8 +3,12 @@
 #include "mainwindow.h"
 #include "renconsole.h"
 
+#include "rencpp/ren.hpp"
+
 MainWindow::MainWindow()
 {
+    qRegisterMetaType<ren::Value>("ren::Value");
+
     console = new RenConsole (this);
 //    console->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 //    console->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -18,7 +22,7 @@ MainWindow::MainWindow()
 
     readSettings();
 
-    setWindowTitle(tr("[Ren] Workbench"));
+    setWindowTitle(tr("Ren [人] Workbench"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -48,9 +52,15 @@ void MainWindow::paste()
 
 void MainWindow::about()
 {
-   QMessageBox::about(this, tr("About [Ren] Workbench"),
-            tr("The <b>[Ren] Workbench</b> example demonstrates integrating"
-               " the rencpp binding with Qt."));
+    QMessageBox::about(
+        this,
+        tr("About Ren [人] Workbench"),
+        tr(
+            "The <b>Ren [人] Workbench</b> integrates Rebol or Red evaluators"
+            " into a Qt-based environment, by utilizing the Rencpp binding."
+            " Copyright 2014 HostileFork.com"
+        )
+    );
 }
 
 void MainWindow::updateMenus()
