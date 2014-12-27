@@ -18,28 +18,11 @@
 #include "rencpp/rebol.hpp"
 
 
-#define BUF_SIZE (16*1024)
-
 #define SF_DEV_NULL 31		// local flag to mark NULL device
-
-
-static REBOOL Redir_Out = 0; // redirection flags
-static REBOOL Redir_Inp = 0;
 
 
 extern REBDEV *Devices[];
 
-extern "C" {
-#ifndef HAS_SMART_CONSOLE	// console line-editing and recall needed
-void *Init_Terminal();
-void Quit_Terminal(void*);
-int  Read_Line(void*, char*, int);
-#endif
-
-void Put_Str(char *buf);
-}
-
-void *Term_IO;
 
 
 
@@ -52,9 +35,7 @@ void *Term_IO;
 {
 	REBDEV *dev = (REBDEV*)dr; // just to keep compiler happy above
 
-    int temp = static_cast<int>(dev->flags);
-    CLR_FLAG(temp, static_cast<int>(RDF_OPEN));
-    dev->flags = static_cast<u32>(temp);
+    CLR_FLAG(dev->flags, RDF_OPEN);
 	return DR_DONE;
 }
 
@@ -72,7 +53,7 @@ void *Term_IO;
 	// Avoid opening the console twice (compare dev and req flags):
 	if (GET_FLAG(dev->flags, RDF_OPEN)) {
 		// Device was opened earlier as null, so req must have that flag:
-        if (GET_FLAG(static_cast<int>(dev->flags), static_cast<int>(SF_DEV_NULL)))
+        if (GET_FLAG(dev->flags, SF_DEV_NULL))
 			SET_FLAG(req->modes, RDM_NULL);
 		SET_FLAG(req->flags, RRF_OPEN);
 		return DR_DONE; // Do not do it again
@@ -81,9 +62,9 @@ void *Term_IO;
 	if (!GET_FLAG(req->modes, RDM_NULL)) {
 	}
     else {
-        int temp = static_cast<int>(dev->flags);
-        SET_FLAG(temp, static_cast<int>(SF_DEV_NULL));
-        dev->flags = static_cast<u32>(temp);
+        int temp = dev->flags;
+        SET_FLAG(temp, SF_DEV_NULL);
+        dev->flags = temp;
     }
 
 	SET_FLAG(req->flags, RRF_OPEN);
@@ -126,7 +107,7 @@ void *Term_IO;
 
     std::ostream & os = rebol::runtime.getOutputStream();
 
-    os.write(reinterpret_cast<char*>(req->data), static_cast<int>(req->length));
+    os.write(reinterpret_cast<char*>(req->data), req->length);
 
     // knowing about a partial write would require using tellp() and comparing
     // which is both unreliable and not available on stdout anyway
@@ -134,7 +115,7 @@ void *Term_IO;
     //    http://stackoverflow.com/a/14238640/211160
 
     if (!os) {
-        req->error = static_cast<u32>(1020);
+        req->error = 1020;
         return DR_ERROR;
     }
 
@@ -146,7 +127,7 @@ void *Term_IO;
     // that's not really part of the ostream interface for write.  What
     // could you do about partial output to stdout anyway?
 
-    req->actual = static_cast<u32>(req->length);
+    req->actual = req->length;
 
 	return DR_DONE;
 }
@@ -173,14 +154,14 @@ void *Term_IO;
 
     std::istream & is = rebol::runtime.getInputStream();
 
-    is.read(reinterpret_cast<char*>(req->data), static_cast<int>(req->length));
+    is.read(reinterpret_cast<char*>(req->data), req->length);
 
     if (is.fail()) {
-        req->error = static_cast<u32>(1020);
+        req->error = 1020;
         return DR_ERROR;
     }
 
-    req->actual = static_cast<u32>(is.gcount());
+    req->actual = is.gcount();
 
 	return DR_DONE;
 }
