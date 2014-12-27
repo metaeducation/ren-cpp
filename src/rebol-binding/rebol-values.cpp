@@ -257,6 +257,18 @@ Float::operator double() const {
 }
 
 
+std::string AnyWord::spellingOf() const {
+    std::string result = static_cast<std::string>(*this);
+    if (isWord())
+        return result;
+    if (isRefinement() or isGetWord() or isIssue())
+        return result.erase(0, 1);
+    if (isSetWord())
+        return result.erase(result.length() - 1, 1);
+    throw std::runtime_error {"Invalid Word Type"};
+}
+
+
 ///
 /// FUNCTION FINALIZER FOR EXTENSION
 ///

@@ -453,11 +453,11 @@ protected:
         Context * contextPtr,
         internal::Loadable loadables[],
         size_t numLoadables
-    );
+    ) const;
 
 public:
     template <typename... Ts>
-    inline Value operator()(Context & context, Ts const &... args) {
+    inline Value operator()(Context & context, Ts const &... args) const {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)
@@ -466,7 +466,7 @@ public:
     }
 
     template <typename... Ts>
-    inline Value operator()(Ts const &... args) {
+    inline Value operator()(Ts const &... args) const {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)
@@ -492,11 +492,11 @@ public:
         class T,
         typename = typename std::enable_if<
             std::is_base_of<Value, T>::value
-            && !std::is_same<Value, T>::value,
+            and not std::is_same<Value, T>::value,
             T
         >::type
     >
-    explicit operator T ()
+    explicit operator T () const
     {
         // Here's the tough bit.  How do we throw exceptions on all the right
         // cases?  Each class needs a checker for the bits.  So it constructs
@@ -719,6 +719,9 @@ protected:
         AnyWord (str.c_str(), validMemFn)
     {
     }
+
+public:
+    std::string spellingOf() const;
 };
 
 
@@ -839,7 +842,7 @@ protected:
     friend class Value;
     template <class R, class... Ts> friend class Extension;
     AnyWordSubtype (Engine & engine, RenCell const & cell) : AnyWord(engine, cell) {}
-    AnyWordSubtype (Dont const &) : Value (Dont::Initialize) {}
+    AnyWordSubtype (Dont const &) : AnyWord (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
 public:

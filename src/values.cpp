@@ -32,7 +32,12 @@ Value::Value () :
 }
 
 
-Value::Value (Dont const &)
+// Even if asked not to initialize, we can't leave the type in a state where
+// it cannot be safely freed.  A bad refcount pointer combined with bad data
+// would be a problem.  Review this issue.
+
+Value::Value (Dont const &) :
+    refcountPtr {nullptr}
 {
 }
 
@@ -76,7 +81,7 @@ ren::Value ren::Value::apply(
     Context * context,
     internal::Loadable * loadablesPtr,
     size_t numLoadables
-) {
+) const {
     Value result {Dont::Initialize};
     if (context == nullptr)
         context = &Context::runFinder(nullptr);
