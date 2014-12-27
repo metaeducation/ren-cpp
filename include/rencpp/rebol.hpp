@@ -42,13 +42,15 @@ public:
 
 private:
     friend class internal::RebolHooks;
-    void lazyInitializeIfNecessary();
+    bool lazyInitializeIfNecessary();
 
 
 public:
     RebolRuntime (bool someExtraInitFlag);
 
     void doMagicOnlyRebolCanDo();
+
+    void cancel();
 
     std::ostream & setOutputStream(std::ostream & os);
 

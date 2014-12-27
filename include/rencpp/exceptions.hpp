@@ -6,6 +6,7 @@
 ///
 
 #include <stdexcept>
+#include <sstream>
 
 #include "values.hpp"
 
@@ -36,7 +37,7 @@ public:
     {
     }
 
-    virtual char const * what() const noexcept {
+    char const * what() const noexcept override {
         return whatString.c_str();
     }
 
@@ -62,7 +63,7 @@ public:
     {
     }
 
-    virtual char const * what() const noexcept {
+    char const * what() const noexcept override {
         return whatString.c_str();
     }
 
@@ -72,14 +73,40 @@ public:
 class exit_command : public std::exception {
 private:
     int codeValue;
+    std::string whatString;
+
 public:
     exit_command (int code) :
         codeValue (code)
     {
+        std::ostringstream ss;
+        ss << "ren::exit_command(" << code << ")";
+        whatString = ss.str();
     }
 
-    int code() {
+    char const * what() const noexcept override {
+        return whatString.c_str();
+    }
+
+    int code() const {
         return codeValue;
+    }
+};
+
+
+// What should the interface for cancellations of evaluations be?  How might
+// timeouts or quotas of operations be managed?
+//
+// https://github.com/hostilefork/rencpp/issues/19
+
+class evaluation_cancelled : public std::exception {
+public:
+    evaluation_cancelled ()
+    {
+    }
+
+    char const * what() const noexcept override {
+        return "ren::evaluation_cancelled";
     }
 };
 

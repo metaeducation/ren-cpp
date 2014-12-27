@@ -7,6 +7,59 @@
 #include "rencpp/ren.hpp"
 #include "rencpp/runtime.hpp"
 
+
+
+///
+/// WORKER OBJECT FOR HANDLING EVALUATIONS
+///
+
+//
+// We push this item to the worker thread and let it do the actual evaluation
+// while we keep monitoring the GUI for an interrupt
+//
+// http://doc.qt.io/qt-5/qthread.html#details
+//
+
+class Worker : public QThread
+{
+    Q_OBJECT
+
+public slots:
+    void doWork(QString const & input) {
+        ren::Value result;
+        bool success = false;
+
+        ren::Value start = ren::runtime("stats/timer");
+
+        try {
+            result = ren::runtime(input.toUtf8().constData());
+            success = true;
+        }
+        catch (ren::evaluation_error & e) {
+            result = e.error();
+        }
+        catch (ren::exit_command & e) {
+            qApp->exit(e.code());
+        }
+        catch (ren::evaluation_cancelled & e) {
+            // Let returning an unset for the error mean cancellation
+        }
+
+        ren::Value delta = ren::runtime("stats/timer -", start);
+
+        emit resultReady(success, result, delta);
+    }
+
+signals:
+    void resultReady(
+        bool success,
+        ren::Value const & result,
+        ren::Value const & delta
+    );
+};
+
+
+
 ///
 /// CONSOLE CONSTRUCTOR
 ///
@@ -23,8 +76,20 @@
 RenConsole::RenConsole(MainWindow * parent) :
     parent (parent),
     prompt (">>"),
-    fakeOut (new FakeStdout(*this))
+    fakeOut (new FakeStdout (*this))
 {
+    // First we set up the Evaluator so it's wired up for signals and slots
+    // and on another thread from the GUI
+
+    Worker * worker = new Worker;
+    worker->moveToThread(&workerThread);
+    connect(&workerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(this, &RenConsole::operate, worker, &Worker::doWork);
+    connect(worker, &Worker::resultReady, this, &RenConsole::handleResults);
+    workerThread.start();
+
+    // Now do the banner using images packed into the resource file
+
     QTextCursor cursor = textCursor();
     cursor.insertImage(QImage (":/images/rebol-logo.png"));
 
@@ -94,11 +159,38 @@ RenConsole::RenConsole(MainWindow * parent) :
 }
 
 
+
+///
+/// KEYPRESS EVENT HANDLING
+///
+
+//
+// Using the current maybe-not-long-term idea (that isn't too terrible), the
+// console is just a Qt rich text editor.  It has a special rule that it
+// remembers the position in the document where the last command ended, and
+// although it will let you select before that point it won't let you modify
+// the text--you can only edit in the lines of the current input prompt
+// position.  So we have to intercept keypresses and decide whether to let
+// them fall through to the text editor's handling.
+//
+
 void RenConsole::keyPressEvent(QKeyEvent * event) {
+
+    bool ctrlc = (event->key() == Qt::Key_C)
+        and (event->modifiers() & Qt::ControlModifier);
+
+    if (ctrlc or (event->key() == Qt::Key_Escape)) {
+        // In the special case of a Ctrl-C or Escape, we want to interrupt
+        // any evaluations in progress.  For cancel semantics, see:
+        //
+        //     https://github.com/hostilefork/rencpp/issues/19
+
+        ren::runtime.cancel();
+        return;
+    }
+
     bool enter = (event->key() == Qt::Key_Enter)
         or (event->key() == Qt::Key_Return);
-
-    // Helper function to add text to the end
 
     QTextCursor cursor = textCursor();
 
@@ -120,55 +212,17 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
         cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
         cursor.insertText("\n");
 
-        ren::Value result;
-
         if (not input.isEmpty()) {
-            ren::Value start = ren::runtime("stats/timer");
-
-            try {
-                result = ren::runtime(input.toUtf8().constData());
-
-                ren::runtime.getOutputStream().flush();
-            }
-            catch (ren::evaluation_error & e) {
-                ren::runtime.getOutputStream().flush();
-
-                QTextCharFormat errorFormat;
-                errorFormat.setForeground(Qt::darkRed);
-                cursor.insertText(e.what(), errorFormat);
-            }
-            catch (ren::exit_command & e) {
-                qApp->exit(e.code());
-            }
-
-            ren::Value delta = ren::runtime("stats/timer -", start);
-            parent->statusBar()->showMessage(
-                QString("Command completed in ")
-                + static_cast<std::string>(delta).c_str()
-            );
+            // Queue work on another thread
+            operate(input);
+            return;
         }
 
-        // If we evaluated and got a value we print an eval result ==
+        // If we reacted to the enter at all, we still need another prompt.
+        // This behavior is up for debate, we could just as well have a beep
+        // sound and status warning or something.
 
-        if (not result.isUnset()) {
-            cursor.insertText("==", promptFormat);
-            cursor.insertText(" ", QTextCharFormat ());
-            cursor.insertText(static_cast<std::string>(result).c_str());
-            cursor.insertText("\n");
-        }
-
-        // I like the spacing always, even though that's not how Rebol did it
-
-        cursor.insertText("\n");
-
-        cursor.insertText(prompt, promptFormat);
-        cursor.insertText(" ", QTextCharFormat ());
-
-        // Move the physical cursor position
-
-        setTextCursor(cursor);
-
-        inputPos = cursor.position();
+        handleResults(true, ren::Value (), ren::none);
         return;
     }
 
@@ -212,3 +266,93 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
 
     QTextEdit::keyPressEvent(event);
 }
+
+
+
+///
+/// EVALUATION RESULT HANDLER
+///
+
+//
+// When the evaluator has finished running, we want to print out the
+// results and maybe a new prompt.
+//
+
+void RenConsole::handleResults(
+    bool success,
+    ren::Value const & result,
+    ren::Value const & delta
+) {
+    // The output to the console seems to flush very aggressively, but with
+    // Rencpp it does buffer by default, so be sure to flush the output
+    // before printing any eval results or errors
+
+    ren::runtime.getOutputStream().flush();
+
+    QTextCursor cursor = textCursor();
+    cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
+
+    if (not success) {
+        QTextCharFormat errorFormat;
+        errorFormat.setForeground(Qt::darkRed);
+
+        // The value does not represent the result of the operation; it
+        // represents the error that was raised while running it, or if
+        // that error is unset then assume a cancellation
+
+        if (result.isUnset()) {
+            cursor.insertText("[Escape]\n", errorFormat);
+        }
+        else {
+            // Formed errors have a newline on the end implicitly
+            cursor.insertText(
+                static_cast<std::string>(result).c_str(),
+                errorFormat
+            );
+        }
+    }
+    else if (not result.isUnset()) {
+        // If we evaluated and it wasn't unset, print an eval result ==
+
+        cursor.insertText("==", promptFormat);
+        cursor.insertText(" ", QTextCharFormat ());
+        cursor.insertText(static_cast<std::string>(result).c_str());
+        cursor.insertText("\n");
+    }
+
+    // I like this newline always, even though Rebol's console only puts in
+    // the newline if you get a non-unset evaluation...
+
+    cursor.insertText("\n");
+
+    // Print another prompt
+
+    cursor.insertText(prompt, promptFormat);
+    cursor.insertText(" ", QTextCharFormat ());
+
+    // Move the physical cursor position
+
+    setTextCursor(cursor);
+
+    inputPos = cursor.position();
+
+    if (delta) {
+        parent->statusBar()->showMessage(
+            QString("Command completed in ")
+            + static_cast<std::string>(delta).c_str()
+        );
+    }
+}
+
+
+
+///
+/// DESTRUCTOR
+///
+
+RenConsole::~RenConsole() {
+    workerThread.quit();
+    workerThread.wait();
+}
+
+#include "renconsole.moc"

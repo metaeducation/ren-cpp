@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include <csignal>
+#include <unistd.h>
 
 #include "rencpp/rebol.hpp"
 
@@ -19,10 +20,6 @@ RebolRuntime runtime {true};
 Runtime & runtimeRef = runtime;
 
 namespace internal {
-
-// Implemented in rebol-hooks.cpp
-
-extern int Fake_Quit(REBVAL *ds);
 
 Loadable::Loadable (char const * sourceCstr) :
     Value (Value::Dont::Initialize)
@@ -105,28 +102,6 @@ RebolRuntime::RebolRuntime (bool someExtraInitFlag) :
                 + " : " + reinterpret_cast<char const *>(content)
             );
         };
-
-    int marker;
-    REBCNT bounds = static_cast<REBCNT>(OS_CONFIG(1, 0));
-
-    if (bounds == 0)
-        bounds = STACK_BOUNDS;
-
-#ifdef OS_STACK_GROWS_UP
-    Stack_Limit = (REBCNT)(&marker) + bounds;
-#else
-    if (bounds > (REBCNT)(&marker))
-        Stack_Limit = 100;
-    else
-        Stack_Limit = (REBCNT)(&marker) - bounds;
-#endif
-
-    // Rebytes, version numbers
-    // REBOL_VER
-    // REBOL_REV
-    // REBOL_UPD
-    // REBOL_SYS
-    // REBOL_VAR
 }
 
 
@@ -147,9 +122,9 @@ REBVAL RebolRuntime::loadAndBindWord(
         // Make_Word has a misleading name; it just finds the symbol
         // number (a REBINT) and the rest of this is needed in order
         // to get to a well formed word.
-        static_cast<REBINT>(Make_Word(
+        Make_Word(
             reinterpret_cast<REBYTE*>(const_cast<char*>(cstrUtf8)),
-            len == 0 ? strlen(cstrUtf8) : len)
+            len == 0 ? strlen(cstrUtf8) : len
         ),
         // Initialize FRAME to null
         nullptr,
@@ -178,9 +153,39 @@ REBVAL RebolRuntime::loadAndBindWord(
     return result;
 }
 
-void RebolRuntime::lazyInitializeIfNecessary() {
+bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
-        return;
+        return false;
+
+    //
+    // I thought this stack measuring thing could be done in the constructor,
+    // but Rebol isn't prepared to have more than one thread, maybe?  It
+    // seems maybe something is setup when you call init and if you try to
+    // call Make_Series from another thread it complains.  Look into it.
+    //
+
+    int marker;
+    REBCNT bounds = OS_CONFIG(1, 0);
+
+    if (bounds == 0)
+        bounds = STACK_BOUNDS;
+
+#ifdef OS_STACK_GROWS_UP
+    Stack_Limit = (REBCNT)(&marker) + bounds;
+#else
+    if (bounds > (REBCNT)(&marker))
+        Stack_Limit = 100;
+    else
+        Stack_Limit = (REBCNT)(&marker) - bounds;
+#endif
+
+    // Rebytes, version numbers
+    // REBOL_VER
+    // REBOL_REV
+    // REBOL_UPD
+    // REBOL_SYS
+    // REBOL_VAR
+
 
     // Although you can build and pass a REBARGS structure yourself and
     // set appropriate defaults, the easiest idea is to formulate your
@@ -255,26 +260,23 @@ void RebolRuntime::lazyInitializeIfNecessary() {
     // bin is optional startup code (compressed).  If it is provided, it
     // will be stored in system/options/boot-host, loaded, and evaluated.
 
-    REBYTE *bin = nullptr;
+    REBYTE * startupBin = nullptr;
     REBINT len = 0; // length of above bin
 
-    if (bin) {
+    if (startupBin) {
         REBSER spec;
-        spec.data = bin;
-        // conversion to 'REBCNT {aka long unsigned int}' from REBINT
-        // '{aka long int}' may change the sign of the result
-        spec.tail = static_cast<REBCNT>(len);
+        spec.data = startupBin;
+        spec.tail = len;
         spec.rest = 0;
         spec.info = 0;
         spec.size = 0;
 
-        REBSER *ser = Decompress(&spec, 0, -1, 10000000, 0);
+        REBSER * startup = Decompress(&spec, 0, -1, 10000000, 0);
 
-        if (!ser)
+        if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
 
-        REBVAL *val = BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST);
-        Set_Binary(val, ser);
+        Set_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
     if (Init_Mezz(0) != 0 /* "zero for success" */)
@@ -316,17 +318,26 @@ void RebolRuntime::lazyInitializeIfNecessary() {
         );
     }
 
-    // Tweak the bits to put our fake quit function in and save it back
-    quitNative.data.func.func.code = &internal::Fake_Quit;
-    Set_Var(&quitWord, &quitNative);
+    // Tweak the bits to put our fake quit function in and save it back...
+    // This worked for QUIT but unfortunately couldn't work for Escape/CtrlC
+    // So a one-word modification to Rebol is necessary
+
+/*    quitNative.data.func.func.code = &internal::Fake_Quit;
+    Set_Var(&quitWord, &quitNative); */
 
     initialized = true;
+    return true;
 }
 
 
 
 void RebolRuntime::doMagicOnlyRebolCanDo() {
    std::cout << "REBOL MAGIC!\n";
+}
+
+
+void RebolRuntime::cancel() {
+    SET_SIGNAL(SIG_ESCAPE);
 }
 
 

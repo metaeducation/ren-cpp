@@ -11,6 +11,8 @@
 extern "C" {
 #include "rebol/src/include/sys-value.h"
 #include "rebol/src/include/sys-state.h"
+
+extern jmp_buf * Halt_State;
 }
 
 
@@ -31,9 +33,6 @@ private:
     RebolEngineHandle theEngine; // currently only support one "Engine"
     REBSER * allocatedContexts;
 
-public:
-    // in reality would have to be per-thread
-    static jmp_buf * Halt_State;
 
 public:
     RebolHooks () :
@@ -228,29 +227,6 @@ public:
 /// CONSTRUCT OR APPLY HOOK
 ///
 
-    void Fake_Halt_Code(REBINT kind, REBVAL *arg)
-    {
-        REBVAL *err = TASK_THIS_ERROR;
-
-        if (!Halt_State) return;
-
-        if (arg) {
-            if (IS_NONE(arg)) {
-                SET_INTEGER(TASK_THIS_VALUE, 0);
-            } else
-                *TASK_THIS_VALUE = *arg;	// save the value
-        } else {
-            SET_NONE(TASK_THIS_VALUE);
-        }
-
-        VAL_SET(err, REB_ERROR);
-        VAL_ERR_NUM(err) = kind;
-        VAL_ERR_VALUE(err) = TASK_THIS_VALUE;
-        VAL_ERR_SYM(err) = 0;
-
-        longjmp(*Halt_State, 1);
-    }
-
     //
     // The ConstructOrApply hook was designed to be a primitive that
     // allows for efficiency in calling the "Generalized Apply" from
@@ -291,6 +267,9 @@ public:
             *val = *DS_NEXT;
             if (VAL_ERR_NUM(val) == RE_QUIT) {
                 throw exit_command (VAL_INT32(VAL_ERR_VALUE(DS_NEXT)));
+            }
+            if (VAL_ERR_NUM(val) == RE_HALT) {
+                throw evaluation_cancelled {};
             }
             throw evaluation_error (Value (engine, *val));
         }
@@ -539,27 +518,7 @@ public:
     }
 };
 
-jmp_buf * RebolHooks::Halt_State = nullptr;
-
 RebolHooks hooks;
-
-int Fake_Quit(REBVAL *ds);
-
-int Fake_Quit(REBVAL *ds) {
-    REBVAL *val = D_ARG(2);
-
-    if (D_REF(3)) {
-        REBINT n = 0;
-        if (D_REF(1)) {
-            if (IS_INTEGER(val)) n = Int32(val);
-            else if (IS_TRUE(val)) n = 100;
-        }
-        OS_EXIT(n);
-    }
-
-    hooks.Fake_Halt_Code(RE_QUIT, val); // NONE if /return not set
-    DEAD_END;
-}
 
 } // end namespace internal
 
