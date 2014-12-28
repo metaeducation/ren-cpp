@@ -11,12 +11,12 @@ MainWindow::MainWindow()
     qRegisterMetaType<ren::Value>("ren::Value");
 
     console = new RenConsole (this);
-//    console->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-//    console->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setCentralWidget(console);
 
     dockWatch = new QDockWidget(tr("watch"), this);
-    dockWatch->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    dockWatch->setAllowedAreas(
+        Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea
+    );
 
     watchList = new WatchList (this);
     dockWatch->setWidget(watchList);
@@ -26,15 +26,28 @@ MainWindow::MainWindow()
 
     createActions();
     createMenus();
-    createToolBars();
     createStatusBar();
+
     updateMenus();
+
+    connect(
+        console, &RenConsole::copyAvailable,
+        cutAct, &QAction::setEnabled,
+        Qt::DirectConnection
+    );
+
+    connect(
+        console, &RenConsole::copyAvailable,
+        copyAct, &QAction::setEnabled,
+        Qt::DirectConnection
+    );
 
     readSettings();
 
     setWindowTitle(tr("Ren [人] Workbench"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
+
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -43,7 +56,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
 }
 
 
-#ifndef QT_NO_CLIPBOARD
 void MainWindow::cut()
 {
     console->cut();
@@ -58,7 +70,7 @@ void MainWindow::paste()
 {
     console->paste();
 }
-#endif
+
 
 void MainWindow::about()
 {
@@ -73,126 +85,61 @@ void MainWindow::about()
     );
 }
 
+
 void MainWindow::updateMenus()
 {
-
-#ifndef QT_NO_CLIPBOARD
     bool hasSelection = console->textCursor().hasSelection();
     cutAct->setEnabled(hasSelection);
     copyAct->setEnabled(hasSelection);
-#endif
 }
+
 
 void MainWindow::createActions()
 {
-    newAct = new QAction(QIcon(":/images/new.png"), tr("&New"), this);
-    newAct->setShortcuts(QKeySequence::New);
-    newAct->setStatusTip(tr("Create a new file"));
-    connect(newAct, SIGNAL(triggered()), this, SLOT(newFile()));
-
-    openAct = new QAction(QIcon(":/images/open.png"), tr("&Open..."), this);
-    openAct->setShortcuts(QKeySequence::Open);
-    openAct->setStatusTip(tr("Open an existing file"));
-    connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
-
-    saveAct = new QAction(QIcon(":/images/save.png"), tr("&Save"), this);
-    saveAct->setShortcuts(QKeySequence::Save);
-    saveAct->setStatusTip(tr("Save the document to disk"));
-    connect(saveAct, SIGNAL(triggered()), this, SLOT(save()));
-
-    saveAsAct = new QAction(tr("Save &As..."), this);
-    saveAsAct->setShortcuts(QKeySequence::SaveAs);
-    saveAsAct->setStatusTip(tr("Save the document under a new name"));
-    connect(saveAsAct, SIGNAL(triggered()), this, SLOT(saveAs()));
-
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
-    connect(exitAct, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
+    connect(exitAct, &QAction::triggered, qApp, &QApplication::quit, Qt::DirectConnection);
 
-#ifndef QT_NO_CLIPBOARD
     cutAct = new QAction(QIcon(":/images/cut.png"), tr("Cu&t"), this);
     cutAct->setShortcuts(QKeySequence::Cut);
     cutAct->setStatusTip(tr("Cut the current selection's contents to the "
                             "clipboard"));
-    connect(cutAct, SIGNAL(triggered()), this, SLOT(cut()));
+    connect(cutAct, &QAction::triggered, this, &MainWindow::cut, Qt::DirectConnection);
 
     copyAct = new QAction(QIcon(":/images/copy.png"), tr("&Copy"), this);
     copyAct->setShortcuts(QKeySequence::Copy);
     copyAct->setStatusTip(tr("Copy the current selection's contents to the "
                              "clipboard"));
-    connect(copyAct, SIGNAL(triggered()), this, SLOT(copy()));
+    connect(copyAct, &QAction::triggered, this, &MainWindow::copy, Qt::DirectConnection);
 
     pasteAct = new QAction(QIcon(":/images/paste.png"), tr("&Paste"), this);
     pasteAct->setShortcuts(QKeySequence::Paste);
     pasteAct->setStatusTip(tr("Paste the clipboard's contents into the current "
                               "selection"));
-    connect(pasteAct, SIGNAL(triggered()), this, SLOT(paste()));
-#endif
-
-    closeAct = new QAction(tr("Cl&ose"), this);
-    closeAct->setStatusTip(tr("Close the active window"));
-    connect(closeAct, SIGNAL(triggered()),
-            console, SLOT(closeActiveSubWindow()));
-
-    closeAllAct = new QAction(tr("Close &All"), this);
-    closeAllAct->setStatusTip(tr("Close all the windows"));
-    connect(closeAllAct, SIGNAL(triggered()),
-            console, SLOT(closeAllSubWindows()));
-
-    tileAct = new QAction(tr("&Tile"), this);
-    tileAct->setStatusTip(tr("Tile the windows"));
-    connect(tileAct, SIGNAL(triggered()), console, SLOT(tileSubWindows()));
-
-    cascadeAct = new QAction(tr("&Cascade"), this);
-    cascadeAct->setStatusTip(tr("Cascade the windows"));
-    connect(cascadeAct, SIGNAL(triggered()), console, SLOT(cascadeSubWindows()));
-
-    nextAct = new QAction(tr("Ne&xt"), this);
-    nextAct->setShortcuts(QKeySequence::NextChild);
-    nextAct->setStatusTip(tr("Move the focus to the next window"));
-    connect(nextAct, SIGNAL(triggered()),
-            console, SLOT(activateNextSubWindow()));
-
-    previousAct = new QAction(tr("Pre&vious"), this);
-    previousAct->setShortcuts(QKeySequence::PreviousChild);
-    previousAct->setStatusTip(tr("Move the focus to the previous "
-                                 "window"));
-    connect(previousAct, SIGNAL(triggered()),
-            console, SLOT(activatePreviousSubWindow()));
-
-    separatorAct = new QAction(this);
-    separatorAct->setSeparator(true);
+    connect(pasteAct, &QAction::triggered, this, &MainWindow::paste, Qt::DirectConnection);
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
-    connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
+    connect(aboutAct, &QAction::triggered, this, &MainWindow::about, Qt::DirectConnection);
 
     aboutQtAct = new QAction(tr("About &Qt"), this);
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
-    connect(aboutQtAct, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+    connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt, Qt::DirectConnection);
 }
+
 
 void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
-    fileMenu->addAction(newAct);
-    fileMenu->addAction(openAct);
-    fileMenu->addAction(saveAct);
-    fileMenu->addAction(saveAsAct);
-    fileMenu->addSeparator();
     QAction *action = fileMenu->addAction(tr("Switch layout direction"));
-    connect(action, SIGNAL(triggered()), this, SLOT(switchLayoutDirection()));
+    connect(action, &QAction::triggered, this, &MainWindow::switchLayoutDirection, Qt::DirectConnection);
     fileMenu->addAction(exitAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
-#ifndef QT_NO_CLIPBOARD
     editMenu->addAction(cutAct);
     editMenu->addAction(copyAct);
     editMenu->addAction(pasteAct);
-#endif
-
-    windowMenu = menuBar()->addMenu(tr("&Window"));
 
     menuBar()->addSeparator();
 
@@ -201,25 +148,12 @@ void MainWindow::createMenus()
     helpMenu->addAction(aboutQtAct);
 }
 
-void MainWindow::createToolBars()
-{
-    fileToolBar = addToolBar(tr("File"));
-    fileToolBar->addAction(newAct);
-    fileToolBar->addAction(openAct);
-    fileToolBar->addAction(saveAct);
-
-#ifndef QT_NO_CLIPBOARD
-    editToolBar = addToolBar(tr("Edit"));
-    editToolBar->addAction(cutAct);
-    editToolBar->addAction(copyAct);
-    editToolBar->addAction(pasteAct);
-#endif
-}
 
 void MainWindow::createStatusBar()
 {
     statusBar()->showMessage(tr("Ready"));
 }
+
 
 void MainWindow::readSettings()
 {
@@ -229,6 +163,7 @@ void MainWindow::readSettings()
     move(pos);
     resize(size);
 }
+
 
 void MainWindow::writeSettings()
 {
