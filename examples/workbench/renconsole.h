@@ -39,6 +39,7 @@ protected:
     void printBanner();
     void appendNewPrompt();
     QString getCurrentInput() const;
+    void clearCurrentInput();
 
 protected:
     void keyPressEvent(QKeyEvent * event) override;
@@ -56,7 +57,6 @@ private slots:
 private:
     MainWindow * parent;
     QThread workerThread;
-    int inputPos;
     QSharedPointer<FakeStdout> fakeOut;
 
 private:
@@ -70,6 +70,25 @@ public slots:
     );
 signals:
     void operate(QString const & input);
+
+private:
+    bool hasUndo;
+    class HistoryEntry {
+    public:
+        int inputPos;
+        bool multiLineMode;
+        int evalCursorPos;
+        int endPos;
+    public:
+        HistoryEntry (int inputPos) :
+            inputPos (inputPos),
+            multiLineMode (false),
+            evalCursorPos (-1),
+            endPos (-1)
+        {
+        }
+    };
+    std::vector<HistoryEntry> history;
 };
 
 #endif

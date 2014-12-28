@@ -84,7 +84,8 @@ RenConsole::RenConsole (MainWindow * parent) :
     shouldTrack (true),
     parent (parent),
     fakeOut (new FakeStdout (*this)),
-    evaluating (false)
+    evaluating (false),
+    hasUndo (false)
 {
     // Set up our safety hook to make sure modifications to the underlying
     // QTextDocument only happen when we explicitly asked for them.
@@ -125,7 +126,7 @@ RenConsole::RenConsole (MainWindow * parent) :
 
     connect(
         verticalScrollBar(), &QScrollBar::valueChanged,
-        [this] (int value) -> void {
+        [this] (int value) {
             if (value == verticalScrollBar()->maximum())
                 startTracking();
             else
@@ -178,6 +179,19 @@ RenConsole::RenConsole (MainWindow * parent) :
         this, &RenConsole::requestConsoleReset,
         this, &RenConsole::onConsoleReset,
         Qt::QueuedConnection
+    );
+
+
+    // "Magic Undo" requires us to know when we've crossed the lines from
+    // what's available in the document queue to undoing content from the
+    // console to edit old data.  We get this via signals, and save in a
+    // variable.
+
+    connect(
+        this, &QTextEdit::undoAvailable,
+        [this] (bool b) {
+            hasUndo = b;
+        }
     );
 
     // Print the banner and a prompt.
@@ -390,14 +404,13 @@ void RenConsole::appendNewPrompt() {
 
     appendText(" ", QTextCharFormat {});
 
-    inputPos = endCursor().position();
+    // You always have to ask for multi-line mode with shift-enter.  Maybe
+    // someone will prefer the opposite?  Not likely.
 
-    // We can't allow people to undo their edits past the last prompts.
-    // (Though it would be kind of interesting, in a Time-Traveling-Debugger
-    // kind of way...if you undid your editing in the Workbench and if it
-    // went back to the previous eval the side effects rolled back...)
-    //
-    // http://debug.elm-lang.org/
+    history.emplace_back(endCursor().position());
+
+    // We can't allow people to undo their edits past the last prompts,
+    // but we do have a "magic Undo" stack that can undo unwanted commands
 
     document()->clearUndoRedoStacks();
 }
@@ -414,7 +427,7 @@ void RenConsole::appendNewPrompt() {
 QString RenConsole::getCurrentInput() const {
     QTextCursor cursor {document()};
 
-    cursor.setPosition(inputPos, QTextCursor::MoveAnchor);
+    cursor.setPosition(history.back().inputPos, QTextCursor::MoveAnchor);
     cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 
     // The misleadingly named QTextCursor::​selectedText() gives you back
@@ -423,6 +436,18 @@ QString RenConsole::getCurrentInput() const {
 
     return cursor.selection().toPlainText();
 }
+
+
+void RenConsole::clearCurrentInput() {
+    QTextCursor cursor {document()};
+
+    cursor.setPosition(history.back().inputPos, QTextCursor::MoveAnchor);
+    cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+
+    cursor.removeSelectedText();
+    setTextCursor(endCursor());
+}
+
 
 
 
@@ -441,55 +466,173 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
     Qt::KeyboardModifiers const modifiers = event->modifiers();
 
 
-    // In the special case of a Ctrl-C or Escape, we want to interrupt
-    // any evaluations in progress.  For cancel semantics, see:
-    //
-    //     https://github.com/hostilefork/rencpp/issues/19
-    //
-    // If no evaluations are in progress, then we want to "reset" the
-    // console so that if we are hooking to a different command interpreter
-    // than the default, we return to the default.
 
-    if (
-        ((key == Qt::Key_C) and (modifiers & Qt::ControlModifier))
-        or (key == Qt::Key_Escape)
-    ) {
+    if ((key == Qt::Key_C) and (modifiers & Qt::ControlModifier)) {
         ren::runtime.cancel();
         return;
     }
 
 
-    // Enter (or "Return", sometimes a different key, but we give the same
-    // meaning) acts differently depending on whether you've pressed
-    // shift or not.  If you press shift, it enters a newline.  If you don't
-    // press shift, it evaluates.
-    //
-    // REVIEW: A feature like in Rebol2 where unclosed braces are detecte
-    // and it refuses to evaluate may be nice.
+    // Escape is given several meanings depending on the context.  If you
+    // are evaluating, it will cancel.  If you are not evaluating, it will
+    // clear any input you've given (an undoable action).  If you're not
+    // evaluating and it has cleared your input, it will bump you to the
+    // outermost shell.
 
-    if (
-        ((key == Qt::Key_Enter) or (key == Qt::Key_Return))
-        and not (modifiers & Qt::ShiftModifier)
-    ) {
-        // A request to evaluate always starts tracking and jumps to the end,
-        // whether we can do anything or not.
+    if (key == Qt::Key_Escape) {
+        if (evaluating) {
+            // For cancel semantics, see:
+            //     https://github.com/hostilefork/rencpp/issues/19
 
-        startTracking();
-
-        // Don't start nested evaluations!
-        if (evaluating)
+            ren::runtime.cancel();
             return;
+        }
 
-        QMutexLocker locker {&modifyMutex};
+        if (not getCurrentInput().isEmpty()) {
+            QMutexLocker locker {&modifyMutex};
+            clearCurrentInput();
+            return;
+        }
+    }
 
-        appendText("\n");
 
-        QString input = getCurrentInput();
-        if (input.isEmpty()) {
-            appendNewPrompt();
-        } else {
-            evaluating = true;
-            operate(input); // queues request to thread, returns
+    // Variants of Enter (or "Return", sometimes a different key) are used to
+    // mean newline or evaluate.  The behavior depends on the line mode you
+    // are in, due to this fantastic suggestion.  :-)
+    //
+    //    https://github.com/hostilefork/ren-garden/issues/4
+    //
+    // Ctrl-Enter always evaluates, but Enter evaluates when you are in
+    // single-line mode.  Shift-Enter switches you into multi-line mode but
+    // acts like Enter once you're in it.  This reduces accidents.
+
+    if ((key == Qt::Key_Enter) or (key == Qt::Key_Return)) {
+        bool shifted = modifiers & Qt::ShiftModifier;
+        bool ctrled = modifiers & Qt::ControlModifier;
+
+        if (
+            (not history.back().multiLineMode) and (shifted and (not ctrled))
+        ) {
+            // Switch from single to multi-line mode
+
+            QMutexLocker locker {&modifyMutex};
+
+            QString input = getCurrentInput();
+            clearCurrentInput();
+
+            QTextCharFormat hintFormat;
+            hintFormat.setForeground(Qt::darkGray);
+            hintFormat.setFontItalic(true);
+            appendText("[ctrl-enter to evaluate]", hintFormat);
+
+            appendText("\n");
+            history.back().inputPos = endCursor().position();
+
+            appendText(input);
+
+            history.back().multiLineMode = true;
+            return;
+        }
+
+        if (ctrled or not history.back().multiLineMode) {
+            // Perform an evaluation
+
+            if (evaluating) {
+                startTracking(); // don't edit, jump the cursor to the end
+                return;
+            }
+
+            // Save positions *before* we start tracking the output
+
+            history.back().evalCursorPos = textCursor().position();
+            history.back().endPos = endCursor().position();
+
+            startTracking();
+
+            QMutexLocker locker {&modifyMutex};
+
+            appendText("\n");
+
+            QString input = getCurrentInput();
+            if (input.isEmpty()) {
+                appendNewPrompt();
+            } else {
+                evaluating = true;
+                operate(input); // queues request to thread, returns
+            }
+
+            return;
+        }
+
+        QTextCursor cursor {document()};
+        cursor.setPosition(textCursor().position());
+
+        if (
+            (cursor.position() == cursor.anchor())
+            and (cursor.position() > history.back().inputPos)
+        ) {
+            // Find out the current line's indentation level, and insert
+            // that many spaces after the newline we insert.
+
+            // This is made complicated by the fact that just looking for
+            // the QString "\n" doesn't seem to work...while the RegExp
+            // caret does.  I'm betting this has to do with those weird
+            // Unicode paragraph characters used internally.  :-/
+
+            if (not find(QRegExp("^"), QTextDocument::FindBackward)) {
+                assert(false);
+                return;
+            }
+            int startLinePos = textCursor().position();
+            int endSpacesPos = startLinePos + 1;
+
+            if (find(QRegExp("[^\\s]"))) {
+                if (textCursor().position() < cursor.position())
+                    endSpacesPos = textCursor().position();
+            }
+
+            QMutexLocker locker {&modifyMutex};
+            cursor.insertText("\n");
+            cursor.insertText(
+                QString(endSpacesPos - startLinePos - 1, QChar::Space)
+            );
+            setTextCursor(cursor);
+            return;
+        }
+
+        // Fallthrough and process as a normal enter character (cursor may
+        // be arbitrarily far up in the document).
+    }
+
+
+    // If you hit enter and get an error or something, and just want to go
+    // back and edit it then why not backtrack?  Testing initial magicUndo.
+
+    if (event->matches(QKeySequence::Undo)) {
+        if (hasUndo) {
+            QMutexLocker locker {&modifyMutex};
+            undo();
+            return;
+        }
+
+        if (history.size() > 1) {
+            history.pop_back();
+
+            QMutexLocker locker {&modifyMutex};
+
+            // Clear from the previous record's endPos to the current end
+            // of the document, then position the cursor at the eval pos
+            QTextCursor cursor = endCursor();
+            cursor.setPosition(history.back().endPos, QTextCursor::KeepAnchor);
+            cursor.removeSelectedText();
+            cursor.setPosition(history.back().evalCursorPos);
+            setTextCursor(cursor);
+
+            // Keep it from trying to record that "edit to undo" as an undoable
+            // action, which causes madness.
+
+            document()->clearUndoRedoStacks();
+            return;
         }
 
         return;
@@ -525,6 +668,7 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
         bool backspace = event->key() == Qt::Key_Backspace;
 
         auto blockedEdit = [&]() -> bool {
+            int inputPos = history.back().inputPos;
             return (cursor.anchor() < (backspace ? inputPos + 1 : inputPos))
             or (cursor.position() < (backspace ? inputPos + 1 : inputPos));
         };
@@ -555,6 +699,18 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
         QTextEdit::keyPressEvent(event);
 
         return;
+    }
+
+
+    // What cursor keys do depend on whether you're in multi-line mode or
+    // not.  If you're in multi-line mode (or evaluating) they just do the
+    // usual navigation.  But if you're in single line mode and in the
+    // command editing area they let you page through recent commands.
+    // Shift-Enter switches you out.
+
+    if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
+        if (not history.back().multiLineMode)
+            return;
     }
 
 
