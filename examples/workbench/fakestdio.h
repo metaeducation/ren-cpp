@@ -4,7 +4,13 @@
 #include <iostream>
 #include <cassert>
 
-// http://www.angelikalanger.com/Articles/C++Report/IOStreamsDerivation/IOStreamsDerivation.html
+#include <QMutexLocker>
+
+// This wound up seeming a lot more complicated than it needed to be.  See
+// notes on the articles sourcing the information and a request for
+// review here:
+//
+//     https://github.com/hostilefork/ren-workbench/issues/2
 
 class FakeStdoutResources {
 public:
@@ -22,7 +28,6 @@ protected:
 };
 
 
-// http://www.mr-edd.co.uk/blog/beginners_guide_streambuf
 
 class FakeStdoutBuffer : protected FakeStdoutResources, public std::streambuf
 {
@@ -48,11 +53,14 @@ protected:
             return true;
 
         *(pbase() + n) = '\0';
-        // If this is UTF8 encoded we might end up on half a character...
-        // should only flush on UTF8 boundaries
-        QTextCursor cursor = QTextCursor (mdi.document());
-        cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-        cursor.insertText(QString(pbase()));
+
+        // BUG: If this is UTF8 encoded we might end up on half a character...
+        // https://github.com/hostilefork/ren-workbench/issues/1
+
+        QMutexLocker locker {&mdi.modifyMutex};
+
+        mdi.appendText(QString(pbase()));
+
         return true;
     }
 

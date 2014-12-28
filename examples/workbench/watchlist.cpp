@@ -98,10 +98,6 @@ WatchList::WatchList(MainWindow * mainWindow, QWidget * parent) :
     QTableWidget (0, 2, parent),
     mainWindow (mainWindow)
 {
-    // Letting people rearrange the items might be interesting, but complex
-
-    /* verticalHeader()->setSectionsMovable(true); */
-
     setHorizontalHeaderLabels(QStringList() << "name" << "value");
 
     setSelectionMode(QAbstractItemView::MultiSelection);
@@ -233,9 +229,10 @@ WatchList::WatchList(MainWindow * mainWindow, QWidget * parent) :
                 // Lots of ideas one could have for a block-based dialect.
                 // [on x y z off q/r/s :foo]
 
-                // Let's try this by making an error object and then applying it
+                // Let's try this by making an error object and then applying
+
                 ren::Value error = ren::runtime(
-                    "make error! {No dialect yet, testing generalized error apply}"
+                    "make error! {No dialect yet for watch!}"
                 );
 
                 throw ren::evaluation_error(error);
