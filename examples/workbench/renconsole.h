@@ -20,9 +20,7 @@ public:
     ~RenConsole () override;
 
 protected:
-    // should writes by the system lead to jump the cursor position ahead?
-    // (can be annoying if you're scrolling/selecting elsewhere...)
-    bool shouldTrack;
+    bool shouldFollow;
     QTextCursor endCursor() const;
     void appendText(
         QString const & text,
@@ -31,8 +29,8 @@ protected:
 signals:
     void needTextAppend(QString text, QTextCharFormat format);
 private slots:
-    void startTracking();
-    void stopTracking();
+    void followLatestOutput();
+    void dontFollowLatestOutput();
     void onAppendText(QString const & text, QTextCharFormat const & format);
 
 protected:
@@ -40,6 +38,7 @@ protected:
     void appendNewPrompt();
     QString getCurrentInput() const;
     void clearCurrentInput();
+    void containInputSelection();
 
 protected:
     void keyPressEvent(QKeyEvent * event) override;
