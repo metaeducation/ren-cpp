@@ -44,7 +44,7 @@ MainWindow::MainWindow()
 
     readSettings();
 
-    setWindowTitle(tr("Ren [人] Workbench"));
+    setWindowTitle(tr("Ren [人] Garden"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -76,11 +76,13 @@ void MainWindow::about()
 {
     QMessageBox::about(
         this,
-        tr("About Ren [人] Workbench"),
+        tr("About Ren [人] Garden"),
         tr(
-            "The <b>Ren [人] Workbench</b> integrates Rebol or Red evaluators"
-            " into a Qt-based environment, by utilizing the Rencpp binding."
-            " Copyright 2014 HostileFork.com"
+            "The <b>Ren [人] Garden</b> workbench integrates Rebol or Red"
+            " evaluators into a Qt-based environment, by utilizing the Rencpp"
+            " binding.\n\n"
+            "Copyright © 2014 HostileFork.com, GPL License\n\n"
+            "Rebol, Red, and Qt are governed by the terms of their licenses."
         )
     );
 }
@@ -157,7 +159,7 @@ void MainWindow::createStatusBar()
 
 void MainWindow::readSettings()
 {
-    QSettings settings("HostileFork", "Ren Workbench");
+    QSettings settings("HostileFork", "Ren Garden");
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
     move(pos);
@@ -167,7 +169,7 @@ void MainWindow::readSettings()
 
 void MainWindow::writeSettings()
 {
-    QSettings settings("HostileFork", "Ren Workbench");
+    QSettings settings("HostileFork", "Ren Garden");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
 }

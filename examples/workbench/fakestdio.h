@@ -10,7 +10,7 @@
 // notes on the articles sourcing the information and a request for
 // review here:
 //
-//     https://github.com/hostilefork/ren-workbench/issues/2
+//     https://github.com/hostilefork/ren-garden/issues/2
 
 class FakeStdoutResources {
 public:
@@ -55,7 +55,7 @@ protected:
         *(pbase() + n) = '\0';
 
         // BUG: If this is UTF8 encoded we might end up on half a character...
-        // https://github.com/hostilefork/ren-workbench/issues/1
+        // https://github.com/hostilefork/ren-garden/issues/1
 
         QMutexLocker locker {&mdi.modifyMutex};
 

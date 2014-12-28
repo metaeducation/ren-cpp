@@ -217,7 +217,7 @@ void RenConsole::printBanner() {
 
     QTextCharFormat headerFormat;
     headerFormat.setFont(QFont("Helvetica", 24, QFont::Bold));
-    cursor.insertText("Ren [人] Workbench", headerFormat);
+    cursor.insertText("Ren [人] Garden", headerFormat);
 
     QTextCharFormat subheadingFormat;
     subheadingFormat.setForeground(Qt::darkGray);
@@ -228,13 +228,13 @@ void RenConsole::printBanner() {
 
         "<i><b>Rebol</b> is © 2014 REBOL Technologies, Apache 2 License</i>",
 
-        "<i><b>Rencpp</b></b> is © 2014 HostileFork.com, Boost License</i>",
+        "<i><b>RenCpp</b></b> is © 2014 HostileFork.com, Boost License</i>",
 
         "<i><b>Qt</b> is © 2014 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
 
         "",
 
-        "<i><b>Ren Workbench</b> is © 2014 HostileFork.com, GPL 3 License</i>"
+        "<i><b>Ren Garden</b> is © 2014 HostileFork.com, GPL 3 License</i>"
     };
 
     for (auto & credit : components) {
