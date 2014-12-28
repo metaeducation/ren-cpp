@@ -119,8 +119,14 @@ extern REBDEV *Devices[];
         return DR_ERROR;
     }
 
+    // For now we flush on every write.  It is inefficient, but it's not
+    // clear what would be done about it otherwise if you are trying to read
+    // the output in a console.  Perhaps an iostream class can be
+    // self-flushing based on a timer, so if it hasn't been flushed for a
+    // second it will?
+
     //if (GET_FLAG(req->flags, RRF_FLUSH)) {
-        //FLUSH();
+        os.flush();
     //}
 
     // old code could theoretically tell you when you had partial output;
