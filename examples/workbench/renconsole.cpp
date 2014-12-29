@@ -188,6 +188,33 @@ RenConsole::RenConsole (QWidget * parent) :
     outputFormat.setFont(outputFont);
 
 
+    auto consoleFunction = ren::make_Extension(
+        "{CONSOLE dialect for customizing Ren Workbench commands}"
+        ":arg [word! path! block! paren! integer!]"
+        "    {word to watch or other legal parameter, see documentation)}",
+
+        [this](
+            ren::Value const & arg
+        )
+            -> ren::Value
+        {
+            if (arg.isBlock()) {
+                ren::runtime("do make error! {Block form of dialect soon...}");
+            }
+
+            return consoleDialect(arg);
+        }
+    );
+
+    // Now bind the function to the word.  But see remarks on using function
+    // values as "unactivated" for assignment directly in a series here, need
+    // to put it in a block and use "first" (or similar)
+    //
+    //     http://stackoverflow.com/q/27641809/211160
+
+    ren::runtime("console: first", ren::Block {consoleFunction});
+
+
     // Print the banner and the first prompt.  Any time we're going to do
     // a write to the console, we need to do so while the modifyMutex is
     // locked.
@@ -415,6 +442,13 @@ void RenConsole::handleResults(
     evaluating = false;
 }
 
+
+
+ren::Value RenConsole::consoleDialect(ren::Value const & arg) {
+    UNUSED(arg);
+    ren::runtime("do make error! {Coming soon to a cross-platform near you}");
+    return ren::unset; // unreachable
+}
 
 
 ///

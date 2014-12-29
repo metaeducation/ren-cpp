@@ -229,6 +229,14 @@ bool Value::isString(REBVAL * init) const {
     return IS_STRING(&cell);
 }
 
+bool Value::isTag(REBVAL * init) const {
+    if (init) {
+        VAL_SET(init, REB_TAG);
+        return true;
+    }
+    return IS_TAG(&cell);
+}
+
 bool Value::isFunction() const {
     return IS_FUNCTION(&cell);
 }

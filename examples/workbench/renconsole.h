@@ -82,6 +82,10 @@ signals:
     void finishedEvaluation();
 protected:
     void evaluate(QString const & input) override;
+
+private:
+    // Now the magic!  :-)
+    ren::Value consoleDialect(ren::Value const & arg);
 };
 
 #endif

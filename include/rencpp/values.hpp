@@ -78,6 +78,8 @@ template <class R, class... Ts> class Extension;
 
 struct none_t;
 
+struct unset_t;
+
 
 
 ///
@@ -196,6 +198,10 @@ protected:
 public:
     Value (Engine & engine);
     Value ();
+
+    // Same as Value() but sometimes more clear to write ren::unset
+    Value (unset_t const &) : Value() {}
+
 
     bool isUnset() const;
 
@@ -334,6 +340,8 @@ public:
 
 public:
     bool isString(RenCell * = nullptr) const;
+
+    bool isTag(RenCell * = nullptr) const;
 
 public:
     bool isFunction() const;
@@ -542,6 +550,14 @@ struct none_t
 constexpr none_t none {none_t::init{}};
 
 
+struct unset_t
+{
+  struct init {};
+  constexpr unset_t(init) {}
+};
+constexpr unset_t unset {unset_t::init{}};
+
+
 
 ///
 /// LEAF VALUE CLASS PROXIES
@@ -610,6 +626,8 @@ protected:
     inline bool isValid() const { return isLogic(); }
 
 public:
+    // Narrow the construction?
+    // https://github.com/hostilefork/rencpp/issues/24
     Logic (bool const & b) :
         Value (b)
     {
@@ -1128,6 +1146,23 @@ public:
     }
 };
 
+
+
+class Tag final : public internal::AnyStringSubtype<&Value::isTag> {
+public:
+    friend class Value;
+    template <class R, class... Ts> friend class Extension;
+    using AnyStringSubtype<&Value::isTag>::AnyStringSubtype;
+
+public:
+    bool operator==(char const * cstr) const {
+        return static_cast<std::string>(*this) == cstr;
+    }
+
+    bool operator!=(char const * cstr) const {
+        return not (*this == cstr);
+    }
+};
 
 
 

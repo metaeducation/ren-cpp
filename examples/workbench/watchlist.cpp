@@ -40,11 +40,11 @@
 WatchList::WatchItem::WatchItem (
     ren::Value const & watch,
     bool useCell,
-    ren::Value const & label
+    ren::Tag const & tag
 ) :
     watch (watch),
     useCell (useCell),
-    label (label)
+    tag (tag)
 {
     evaluate(true);
 }
@@ -66,9 +66,8 @@ void WatchList::WatchItem::evaluate(bool firstTime) {
 
 
 QString WatchList::WatchItem::getWatchString() const {
-    if (label) {
-        ren::Word word {label};
-        return word.spellingOf().c_str();
+    if (tag) {
+        return static_cast<QString>(tag);
     }
 
     // Should there be a way to automatically debug based on the
@@ -107,7 +106,7 @@ bool WatchList::WatchItem::isCell() const {
 
 
 bool WatchList::WatchItem::isLabeled() const {
-    return static_cast<bool>(label);
+    return static_cast<bool>(tag);
 }
 
 
@@ -120,8 +119,6 @@ WatchList::WatchList(QWidget * parent) :
     QTableWidget (0, 2, parent)
 {
     setHorizontalHeaderLabels(QStringList() << "name" << "value");
-
-    setSelectionMode(QAbstractItemView::MultiSelection);
 
     // We want the value column of TableWidget to get wider if the splitter
     // or dock widget give it more space
@@ -147,121 +144,30 @@ WatchList::WatchList(QWidget * parent) :
 
     auto watchFunction = ren::make_Extension(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
-        ":watches [word! path! block! paren! integer!]"
-        "    {what to add to the list for evaluation}"
+        ":arg [word! path! block! paren! integer!]"
+        "    {word to watch or other legal parameter, see documentation)}"
         "/cell {Monitor the resulting boxed cell, not the expression}"
-        "/label name [word!] {Label the expression in the view.}",
+        "/label tag [tag!] {label the expression in the view}",
 
         [this](
-            ren::Value && vars,
-            ren::Value && useCell,
-            ren::Value && useLabel,
-            ren::Value && label
+            ren::Value const & arg,
+            ren::Value const & useCell,
+            ren::Value const & useLabel,
+            ren::Tag const & tag
         )
             -> ren::Value
         {
-            ren::Value result;
-            if (vars.isInteger()) {
-                ren::Integer index {vars};
+            // It's a pretty long function to put all in the lambda (you
+            // could, though!)  Just to demonstrate, we'll do a rejection
+            // of a zero integer parameter here...
 
-                // Positive integer is a request for the data held by the
-                // watch, which we need to do here and return synchronously.
-                // Negative integers affect the GUI and run on GUI thread,
-                // and do not return anything.  Zero should throw an error
-                // but we'll just do unset for now.
 
-                if (index >= 0) {
-                    if (static_cast<size_t>(index) > this->watchList.size())
-                        return result; // unset
 
-                    return this->watchList[index - 1].getValue();
-                }
-
-                emit removeWatchItemRequested(-index);
-                return result; // unset;
+            if (arg.isBlock()) {
+                ren::runtime("do make error! {Block form of dialect soon...}");
             }
 
-            // Should this be a common routine?
-            int logicIndex = -1;
-            if (vars.isWord()) {
-                static std::vector<QString> logicWords[2] =
-                    {{"off", "no", "false"}, {"on", "yes", "true"}};
-
-                ren::Word word = ren::Word {vars};
-                auto spelling = word.spellingOf<QString>();
-                for (int index = 0; index < 2; index++) {
-                    if (
-                        logicWords[index].end()
-                        != std::find(
-                            logicWords[index].begin(),
-                            logicWords[index].end(),
-                            spelling
-                        )
-                    ) {
-                        logicIndex = index;
-                        break;
-                    }
-                }
-            }
-
-            if (vars.isLogic()) {
-                logicIndex = static_cast<bool>(vars);
-            }
-
-            if (logicIndex != -1) {
-                if (logicIndex)
-                    emit showDockRequested();
-                else
-                    emit hideDockRequested();
-                return result; // unset
-            }
-
-            // With those words out of the way, we should be able to take
-            // for granted the creation of a WatchItem for words.  Then we
-            // can throw an error up to the console on a /cell request.
-            // Because there's no use adding it to the watch list if it will
-            // never be evaluated again (a regular watch may become good...)
-
-            if (vars.isWord() or vars.isPath() or vars.isParen()) {
-
-                WatchItem watchItem {
-                    vars,
-                    static_cast<bool>(useCell),
-                    useLabel ? label : label
-                };
-
-                if (watchItem.isCell() and watchItem.hadError()) {
-                    watchItem.getError()(); // should throw...
-
-                    throw std::runtime_error("Unreachable");
-                }
-
-                // we append to end instead of inserting at the top because
-                // it keeps the numbering more consistent.  some people might
-                // desire it added at the top and consider it better that way.
-
-                watchList.push_back(watchItem);
-
-                emit watchItemPushed();
-                return result; // unset;
-            }
-
-           if (vars.isBlock()) {
-                // Lots of ideas one could have for a block-based dialect.
-                // [on x y z off q/r/s :foo]
-
-                // Let's try this by making an error object and then applying
-
-                ren::Value error = ren::runtime(
-                    "make error! {No dialect yet for watch!}"
-                );
-
-                throw ren::evaluation_error(error);
-
-                throw std::runtime_error("unreachable");
-            }
-
-            return result; // unset
+            return watchDialect(arg, useCell, useLabel, tag);
         }
     );
 
@@ -334,10 +240,20 @@ void WatchList::handleRemoveWatchItemRequest(int index) {
 }
 
 
+void WatchList::mousePressEvent(QMouseEvent * event) {
+    setSelectionMode(QAbstractItemView::SingleSelection);
+    QTableWidget::mousePressEvent(event);
+}
+
 
 void WatchList::updateWatches() {
     if (not isVisible())
         return;
+
+    // We only temporarily do this selection mode to do our highlighting
+    // it's turned off before you can ever click the mouse...
+
+    setSelectionMode(QAbstractItemView::MultiSelection);
 
     int row = 0;
     for (WatchItem & watchItem : watchList) {
@@ -363,6 +279,7 @@ void WatchList::updateWatches() {
         // aren't so esoteric in systems where you convert errors to strings,
         // so checking the brush color is actually not pointless.
 
+        item(row, 0)->setSelected(false);
         if ((oldText != newText) or (oldBrush != newBrush)) {
             QTableWidgetItem * newValueItem = new QTableWidgetItem;
 
@@ -370,7 +287,8 @@ void WatchList::updateWatches() {
             newValueItem->setText(newText);
             setItem(row, 1, newValueItem);
 
-            // Can't set selected before insertion
+            // Can't set a newly created element selected before insertion
+
             item(row, 1)->setSelected(true);
         }
         else {
@@ -382,11 +300,126 @@ void WatchList::updateWatches() {
 }
 
 
+ren::Value WatchList::watchDialect(
+    ren::Value const & arg,
+    ren::Value const & useCell,
+    ren::Value const & useLabel,
+    ren::Tag const & tag
+) {
+    if (arg.isInteger()) {
+        int signedIndex = ren::Integer {arg};
+        if (signedIndex == 0) {
+            ren::runtime("do make error! {Integer arg must be nonzero}");
+            return ren::unset; // unreachable
+        }
 
-///
-/// DESTRUCTOR
-///
+        bool removal = signedIndex < 0;
+        size_t index = std::abs(signedIndex);
 
-WatchList::~WatchList() {
+        // Positive integer is a request for the data held by the
+        // watch, which we need to do here and return synchronously.
+        // Negative integers affect the GUI and run on GUI thread.
+
+        if (index > this->watchList.size()) {
+            ren::runtime("do make error! {No such watchlist item index}");
+            return ren::unset; // unreachable
+        }
+
+        if (removal) {
+            emit removeWatchItemRequested(-index);
+            return ren::unset;
+        }
+
+        if (watchList[index - 1].hadError()) {
+            watchList[index - 1].getError()(); // apply the error
+            return ren::unset; // unreachable
+        }
+
+        return watchList[index - 1].getValue();
+    }
+
+    // Let's use the evaluator for this trick.  :-)  Have it give us back
+    // -1, 0, or 1... -1 meaning "word is not a logic synonym"
+
+    int logicIndex = -1;
+
+#ifdef GARDEN_CPP_WAY
+    if (arg.isWord()) {
+        static std::vector<QString> logicWords[2] =
+            {{"off", "no", "false"}, {"on", "yes", "true"}};
+
+        ren::Word word = ren::Word {arg};
+        auto spelling = word.spellingOf<QString>();
+        for (int index = 0; index < 2; index++) {
+            if (
+                logicWords[index].end()
+                != std::find(
+                    logicWords[index].begin(),
+                    logicWords[index].end(),
+                    spelling
+                )
+            ) {
+                logicIndex = index;
+                break;
+            }
+        }
+    }
+
+    if (arg.isLogic()) {
+        logicIndex = static_cast<bool>(arg);
+    }
+#else
+    logicIndex = ren::Integer {
+        ren::runtime(
+            "case", ren::Block {
+            "    find [off no false] quote", arg, "[0]"
+            "    find [on yes true] quote", arg, "[1]"
+            "    true [-1]"
+            }
+        )
+    };
+#endif
+
+    if (logicIndex != -1) {
+        if (logicIndex)
+            emit showDockRequested();
+        else
+            emit hideDockRequested();
+        return ren::unset;
+    }
+
+    // With those words out of the way, we should be able to take
+    // for granted the creation of a WatchItem for words.  Then we
+    // can throw an error up to the console on a /cell request.
+    // Because there's no use adding it to the watch list if it will
+    // never be evaluated again (a regular watch may become good...)
+
+    if (arg.isWord() or arg.isPath() or arg.isParen()) {
+
+        WatchItem watchItem {
+            arg,
+            static_cast<bool>(useCell),
+            useLabel ? tag : tag
+        };
+
+        if (watchItem.isCell() and watchItem.hadError()) {
+            watchItem.getError()(); // should throw...
+
+            throw std::runtime_error("Unreachable");
+        }
+
+        // we append to end instead of inserting at the top because
+        // it keeps the numbering more consistent.  some people might
+        // desire it added at the top and consider it better that way.
+
+        watchList.push_back(watchItem);
+
+        emit watchItemPushed();
+        return ren::unset;
+    }
+
+    throw std::runtime_error("unexpected type passed to watch dialect");
+
+    return ren::unset;
 }
 

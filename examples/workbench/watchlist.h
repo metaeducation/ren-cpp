@@ -35,7 +35,6 @@ class WatchList : public QTableWidget
 
 public:
     WatchList (QWidget * parent = nullptr);
-    ~WatchList () override;
 
 signals:
     void watchCalled(
@@ -60,13 +59,16 @@ private slots:
 
     void handleRemoveWatchItemRequest(int index);
 
+protected:
+    void mousePressEvent(QMouseEvent * event) override;
+
 private:
     class WatchItem {
         ren::Value watch;
         bool useCell;
         ren::Value value;
         ren::Value error;
-        ren::Value label;
+        ren::Tag tag;
 
     public:
         // Construct will also evaluate to capture at the time of the watch
@@ -74,7 +76,7 @@ private:
         WatchItem (
             ren::Value const & watch,
             bool useCell,
-            ren::Value const & label
+            ren::Tag const & tag
         );
 
         // Evaluates and returns error if there was one, or none
@@ -96,6 +98,15 @@ private:
     };
 
     std::vector<WatchItem> watchList;
+
+private:
+    // aaaand... magic! :-)
+    ren::Value watchDialect(
+        ren::Value const & arg,
+        ren::Value const & useCell,
+        ren::Value const & useLabel,
+        ren::Tag const & tag
+    );
 };
 
 #endif
