@@ -89,7 +89,7 @@ struct none_t;
 // is thrown by Value itself in templated code and needs to be here
 //
 
-class bad_value_cast final : public std::bad_cast {
+class bad_value_cast : public std::bad_cast {
 private:
     std::string whatString;
 
@@ -245,7 +245,9 @@ public:
     //
     // We *explicitly* coerce to operator bool.  This only does the conversion
     // automatically under contexts like if(); the C++11 replacement for
-    // "safe bool idiom" of if (!!x)
+    // "safe bool idiom" of if (!!x).  As with UNSET! in Rebol/Red, it will
+    // throw an exception if you try to use it on a value that turns out
+    // to be UNSET!
     //
     // http://stackoverflow.com/questions/6242768/
     //
@@ -258,10 +260,8 @@ public:
 
     bool isFalse() const;
 
-    inline explicit operator bool() const {
-      // http://stackoverflow.com/q/6242768/211160
-        return (not isNone()) and (not isFalse());
-    }
+    // http://stackoverflow.com/q/6242768/211160
+    explicit operator bool() const;
 
 
 public:
@@ -582,6 +582,8 @@ public:
         Value ()
     {
     }
+
+    explicit operator bool() const = delete;
 };
 
 

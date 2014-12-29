@@ -54,6 +54,16 @@ Value::Value (bool const & someBool) :
 }
 
 
+Value::operator bool() const {
+    if (isUnset()) {
+        // Is there a better way to throw the "value is unset" error in a
+        // way that matches what the runtime offers?
+        (*this)();
+    }
+    return (not isNone()) and (not isFalse());
+}
+
+
 Value::Value (int const & someInt) :
     Value (Engine::runFinder(), someInt)
 {
