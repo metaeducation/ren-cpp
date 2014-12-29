@@ -660,6 +660,15 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
+        // It's sort of pleasing to be able to go all the way back to zero,
+        // so clear the input even though it's a bit of a forgery...
+
+        if (not getCurrentInput().isEmpty()) {
+            clearCurrentInput();
+            document()->clearUndoRedoStacks();
+            return;
+        }
+
         parent->statusBar()->showMessage("Nothing available for undo.");
         return;
     }
