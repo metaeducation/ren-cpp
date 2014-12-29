@@ -12,7 +12,7 @@ class WatchList : public QTableWidget
     Q_OBJECT
 
 public:
-    WatchList (MainWindow * mainWindow, QWidget * parent = nullptr);
+    WatchList (QWidget * parent = nullptr);
     ~WatchList () override;
 
 signals:
@@ -39,8 +39,6 @@ private slots:
     void handleRemoveWatchItemRequest(int index);
 
 private:
-    MainWindow * mainWindow;
-
     class WatchItem {
         ren::Value watch;
         bool useCell;

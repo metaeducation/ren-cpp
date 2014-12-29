@@ -10,7 +10,7 @@ MainWindow::MainWindow()
 {
     qRegisterMetaType<ren::Value>("ren::Value");
 
-    console = new RenConsole (this);
+    console = new RenConsole;
     setCentralWidget(console);
 
     dockWatch = new QDockWidget(tr("watch"), this);
@@ -18,8 +18,29 @@ MainWindow::MainWindow()
         Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea
     );
 
-    watchList = new WatchList (this);
+    watchList = new WatchList;
     dockWatch->setWidget(watchList);
+
+    connect(
+        console, &RenConsole::finishedEvaluation,
+        watchList, &WatchList::updateWatches,
+        Qt::DirectConnection
+    );
+
+    // REVIEW: is there a better way of having a command say it wants to
+    // hide the dock the watchList is in?
+
+    connect(
+        watchList, &WatchList::showDockRequested,
+        dockWatch, &QDockWidget::show,
+        Qt::QueuedConnection
+    );
+
+    connect(
+        watchList, &WatchList::hideDockRequested,
+        dockWatch, &QDockWidget::hide,
+        Qt::QueuedConnection
+    );
 
     addDockWidget(Qt::RightDockWidgetArea, dockWatch);
     dockWatch->hide();

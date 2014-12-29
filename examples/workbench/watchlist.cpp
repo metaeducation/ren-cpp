@@ -94,9 +94,8 @@ bool WatchList::WatchItem::isLabeled() const {
 /// WATCHLIST CONSTRUCTOR
 ///
 
-WatchList::WatchList(MainWindow * mainWindow, QWidget * parent) :
-    QTableWidget (0, 2, parent),
-    mainWindow (mainWindow)
+WatchList::WatchList(QWidget * parent) :
+    QTableWidget (0, 2, parent)
 {
     setHorizontalHeaderLabels(QStringList() << "name" << "value");
 
@@ -258,18 +257,6 @@ WatchList::WatchList(MainWindow * mainWindow, QWidget * parent) :
     // have to hold up the running evaluator when watch is called
 
     connect(
-        this, &WatchList::showDockRequested,
-        mainWindow->dockWatch, &QDockWidget::show,
-        Qt::QueuedConnection
-    );
-
-    connect(
-        this, &WatchList::hideDockRequested,
-        mainWindow->dockWatch, &QDockWidget::hide,
-        Qt::QueuedConnection
-    );
-
-    connect(
         this, &WatchList::watchItemPushed,
         this, &WatchList::handlePushedWatchItem,
         Qt::BlockingQueuedConnection
@@ -309,7 +296,7 @@ void WatchList::handlePushedWatchItem() {
     setItem(count, 0, name);
     setItem(count, 1, value);
 
-    mainWindow->dockWatch->setVisible(true);
+    emit showDockRequested();
 }
 
 

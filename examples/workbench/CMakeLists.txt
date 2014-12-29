@@ -55,6 +55,7 @@ add_executable(
 
     main.cpp
     mainwindow.cpp
+    replpad.cpp
     renconsole.cpp
     watchlist.cpp
 
@@ -64,6 +65,7 @@ add_executable(
 
     mainwindow.h
     renconsole.h
+    replpad.h
     fakestdio.h
     watchlist.h
     
