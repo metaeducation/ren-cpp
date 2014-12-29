@@ -475,8 +475,25 @@ void RenConsole::containInputSelection() {
 void RenConsole::keyPressEvent(QKeyEvent * event) {
 
     int const key = event->key();
+
+    // Putting this list here for convenience.  In theory commands could take
+    // into account whether you hit the 1 on a numeric kepad or on the top
+    // row of the keyboard....
+
     bool shifted = event->modifiers() & Qt::ShiftModifier;
     bool ctrled = event->modifiers() & Qt::ControlModifier;
+    bool alted = event->modifiers() & Qt::AltModifier;
+    bool metaed = event->modifiers() & Qt::MetaModifier;
+    bool keypadded = event->modifiers() & Qt::KeypadModifier;
+
+    // "Groups and levels are two kinds of keyboard mode; in general, the
+    // level determines whether the top or bottom symbol on a key is used,
+    // and the group determines whether the left or right symbol is used.
+    // On US keyboards, the shift key changes the keyboard level, and there
+    // are no groups."
+
+    bool groupswitched = event->modifiers() & Qt::GroupSwitchModifier;
+    UNUSED(groupswitched);
 
     QString temp = event->text();
 
@@ -501,6 +518,32 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
     }
 
 
+    // Matching the zoomIn seems to not work for some reason, the keysequence
+    // Ctrl and = or Ctrl and Shift and = (to get a textual plus) isn't
+    // showing up.  However, ZoomOut works?  That's on KDE and a small apple
+    // keyboard, despite the key code being correct and control key hit.
+    // Would need a debug build of Qt5 to know why.  In any case, this is
+    // even better because we allow for Ctrl = to work which saves you on
+    // the shifting if the + and - aren't on the same keys.
+
+    if (
+        event->matches(QKeySequence::ZoomIn)
+        or (ctrled and ((key == Qt::Key_Plus) or (event->text() == "+")))
+        or (ctrled and ((key == Qt::Key_Equal) or (event->text() == "=")))
+    ) {
+        zoomIn();
+        return;
+    }
+
+    if (
+        event->matches(QKeySequence::ZoomOut)
+        or (ctrled and ((key == Qt::Key_Minus) or (event->text() == "-")))
+    ) {
+        zoomOut();
+        return;
+    }
+
+
     // If something has no printable representation, we usually assume
     // getting it in a key event isn't asking us to mutate the document.
     // Thus we can just call the default QTextEdithandling for the navigation
@@ -509,7 +552,7 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
     // There are some exceptions, so we form it as a while loop to make it
     // easier to style with breaks.
 
-    while (not hasRealText) {
+    while ((not hasRealText) or alted or metaed) {
 
         if (
             (key == Qt::Key_Return)
@@ -896,6 +939,15 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
             " and do it again, please report it to the bug tracker.  But"
             " to be on the safe side, we're ignoring that insert attempt."
         );
+        return;
+    }
+
+    if (ctrled) {
+        // For whatever reason, the usual behavior in widgets is to go ahead
+        // and consider hitting something like "control backslash" to mean
+        // the same thing as backslash.  We throw these out if they made
+        // it this far without special handling.
+
         return;
     }
 
