@@ -65,7 +65,7 @@ protected:
     void appendText(QString const & text) override;
 
 protected:
-    void modifyingKeyPressEvent(QKeyEvent * event) override;
+    bool isReadyToModify(QKeyEvent * event) override;
 
 private:
     bool evaluating;

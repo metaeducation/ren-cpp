@@ -49,6 +49,15 @@ MainWindow::MainWindow()
         Qt::DirectConnection
     );
 
+    connect(
+        console, &ReplPad::commandStatus,
+        statusBar(), [this](QString const & message) {
+            // Slot wants a "timeout" (0 for "until next message")
+            statusBar()->showMessage(message, 0);
+        },
+        Qt::DirectConnection
+    );
+
     // REVIEW: is there a better way of having a command say it wants to
     // hide the dock the watchList is in?
 

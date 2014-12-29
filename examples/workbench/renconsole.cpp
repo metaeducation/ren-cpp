@@ -65,8 +65,12 @@ public slots:
             qApp->exit(e.code());
         }
         catch (ren::evaluation_cancelled & e) {
-            // Let returning an unset for the error mean cancellation
+            // Let returning none for the error mean cancellation
+            result = ren::none;
         }
+
+        // Console hook needs to run here for low latency for things like
+        // timers, otherwise a UI event could be holding it up.
 
         ren::Value delta = ren::runtime("stats/timer -", start);
 
@@ -88,8 +92,13 @@ signals:
 ///
 
 //
-// Right now the console constructor is really mostly about setting up a
-// long graphical banner.
+// The console subclasses the ReplPad, adding in the constraint that you
+// can't interact with the console in a modifying way if an evaluation is
+// underway.  It provides the virtual evaluate function...which doesn't
+// run synchronously but posts a work item to an evaluation thread (this
+// keeps the GUI thread responsive and allows a way of reading requests
+// to cancel from the user)
+//
 
 RenConsole::RenConsole (QWidget * parent) :
     ReplPad (parent),
@@ -178,7 +187,10 @@ RenConsole::RenConsole (QWidget * parent) :
     outputFont.setPointSize(currentFont().pointSize());
     outputFormat.setFont(outputFont);
 
-    // Print the banner and a prompt.
+
+    // Print the banner and the first prompt.  Any time we're going to do
+    // a write to the console, we need to do so while the modifyMutex is
+    // locked.
 
     QMutexLocker locker {&modifyMutex};
     printBanner();
@@ -258,12 +270,8 @@ void RenConsole::printBanner() {
 
 
 void RenConsole::printPrompt() {
-
     pushFormat(promptFormat);
     appendText(">>");
-
-    // Text insertions continue using whatever format was set up previously,
-    // So clear the format as of the space insertion.
 
     pushFormat(inputFormat);
     appendText(" ");
@@ -271,9 +279,9 @@ void RenConsole::printPrompt() {
 
 
 void RenConsole::printMultilinePrompt() {
-
     pushFormat(hintFormat);
     appendText("[ctrl-enter to evaluate]");
+
     pushFormat(inputFormat);
     appendText("\n");
 }
@@ -302,16 +310,8 @@ void RenConsole::appendText(QString const & text) {
 
 
 
-//
-// RenConsole::keyPressEvent()
-//
-// Main keyboard hook for handling input.  Note that input can come from
-// other sources--such as the clipboard, and so that has to be intercepted
-// as well (to scrub non-plaintext formatting off of information coming from
-// web browsers, etc.
-//
 
-void RenConsole::modifyingKeyPressEvent(QKeyEvent * event) {
+bool RenConsole::isReadyToModify(QKeyEvent * event) {
 
     // No modifying operations while you are running in the console.  You
     // can only request to cancel.  For issues tied to canceling semantics
@@ -325,15 +325,15 @@ void RenConsole::modifyingKeyPressEvent(QKeyEvent * event) {
 
             // Message of successful cancellation is given in the console
             // by the handler when the evaluation thread finishes.
-            return;
+            return false;
         }
 
         emit commandStatus("Evaluation in progress, can't edit");
         followLatestOutput();
-        return;
+        return false;
     }
 
-    ReplPad::modifyingKeyPressEvent(event);
+    return true;
 }
 
 
@@ -362,9 +362,9 @@ void RenConsole::handleResults(
 ) {
     assert(evaluating);
 
-    // The output to the console seems to flush very aggressively, but with
-    // Rencpp it does buffer by default, so be sure to flush the output
-    // before printing any eval results or errors
+    // At the moment, RenCpp actually flushes on every write.  This isn't
+    // such a bad idea for stdout, and works well for the console, but may
+    // change later...so keep the flush here as a note.
 
     ren::runtime.getOutputStream().flush();
 
@@ -374,14 +374,14 @@ void RenConsole::handleResults(
         pushFormat(errorFormat);
 
         // The value does not represent the result of the operation; it
-        // represents the error that was raised while running it, or if
-        // that error is unset then assume a cancellation.  Formed errors
+        // represents the error that was raised while running it (or if
+        // that error is unset then assume a cancellation).  Formed errors
         // have an implicit newline on the end implicitly
 
-        if (result.isUnset())
-            appendText("[Escape]\n");
-        else
+        if (result)
             appendText(static_cast<QString>(result));
+        else
+            appendText("[Escape]\n");
 
     }
     else if (not result.isUnset()) {
