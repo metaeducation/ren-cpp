@@ -709,15 +709,50 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
         }
 
 
-        if (ctrled or not history.back().multiLineMode) {
+        // The user may have entered or pasted an arbitrary amount of
+        // whitespace, so the cursor may have no data after it.  Find
+        // the last good position (which may be equal to the cursor
+        // position if there's no extra whitespace)
+
+        int lastGoodPosition = [&]() {
+            QTextCursor cursor = textCursor();
+
+            setTextCursor(endCursor());
+            if (not find(QRegExp("[^\\s]"), QTextDocument::FindBackward)) {
+                throw std::runtime_error("No non-whitespace in console.");
+            }
+
+            int result = textCursor().position();
+            setTextCursor(cursor);
+            return result;
+        }();
+
+        int extraneousNewlines = [&]() {
+            if (textCursor().position() <= lastGoodPosition)
+                return 0;
+
+            if (not history.back().multiLineMode)
+                return 0;
+
+            QTextCursor cursor {document()};
+            cursor.setPosition(lastGoodPosition);
+            cursor.setPosition(
+                endCursor().position(), QTextCursor::KeepAnchor
+            );
+
+            return cursor.selection().toPlainText().count("\n");
+        }();
+
+        if (
+            ctrled or (not history.back().multiLineMode)
+            or (extraneousNewlines > 0)
+        ) {
             // Perform an evaluation.  But first, clean up all the whitespace
             // at the tail of the input (if it happens after our cursor
             // position.)
 
             history.back().evalCursorPos = textCursor().position();
 
-            setTextCursor(endCursor());
-            find(QRegExp("[^\\s]"), QTextDocument::FindBackward);
             QTextCursor cursor = endCursor();
             cursor.setPosition(
                 std::max(
@@ -753,11 +788,6 @@ void RenConsole::keyPressEvent(QKeyEvent * event) {
             // Try to do some kind of "auto-indent" on enter, by finding
             // out the current line's indentation level, and inserting
             // that many spaces after the newline we insert.
-
-            // This is made complicated by the fact that just looking for
-            // the QString "\n" doesn't seem to work...while the RegExp
-            // caret does.  I'm betting this has to do with those weird
-            // Unicode paragraph characters used internally.  :-/
 
             QTextCursor cursor = textCursor();
 
