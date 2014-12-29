@@ -176,6 +176,71 @@ file(
 
 
 
+#
+# Because the standard library doesn't have any Unicode support to speak of
+# and several of the Qt Toolkit's types have interesting mappings to Ren
+# otherwise, you can build against the Qt library in addition to building
+# against the standard C++ library, for things like converting Ren values
+# into QString vs std::string (or both, or neither).
+#
+
+
+if(GARDEN AND NOT (CLASSLIB_QT EQUAL 1))
+
+    # Technically speaking Ren Garden *could* fall back on some helper stubs
+    # if not built for Qt.  But we're experimenting here with making things
+    # as integrative and "pretty" as possible...
+
+    # https://github.com/hostilefork/rencpp/issues/23
+
+    message(FATAL_ERROR "CLASSLIB_QT must be 1 if building Ren Garden")
+endif()
+
+
+if((NOT CLASSLIB_STD) OR (CLASSLIB_STD EQUAL 1))
+
+    # Assume we want the standard classlib if none specified
+    add_definitions("-DREN_CLASSLIB_STD=1")
+
+elseif(CLASSLIB_STD EQUAL 0)
+
+    add_definitions("-DREN_CLASSLIB_STD=0")
+
+else()
+
+    message(FATAL_ERROR "CLASSLIB_STD must be 0 or 1 if defined")
+
+endif()
+
+
+
+if((NOT CLASSLIB_QT) OR (CLASSLIB_QT EQUAL 0))
+
+    # Assume we don't want the Qt classlib if none specified
+
+    add_definitions("-DREN_CLASSLIB_QT=0")
+
+elseif(CLASSLIB_QT EQUAL 1)
+
+    # Find the QtCore library - we only need the core for types like QString
+    # and QByteArray and such.
+    #
+    #     http://www.kdab.com/using-cmake-with-qt-5/
+
+    find_package(Qt5Core REQUIRED)
+    add_definitions("-DREN_CLASSLIB_QT=1")
+    include_directories(${Qt5Core_INCLUDE_DIRS})
+    add_cxx_flags(${Qt5Core_EXECUTABLE_COMPILE_FLAGS})
+    set(LIBS_ALL ${LIBS_ALL} Qt5::Core)
+
+else()
+
+    message(FATAL_ERROR "CLASSLIB_QT must be 0 or 1 if defined")
+
+endif()
+
+
+
 if(NOT RUNTIME)
 
     # A version of Ren which can be built without Red or Rebol and has some
@@ -308,7 +373,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # supposedly find that for you automatically with this variable.
     # http://en.wikipedia.org/wiki/Dynamic_loading
 
-    set(LIBS_ALL ${CMAKE_DL_LIBS})
+    set(LIBS_ALL ${LIBS_ALL} ${CMAKE_DL_LIBS})
 
 else()
 

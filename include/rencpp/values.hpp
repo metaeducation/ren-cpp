@@ -2,7 +2,6 @@
 #define RENCPP_VALUES_HPP
 
 
-#include <string>
 #include <iostream>
 #include <cstdint>
 
@@ -427,8 +426,13 @@ public:
     // Only the string type allows implicit casting, though it provides the
     // same answer.
 
+#if REN_CLASSLIB_STD
     explicit operator std::string () const;
+#endif
 
+#if REN_CLASSLIB_QT
+    explicit operator QString () const;
+#endif
 
     // The strategy is that ren::Values are not evaluated by default when
     // being passed around and used in C++.  For why this has to be the way
@@ -703,6 +707,7 @@ protected:
         bool (Value::*validMemFn)(RenCell *) const);
 
 
+#ifdef REN_CLASSLIB_STD
     explicit AnyWord (
         Context & context,
         std::string const & str,
@@ -719,10 +724,59 @@ protected:
         AnyWord (str.c_str(), validMemFn)
     {
     }
+#endif
+
+
+#ifdef REN_CLASSLIB_QT
+    explicit AnyWord (
+        Context & context,
+        QString const & str,
+        bool (Value::*validMemFn)(RenCell *) const
+    );
+
+    explicit AnyWord (
+        QString const & str,
+        bool (Value::*validMemFn)(RenCell *) const
+    );
+#endif
 
 public:
-    std::string spellingOf() const;
+    template <
+        class T =
+#ifdef REN_CLASSLIB_STD
+            std::string
+#elif REN_CLASSLIB_QT
+            QString
+#else
+    static_assert(false, "https://github.com/hostilefork/rencpp/issues/22");
+#endif
+    >
+    T spellingOf() const {
+        throw std::runtime_error("Unspecialized version of spellingOf called");
+    }
+
+#ifdef REN_CLASSLIB_STD
+    std::string spellingOf_STD() const;
+#endif
+
+#ifdef REN_CLASSLIB_QT
+    QString spellingOf_QT() const;
+#endif
+
 };
+
+
+// http://stackoverflow.com/a/3052604/211160
+
+template<>
+inline QString AnyWord::spellingOf<QString>() const {
+    return spellingOf_QT();
+}
+
+template<>
+inline std::string AnyWord::spellingOf<std::string>() const {
+    return spellingOf_STD();
+}
 
 
 class Series : public Value {
@@ -763,10 +817,21 @@ public:
     //
     //     https://github.com/hostilefork/rencpp/issues/6
 
+#ifdef REN_CLASSLIB_STD
     operator std::string () const {
         Value const & thisValue = *this;
         return static_cast<std::string>(thisValue);
     }
+#endif
+
+
+#ifdef REN_CLASSLIB_QT
+    operator QString () const {
+        Value const & thisValue = *this;
+        return static_cast<QString>(thisValue);
+    }
+#endif
+
 
 public:
     // Need to expose an iteration interface.  You should be able to write:
@@ -881,10 +946,19 @@ public:
     {
     }
 
+#ifdef REN_CLASSLIB_STD
     explicit AnyStringSubtype (std::string const & str) :
         AnyString (str.c_str(), validMemFn)
     {
     }
+#endif
+
+#ifdef REN_CLASSLIB_QT
+    explicit AnyStringSubtype (QString const & str) :
+        AnyString (str, validMemFn)
+    {
+    }
+#endif
 };
 
 
@@ -1030,9 +1104,18 @@ public:
 public:
     // For String only, allow implicit cast instead of explicit.
 
+#ifdef REN_CLASSLIB_STD
     operator std::string () const {
         return Value::operator std::string ();
     }
+#endif
+
+#ifdef REN_CLASSLIB_QT
+    operator QString () const {
+        return Value::operator QString ();
+    }
+#endif
+
 
     bool operator==(char const * cstr) const {
         return static_cast<std::string>(*this) == cstr;

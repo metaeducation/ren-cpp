@@ -105,14 +105,6 @@ public:
         return value.cell;
     }
 
-    //
-    // See discussion here about how many hook points there need to be into
-    // the system, vs relying upon calling the evaluator with words:
-    //
-    //    https://github.com/hostilefork/rencpp/issues/8
-    //
-    static std::string form(Value const & value);
-
     virtual ~Runtime () {
     }
 };

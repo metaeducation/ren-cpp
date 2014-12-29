@@ -66,9 +66,105 @@ Value::Value (double const & someDouble) :
 }
 
 
+#if REN_CLASSLIB_STD
 Value::operator std::string () const {
-    return Runtime::form(*this);
+    const size_t defaultBufLen = 100;
+
+    std::vector<char> buffer (defaultBufLen);
+
+    size_t numBytes;
+
+    // Note .data() method is const on std::string.
+    //    http://stackoverflow.com/questions/7518732/
+
+    switch (
+        RenFormAsUtf8(
+            origin, &cell, buffer.data(), defaultBufLen, &numBytes
+        ))
+    {
+        case REN_SUCCESS:
+            assert(numBytes <= defaultBufLen);
+            break;
+
+        case REN_BUFFER_TOO_SMALL: {
+            assert(numBytes > defaultBufLen);
+            buffer.resize(numBytes);
+
+            size_t numBytesNew;
+            if (
+                RenFormAsUtf8(
+                    origin,
+                    &cell,
+                    buffer.data(),
+                    numBytes,
+                    &numBytesNew
+                ) != REN_SUCCESS
+            ) {
+                throw std::runtime_error("Expansion failure in RenFormAsUtf8");
+            }
+            assert(numBytesNew == numBytes);
+            break;
+        }
+
+        default:
+            throw std::runtime_error("Unknown error in RenFormAsUtf8");
+    }
+
+    auto result = std::string(buffer.data(), numBytes);
+    return result;
 }
+#endif
+
+
+#if REN_CLASSLIB_QT
+Value::operator QString () const {
+    const size_t defaultBufLen = 100;
+
+    QByteArray buffer (defaultBufLen, Qt::Uninitialized);
+
+    size_t numBytes;
+
+    // Note .data() method is const on std::string.
+    //    http://stackoverflow.com/questions/7518732/
+
+    switch (
+        RenFormAsUtf8(
+            origin, &cell, buffer.data(), defaultBufLen, &numBytes
+        ))
+    {
+        case REN_SUCCESS:
+            assert(numBytes <= defaultBufLen);
+            break;
+
+        case REN_BUFFER_TOO_SMALL: {
+            assert(numBytes > defaultBufLen);
+            buffer.resize(numBytes);
+
+            size_t numBytesNew;
+            if (
+                RenFormAsUtf8(
+                    origin,
+                    &cell,
+                    buffer.data(),
+                    numBytes,
+                    &numBytesNew
+                ) != REN_SUCCESS
+            ) {
+                throw std::runtime_error("Expansion failure in RenFormAsUtf8");
+            }
+            assert(numBytesNew == numBytes);
+            break;
+        }
+
+        default:
+            throw std::runtime_error("Unknown error in RenFormAsUtf8");
+    }
+
+    buffer.truncate(numBytes);
+    auto result = QString(buffer);
+    return result;
+}
+#endif
 
 
 std::ostream & operator<<(std::ostream & os, ren::Value const & value)
@@ -160,6 +256,44 @@ AnyWord::AnyWord (
     AnyWord (Context::runFinder(nullptr), cstr, validMemFn)
 {
 }
+
+
+#ifdef REN_CLASSLIB_QT
+AnyWord::AnyWord (
+    Context & context,
+    QString const & str,
+    bool (Value::*validMemFn)(RenCell *) const
+) :
+    Value (Dont::Initialize)
+{
+    // can't return char * without intermediate
+    // http://stackoverflow.com/questions/17936160/
+    QByteArray array = str.toLocal8Bit();
+    char const * buffer = array.data();
+
+    internal::Loadable loadable (buffer);
+    (this->*validMemFn)(&this->cell);
+
+    context.constructOrApplyInitialize(
+        nullptr,
+        &loadable,
+        1,
+        // Do construct
+        this,
+        // Don't apply
+        nullptr
+    );
+}
+
+
+AnyWord::AnyWord (
+    QString const & str,
+    bool (Value::*validMemFn)(RenCell *) const
+) :
+    AnyWord (Context::runFinder(nullptr), str, validMemFn)
+{
+}
+#endif
 
 
 AnyString::AnyString (

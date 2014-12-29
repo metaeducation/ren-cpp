@@ -75,10 +75,15 @@ endif()
 # besides just baseline C++11.  They must be requested specifically, such 
 # as passing in:
 #
-#     -DWORKBENCH=yes
-#
 
-if(WORKBENCH)
+
+if(GARDEN)
+
+    # Ren Garden is temporarily being built in the Rencpp project, but has
+    # its own issue tracker and will be migrated to:
+    #
+    #     https://github.com/hostilefork/ren-garden
+    #
 
     add_subdirectory(workbench)
 

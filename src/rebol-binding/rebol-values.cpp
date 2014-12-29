@@ -257,7 +257,8 @@ Float::operator double() const {
 }
 
 
-std::string AnyWord::spellingOf() const {
+#ifdef REN_CLASSLIB_STD
+std::string AnyWord::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
     if (isWord())
         return result;
@@ -267,6 +268,23 @@ std::string AnyWord::spellingOf() const {
         return result.erase(result.length() - 1, 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
+#endif
+
+
+#ifdef REN_CLASSLIB_QT
+QString AnyWord::spellingOf_QT() const {
+    QString result = static_cast<QString>(*this);
+    if (isWord())
+        return result;
+    if (isRefinement() or isGetWord() or isIssue())
+        return result.right(result.length() - 1);
+    if (isSetWord())
+        return result.left(result.length() - 1);
+    throw std::runtime_error {"Invalid Word Type"};
+}
+#endif
+
+
 
 
 ///

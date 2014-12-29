@@ -11,13 +11,67 @@
 // http://stackoverflow.com/a/4030983/211160
 // Use to indicate a variable is being intentionally not referred to (which
 // usually generates a compiler warning)
+
 #ifndef UNUSED
   #define UNUSED(x) ((void)(true ? 0 : ((x), void(), 0)))
 #endif
 
+
+
+///
+/// CLASSLIB LIBRAY INCLUSIONS
+///
+
+#if REN_CLASSLIB_QT == 1
+
+    // We only use QtCore classes (QString, QByteArray, etc.) in the Ren
+    // binding when they are enabled.  So no QtWidgets.
+
+    #include <QString>
+    #include <QByteArray> // For const char * of QString (later BINARY!...)
+
+#elif REN_CLASSLIB_QT != 0
+
+    static_assert(false, "Invalid value for REN_CLASSLIB_QT, not 0 or 1.");
+
+#endif
+
+
+#if REN_CLASSLIB_STD == 1
+
+    // Although we use C++11 classes internally for data structures, there
+    // is no express requirement to include std::string.  It is a fairly
+    // anemic class in the first place.  So this is the only place we should
+    // be including it.
+
+    #include <string>
+
+#elif REN_CLASSLIB_STD != 0
+
+    static_assert(false, "Invalid value for REN_CLASSLIB_STD, not 0 or 1.");
+
+#endif
+
+
+#if (REN_CLASSLIB_STD == 0) and (REN_CLASSLIB_QT == 0)
+
+    static_assert(false, "Unimplemented feature: no REN_CLASSLIB set"
+        " see https://github.com/hostilefork/rencpp/issues/22"
+
+#endif
+
+
+
+///
+/// BRIDGES TO FIXED-SIZE CONVERSIONS
+///
+
 //
-// Hopefully not too many of these will creep in; but right now there are some
-// by matter of necessity.
+// Although 64-bit builds of Rebol do exist, Red is currently focusing on
+// 32-bit architectures for the most part.  Hence there are some places
+// where pointers can't be used and need to be converted to.  Hopefully not
+// too many of these will creep in; but right now there are some by matter
+// of necessity and it's good to point them out.
 //
 
 static_assert(

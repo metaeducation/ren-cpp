@@ -53,14 +53,14 @@ QString WatchList::WatchItem::getWatchString() const {
     // address values of the cell?  That could be helpful.  Could
     // also just have a mode that shows that anyway...tooltip?
 
-    return static_cast<std::string>(watch).c_str();
+    return static_cast<QString>(watch);
 }
 
 
 QString WatchList::WatchItem::getValueString() const {
     if (error)
-        return static_cast<std::string>(error).c_str();
-    return static_cast<std::string>(value).c_str();
+        return static_cast<QString>(error);
+    return static_cast<QString>(value);
 }
 
 
@@ -163,11 +163,11 @@ WatchList::WatchList(MainWindow * mainWindow, QWidget * parent) :
             // Should this be a common routine?
             int logicIndex = -1;
             if (vars.isWord()) {
-                static std::vector<std::string> logicWords[2] =
+                static std::vector<QString> logicWords[2] =
                     {{"off", "no", "false"}, {"on", "yes", "true"}};
 
                 ren::Word word = ren::Word {vars};
-                std::string spelling = word.spellingOf();
+                auto spelling = word.spellingOf<QString>();
                 for (int index = 0; index < 2; index++) {
                     if (
                         logicWords[index].end()

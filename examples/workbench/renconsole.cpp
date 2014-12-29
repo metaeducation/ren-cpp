@@ -943,10 +943,7 @@ void RenConsole::handleResults(
         }
         else {
             // Formed errors have a newline on the end implicitly
-            cursor.insertText(
-                static_cast<std::string>(result).c_str(),
-                errorFormat
-            );
+            cursor.insertText(static_cast<QString>(result), errorFormat);
         }
     }
     else if (not result.isUnset()) {
@@ -958,7 +955,7 @@ void RenConsole::handleResults(
 
         cursor.insertText(" ", QTextCharFormat {});
 
-        cursor.insertText(static_cast<std::string>(result).c_str());
+        cursor.insertText(static_cast<QString>(result));
         cursor.insertText("\n");
     }
 
@@ -971,8 +968,7 @@ void RenConsole::handleResults(
 
     if (delta) {
         parent->statusBar()->showMessage(
-            QString("Command completed in ")
-            + static_cast<std::string>(delta).c_str()
+            QString("Command completed in ") + static_cast<QString>(delta)
         );
     }
 
