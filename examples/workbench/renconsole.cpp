@@ -1,11 +1,22 @@
 //
-// Using the current maybe-not-long-term idea (that isn't too terrible), the
-// console is just a Qt rich text editor.  It has a special rule that it
-// remembers the position in the document where the last command ended, and
-// although it will let you select before that point it won't let you modify
-// the text--you can only edit in the lines of the current input prompt
-// position.  So we have to intercept keypresses and decide whether to let
-// them fall through to the text editor's handling.
+// renconsole.cpp
+// This file is part of Ren Garden
+// Copyright (C) 2014 HostileFork.com
+//
+// Ren Garden is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Ren Garden is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
+//
+// See http://ren-garden.hostilefork.com/ for more information on this project
 //
 
 
