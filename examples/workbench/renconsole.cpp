@@ -163,8 +163,11 @@ RenConsole::RenConsole (QWidget * parent) :
     );
 
 
-    // Initialize text formats used - generalize anywhere specific styles
-    // are hardcoded... someday :-)
+    // Initialize text formats used.  What makes this difficult is "zoom in"
+    // and "zoom out", so if you get too creative with the font settings then
+    // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
+    //
+    //     https://github.com/hostilefork/ren-garden/issues/7
 
     // Make the input just a shade lighter black than the output.  (It's also
     // not a fixed width font, so between those two differences you should be
@@ -180,13 +183,14 @@ RenConsole::RenConsole (QWidget * parent) :
 
     errorFormat.setForeground(Qt::darkRed);
 
+    // See what works well enough on platforms to demo in terms of common
+    // monospace fonts (or if monospace is even what we want to differentiate
+    // the output...)
+    //
     // http://stackoverflow.com/a/1835938/211160
 
-    QFont outputFont {"Monospace"};
-    outputFont.setStyleHint(QFont::TypeWriter);
-    outputFont.setPointSize(currentFont().pointSize());
-    outputFormat.setFont(outputFont);
-
+    outputFormat.setFontFamily("Courier");
+    outputFormat.setFontWeight(QFont::Bold);
 
     auto consoleFunction = ren::make_Extension(
         "{CONSOLE dialect for customizing Ren Workbench commands}"
@@ -249,14 +253,28 @@ void RenConsole::printBanner() {
 
     cursor.insertImage(QImage (":/images/rebol-logo.png"));
 
-    cursor.insertText("\n");
-
     QTextCharFormat headerFormat;
-    headerFormat.setFont(QFont("Helvetica", 24, QFont::Bold));
-    cursor.insertText("Ren [人] Garden", headerFormat);
+    headerFormat.setFont(
+        QFont("Helvetica", defaultFont.pointSize() * 1.5)
+    );
+
+    cursor.insertText("\n", headerFormat);
+    cursor.insertHtml("<h1>Ren [人] Garden</h1>");
+
+    // Use a font we set the size explicitly for so this text intentionally
+    // does not participate in zoom in and zoom out
+    //
+    // https://github.com/hostilefork/ren-garden/issues/7
 
     QTextCharFormat subheadingFormat;
+    subheadingFormat.setFont(
+        QFont(
+            "Helvetica",
+            defaultFont.pointSize()
+        )
+    );
     subheadingFormat.setForeground(Qt::darkGray);
+
     cursor.insertText("\n", subheadingFormat);
 
     std::vector<char const *> components = {
