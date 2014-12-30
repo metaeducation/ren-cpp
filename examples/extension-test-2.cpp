@@ -12,7 +12,7 @@ private:
 public:
     Adder(int amount) : amount (amount) {}
 
-    Integer operator()(Integer && value) {
+    Integer operator()(Integer const & value) {
         return value + amount;
     }
 };
@@ -28,7 +28,7 @@ int main(int, char **) {
         /* Adder {5} */
 
         // This works, but makes you repeat the type signature.  That's life.
-        std::function<Integer(Integer &&)> {Adder {5}}
+        std::function<Integer(Integer const &)> {Adder {5}}
     );
 
     // Here we actually are using the behavior being complained about here
@@ -36,6 +36,7 @@ int main(int, char **) {
     // call to an APPLY:
     //
     //     http://stackoverflow.com/questions/27641809/
+    //
 
-    assert(static_cast<Integer>(runtime("10 +", addFive, 100)) == 115);
+    assert(Integer {runtime("10 +", addFive, 100)} == 115);
 }

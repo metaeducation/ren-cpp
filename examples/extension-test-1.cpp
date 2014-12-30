@@ -13,7 +13,7 @@ int main(int, char **) {
         "blk [block!] {The block to print}"
         "str [string!] {The string to print}",
 
-        [](Block && blk, String && str) -> Logic {
+        [](Block const & blk, String const & str) -> Logic {
             print("blk is", blk);
             print("str is", str);
             return true;
@@ -32,16 +32,12 @@ int main(int, char **) {
             print("EXTENSION RETURNED FALSE!");
     }
 
-    // Add extension to the environment.  It shouldn't require the proxy;
-    // seems a Rebol bug...function *values* should be inert:
+    // Add extension to the environment.  For why we need the "quote", see
+    // the answers here:
     //
     //    http://stackoverflow.com/questions/27641809/
-    //
-    // So you *should* be able to just write:
-    //
-    //    SetWord {"some-ext:"}(someExt);
 
-    runtime("some-ext: first", Block {printBlockString});
+    runtime("some-ext: quote", printBlockString);
 
     // Call the extension under its new name
 
