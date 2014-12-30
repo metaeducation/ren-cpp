@@ -126,6 +126,9 @@ class Value {
 protected:
     friend class Runtime;
     friend class Context; // Value::Dont::Initialize
+    friend class Series; // Value::Dont::Initialize for dereference
+    friend class AnyBlock; // Value::Dont::Initialize for dereference
+
 public: // temporary for the lambda in function, find better way
     RenCell cell;
 
@@ -222,6 +225,11 @@ protected:
     //        // derived class code that can cope with that
     //     }
     //
+    // Hadn't seen any precedent for this, but once I came up with it I
+    // did notice it in Qt::Uninitialized...
+    //
+    //     https://qt.gitorious.org/qt/icefox/commit/fbe0edc
+    //
     // Call finishInit to set up the refcounting if necessary.
     //
     enum class Dont {Initialize};
@@ -271,8 +279,18 @@ public:
 
 
 public:
-    Value (Engine & engine, int const & someInt);
-    Value (int const & someInt);
+    Value (Engine & engine, char const & c);
+    Value (char const & c);
+
+    Value (Engine & engine, wchar_t const & c);
+    Value (wchar_t const & c);
+
+    bool isCharacter() const;
+
+
+public:
+    Value (Engine & engine, int const & i);
+    Value (int const & i);
 
     bool isInteger() const;
 
@@ -424,6 +442,25 @@ public:
     ~Value() {
         releaseRefIfNecessary();
     }
+
+
+    //
+    // Equality and Inequality
+    //
+    // Note the semantics here are about comparing the values as equal in
+    // the sense of value equality.  For why we do not do bit equality, see:
+    //
+    //     https://github.com/hostilefork/rencpp/issues/25
+    //
+    // Having implicit constructors for C++ native types is more valuable
+    // than overloading == and != which is especially true given that C++
+    // has a different meaning for == than Rebol/Red.  Trying to make ==
+    // act like "isSameAs" causes ambiguity.
+    //
+public:
+    bool isEqualTo(Value const & other) const;
+    bool isSameAs(Value const & other) const;
+
 
 public:
     friend std::ostream & operator<<(std::ostream & os, Value const & value);
@@ -637,6 +674,38 @@ public:
 };
 
 
+class Character final : public Value {
+protected:
+    friend class Value;
+    friend class AnyString;
+    template <class R, class... Ts> friend class Extension;
+    Character (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
+    Character (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isCharacter(); }
+
+public:
+    Character (char const & c) :
+        Value (c)
+    {
+    }
+
+    Character (wchar_t const & wc) :
+        Value (wc)
+    {
+    }
+
+
+    // Characters represent codepoints.  These conversion operators are for
+    // convenience, but note that they may throw.
+
+    operator char () const;
+    operator wchar_t () const;
+    operator int () const;
+
+    // How to expose UTF8 encoding?
+};
+
+
 class Integer final : public Value {
 protected:
     friend class Value;
@@ -806,6 +875,35 @@ protected:
     Series (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Series (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
+
+    //
+    // If you wonder why C++ would need a separate iterator type for a Series
+    // instead of doing as Rebol does and just using a Series, see this:
+    //
+    //    https://github.com/hostilefork/rencpp/issues/25
+    //
+public:
+    class iterator {
+        friend class Series;
+        Value state; // it's a series but that's incomplete type
+        iterator (Series const & state) : state (state) {}
+
+    public:
+        iterator & operator++();
+        iterator & operator--();
+
+        bool operator==(iterator const & other)
+            { return state.isSameAs(other.state); }
+        bool operator!=(iterator const & other)
+            { return not state.isSameAs(other.state); }
+
+        Value operator * () const;
+        explicit operator Series () const;
+    };
+
+    iterator begin();
+
+    iterator end();
 };
 
 
@@ -854,14 +952,27 @@ public:
 
 
 public:
-    // Need to expose an iteration interface.  You should be able to write:
-    //
-    //     ren::String test {"Test"};
-    //     for (auto ch = test) {
-    //         ...
-    //     }
-    //
-    // But what type do you get from the auto?
+    class iterator {
+        friend class AnyString;
+        Value state; // It's an AnyString but that's incomplete type
+        iterator (AnyString const & state) : state (state) {}
+
+    public:
+        iterator & operator++();
+        iterator & operator--();
+        bool operator==(iterator const & other)
+            { return state.isSameAs(other.state); }
+        bool operator!=(iterator const & other)
+            { return state.isSameAs(other.state);}
+
+        Character operator * () const;
+
+        explicit operator AnyString() const;
+    };
+
+    iterator begin();
+
+    iterator end();
 };
 
 
@@ -898,10 +1009,6 @@ protected:
         size_t numLoadables,
         bool (Value::*validMemFn)(RenCell *) const
     );
-
-public:
-    // Need to expose an iteration interface.  An AnyBlock iterator will always
-    // give back Value, so we can get typing from that.
 };
 
 

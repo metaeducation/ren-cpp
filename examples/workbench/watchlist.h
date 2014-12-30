@@ -68,7 +68,7 @@ private:
         bool useCell;
         ren::Value value;
         ren::Value error;
-        ren::Tag tag;
+        ren::Value tag;
 
     public:
         // Construct will also evaluate to capture at the time of the watch
@@ -76,7 +76,7 @@ private:
         WatchItem (
             ren::Value const & watch,
             bool useCell,
-            ren::Tag const & tag
+            ren::Value const & tag
         );
 
         // Evaluates and returns error if there was one, or none
@@ -103,9 +103,9 @@ private:
     // aaaand... magic! :-)
     ren::Value watchDialect(
         ren::Value const & arg,
-        ren::Value const & useCell,
-        ren::Value const & useLabel,
-        ren::Tag const & tag
+        bool useCell,
+        bool useLabel,
+        ren::Value const & tag
     );
 };
 

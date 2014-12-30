@@ -40,7 +40,7 @@
 WatchList::WatchItem::WatchItem (
     ren::Value const & watch,
     bool useCell,
-    ren::Tag const & tag
+    ren::Value const & tag
 ) :
     watch (watch),
     useCell (useCell),
@@ -145,39 +145,22 @@ WatchList::WatchList(QWidget * parent) :
     auto watchFunction = ren::make_Extension(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
         ":arg [word! path! block! paren! integer!]"
-        "    {word to watch or other legal parameter, see documentation)}"
-        "/cell {Monitor the resulting boxed cell, not the expression}"
-        "/label tag [tag!] {label the expression in the view}",
+        "    {word to watch or other legal parameter, see documentation)}",
 
-        [this](
-            ren::Value const & arg,
-            ren::Value const & useCell,
-            ren::Value const & useLabel,
-            ren::Tag const & tag
-        )
-            -> ren::Value
-        {
-            // It's a pretty long function to put all in the lambda (you
-            // could, though!)  Just to demonstrate, we'll do a rejection
-            // of a zero integer parameter here...
-
-
+        [this](ren::Value const & arg) -> ren::Value {
 
             if (arg.isBlock()) {
-                ren::runtime("do make error! {Block form of dialect soon...}");
+                for (auto item : ren::Block {arg}) {
+                    watchDialect(item, false, false, ren::none);
+                }
+                return ren::none;
             }
 
-            return watchDialect(arg, useCell, useLabel, tag);
+            return watchDialect(arg, false, false, ren::none);
         }
     );
 
-    // Now bind the function to the word.  But see remarks on using function
-    // values as "unactivated" for assignment directly in a series here, need
-    // to put it in a block and use "first" (or similar)
-    //
-    //     http://stackoverflow.com/q/27641809/211160
-
-    ren::runtime("watch: first", ren::Block {watchFunction});
+    ren::runtime("watch: quote", watchFunction);
 
     // We also have to hook up the watchCalled and handleWatch signals and
     // slots.  This could be asynchronous, however we actually are
@@ -302,9 +285,9 @@ void WatchList::updateWatches() {
 
 ren::Value WatchList::watchDialect(
     ren::Value const & arg,
-    ren::Value const & useCell,
-    ren::Value const & useLabel,
-    ren::Tag const & tag
+    bool useCell,
+    bool useLabel,
+    ren::Value const & tag
 ) {
     if (arg.isInteger()) {
         int signedIndex = ren::Integer {arg};
@@ -399,7 +382,7 @@ ren::Value WatchList::watchDialect(
         WatchItem watchItem {
             arg,
             static_cast<bool>(useCell),
-            useLabel ? tag : tag
+            useLabel ? ren::Tag {tag} : ren::Value {}
         };
 
         if (watchItem.isCell() and watchItem.hadError()) {

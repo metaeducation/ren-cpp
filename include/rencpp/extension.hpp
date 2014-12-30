@@ -90,6 +90,7 @@ private:
     struct TableEntry {
         Engine & engine;
         FunType const fun;
+        std::function<int(REBVAL *)> shim;
     };
 
     static std::unordered_map<
@@ -168,7 +169,21 @@ public:
     Extension (Engine & engine, Block const & spec, FunType const & fun) :
         Function (Dont::Initialize)
     {
-        RenShimPointer const & shim  =
+        // See remarks on lambda lifetimes here:
+        //
+        //     http://stackoverflow.com/questions/8026170/l
+        //
+        // You can't hold a *local* lambda alive or insert it into a vector,
+        // because each lambda has a different type signature.  You need
+        // to put it into something more persistent like a std::function and
+        // get the "target":
+        //
+        //     http://www.cplusplus.com/forum/general/63552/
+        //
+        // But I'm having a hard time figuring it out, it turns out only the
+        // first lambda is held onto.  It's a work in progress.
+
+        auto lambda  =
             [] (RenCell * stack) -> int {
                 // We only need to do this lookup once.  Though the static
                 // variable initialization is thread-safe, the table access
@@ -195,18 +210,28 @@ public:
                 return REN_SUCCESS;
             };
 
+        std::function<int(REBVAL *)> shim = static_cast<RenShimPointer>(lambda);
+        RenShimPointer const cfunc_function = *shim.target<int(*)(REBVAL *)>();
+        RenShimPointer const cfunc_lambda = lambda;
+
+/*        assert(cfunc_function);
+        assert(cfunc_lambda); */ // Houston, we have a problem... :-/
+        // Researching this now.
+
         // Insert the shim into the mapping table so it can find itself while
         // the shim code is running.  Note that the tableAdd code has
         // to be thread-safe in case two threads try to modify the global
-        // table at the same time...
+        // table at the same time.  Also note that because the lambda will
+        // only last in this scope unless captured by a std::function, we
+        // have to capture it.  Maybe.  Unless this is totally broke.
 
-        tableAdd(shim, TableEntry {engine, fun});
+        tableAdd(cfunc_lambda, TableEntry {engine, fun, shim});
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInit(engine, spec, shim);
+        Function::finishInit(engine, spec, cfunc_lambda);
     }
 
     Extension (Block const & spec, FunType const & fun) :

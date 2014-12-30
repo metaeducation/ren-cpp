@@ -5,6 +5,22 @@
 
 namespace ren {
 
+bool Value::isEqualTo(Value const & other) const {
+    return Compare_Values(
+        const_cast<REBVAL *>(&cell),
+        const_cast<REBVAL *>(&other.cell),
+        0 // REBNATIVE(equalq)
+    );
+}
+
+bool Value::isSameAs(Value const & other) const {
+    return Compare_Values(
+        const_cast<REBVAL *>(&cell),
+        const_cast<REBVAL *>(&other.cell),
+        3 // REBNATIVE(sameq)
+    );
+}
+
 
 Value::Value (Engine & engine) :
     Value (Dont::Initialize)
@@ -27,6 +43,19 @@ Value::Value (Engine & engine, bool const & someBool) :
     finishInit(engine.getHandle());
 }
 
+Value::Value (Engine & engine, char const & c) :
+    Value (Dont::Initialize)
+{
+    SET_CHAR(&cell, c);
+    finishInit(engine.getHandle());
+}
+
+Value::Value (Engine & engine, wchar_t const & wc) :
+    Value (Dont::Initialize)
+{
+    SET_CHAR(&cell, wc);
+    finishInit(engine.getHandle());
+}
 
 Value::Value (Engine & engine, int const & someInt) :
     Value (Dont::Initialize)
@@ -92,6 +121,10 @@ bool Value::isTrue() const {
 
 bool Value::isFalse() const {
     return isLogic() && !VAL_LOGIC(&cell);
+}
+
+bool Value::isCharacter() const {
+    return IS_CHAR(&cell);
 }
 
 bool Value::isInteger() const {
@@ -308,5 +341,95 @@ void Function::finishInit(
 
     Value::finishInit(engine.getHandle());
 }
+
+
+
+///
+/// ITERATORS (WORK IN PROGRESS)
+///
+
+//
+// Series
+//
+
+Series::iterator & Series::iterator::operator++() {
+    state.cell.data.series.index++;
+    return *this;
+}
+
+Series::iterator & Series::iterator::operator--() {
+    state.cell.data.series.index--;
+    return *this;
+}
+
+Value Series::iterator::operator * () const {
+    Value result {Dont::Initialize};
+    result.cell = *VAL_BLK_SKIP(&state.cell, state.cell.data.series.index);
+    return result;
+}
+
+Series::iterator::operator Series() const {
+    return Series {state};
+}
+
+Series::iterator Series::begin() {
+    // Rebol iterations start at current position.  So return a *copy* at
+    // the current index.  It will be mutated by the operator++ and operator--
+    return Series::iterator(*this);
+}
+
+Series::iterator Series::end() {
+    Series result {*this};
+    result.cell.data.series.index = (REBCNT)cell.data.series.series->tail;
+    return Series::iterator(result);
+}
+
+
+
+
+
+//
+// AnyString
+//
+
+AnyString::iterator & AnyString::iterator::operator++() {
+    state.cell.data.series.index++;
+    return *this;
+}
+
+AnyString::iterator & AnyString::iterator::operator--() {
+    state.cell.data.series.index--;
+    return *this;
+}
+
+Character AnyString::iterator::operator * () const {
+    Character result {Dont::Initialize};
+
+    // from str_to_char
+    SET_CHAR(
+        &result.cell,
+        GET_ANY_CHAR(VAL_SERIES(&state.cell),
+        state.cell.data.series.index)
+    );
+    return result;
+}
+
+AnyString::iterator::operator AnyString() const {
+    return AnyString {state};
+}
+
+AnyString::iterator AnyString::begin() {
+    // Rebol iterations start at current position.  So return a *copy* at
+    // the current index.  It will be mutated by the operator++ and operator--
+    return *this;
+}
+
+AnyString::iterator AnyString::end() {
+    AnyString result {*this};
+    result.cell.data.series.index =
+        static_cast<REBCNT>(cell.data.series.series->tail);
+    return AnyString::iterator {result};
+}
+
 
 } // end namespace ren
