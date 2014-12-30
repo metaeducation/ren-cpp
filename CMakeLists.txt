@@ -82,6 +82,33 @@ macro(remove_cxx_flag flag)
 endmacro()
 
 
+# Helper for dumping lists, each item on a new line and not pushed together
+# without spaces (which is the default behavior)
+
+macro(dump_list message list)
+    message(STATUS ${message})
+    foreach(ITEM ${list})
+        message(STATUS "  " ${ITEM})
+    endforeach()
+endmacro()
+
+
+# Equivalent to list(REMOVE_ITEM list item) but checks to make sure the
+# removal actually happened.
+
+macro(ensure_remove_item list_name item)
+    list(FIND "${list_name}" ${item} ITEM_INDEX)
+    if(ITEM_INDEX EQUAL -1)
+        message(FATAL_ERROR "Couldn't local removal item " ${item})
+    endif()
+    list(REMOVE_AT "${list_name}" ${ITEM_INDEX})
+    list(FIND "${list_name}" ${item} ITEM_INDEX)
+    if(NOT ITEM_INDEX EQUAL -1)
+        message(FATAL_ERROR "Removal failed of item " ${item})
+    endif()
+endmacro()
+
+
 #
 # Default to looking for the runtime installation up one level
 #
@@ -89,7 +116,7 @@ endmacro()
 # which inherit this file's settings vs add_subdirectory will still work
 #
 
-if (RUNTIME AND NOT RUNTIME_PATH)
+if(RUNTIME AND NOT RUNTIME_PATH)
     set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${RUNTIME})
 endif()
 
@@ -345,18 +372,16 @@ elseif(RUNTIME STREQUAL "rebol")
     # the entry point.
 
     file(GLOB EXTRA_OBJS ${RUNTIME_PATH}/make/objs/*.o)
-    list(REMOVE_ITEM EXTRA_OBJS ${RUNTIME_PATH}/make/objs/host-main.o)
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/host-main.o)
 
-    # Speaking of things to rip out, the great-wall-of-Rebol-lib
+    # Among things that would be nice to omit, the great-wall-of-Rebol-lib
     # is one of them.  It's a fairly anemic interface; the binding
     # runs at a privileged level and wants to do anything a native
-    # could have done.  Don't have to remove them...but they're
-    # not useful when you have the full interpreter internals available
-
-    #list(REMOVE_ITEM EXTRA_OBJS
-    #    ${RUNTIME_PATH}/make/objs/a-lib2.o
-    #    ${RUNTIME_PATH}/make/objs/a-lib.o
-    #)
+    # could have done.  Unfortunately, small links here and there keep
+    # them dependent.
+    #
+    # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib.o)
+    # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib2.o)
 
     # The binding could replace the entirety of the "host", implementing all
     # the network calls in "Rebolese" using its ioctl system.  That's work
@@ -365,9 +390,24 @@ elseif(RUNTIME STREQUAL "rebol")
     # the hooks are reimplemented to speak to the C++ iostreams and we axe
     # the host kit one.
 
-    list(REMOVE_ITEM EXTRA_OBJS ${RUNTIME_PATH}/make/objs/dev-stdio.o)
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/dev-stdio.o)
 
-    message(STATUS "extra_objs" ${EXTRA_OBJS})
+    # We cannot use the c-do.c file unmodified from github's rebol/rebol,
+    # due to Halt_State being static.  Though that's a small change, more
+    # radical changes can give us interesting hooks into the evaluator.
+    # So it's worth it to pull that file out and customize it in Rencpp.
+    # But we then have to put the customized version from the Rencpp
+    # sources at the right position in the list so its globals get picked
+    # up by the other Rebol object files
+    #
+    # Note that the license inherited by c-do.cpp is Apache, not Boost.
+
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-do.o)
+
+    # To assist in debugging, dump out the EXTRA_OBJS list
+
+    dump_list("EXTRA OBJS:" "${EXTRA_OBJS}")
+
 
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.

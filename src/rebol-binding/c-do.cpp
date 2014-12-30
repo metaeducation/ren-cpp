@@ -1,3 +1,17 @@
+//
+// This is an experimental adaptation of Rebol 3's c-do.c for use in the
+// Rencpp binding for Rebol and Red.
+//
+// Although RenCpp is under a Boost license in general, when built against
+// Rebol the Rebol portions are governed by the Apache 2 license.  Although
+// most every file could technically be "linked to" from a separate Rebol
+// installation, the c-do.c file was one that had no workaround without
+// a modification to the rebol/rebol GitHub.  Hence this file is included
+// in the RenCpp distribution.
+//
+// The Rebol license is included.
+//
+
 /***********************************************************************
 **
 **  REBOL [R3] Language Interpreter and Run-time Environment
@@ -31,9 +45,12 @@
 **
 ***********************************************************************/
 
-#include "sys-core.h"
-#include <stdio.h>
-#include "sys-state.h"
+#include "rencpp/common.hpp"
+
+extern "C" {
+#include "rebol/src/include/sys-core.h"
+#include "rebol/src/include/sys-state.h"
+}
 
 enum Eval_Types {
 	ET_INVALID,		// not valid to evaluate
@@ -50,19 +67,35 @@ enum Eval_Types {
 	ET_END			// end of block
 };
 
-static jmp_buf *Halt_State = 0;  //!!!!!!!!!! global?
+extern "C" jmp_buf *Halt_State;
+jmp_buf *Halt_State = 0;  //!!!!!!!!!! global?
 
-/*
-void T_Error(REBCNT n) {;}
 
-// Deferred:
-void T_Series(REBCNT n) {;}		// image
-void T_List(REBCNT n) {;}		// list
-*/
+static void Do_Rebcode(REBVAL *v) {UNUSED(v);}
 
-void Do_Rebcode(REBVAL *v) {;}
 
-#include "tmp-evaltypes.h"
+///
+/// SINGLE-INSTANCE DISPATCH TABLES
+///
+
+//
+// The MAKE PREP step of building Rebol takes some files that describe the
+// types and builds the file tmp-evaltypes.h - these are used by other Rebol
+// modules that expect them to be available with C linkages.  However, to
+// get C linkage in C++ you have to have previously seen a forward declaration
+// for it.  The extern "C" is ignored if it appears on the instantiation.
+// Hence we have to forward declare the types before they appear.
+//
+
+extern "C" const REBINT Eval_Type_Map[REB_MAX];
+extern "C" const REBDOF Func_Dispatch[];
+extern "C" const REBACT Value_Dispatch[REB_MAX];
+extern "C" const REBPEF Path_Dispatch[REB_MAX];
+
+//extern "C" {
+#include "rebol/src/include/tmp-evaltypes.h"
+//}
+
 
 #define EVAL_TYPE(val) (Eval_Type_Map[VAL_TYPE(val)])
 
@@ -161,6 +194,7 @@ static REBVAL *Func_Word(REBINT dsf)
 	return 0;
 }
 
+extern "C" REBNATIVE(trace);
 
 /***********************************************************************
 **
@@ -213,8 +247,10 @@ static REBINT Init_Depth(void)
 
 #define CHECK_DEPTH(d) if ((d = Init_Depth()) < 0) return;\
 
-void Trace_Line(REBSER *block, REBINT index, REBVAL *value)
+static void Trace_Line(REBSER *block, REBINT index, REBVAL *value)
 {
+    UNUSED(block);
+
 	int depth;
 
 	if (GET_FLAG(Trace_Flags, 1)) return; // function
@@ -243,7 +279,7 @@ void Trace_Line(REBSER *block, REBINT index, REBVAL *value)
 	Debug_Line();
 }
 
-void Trace_Func(REBVAL *word, REBVAL *value)
+static void Trace_Func(REBVAL *word, REBVAL *value)
 {
 	int depth;
 	CHECK_DEPTH(depth);
@@ -252,7 +288,7 @@ void Trace_Func(REBVAL *word, REBVAL *value)
 	else Debug_Line();
 }
 
-void Trace_Return(REBVAL *word, REBVAL *value)
+static void Trace_Return(REBVAL *word, REBVAL *value)
 {
 	int depth;
 	CHECK_DEPTH(depth);
@@ -260,7 +296,7 @@ void Trace_Return(REBVAL *word, REBVAL *value)
 	Debug_Values(value, 1, 50);
 }
 
-void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
+static void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 {
 	int depth;
 	if (IS_REFINEMENT(arg) && (!path || IS_END(path))) return;
@@ -339,7 +375,7 @@ void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 	// Save WORD for function and fake frame for relative arg lookup:
 	tos++;
 	VAL_SET(tos, REB_HANDLE); // Was REB_WORD, but GC does not like bad fields.
-	VAL_WORD_SYM(tos) = word ? word : SYM__APPLY_;
+    VAL_WORD_SYM(tos) = word ? word : static_cast<REBCNT>(SYM__APPLY_);
 	VAL_WORD_INDEX(tos) = -1; // avoid GC access to invalid FRAME above
 	if (func) {
 		VAL_WORD_FRAME(tos) = VAL_FUNC_ARGS(func);
@@ -420,6 +456,8 @@ void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 		Trap_Range(pvs->path);
 	case PE_BAD_SET_TYPE:
 		Trap2(RE_BAD_FIELD_SET, pvs->path, Of_Type(pvs->setval));
+    default:
+        throw std::runtime_error("Unreachable condition in Next_Path");
 	}
 
 	if (NOT_END(pvs->path+1)) Next_Path(pvs);
@@ -451,8 +489,8 @@ void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 	pvs.store = DS_TOP;		// Temp space for constructed results
 
 	// Get first block value:
-	pvs.orig = *path_val;
-	pvs.path = VAL_BLK_DATA(*path_val);
+    pvs.orig = *path_val;
+    pvs.path = VAL_BLK_DATA(*path_val);
 
 	// Lookup the value of the variable:
 	if (IS_WORD(pvs.path)) {
@@ -527,6 +565,8 @@ void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 	case PE_BAD_SET:
 		Trap2(RE_BAD_PATH_SET, pvs.value, pvs.select);
 		break;
+    default:
+        throw std::runtime_error("unreachable Pick_Path");
 	}
 }
 
@@ -2166,6 +2206,7 @@ xx*/	REBVAL *Do_Path(REBVAL **path_val, REBVAL *val)
 /*
 ***********************************************************************/
 {
+    UNUSED(reserved);
 	REBINT result = 0;
 	//REBVAL *val;
 	REBOL_STATE state;
