@@ -422,7 +422,18 @@ else()
 endif()
 
 
-set(SRC_ALL ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST})
+
+#
+# Though it's early yet to decide exactly how the project will be packaged,
+# CMake's static libraries at least speed up the build for now.
+#
+
+add_library(
+    RenCpp STATIC
+    ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST}
+)
+
+target_link_libraries(RenCpp ${LIBS_ALL})
 
 
 #

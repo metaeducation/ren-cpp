@@ -7,20 +7,20 @@
 # These tests do not require an evaluator, and simply test Ren values
 #
 
-add_executable(literals-test literals-test.cpp ${SRC_ALL})
-target_link_libraries(literals-test ${LIBS_ALL})
+add_executable(literals-test literals-test.cpp)
+target_link_libraries(literals-test RenCpp)
 
-add_executable(cast-test cast-test.cpp ${SRC_ALL})
-target_link_libraries(cast-test ${LIBS_ALL})
+add_executable(cast-test cast-test.cpp)
+target_link_libraries(cast-test RenCpp)
 
-add_executable(block-test block-test.cpp ${SRC_ALL})
-target_link_libraries(block-test ${LIBS_ALL})
+add_executable(block-test block-test.cpp)
+target_link_libraries(block-test RenCpp)
 
-add_executable(assign-test assign-test.cpp ${SRC_ALL})
-target_link_libraries(assign-test ${LIBS_ALL})
+add_executable(assign-test assign-test.cpp)
+target_link_libraries(assign-test RenCpp)
 
-add_executable(form-test form-test.cpp ${SRC_ALL})
-target_link_libraries(form-test ${LIBS_ALL})
+add_executable(form-test form-test.cpp)
+target_link_libraries(form-test RenCpp)
 
 
 
@@ -30,23 +30,23 @@ target_link_libraries(form-test ${LIBS_ALL})
 
 if(NOT RUNTIME STREQUAL "none")
 
-    add_executable(apply-test apply-test.cpp ${SRC_ALL})
-    target_link_libraries(apply-test ${LIBS_ALL})
+    add_executable(apply-test apply-test.cpp)
+    target_link_libraries(apply-test RenCpp)
 
-    add_executable(parse-test-1 parse-test-1.cpp ${SRC_ALL})
-    target_link_libraries(parse-test-1 ${LIBS_ALL})
+    add_executable(parse-test-1 parse-test-1.cpp)
+    target_link_libraries(parse-test-1 RenCpp)
 
-    add_executable(parse-test-2 parse-test-2.cpp ${SRC_ALL})
-    target_link_libraries(parse-test-2 ${LIBS_ALL})
+    add_executable(parse-test-2 parse-test-2.cpp)
+    target_link_libraries(parse-test-2 RenCpp)
 
-    add_executable(context-test context-test.cpp ${SRC_ALL})
-    target_link_libraries(context-test ${LIBS_ALL})
+    add_executable(context-test context-test.cpp)
+    target_link_libraries(context-test RenCpp)
 
-    add_executable(extension-test-1 extension-test-1.cpp ${SRC_ALL})
-    target_link_libraries(extension-test-1 ${LIBS_ALL})
+    add_executable(extension-test-1 extension-test-1.cpp)
+    target_link_libraries(extension-test-1 RenCpp)
 
-    add_executable(extension-test-2 extension-test-2.cpp ${SRC_ALL})
-    target_link_libraries(extension-test-2 ${LIBS_ALL})
+    add_executable(extension-test-2 extension-test-2.cpp)
+    target_link_libraries(extension-test-2 RenCpp)
 
 endif()
 
@@ -59,13 +59,13 @@ endif()
 
 if(RUNTIME STREQUAL "red")
 
-    add_executable(red-test red-test.cpp ${SRC_ALL})
-    target_link_libraries(red-test ${LIBS_ALL})
+    add_executable(red-test red-test.cpp)
+    target_link_libraries(red-test RenCpp)
 
 elseif(RUNTIME STREQUAL "rebol")
 
-    add_executable(rebol-test rebol-test.cpp ${SRC_ALL})
-    target_link_libraries(rebol-test ${LIBS_ALL})
+    add_executable(rebol-test rebol-test.cpp)
+    target_link_libraries(rebol-test RenCpp)
 
 endif()
 

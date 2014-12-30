@@ -67,11 +67,7 @@ add_executable(
     renconsole.h
     replpad.h
     fakestdio.h
-    watchlist.h
-    
-    # Sources inherited from the binding
-
-    ${SRC_ALL}
+    watchlist.h    
 )
 
 
@@ -79,7 +75,7 @@ add_executable(
 
 target_link_libraries(
     workbench 
-    ${LIBS_ALL} 
+    RenCpp
     Qt5::Widgets 
 )
 
