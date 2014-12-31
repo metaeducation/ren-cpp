@@ -75,14 +75,12 @@ void Host_Crash(REBYTE * message) {
 //
 
 
-RebolRuntime::RebolRuntime (bool someExtraInitFlag) :
+RebolRuntime::RebolRuntime (bool) :
     Runtime (),
     initialized (false),
     osPtr (&std::cout),
     isPtr (&std::cin)
 {
-    UNUSED(someExtraInitFlag);
-
     Host_Lib = &Host_Lib_Init; // OS host library (dispatch table)
 
     // We don't want to rewrite the entire host lib here, but we can
@@ -233,8 +231,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // to handle a Ctrl-C on the gui thread during an infinite loop you need
     // to be doing the evaluation on a worker thread and signal it from GUI
 
-    auto signalHandler = [](int sig) {
-        UNUSED(sig);
+    auto signalHandler = [](int) {
         std::cout << "[escape]";
         SET_SIGNAL(SIG_ESCAPE);
     };

@@ -175,14 +175,12 @@ extern REBDEV *Devices[];
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Open_Echo(REBREQ *req)
+*/	static DEVICE_CMD Open_Echo(REBREQ *)
 /*
 **		Open a file for low-level console echo (output).
 **
 ***********************************************************************/
 {
-    UNUSED(req);
-
     throw std::runtime_error(
         "echo stdin and stdout to file not supported by binding"
         " in a direct fashion, you have to create a stream aggregator"
