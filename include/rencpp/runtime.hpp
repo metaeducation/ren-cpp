@@ -162,8 +162,7 @@ public:
     }
 
     template <typename T>
-    void writeArgs(bool spaced, T && t) {
-        UNUSED(spaced);
+    void writeArgs(bool , T && t) {
         runtime.getOutputStream() << std::forward<T>(t);
     }
 

@@ -8,15 +8,6 @@
 #include <type_traits>
 
 
-// http://stackoverflow.com/a/4030983/211160
-// Use to indicate a variable is being intentionally not referred to (which
-// usually generates a compiler warning)
-
-#ifndef UNUSED
-  #define UNUSED(x) ((void)(true ? 0 : ((x), void(), 0)))
-#endif
-
-
 
 ///
 /// CLASSLIB LIBRAY INCLUSIONS
@@ -56,7 +47,7 @@
 #if (REN_CLASSLIB_STD == 0) and (REN_CLASSLIB_QT == 0)
 
     static_assert(false, "Unimplemented feature: no REN_CLASSLIB set"
-        " see https://github.com/hostilefork/rencpp/issues/22"
+        " see https://github.com/hostilefork/rencpp/issues/22");
 
 #endif
 

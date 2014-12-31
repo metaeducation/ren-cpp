@@ -369,8 +369,6 @@ public:
         REBVAL * constructOutDatatypeIn,
         REBVAL * applyOut
     ) {
-        UNUSED(engine);
-
         lazyThreadInitializeIfNeeded(engine);
 
         REBOL_STATE state;
@@ -581,8 +579,6 @@ public:
                 if (nodes[engine.data].empty())
                     nodes.erase(engine.data);
             }
-        #else
-            UNUSED(engine);
         #endif
 
             current += sizeofCellBlock;
