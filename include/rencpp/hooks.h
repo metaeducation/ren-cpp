@@ -37,6 +37,7 @@ typedef int RenResult;
 #define REN_ERROR_TOO_MANY_ARGS 10
 #define REN_ERROR_NO_SUCH_CONTEXT 11
 #define REN_BUFFER_TOO_SMALL 12
+#define REN_SHIM_INITIALIZED 13
 
 
 /*

@@ -51,8 +51,18 @@ namespace ren {
 //
 
 namespace internal {
+
     extern std::mutex extensionTablesMutex;
+
+    typedef int RenShimId;
+
+    extern RenShimId shimIdToCapture;
+
+    typedef RenResult (* RenShimBouncer)(RenShimId id, RenCell * stack);
+
+    extern RenShimBouncer shimBouncerToCapture;
 }
+
 
 template<class R, class... Ts>
 class Extension : public Function {
@@ -90,32 +100,10 @@ private:
     struct TableEntry {
         Engine & engine;
         FunType const fun;
-        std::function<int(REBVAL *)> shim;
     };
 
-    static std::unordered_map<
-        RenShimPointer, TableEntry
-    > table;
+    static std::vector<TableEntry> table;
 
-    static void tableAdd(RenShimPointer shim, TableEntry && entry) {
-        using internal::extensionTablesMutex;
-
-        std::lock_guard<std::mutex> lock {extensionTablesMutex};
-
-        table.emplace(shim, entry);
-    }
-
-    static TableEntry tableFindAndRemove(RenCell * stack) {
-        using internal::extensionTablesMutex;
-
-        std::lock_guard<std::mutex> lock {extensionTablesMutex};
-
-        auto it = table.find(REN_STACK_SHIM(stack));
-
-        TableEntry result = (*it).second;
-        table.erase(it);
-        return result;
-    }
 
     // Function used to create Ts... on the fly and apply a
     // given function to them
@@ -165,87 +153,106 @@ private:
         );
     }
 
+private:
+    static int bounceShim(internal::RenShimId id, RenCell * stack) {
+        using internal::extensionTablesMutex;
+
+        // The extension table is add-only, but additions can resize,
+        // and move the underlying memory.  We either hold the lock for
+        // the entire duration of the function run, or copy the table
+        // entry out by value... the latter makes more sense.
+
+        extensionTablesMutex.lock();
+        TableEntry entry = table[id];
+        extensionTablesMutex.unlock();
+
+        // Our applyFun helper does the magic to recursively forward
+        // the Value classes that we generate to the function that
+        // interfaces us with the Callable the extension author wrote
+        // (who is blissfully unaware of the stack convention and
+        // writing using high-level types...)
+
+        auto && result = applyFun(entry.fun, entry.engine, stack);
+
+        // The return result is written into a location that is known
+        // according to the protocol of the stack
+
+        *REN_STACK_RETURN(stack) = result.cell;
+
+        // Note: trickery!  R_RET is 0, but all other R_ values are
+        // meaningless to Red.  So we only use that one here.
+
+        return REN_SUCCESS;
+    }
+
 public:
-    Extension (Engine & engine, Block const & spec, FunType const & fun) :
+    Extension (
+        Engine & engine,
+        Block const & spec,
+        RenShimPointer shim,
+        FunType const & fun = FunType {nullptr}
+    ) :
         Function (Dont::Initialize)
     {
-        // See remarks on lambda lifetimes here:
-        //
-        //     http://stackoverflow.com/questions/8026170/l
-        //
-        // You can't hold a *local* lambda alive or insert it into a vector,
-        // because each lambda has a different type signature.  You need
-        // to put it into something more persistent like a std::function and
-        // get the "target":
-        //
-        //     http://www.cplusplus.com/forum/general/63552/
-        //
-        // But I'm having a hard time figuring it out, it turns out only the
-        // first lambda is held onto.  It's a work in progress.
+        // First we lock the global table so we can call the shim for the
+        // initial time.  It will grab its identity so that from then on it
+        // can forward calls to us.
 
-        auto lambda  =
-            [] (RenCell * stack) -> int {
-                // We only need to do this lookup once.  Though the static
-                // variable initialization is thread-safe, the table access
-                // itself is not...so it is protected via mutex.
+        std::lock_guard<std::mutex> lock {internal::extensionTablesMutex};
 
-                static TableEntry entry = tableFindAndRemove(stack);
+        assert(internal::shimIdToCapture == -1);
+        assert(not internal::shimBouncerToCapture);
 
-                // Our applyFun helper does the magic to recursively forward
-                // the Value classes that we generate to the function that
-                // interfaces us with the Callable the extension author wrote
-                // (who is blissfully unaware of the stack convention and
-                // writing using high-level types...)
+        internal::shimIdToCapture = table.size();
+        internal::shimBouncerToCapture = &bounceShim;
 
-                auto && result = applyFun(entry.fun, entry.engine, stack);
+        if (shim(nullptr) != REN_SHIM_INITIALIZED)
+            throw std::runtime_error(
+                "First shim call didn't return REN_SHIM_INITIALIZED"
+            );
 
-                // The return result is written into a location that is known
-                // according to the protocol of the stack
-
-                *REN_STACK_RETURN(stack) = result.cell;
-
-                // Note: trickery!  R_RET is 0, but all other R_ values are
-                // meaningless to Red.  So we only use that one here.
-
-                return REN_SUCCESS;
-            };
-
-        std::function<int(REBVAL *)> shim = static_cast<RenShimPointer>(lambda);
-        RenShimPointer const cfunc_function = *shim.target<int(*)(REBVAL *)>();
-        RenShimPointer const cfunc_lambda = lambda;
-
-/*        assert(cfunc_function);
-        assert(cfunc_lambda); */ // Houston, we have a problem... :-/
-        // Researching this now.
+        internal::shimIdToCapture = -1;
+        internal::shimBouncerToCapture = nullptr;
 
         // Insert the shim into the mapping table so it can find itself while
         // the shim code is running.  Note that the tableAdd code has
         // to be thread-safe in case two threads try to modify the global
-        // table at the same time.  Also note that because the lambda will
-        // only last in this scope unless captured by a std::function, we
-        // have to capture it.  Maybe.  Unless this is totally broke.
+        // table at the same time.
 
-        tableAdd(cfunc_lambda, TableEntry {engine, fun, shim});
+        table.push_back({engine, fun});
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInit(engine, spec, cfunc_lambda);
+        Function::finishInit(engine, spec, shim);
     }
 
-    Extension (Block const & spec, FunType const & fun) :
-        Extension (Engine::runFinder(), spec, fun)
+    Extension (
+        Block const & spec,
+        RenShimPointer shim,
+        FunType const & fun
+    ) :
+        Extension (Engine::runFinder(), spec, shim, fun)
     {
     }
 
-    Extension (Engine & engine, char const * specCstr, FunType const & fun) :
-        Extension (engine, Block {specCstr}, fun)
+    Extension (
+        Engine & engine,
+        char const * spec,
+        RenShimPointer shim,
+        FunType const & fun
+    ) :
+        Extension (engine, Block {spec}, shim, fun)
     {
     }
 
-    Extension (char const * specCstr, FunType const & fun) :
-        Extension (Engine::runFinder(), specCstr, fun)
+    Extension (
+        char const * spec,
+        RenShimPointer shim,
+        FunType const & fun = FunType {nullptr}
+    ) :
+        Extension (Engine::runFinder(), spec, shim, fun)
     {
     }
 };
@@ -258,51 +265,95 @@ public:
 //
 
 template<class R, class... Ts>
-std::unordered_map<
-    RenShimPointer,
+std::vector<
     typename Extension<R, Ts...>::TableEntry
 > Extension<R, Ts...>::table;
 
 
 
 ///
-/// UGLY LAMBDA INFERENCE NIGHTMARE
+/// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
 ///
 
 //
-// This craziness is due to a seeming-missing feature in C++11, which is a
-// convenient way to use type inference from a lambda.  Lambdas are the most
-// notationally convenient way of making functions, and yet you can't make
-// a template which picks up their signature.  This creates an annoying
-// repetition where you wind up typing the signature twice.
+// While preprocessor macros are to be avoided whenever possible, the
+// particulars of this case require them.  At the moment, the only "identity"
+// the generated parameter-unpacking "shim" function gets when it is called
+// is its own pointer pushed on the stack.  That's the only way it can look
+// up the C++ function it's supposed to unpack and forward to.  And C/C++
+// functions *don't even know their own pointer*!
 //
-// We are trusting here that it's not a "you shouldn't do it" but rather a
-// "the standard library didn't cover it".  This helpful adaptation from
-// Morwenn on StackOverflow does the trick.
+// So what we do here is a trick.  The first call to the function isn't asking
+// it to forward parameters, it's just asking it to save knowledge of its own
+// identity and the pointer to the function it should forward to in future
+// calls.  Because the macro is instantiated by each client, there is a
+// unique pointer for each lambda.  It's really probably the only way this
+// can be done without changing the runtime to pass something more to us.
+
+#define REN_STD_FUNCTION \
+    [](RenCell * stack) -> int {\
+        static ren::internal::RenShimId id = -1; \
+        static ren::internal::RenShimBouncer bouncer = nullptr; \
+        if (id != -1) \
+            return bouncer(id, stack); \
+        id = ren::internal::shimIdToCapture; \
+        bouncer = ren::internal::shimBouncerToCapture; \
+        return REN_SHIM_INITIALIZED; \
+    }
+
+
+
+///
+/// TYPE INFERENCE FROM LAMBDA
+///
+
+//
+// C++11 is missing the feature of a convenient way to use type inference from
+// a lambda to determine its signature.  So you can't make a templated class
+// that automatically detects and extracts their type when passed as an
+// argument to the constructor.  This creates an annoying repetition where
+// you wind up typing the signature twice...once on what you're trying to
+// pass the lambda to, and once on the lambda itself.
+//
+//     Foo<Baz(Bar)> temp { [](Bar bar) -> Baz {...} }; // booo!
+//
+//     auto temp = makeFoo { [](Bar bar) -> Baz {...} }; // better!
+//
+// Eliminating the repetition is desirable.  So Morwenn adapted this technique
+// from one of his StackOverflow answers:
 //
 //     http://stackoverflow.com/a/19934080/211160
 //
-// But putting it in use is as ugly as any standard library implementation
-// code, though.  :-P  If you're dealing with "Generic Lambdas" from C++14
-// it breaks, but should work for the straightforward case it was designed for.
+// It will not work in the general case with "Callables", e.g. objects that
+// have operator() overloading.  (There could be multiple overloads, which one
+// to pick?  For a similar reason it will not work with "Generic Lambdas"
+// from C++14.)  However, it works for ordinary lambdas...and that leads to
+// enough benefit to make it worth including.
 //
 
 template<typename Fun, std::size_t... Ind>
-auto make_Extension_(char const * specCstr, Fun && fun, utility::indices<Ind...>)
-    -> Extension<
+Function makeFunction_(
+    char const * spec,
+    RenShimPointer shim,
+    Fun && fun,
+    utility::indices<Ind...>
+) {
+    typedef Extension<
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::result_type,
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::template arg<Ind>...
-    >
-{
+    > Temp;
+
     using Ret = typename utility::function_traits<
         typename std::remove_reference<Fun>::type
     >::result_type;
-    return {
-        specCstr,
+
+    return Temp {
+        spec,
+        shim,
         std::function<
             Ret(
                 typename utility::function_traits<
@@ -321,10 +372,12 @@ template<
         >::arity
     >
 >
-auto make_Extension(char const * specCstr, Fun && fun)
-    -> decltype(make_Extension_(specCstr, std::forward<Fun>(fun), Indices()))
-{
-    return make_Extension_(specCstr, std::forward<Fun>(fun), Indices());
+Function makeFunction(
+    char const * spec,
+    RenShimPointer shim,
+    Fun && fun
+) {
+    return makeFunction_(spec, shim, std::forward<Fun>(fun), Indices());
 }
 
 }

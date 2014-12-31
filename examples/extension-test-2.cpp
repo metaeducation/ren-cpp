@@ -19,9 +19,11 @@ public:
 
 int main(int, char **) {
 
-    auto addFive = make_Extension(
+    auto addFive = makeFunction(
         "{Demonstration of using an operator() overloaded class}"
         "value [integer!]",
+
+        REN_STD_FUNCTION,
 
         // This won't work, operator() may (in the general case) be a template
         // http://stackoverflow.com/a/8670836/211160

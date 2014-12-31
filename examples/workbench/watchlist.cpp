@@ -142,16 +142,19 @@ WatchList::WatchList(QWidget * parent) :
     // have been reassigned to something else the parens could work for that
     // as well.
 
-    auto watchFunction = ren::make_Extension(
+    auto watchFunction = ren::makeFunction(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
         ":arg [word! path! block! paren! integer!]"
         "    {word to watch or other legal parameter, see documentation)}",
 
+        REN_STD_FUNCTION,
+
         [this](ren::Value const & arg) -> ren::Value {
 
             if (arg.isBlock()) {
+                ren::print("First argument is", arg);
                 for (auto item : ren::Block {arg}) {
-                    watchDialect(item, false, false, ren::none);
+                    //watchDialect(item, false, false, ren::none);
                 }
                 return ren::none;
             }
@@ -382,7 +385,7 @@ ren::Value WatchList::watchDialect(
         WatchItem watchItem {
             arg,
             static_cast<bool>(useCell),
-            useLabel ? ren::Tag {tag} : ren::Value {}
+            useLabel ? ren::Tag {tag} : ren::Value {ren::none}
         };
 
         if (watchItem.isCell() and watchItem.hadError()) {

@@ -192,10 +192,12 @@ RenConsole::RenConsole (QWidget * parent) :
     outputFormat.setFontFamily("Courier");
     outputFormat.setFontWeight(QFont::Bold);
 
-    auto consoleFunction = ren::make_Extension(
+    auto consoleFunction = ren::makeFunction(
         "{CONSOLE dialect for customizing Ren Workbench commands}"
         ":arg [word! path! block! paren! integer!]"
         "    {word to watch or other legal parameter, see documentation)}",
+
+        REN_STD_FUNCTION,
 
         [this](ren::Value const & arg) -> ren::Value
         {
