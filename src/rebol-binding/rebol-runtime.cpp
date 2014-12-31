@@ -18,6 +18,7 @@ namespace ren {
 
 RebolRuntime runtime {true};
 Runtime & runtimeRef = runtime;
+Printer print (runtime);
 
 namespace internal {
 

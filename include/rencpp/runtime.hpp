@@ -3,17 +3,18 @@
 
 #include <functional>
 
+#include <stdexcept>
+#include <iostream>
+#include <iomanip>
+
 #include "common.hpp"
 #include "values.hpp"
 #include "exceptions.hpp"
 #include "context.hpp"
 #include "engine.hpp"
 
-#include "printer.hpp"
 
 namespace ren {
-
-extern Printer print;
 
 class Runtime;
 
@@ -63,7 +64,7 @@ public:
 
 
 ///
-/// BASE RUNTIME CLASS
+/// ABSTRACT BASE RUNTIME CLASS
 ///
 
 //
@@ -91,13 +92,30 @@ protected:
 
 
 public:
-    Runtime ();
-
     template <typename... Ts>
     Value operator()(Ts... args) {
         return Context::runFinder(nullptr)(args...);
     }
 
+
+    virtual std::ostream & setOutputStream(std::ostream & os) = 0;
+
+    virtual std::istream & setInputStream(std::istream & is) = 0;
+
+    virtual std::ostream & getOutputStream() = 0;
+
+    virtual std::istream & getInputStream() = 0;
+
+    //
+    // How to do a cancellation interface properly in threading environments
+    // which may be making many requests?  This simple interface assumes one
+    // evaluator thread to whom a cancel is being made from another thread
+    // (that is not able to do evaluations at the same time)... because that
+    // is what Rebol implemented.  A better interface is needed.
+    //
+    //     https://github.com/hostilefork/rencpp/issues/19
+    //
+    virtual void cancel() = 0;
 
     static bool needsRefcount(RenCell const & cell);
 
@@ -108,6 +126,77 @@ public:
     virtual ~Runtime () {
     }
 };
+
+
+
+///
+/// PRINTING HELPER CLASS EXPERIMENT
+///
+
+//
+// One misses Rebol/Red PRINT when doing debugging, so this little printer
+// class brings you that functionality via variadic functions.  It's easy
+// to use, just say:
+//
+//     ren::print("This", "will", "have", "spaces");
+//
+// To not get the spaces, use the .only function call.
+//
+//     ren::print.only("This", "won't", "be", "spaced");
+//
+// This is JUST AN EXPERIMENT to see how people might use it if it were
+// available.  By writing it this way and not calling into the evaluator
+// it will not match up with what print does necessarily, even if it were
+// a complete reimplementation of the default print behavior (it is not).
+//
+
+
+class Printer {
+private:
+    Runtime & runtime;
+
+public:
+    Printer (Runtime & runtime)
+        : runtime (runtime)
+    {
+    }
+
+    template <typename T>
+    void writeArgs(bool spaced, T && t) {
+        UNUSED(spaced);
+        runtime.getOutputStream() << std::forward<T>(t);
+    }
+
+    template <typename T, typename... Ts>
+    void writeArgs(bool spaced, T && t, Ts &&... args) {
+        writeArgs(spaced, std::forward<T>(t));
+        if (spaced)
+            runtime.getOutputStream() << " ";
+        writeArgs(spaced, std::forward<Ts>(args)...);
+    }
+
+    template <typename... Ts>
+    void corePrint(bool spaced, bool linefeed, Ts &&... args) {
+        writeArgs(spaced, std::forward<Ts>(args)...);
+        if (linefeed)
+            runtime.getOutputStream() << std::endl;
+    }
+
+    template <typename... Ts>
+    void operator()(Ts &&... args) {
+        corePrint(true, true, std::forward<Ts>(args)...);
+    }
+
+    template <typename... Ts>
+    void only(Ts &&... args) {
+        corePrint(false, false, std::forward<Ts>(args)...);
+    }
+
+    ~Printer () {
+    }
+};
+
+extern Printer print;
 
 
 }

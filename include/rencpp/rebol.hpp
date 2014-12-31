@@ -50,15 +50,15 @@ public:
 
     void doMagicOnlyRebolCanDo();
 
-    void cancel();
+    std::ostream & setOutputStream(std::ostream & os) override;
 
-    std::ostream & setOutputStream(std::ostream & os);
+    std::istream & setInputStream(std::istream & is) override;
 
-    std::istream & setInputStream(std::istream & is);
+    std::ostream & getOutputStream() override;
 
-    std::ostream & getOutputStream();
+    std::istream & getInputStream() override;
 
-    std::istream & getInputStream();
+    void cancel() override;
 
     ~RebolRuntime() override;
 };
