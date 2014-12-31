@@ -60,6 +60,12 @@
 #
 #       message(STATUS "Some string" ${SOME_VAR})
 #
+# If at all possible, please check changes against multiple compilers.  This
+# CMakeLists.txt is supposed to be compiler independent, so specify
+# alternative compilers e.g. with:
+#
+#       -DCMAKE_CXX_COMPILER=/usr/bin/clang
+#
 
 project(rencpp)
 

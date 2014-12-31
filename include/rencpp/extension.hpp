@@ -65,7 +65,7 @@ namespace internal {
 
 
 template<class R, class... Ts>
-class Extension : public Function {
+class FunctionGenerator : public Function {
 private:
 
     //
@@ -98,7 +98,7 @@ private:
     //
 
     struct TableEntry {
-        Engine & engine;
+        RenEngineHandle engine;
         FunType const fun;
     };
 
@@ -111,46 +111,42 @@ private:
     template <std::size_t... Indices>
     static auto applyFunImpl(
         FunType const & fun,
-        Engine & engine,
+        RenEngineHandle engine,
         RenCell * stack,
         utility::indices<Indices...>
     )
         -> decltype(
             fun(
-                typename utility::type_at<Indices, Ts...>::type{
+                Value::construct<
+                    typename std::decay<
+                        typename utility::type_at<Indices, Ts...>::type
+                    >::type
+                >(
                     engine,
                     *REN_STACK_ARGUMENT(stack, Indices)
-                }...
+                )...
             )
         )
     {
         return fun(
-            typename utility::type_at<Indices, Ts...>::type{
+            Value::construct<
+                typename std::decay<
+                    typename utility::type_at<Indices, Ts...>::type
+                >::type
+            >(
                 engine,
                 *REN_STACK_ARGUMENT(stack, Indices)
-            }...
+            )...
         );
     }
 
-    template <
-        typename Indices = utility::make_indices<sizeof...(Ts)>
-    >
-    static auto applyFun(FunType const & fun, Engine & engine, RenCell * stack)
-        -> decltype(
-            applyFunImpl(
-                fun,
-                engine,
-                stack,
-                Indices {}
-            )
-        )
+    template <typename Indices = utility::make_indices<sizeof...(Ts)>>
+    static auto applyFun(
+        FunType const & fun, RenEngineHandle engine, RenCell * stack
+    ) ->
+        decltype(applyFunImpl(fun, engine, stack, Indices {}))
     {
-        return applyFunImpl(
-            fun,
-            engine,
-            stack,
-            Indices {}
-        );
+        return applyFunImpl(fun, engine, stack, Indices {});
     }
 
 private:
@@ -186,7 +182,7 @@ private:
     }
 
 public:
-    Extension (
+    FunctionGenerator (
         Engine & engine,
         Block const & spec,
         RenShimPointer shim,
@@ -219,40 +215,40 @@ public:
         // to be thread-safe in case two threads try to modify the global
         // table at the same time.
 
-        table.push_back({engine, fun});
+        table.push_back({engine.getHandle(), fun});
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInit(engine, spec, shim);
+        Function::finishInit(engine.getHandle(), spec, shim);
     }
 
-    Extension (
+    FunctionGenerator (
         Block const & spec,
         RenShimPointer shim,
         FunType const & fun
     ) :
-        Extension (Engine::runFinder(), spec, shim, fun)
+        FunctionGenerator (Engine::runFinder(), spec, shim, fun)
     {
     }
 
-    Extension (
+    FunctionGenerator (
         Engine & engine,
         char const * spec,
         RenShimPointer shim,
         FunType const & fun
     ) :
-        Extension (engine, Block {spec}, shim, fun)
+        FunctionGenerator (engine, Block {spec}, shim, fun)
     {
     }
 
-    Extension (
+    FunctionGenerator (
         char const * spec,
         RenShimPointer shim,
         FunType const & fun = FunType {nullptr}
     ) :
-        Extension (Engine::runFinder(), spec, shim, fun)
+        FunctionGenerator (Engine::runFinder(), spec, shim, fun)
     {
     }
 };
@@ -260,14 +256,14 @@ public:
 
 //
 // There is some kind of voodoo that makes this work, even though it's in a
-// header file.  So each specialization of the Extension type gets its own
-// copy and there are no duplicate symbols arising from multiple includes
+// header file.  So each specialization of the FunctionGenerator type gets its
+// own copy and there are no duplicate symbols arising from multiple includes
 //
 
 template<class R, class... Ts>
 std::vector<
-    typename Extension<R, Ts...>::TableEntry
-> Extension<R, Ts...>::table;
+    typename FunctionGenerator<R, Ts...>::TableEntry
+> FunctionGenerator<R, Ts...>::table;
 
 
 
@@ -338,20 +334,20 @@ Function makeFunction_(
     Fun && fun,
     utility::indices<Ind...>
 ) {
-    typedef Extension<
+    typedef FunctionGenerator<
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::result_type,
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::template arg<Ind>...
-    > Temp;
+    > Gen;
 
     using Ret = typename utility::function_traits<
         typename std::remove_reference<Fun>::type
     >::result_type;
 
-    return Temp {
+    return Gen {
         spec,
         shim,
         std::function<

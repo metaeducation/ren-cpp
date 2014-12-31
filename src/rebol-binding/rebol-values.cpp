@@ -333,13 +333,13 @@ QString AnyWord::spellingOf_QT() const {
 ///
 
 void Function::finishInit(
-    Engine & engine,
+    RenEngineHandle engine,
     Block const & spec,
     RenShimPointer const & shim
 ) {
     Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
 
-    Value::finishInit(engine.getHandle());
+    Value::finishInit(engine);
 }
 
 
@@ -403,7 +403,7 @@ AnyString::iterator & AnyString::iterator::operator--() {
 }
 
 Character AnyString::iterator::operator * () const {
-    Character result {Dont::Initialize};
+    auto result = Value::construct<Character>(Dont::Initialize);
 
     // from str_to_char
     SET_CHAR(

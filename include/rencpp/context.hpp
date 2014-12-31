@@ -80,6 +80,7 @@ public:
     // Needs to be a static method, as some people who are calling it only
     // have a handle and no Context object at that point
 protected:
+    friend class Engine;
     static void constructOrApplyInitializeCore(
         RenEngineHandle engineHandle,
         RenContextHandle contextHandle,

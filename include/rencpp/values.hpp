@@ -74,7 +74,7 @@ namespace internal {
 
 }
 
-template <class R, class... Ts> class Extension;
+template <class R, class... Ts> class FunctionGenerator;
 
 struct none_t;
 
@@ -124,7 +124,8 @@ public:
 
 class Value {
 protected:
-    friend class Runtime;
+    friend class Runtime; // cell
+    friend class Engine; // Value::Dont::Initialize
     friend class Context; // Value::Dont::Initialize
     friend class Series; // Value::Dont::Initialize for dereference
     friend class AnyBlock; // Value::Dont::Initialize for dereference
@@ -175,18 +176,6 @@ public: // temporary for the lambda in function, find better way
     RenEngineHandle origin;
 
 
-protected:
-    //
-    // The value-from-cell constructor does not check the bits, and all cell
-    // based constructors are not expected to either.  You trust they were
-    // set up correctly OR if they are not, then the cast operator is tasked
-    // with checking their invalidity and throwing an exception
-    //
-    template <class R, class... Ts> friend class Extension;
-    explicit Value (RenEngineHandle engine, RenCell const & cell);
-    explicit Value (Engine & engine, RenCell const & cell);
-
-
     //
     // At first the only user-facing constructor that was exposed directly
     // from Value was the default constructor, used to make an UNSET!
@@ -209,10 +198,9 @@ public:
     bool isUnset() const;
 
 
-protected:
     //
-    // So we see there is a default constructor, and it initializes the 128
-    // bit pattern to be an UNSET.
+    // There is a default constructor, and it initializes the RenCell to be
+    // a constructed value of type UNSET!
     //
     // BUT as an implementation performance detail, if the default constructor
     // is bothering to initialize the 128 bits, what if a derived class
@@ -230,26 +218,77 @@ protected:
     //
     //     https://qt.gitorious.org/qt/icefox/commit/fbe0edc
     //
-    // Call finishInit to set up the refcounting if necessary.
+    // Call finishInit once the cell bits have been properly set up, so
+    // that any tracking/refcounting/etc. can be added.
     //
+    // We also provide a construct template function which allows friend
+    // classes of value to get access to this constructor on all derived
+    // classes of Value (which have friended Value)
+    //
+
+protected:
     enum class Dont {Initialize};
     Value (Dont const &);
 
-public: // temporary until the lambdas are friended in Extension
     void finishInit(RenEngineHandle engine);
 
+    template<
+        class T,
+        typename = typename std::enable_if<
+            std::is_base_of<Value, T>::value, void *
+        >::type
+    >
+    static T construct (Dont const &) {
+        return T {Dont::Initialize};
+    }
+
+
+    //
+    // The value-from-cell constructor does not check the bits, and all cell
+    // based constructors are not expected to either.  You trust they were
+    // set up correctly OR if they are not, then the cast operator is tasked
+    // with checking their invalidity and throwing an exception
+    //
+    // Again, we provide a catapulting "construct" function to give value's
+    // friends access to this construction for any derived class.
+    //
+protected:
+    template <class R, class... Ts> friend class FunctionGenerator;
+
+    explicit Value (RenEngineHandle engine, RenCell const & cell) {
+        this->cell = cell;
+        finishInit(engine);
+    }
+
+    template<
+        class T,
+        typename = typename std::enable_if<
+            std::is_base_of<Value, T>::value, void *
+        >::type
+    >
+    static T construct (RenEngineHandle engine, RenCell const & cell) {
+        T result {Dont::Initialize};
+        result.cell = cell;
+        result.finishInit(engine);
+        return result;
+    }
 
 public:
     //
-    // Constructing from nullptr is so ugly we disable it, but it's nice
-    // to be able to just assign from "none".
+    // Constructing from nullptr is ugly, but it's nice to be able to just
+    // assign from "none".
     //
     // https://github.com/hostilefork/rencpp/issues/3
     //
 
     bool isNone() const;
 
-    Value (nullptr_t) = delete;
+    // actually never provide this; this is a disabling.  = delete is
+    // apparently not a "better" way of doing such a disablement.
+
+    // disabling doesn't work in clang, bad idea?
+    /* Value (nullptr_t) = delete; */
+    /* Value (nullptr_t); */
 
     Value (Engine & engine, none_t const &);
     Value (none_t const &);
@@ -439,7 +478,7 @@ public:
     }
 
 public:
-    ~Value() {
+    ~Value () {
         releaseRefIfNecessary();
     }
 
@@ -610,7 +649,6 @@ constexpr unset_t unset {unset_t::init{}};
 //
 // protected:
 //    friend class Value;
-//    Foo (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
 //    Foo (Dont const &) : Value (Dont::Initialize) {}
 //    inline bool isValid() const { return ...; }
 //
@@ -625,8 +663,6 @@ constexpr unset_t unset {unset_t::init{}};
 class Unset final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Unset (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Unset (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
@@ -643,8 +679,6 @@ public:
 class None final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    None (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     None (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
@@ -657,8 +691,6 @@ public:
 class Logic final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Logic (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Logic (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
@@ -677,9 +709,6 @@ public:
 class Character final : public Value {
 protected:
     friend class Value;
-    friend class AnyString;
-    template <class R, class... Ts> friend class Extension;
-    Character (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Character (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
 
@@ -709,8 +738,6 @@ public:
 class Integer final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Integer (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Integer (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
@@ -727,8 +754,6 @@ public:
 class Float final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Float (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Float (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
@@ -745,8 +770,6 @@ public:
 class Date final : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Date (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Date (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 
@@ -780,9 +803,7 @@ public:
 class AnyWord : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     AnyWord (Dont const &) : Value (Dont::Initialize) {}
-    AnyWord (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     inline bool isValid() const { return isAnyWord(); }
 
 protected:
@@ -793,7 +814,8 @@ protected:
 
     explicit AnyWord (
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const);
+        bool (Value::*validMemFn)(RenCell *) const
+    );
 
 
 #ifdef REN_CLASSLIB_STD
@@ -871,8 +893,6 @@ inline std::string AnyWord::spellingOf<std::string>() const {
 class Series : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Series (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Series (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
@@ -912,14 +932,12 @@ class AnyString : public Series
 {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    AnyString (Engine & engine, RenCell const & cell) : Series(engine, cell) {}
     AnyString (Dont const &) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyString(); }
 
 protected:
     AnyString(
-        Context & context,
+        Engine & engine,
         char const * cstr,
         bool (Value::*validMemFn)(RenCell *) const
     );
@@ -928,6 +946,20 @@ protected:
         char const * cstr,
         bool (Value::*validMemFn)(RenCell *) const
     );
+
+#ifdef REN_CLASSLIB_STD
+    AnyString (
+        std::string const & str,
+        bool (Value::*validMemFn)(RenCell *) const
+    );
+#endif
+
+#ifdef REN_CLASSLIB_QT
+    AnyString (
+        QString const & str,
+        bool (Value::*validMemFn)(RenCell *) const
+    );
+#endif
 
 public:
     // This lets you pass ren::String to anything that expected a std::string
@@ -980,8 +1012,6 @@ public:
 class AnyBlock : public Series {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    AnyBlock (Engine & engine, RenCell const & cell) : Series(engine, cell) {}
     AnyBlock (Dont const &) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyBlock(); }
 
@@ -1032,8 +1062,6 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyWordSubtype : public AnyWord {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    AnyWordSubtype (Engine & engine, RenCell const & cell) : AnyWord(engine, cell) {}
     AnyWordSubtype (Dont const &) : AnyWord (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
@@ -1062,8 +1090,6 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyStringSubtype : public AnyString {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    AnyStringSubtype (Engine & engine, RenCell const & cell) : AnyString(engine, cell) {}
     AnyStringSubtype (Dont const &) : AnyString (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
@@ -1075,7 +1101,7 @@ public:
 
 #ifdef REN_CLASSLIB_STD
     explicit AnyStringSubtype (std::string const & str) :
-        AnyString (str.c_str(), validMemFn)
+        AnyString (str, validMemFn)
     {
     }
 #endif
@@ -1109,9 +1135,7 @@ template <bool (Value::*validMemFn)(RenCell *) const>
 class AnyBlockSubtype : public AnyBlock {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    AnyBlockSubtype (Engine & engine, RenCell const & cell) : AnyBlock(engine, cell) {}
-    AnyBlockSubtype (Dont const &) : Value (Dont::Initialize) {}
+    AnyBlockSubtype (Dont const &) : AnyBlock (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
 private:
@@ -1173,59 +1197,60 @@ public:
 
 
 class Word final :
-    public internal::AnyWordSubtype<&Value::isWord> {
+    public internal::AnyWordSubtype<&Value::isWord>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
+
     using AnyWordSubtype<&Value::isWord>::AnyWordSubtype;
 };
 
 
 
 class SetWord final :
-    public internal::AnyWordSubtype<&Value::isSetWord> {
+    public internal::AnyWordSubtype<&Value::isSetWord>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isSetWord>::AnyWordSubtype;
 };
 
 
 
 class GetWord final :
-    public internal::AnyWordSubtype<&Value::isGetWord> {
+    public internal::AnyWordSubtype<&Value::isGetWord>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isGetWord>::AnyWordSubtype;
 };
 
 
 
 class LitWord final :
-    public internal::AnyWordSubtype<&Value::isLitWord> {
+    public internal::AnyWordSubtype<&Value::isLitWord>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isLitWord>::AnyWordSubtype;
 };
 
 
 
 class Refinement final :
-    public internal::AnyWordSubtype<&Value::isRefinement> {
+    public internal::AnyWordSubtype<&Value::isRefinement>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyWordSubtype<&Value::isRefinement>::AnyWordSubtype;
 };
 
 
 
-class String final : public internal::AnyStringSubtype<&Value::isString> {
+class String final : public internal::AnyStringSubtype<&Value::isString>
+{
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyStringSubtype<&Value::isString>::AnyStringSubtype;
 
 public:
@@ -1243,7 +1268,6 @@ public:
     }
 #endif
 
-
     bool operator==(char const * cstr) const {
         return static_cast<std::string>(*this) == cstr;
     }
@@ -1258,7 +1282,7 @@ public:
 class Tag final : public internal::AnyStringSubtype<&Value::isTag> {
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
+
     using AnyStringSubtype<&Value::isTag>::AnyStringSubtype;
 
 public:
@@ -1276,7 +1300,6 @@ public:
 class Block final : public internal::AnyBlockSubtype<&Value::isBlock> {
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isBlock>::AnyBlockSubtype;
 };
 
@@ -1285,7 +1308,6 @@ public:
 class Paren final : public internal::AnyBlockSubtype<&Value::isParen> {
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isParen>::AnyBlockSubtype;
 };
 
@@ -1294,7 +1316,6 @@ public:
 class Path final : public internal::AnyBlockSubtype<&Value::isPath> {
 public:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
     using AnyBlockSubtype<&Value::isPath>::AnyBlockSubtype;
 };
 
@@ -1305,10 +1326,10 @@ public:
 ///
 
 //
-// In the current implementation, an Extension is really just a FUNCTION!
+// In the current implementation, an FunctionGenerator is really just a FUNCTION!
 // where the native function pointer (that processes the argument stack) is
 // built automatically by the system.  It's not possible to have a term be
-// both a template and a class, so if Extension was going to be Function
+// both a template and a class, so if FunctionGenerator was going to be Function
 // then Function would have to be written Function<> and be specialized
 // for that.
 //
@@ -1316,14 +1337,20 @@ public:
 class Function : public Value {
 protected:
     friend class Value;
-    template <class R, class... Ts> friend class Extension;
-    Function (Engine & engine, RenCell const & cell) : Value(engine, cell) {}
     Function (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFunction(); }
 
-private: // used by Extension
+private:
+    // Most classes can get away with setting up cell bits all in the
+    // implementation files, but FunctionGenerator is a template.  It
+    // needs to be able to finalize "in view".  We might consider another
+    // way of shaping this, by having a public "set cell bits for function"
+    // API in the hooks.h, then just use normal finishInit.  Might be what
+    // has to be done.
+
+    template <class R, class... Ts> friend class FunctionGenerator;
     void finishInit(
-        Engine & engine,
+        RenEngineHandle engine,
         Block const & spec,
         RenShimPointer const & shim
     );

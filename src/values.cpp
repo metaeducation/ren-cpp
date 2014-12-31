@@ -11,21 +11,6 @@ bool Value::needsRefcount() const {
 }
 
 
-Value::Value (RenEngineHandle engine, RenCell const & cell) :
-    cell (cell)
-{
-    finishInit(engine);
-}
-
-
-Value::Value (Engine & engine, RenCell const & cell) :
-    cell (cell)
-{
-    finishInit(engine.handle);
-}
-
-
-
 Value::Value () :
     Value (Engine::runFinder())
 {
@@ -307,7 +292,7 @@ AnyWord::AnyWord (
 
 
 AnyString::AnyString (
-    Context & context,
+    Engine & engine,
     char const * cstr,
     bool (Value::*validMemFn)(RenCell *) const
 ) :
@@ -317,7 +302,7 @@ AnyString::AnyString (
 
     internal::Loadable loadable (cstr);
 
-    context.constructOrApplyInitialize(
+    Context::runFinder(&engine).constructOrApplyInitialize(
         nullptr,
         &loadable,
         1,
@@ -331,7 +316,7 @@ AnyString::AnyString (
     char const * cstr,
     bool (Value::*validMemFn)(RenCell *) const
 ) :
-    AnyString (Context::runFinder(nullptr), cstr, validMemFn)
+    AnyString (Engine::runFinder(), cstr, validMemFn)
 {
 }
 
