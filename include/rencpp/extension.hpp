@@ -3,7 +3,7 @@
 
 #include <functional>
 #include <utility>
-#include <unordered_map>
+#include <vector>
 #include <cassert>
 
 #include <mutex> // global table must be protected for thread safety

@@ -247,7 +247,7 @@ public:
         assert(it != nodes.end());
 
         std::unordered_map<REBSER const *, unsigned int> & leftovers
-            = (*it).second;
+            = it->second;
         assert (leftovers.empty());
 
         nodes.erase(it);
@@ -574,8 +574,8 @@ public:
             auto it = nodes[engine.data].find(VAL_SERIES(cell));
             assert(it != nodes[engine.data].end());
 
-            (*it).second--;
-            if ((*it).second == 0) {
+            it->second--;
+            if (it->second == 0) {
                 size_t numErased = nodes[engine.data].erase(VAL_SERIES(cell));
                 assert(numErased == 1);
                 if (nodes[engine.data].empty())
@@ -606,10 +606,10 @@ public:
             auto it = nodes.find(engine.data);
             assert(it != nodes.end());
             assert(
-                (*it).second.find(reinterpret_cast<REBSER const *>(
+                it->second.find(reinterpret_cast<REBSER const *>(
                     VAL_SERIES(value))
                 )
-                != (*it).second.end()
+                != it->second.end()
             );
         }
 #endif

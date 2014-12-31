@@ -253,7 +253,7 @@ AnyWord::AnyWord (
 }
 
 
-#ifdef REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT
 AnyWord::AnyWord (
     Context & context,
     QString const & str,

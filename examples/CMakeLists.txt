@@ -22,6 +22,9 @@ target_link_libraries(assign-test RenCpp)
 add_executable(form-test form-test.cpp)
 target_link_libraries(form-test RenCpp)
 
+add_executable(iterator-test iterator-test.cpp)
+target_link_libraries(iterator-test RenCpp)
+
 
 
 #

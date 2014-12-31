@@ -88,7 +88,7 @@ void Value::finishInit(RenEngineHandle engine) {
         if (it == internal::nodes[engine.data].end())
             internal::nodes[engine.data].emplace(VAL_SERIES(&cell), 1);
         else
-            (*it).second++;
+            it->second++;
     #endif
 
     } else {
@@ -298,7 +298,7 @@ Float::operator double() const {
 }
 
 
-#ifdef REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD
 std::string AnyWord::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
     if (isWord())
@@ -312,7 +312,7 @@ std::string AnyWord::spellingOf_STD() const {
 #endif
 
 
-#ifdef REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT
 QString AnyWord::spellingOf_QT() const {
     QString result = static_cast<QString>(*this);
     if (isWord())
@@ -362,10 +362,28 @@ Series::iterator & Series::iterator::operator--() {
     return *this;
 }
 
-Value Series::iterator::operator * () const {
+Series::iterator Series::iterator::operator++(int) {
+    auto temp = *this;
+    ++*this;
+    return temp;
+}
+
+Series::iterator Series::iterator::operator--(int) {
+    auto temp = *this;
+    --*this;
+    return temp;
+}
+
+Value Series::iterator::operator*() const {
     Value result {Dont::Initialize};
     result.cell = *VAL_BLK_SKIP(&state.cell, state.cell.data.series.index);
+    result.finishInit(state.origin);
     return result;
+}
+
+Value * Series::iterator::operator->() const {
+    valForArrow = *(*this);
+    return &valForArrow;
 }
 
 Series::iterator::operator Series() const {
@@ -402,7 +420,19 @@ AnyString::iterator & AnyString::iterator::operator--() {
     return *this;
 }
 
-Character AnyString::iterator::operator * () const {
+AnyString::iterator AnyString::iterator::operator++(int) {
+    auto temp = *this;
+    ++*this;
+    return temp;
+}
+
+AnyString::iterator AnyString::iterator::operator--(int) {
+    auto temp = *this;
+    ++*this;
+    return temp;
+}
+
+Character AnyString::iterator::operator* () const {
     auto result = Value::construct<Character>(Dont::Initialize);
 
     // from str_to_char
@@ -411,7 +441,17 @@ Character AnyString::iterator::operator * () const {
         GET_ANY_CHAR(VAL_SERIES(&state.cell),
         state.cell.data.series.index)
     );
+    /*result.finishInit(state.origin);*/
     return result;
+}
+
+Character * AnyString::iterator::operator-> () const {
+    // Internal string packingmay be 8, 16 or (in Red) 32 bits based on
+    // size of largest codepoint in string.  We cannot just give back a
+    // pointer to existing memory, even if our Value didn't add more bits.
+
+    chForArrow = *(*this);
+    return &chForArrow;
 }
 
 AnyString::iterator::operator AnyString() const {
