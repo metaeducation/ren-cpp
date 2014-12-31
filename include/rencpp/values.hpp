@@ -72,9 +72,9 @@ namespace internal {
     static_assert(false, "Invalid runtime setting")
 #endif
 
+    template <class R, class... Ts> class FunctionGenerator;
 }
 
-template <class R, class... Ts> class FunctionGenerator;
 
 struct none_t;
 
@@ -1348,7 +1348,7 @@ private:
     // API in the hooks.h, then just use normal finishInit.  Might be what
     // has to be done.
 
-    template <class R, class... Ts> friend class FunctionGenerator;
+    template <class R, class... Ts> friend class internal::FunctionGenerator;
     void finishInit(
         RenEngineHandle engine,
         Block const & spec,

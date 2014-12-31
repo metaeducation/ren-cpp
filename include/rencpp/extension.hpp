@@ -44,24 +44,25 @@ namespace ren {
 //     http://stackoverflow.com/q/27263092/211160
 //
 
+
+namespace internal {
+
 //
 // Limits of the type system and specialization force us to have a table
 // of functions on a per-template specialization basis.  However, there's
 // no good reason to have one mutex per table.  One for all will do.
 //
 
-namespace internal {
+extern std::mutex extensionTablesMutex;
 
-    extern std::mutex extensionTablesMutex;
+typedef int RenShimId;
 
-    typedef int RenShimId;
+extern RenShimId shimIdToCapture;
 
-    extern RenShimId shimIdToCapture;
+typedef RenResult (* RenShimBouncer)(RenShimId id, RenCell * stack);
 
-    typedef RenResult (* RenShimBouncer)(RenShimId id, RenCell * stack);
+extern RenShimBouncer shimBouncerToCapture;
 
-    extern RenShimBouncer shimBouncerToCapture;
-}
 
 
 template<class R, class... Ts>
@@ -88,14 +89,14 @@ private:
     typedef std::tuple<Ts...> ParamsType;
 
 
-    //
-    // Although templates can be parameterized with function pointers (or
-    // pointer-to-member) there is no way for us to get a std::function
-    // object passed as a parameter to the constructor into the C-style shim.
-    // The shim, produced by a lambda, must not capture anything from its
-    // environment...only accessing global data.  We make a little global
-    // map and then capture the data into a static.
-    //
+    // When a "self-aware" shim forwards its parameter and its function
+    // identity to the templatized generator that created it, then it
+    // looks in this per-signature table to find the std::function to
+    // unpack the parameters and give to.  It also has the engine handle,
+    // which is required to construct the values for the cells in the
+    // appropriate sandbox.  The vector is only added to and never removed,
+    // but it has to be protected with a mutex in case multiple threads
+    // are working with it at the same time.
 
     struct TableEntry {
         RenEngineHandle engine;
@@ -183,7 +184,7 @@ private:
 
 public:
     FunctionGenerator (
-        Engine & engine,
+        RenEngineHandle engine,
         Block const & spec,
         RenShimPointer shim,
         FunType const & fun = FunType {nullptr}
@@ -215,41 +216,13 @@ public:
         // to be thread-safe in case two threads try to modify the global
         // table at the same time.
 
-        table.push_back({engine.getHandle(), fun});
+        table.push_back({engine, fun});
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInit(engine.getHandle(), spec, shim);
-    }
-
-    FunctionGenerator (
-        Block const & spec,
-        RenShimPointer shim,
-        FunType const & fun
-    ) :
-        FunctionGenerator (Engine::runFinder(), spec, shim, fun)
-    {
-    }
-
-    FunctionGenerator (
-        Engine & engine,
-        char const * spec,
-        RenShimPointer shim,
-        FunType const & fun
-    ) :
-        FunctionGenerator (engine, Block {spec}, shim, fun)
-    {
-    }
-
-    FunctionGenerator (
-        char const * spec,
-        RenShimPointer shim,
-        FunType const & fun = FunType {nullptr}
-    ) :
-        FunctionGenerator (Engine::runFinder(), spec, shim, fun)
-    {
+        Function::finishInit(engine, spec, shim);
     }
 };
 
@@ -297,13 +270,17 @@ std::vector<
         return REN_SHIM_INITIALIZED; \
     }
 
+} // end namespace internal
+
 
 
 ///
-/// TYPE INFERENCE FROM LAMBDA
+/// USER-FACING CONSTRUCTION FOR MAKE FUNCTION
 ///
 
 //
+// The FunctionGenerator is an internal class.  One reason why the interface
+// is exposed as a function instead of as a class is because of a problem:
 // C++11 is missing the feature of a convenient way to use type inference from
 // a lambda to determine its signature.  So you can't make a templated class
 // that automatically detects and extracts their type when passed as an
@@ -329,12 +306,13 @@ std::vector<
 
 template<typename Fun, std::size_t... Ind>
 Function makeFunction_(
-    char const * spec,
+    RenEngineHandle engine,
+    Block const & spec,
     RenShimPointer shim,
     Fun && fun,
     utility::indices<Ind...>
 ) {
-    typedef FunctionGenerator<
+    typedef internal::FunctionGenerator<
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::result_type,
@@ -348,6 +326,7 @@ Function makeFunction_(
     >::result_type;
 
     return Gen {
+        engine,
         spec,
         shim,
         std::function<
@@ -359,6 +338,12 @@ Function makeFunction_(
         >(fun)
     };
 }
+
+
+//
+// For convenience, we define specializations that let you be explicit about
+// the engine and/or provide an already built spec block.
+//
 
 template<
     typename Fun,
@@ -373,8 +358,86 @@ Function makeFunction(
     RenShimPointer shim,
     Fun && fun
 ) {
-    return makeFunction_(spec, shim, std::forward<Fun>(fun), Indices());
+    return makeFunction_(
+        Engine::runFinder().getHandle(),
+        Block {spec},
+        shim,
+        std::forward<Fun>(fun),
+        Indices()
+    );
 }
+
+
+template<
+    typename Fun,
+    typename Indices = utility::make_indices<
+        utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::arity
+    >
+>
+Function makeFunction(
+    Block const & spec,
+    RenShimPointer shim,
+    Fun && fun
+) {
+    return makeFunction_(
+        Engine::runFinder().getHandle(),
+        spec,
+        shim,
+        std::forward<Fun>(fun),
+        Indices()
+    );
+}
+
+
+template<
+    typename Fun,
+    typename Indices = utility::make_indices<
+        utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::arity
+    >
+>
+Function makeFunction(
+    Engine & engine,
+    char const * spec,
+    RenShimPointer shim,
+    Fun && fun
+) {
+    return makeFunction_(
+        engine,
+        Block {spec},
+        shim,
+        std::forward<Fun>(fun),
+        Indices()
+    );
+}
+
+
+template<
+    typename Fun,
+    typename Indices = utility::make_indices<
+        utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::arity
+    >
+>
+Function makeFunction(
+    Engine & engine,
+    Block const & spec,
+    RenShimPointer shim,
+    Fun && fun
+) {
+    return makeFunction_(
+        engine.getHandle(),
+        spec,
+        shim,
+        std::forward<Fun>(fun),
+        Indices()
+    );
+}
+
 
 }
 
