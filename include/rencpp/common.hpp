@@ -56,7 +56,7 @@
 #if (REN_CLASSLIB_STD == 0) and (REN_CLASSLIB_QT == 0)
 
     static_assert(false, "Unimplemented feature: no REN_CLASSLIB set"
-        " see https://github.com/hostilefork/rencpp/issues/22"
+        " see https://github.com/hostilefork/rencpp/issues/22");
 
 #endif
 
