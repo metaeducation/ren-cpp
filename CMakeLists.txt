@@ -3,7 +3,7 @@
 #
 # REN (REadable Notation) C++ Binding for the Red and Rebol languages
 #
-# Copyright (C) 2014 HostileFork.com
+# Copyright (C) 2015 HostileFork.com
 #
 # Licensed under the Boost License, Version 1.0 (the "License")
 #

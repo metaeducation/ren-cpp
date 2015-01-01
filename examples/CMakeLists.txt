@@ -85,7 +85,7 @@ if(GARDEN)
     # Ren Garden is temporarily being built in the Rencpp project, but has
     # its own issue tracker and will be migrated to:
     #
-    #     https://github.com/hostilefork/ren-garden
+    #     https://github.com/metaeducation/ren-garden
     #
 
     add_subdirectory(workbench)

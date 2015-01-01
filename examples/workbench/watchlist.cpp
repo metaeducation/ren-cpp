@@ -1,7 +1,7 @@
 //
 // watchlist.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2014 HostileFork.com
+// Copyright (C) 2015 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
 //
-// See http://ren-garden.hostilefork.com/ for more information on this project
+// See http://ren-garden.metaeducation.com for more information on this project
 //
 
 
@@ -33,11 +33,81 @@
 
 
 ///
-/// WATCHITEM
+/// WATCH WIDGET ITEM REPRESENTING A SINGLE CELL IN THE WATCH TABLE
+///
+
+//
+// Even if we allowed editing in the watch widget table cells (such as to poke
+// into the memory), we'd still want to subclass the cells to get notified
+// *prior* to the edit to do data validation.  As it is, allowing the user
+// to select in and edit copy/paste is a convenience...we just reject any
+// actual commits to that tinkering.
+//
+
+class WatchWidgetItem : public QTableWidgetItem {
+public:
+    using QTableWidgetItem::QTableWidgetItem; // inherit constructors
+
+public:
+    void setData(int role, QVariant const & value) override {
+        if (role != Qt::EditRole) {
+            // We only trap attempts to edit the shown string (not
+            // programmatic changes to color, etc.)
+
+            QTableWidgetItem::setData(role, value);
+            return;
+        }
+
+        auto watchList = qobject_cast<WatchList *>(tableWidget());
+        watchList->setItemData(this, value);
+    }
+};
+
+void WatchList::setItemData(WatchWidgetItem * item, QVariant const & value) {
+
+    switch (item->column()) {
+        case 0: {
+            // If they type text into the first column and it doesn't match the
+            // text that was there, then consider it to be a label.  If they
+            // delete everything, consider it to be "unlabeling"
+
+            QString contents = value.toString();
+            if (contents.isEmpty()) {
+                watchList[item->row()].tag = ren::none;
+                item->QTableWidgetItem::setTextColor(Qt::black);
+            } else {
+                watchList[item->row()].tag = ren::String {
+                    QString("{") + contents + "}"
+                };
+                item->QTableWidgetItem::setTextColor(Qt::darkMagenta);
+            }
+
+            item->QTableWidgetItem::setData(
+                Qt::EditRole,
+                watchList[item->row()].getWatchString()
+            );
+            break;
+        }
+
+        case 1:
+            watchStatus(
+                "Memory editing of variables not supported (yet...)"
+            );
+            break;
+
+        default:
+            throw std::runtime_error("Illegal column selected");
+    }
+}
+
+
+
+///
+/// WATCHER CLASS REPRESENTING A SINGLE WATCHED VALUE OR EXPRESSION
 ///
 
 
-WatchList::WatchItem::WatchItem (
+WatchList::Watcher::Watcher (
     ren::Value const & watch,
     bool useCell,
     ren::Value const & tag

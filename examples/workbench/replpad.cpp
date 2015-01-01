@@ -1,7 +1,7 @@
 //
 // replpad.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2014 HostileFork.com
+// Copyright (C) 2015 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
 //
-// See http://ren-garden.hostilefork.com/ for more information on this project
+// See http://ren-garden.metaeducation.com for more information on this project
 //
 
 
 #include <QtWidgets>
 
-// Rencpp dependency, see https://github.com/hostilefork/ren-garden/issues/5
+// Rencpp dependency, see https://github.com/metaeducation/ren-garden/issues/5
 
 #include "rencpp/ren.hpp"
 #include "rencpp/runtime.hpp"
@@ -537,7 +537,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // Behavior of Enter/Return depends on the line mode you are in, due to
     // this fantastic suggestion.  :-)
     //
-    //    https://github.com/hostilefork/ren-garden/issues/4
+    //    https://github.com/metaeducation/ren-garden/issues/4
     //
     // Ctrl-Enter always evaluates.  But Enter evaluates when you are in
     // single-line mode.  Shift-Enter switches you into multi-line mode where

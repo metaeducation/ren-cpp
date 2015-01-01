@@ -1,7 +1,7 @@
 //
 // renconsole.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2014 HostileFork.com
+// Copyright (C) 2015 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
 //
-// See http://ren-garden.hostilefork.com/ for more information on this project
+// See http://ren-garden.metaeducation.com for more information on this project
 //
 
 
@@ -133,7 +133,7 @@ void MainWindow::about()
             "The <b>Ren [人] Garden</b> workbench integrates Rebol or Red"
             " evaluators into a Qt-based environment, by utilizing the Rencpp"
             " binding.\n\n"
-            "Copyright © 2014 HostileFork.com, GPL License\n\n"
+            "Copyright © 2015 MetÆducation, GPL License\n\n"
             "Rebol, Red, and Qt are governed by the terms of their licenses."
         )
     );

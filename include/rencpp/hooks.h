@@ -2,6 +2,25 @@
 #define RENCPP_HOOKS_H
 
 /*
+ * hooks.h
+ * This file is part of RenCpp
+ * Copyright (C) 2015 HostileFork.com
+ *
+ * Licensed under the Boost License, Version 1.0 (the "License")
+ *
+ *      http://www.boost.org/LICENSE_1_0.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.  See the License for the specific language governing
+ * permissions and limitations under the License.
+ *
+ * See http://rencpp.hostilefork.com for more information on this project
+ */
+
+
+/*
  * For the sake of the thought experiment, this file a generalized one that
  * can be built with either C or C++.  One might consider how much work could
  * potentially be reused between the two bindings.
@@ -189,7 +208,7 @@ typedef RedContextHandle RenContextHandle;
 /*
  * REBVAL is a typedef for Reb_Value, both defined in src/include/sys_value.h
  *
- * The Rebol codebase is (circa 2014) not able to build with a C++ compiler,
+ * The Rebol codebase is (circa 2015) not able to build with a C++ compiler,
  * although patches do exist to make it possible.  Which is okay because you
  * can link the C and C++ .o files together from the separate builds.  Here
  * we are only sharing header files and macros, and linking through extern "C"

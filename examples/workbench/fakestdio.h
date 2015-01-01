@@ -4,7 +4,7 @@
 //
 // fakestdio.h
 // This file is part of Ren Garden
-// Copyright (C) 2014 HostileFork.com
+// Copyright (C) 2015 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
 //
-// See http://ren-garden.hostilefork.com/ for more information on this project
+// See http://ren-garden.metaeducation.com for more information on this project
 //
 
 
@@ -32,7 +32,7 @@
 // notes on the articles sourcing the information and a request for
 // review here:
 //
-//     https://github.com/hostilefork/ren-garden/issues/2
+//     https://github.com/metaeducation/ren-garden/issues/2
 
 class FakeStdoutResources {
 public:
@@ -77,7 +77,7 @@ protected:
         *(pbase() + n) = '\0';
 
         // BUG: If this is UTF8 encoded we might end up on half a character...
-        // https://github.com/hostilefork/ren-garden/issues/1
+        // https://github.com/metaeducation/ren-garden/issues/1
 
         QMutexLocker locker {&mdi.modifyMutex};
 

@@ -1,7 +1,7 @@
 //
 // renconsole.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2014 HostileFork.com
+// Copyright (C) 2015 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ren Garden.  If not, see <http://www.gnu.org/licenses/>.
 //
-// See http://ren-garden.hostilefork.com/ for more information on this project
+// See http://ren-garden.metaeducation.com for more information on this project
 //
 
 
@@ -167,7 +167,7 @@ RenConsole::RenConsole (QWidget * parent) :
     // and "zoom out", so if you get too creative with the font settings then
     // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
     //
-    //     https://github.com/hostilefork/ren-garden/issues/7
+    //     https://github.com/metaeducation/ren-garden/issues/7
 
     // Make the input just a shade lighter black than the output.  (It's also
     // not a fixed width font, so between those two differences you should be
@@ -257,7 +257,7 @@ void RenConsole::printBanner() {
     // Use a font we set the size explicitly for so this text intentionally
     // does not participate in zoom in and zoom out
     //
-    // https://github.com/hostilefork/ren-garden/issues/7
+    // https://github.com/metaeducation/ren-garden/issues/7
 
     QTextCharFormat subheadingFormat;
     subheadingFormat.setFont(
@@ -271,17 +271,17 @@ void RenConsole::printBanner() {
     cursor.insertText("\n", subheadingFormat);
 
     std::vector<char const *> components = {
-        "<i><b>Red</b> is © 2014 Nenad Rakocevic, BSD License</i>",
+        "<i><b>Red</b> is © 2015 Nenad Rakocevic, BSD License</i>",
 
-        "<i><b>Rebol</b> is © 2014 REBOL Technologies, Apache 2 License</i>",
+        "<i><b>Rebol</b> is © 2015 REBOL Technologies, Apache 2 License</i>",
 
-        "<i><b>RenCpp</b></b> is © 2014 HostileFork.com, Boost License</i>",
+        "<i><b>RenCpp</b></b> is © 2015 HostileFork.com, Boost License</i>",
 
-        "<i><b>Qt</b> is © 2014 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
+        "<i><b>Qt</b> is © 2015 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
 
         "",
 
-        "<i><b>Ren Garden</b> is © 2014 HostileFork.com, GPL 3 License</i>"
+        "<i><b>Ren Garden</b> is © 2015 MetÆducation, GPL 3 License</i>"
     };
 
     for (auto & credit : components) {
