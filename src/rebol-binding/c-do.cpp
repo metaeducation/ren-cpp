@@ -71,7 +71,7 @@ extern "C" jmp_buf *Halt_State;
 jmp_buf *Halt_State = 0;  //!!!!!!!!!! global?
 
 
-static void Do_Rebcode(REBVAL *v) {UNUSED(v);}
+static void Do_Rebcode(REBVAL *) {;}
 
 
 ///
