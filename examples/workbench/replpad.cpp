@@ -30,6 +30,38 @@
 #include "replpad.h"
 
 
+
+///
+/// HISTORY RECORDS
+///
+
+//
+// Destined to be its own file...
+//
+
+//
+// ReplPad::getCurrentInput()
+//
+// Get content from the last prompt all the way to the end.  We do this by
+// storing the index of the end of the last prompt text.
+//
+
+QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
+    QTextCursor cursor {pad.document()};
+
+    cursor.setPosition(inputPos, QTextCursor::MoveAnchor);
+    if (endPos == -1)
+        cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+    else
+        cursor.setPosition(endPos, QTextCursor::KeepAnchor);
+
+    // The misleadingly named QTextCursor::​selectedText() gives you back
+    // text with Unicode U+2029 paragraph separator characters instead of a
+    // newline \n character, for reasons known only to Qt.
+
+    return cursor.selection().toPlainText();
+}
+
 ///
 /// CONSOLE CONSTRUCTION
 ///
@@ -179,8 +211,67 @@ void ReplPad::followLatestOutput() {
 
 
 void ReplPad::mousePressEvent(QMouseEvent * event) {
-    dontFollowLatestOutput();
+
+    if (event->buttons() == Qt::RightButton) {
+        QTextCursor clickCursor = cursorForPosition(event->pos());
+        if (textCursor().position() == textCursor().anchor())
+            setTextCursor(clickCursor);
+        else {
+            int lo = std::min(textCursor().position(), textCursor().anchor());
+            int hi = std::max(textCursor().position(), textCursor().anchor());
+            if ((clickCursor.position() < lo) or (clickCursor.position() > hi))
+                setTextCursor(clickCursor);
+        }
+    }
+
     QTextEdit::mousePressEvent(event);
+
+    dontFollowLatestOutput();
+}
+
+
+void ReplPad::mouseDoubleClickEvent(QMouseEvent * event) {
+    // There is no exposed "triple click" event in Qt.  The behavior you see
+    // where entire lines are selected by QTextEdit if a third click happens
+    // is custom implemented inside QTextEdit::mouseDoubleClickEvent.  A
+    // diff on another widget implementing triple click here:
+    //
+    //     https://qt.gitorious.org/qt/qtdeclarative/merge_requests/6/diffs
+
+    // We need to differentiate click behavior when they are in the source
+    // code input part vs. the output part.  When in output, fall back on
+    // normal QTextEdit behavior.
+
+    HistoryEntry * entryInside = nullptr;
+
+    for (auto it = history.rbegin(); it != history.rend(); it++) {
+        if (textCursor().position() > it->inputPos) {
+            int last = (it->endPos == -1)
+                ? endCursor().position()
+                : it->endPos;
+
+            if (textCursor().position() <= last)
+                entryInside = &(*it);
+            break;
+        }
+    }
+
+    if (entryInside) {
+        std::pair<int, int> range = getSyntaxer().rangeForWholeToken(
+            entryInside->getInput(*this),
+            textCursor().position() - entryInside->inputPos
+        );
+
+        QTextCursor cursor {document()};
+        cursor.setPosition(range.first + entryInside->inputPos);
+        cursor.setPosition(
+            range.second + entryInside->inputPos,
+            QTextCursor::KeepAnchor
+        );
+        setTextCursor(cursor);
+    } else {
+        QTextEdit::mouseDoubleClickEvent(event);
+    }
 }
 
 
@@ -234,27 +325,6 @@ void ReplPad::appendNewPrompt() {
     document()->clearUndoRedoStacks();
 }
 
-
-
-//
-// ReplPad::getCurrentInput()
-//
-// Get content from the last prompt all the way to the end.  We do this by
-// storing the index of the end of the last prompt text.
-//
-
-QString ReplPad::getCurrentInput() const {
-    QTextCursor cursor {document()};
-
-    cursor.setPosition(history.back().inputPos, QTextCursor::MoveAnchor);
-    cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
-
-    // The misleadingly named QTextCursor::​selectedText() gives you back
-    // text with Unicode U+2029 paragraph separator characters instead of a
-    // newline \n character, for reasons known only to Qt.
-
-    return cursor.selection().toPlainText();
-}
 
 
 void ReplPad::clearCurrentInput() {
@@ -312,7 +382,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // are no groups."
 
     bool groupswitched = event->modifiers() & Qt::GroupSwitchModifier;
-    UNUSED(groupswitched);
 
     QString temp = event->text();
 
@@ -430,9 +499,10 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
 
     // Whatever we do from here should update the status bar, even to clear
-    // it.  We put a test message on to make sure all paths clear.
+    // it.  Rather than simply clearing it, we should set up something more
+    // formal to ensure all paths have some kind of success or failure report
 
-    emit commandStatus("Unlabeled status path - report!");
+    emit commandStatus("");
 
 
     // Temporarily allow writing to the console during the rest of this
@@ -467,7 +537,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // outermost shell.
 
     if ((key == Qt::Key_Escape)) {
-        if (not getCurrentInput().isEmpty()) {
+        if (not history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
             return;
         }
@@ -512,7 +582,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         // It's sort of pleasing to be able to go all the way back to zero,
         // so clear the input even though it's a bit of a forgery...
 
-        if (not getCurrentInput().isEmpty()) {
+        if (not history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
             document()->clearUndoRedoStacks();
             return;
@@ -551,7 +621,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         ) {
             // Switch from single to multi-line mode
 
-            QString input = getCurrentInput();
+            QString input = history.back().getInput(*this);
             clearCurrentInput();
 
             printMultilinePrompt();
@@ -623,7 +693,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
             appendText("\n");
 
-            QString input = getCurrentInput();
+            QString input = history.back().getInput(*this);
             if (input.isEmpty()) {
                 appendNewPrompt();
                 followLatestOutput();

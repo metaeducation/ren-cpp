@@ -232,7 +232,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // to be doing the evaluation on a worker thread and signal it from GUI
 
     auto signalHandler = [](int) {
-        std::cout << "[escape]";
+        runtime.getOutputStream() << "[escape]";
         SET_SIGNAL(SIG_ESCAPE);
     };
 

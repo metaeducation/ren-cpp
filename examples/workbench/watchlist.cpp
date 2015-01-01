@@ -114,15 +114,16 @@ WatchList::Watcher::Watcher (
 ) :
     watch (watch),
     useCell (useCell),
-    tag (tag)
+    tag (tag),
+    frozen (false)
 {
     evaluate(true);
 }
 
 
-void WatchList::WatchItem::evaluate(bool firstTime) {
+void WatchList::Watcher::evaluate(bool firstTime) {
     try {
-        if (firstTime or not useCell)
+        if (firstTime or (not useCell) or (not frozen))
             value = watch(); // apply it
     }
     catch (ren::evaluation_error & e) {
@@ -135,9 +136,10 @@ void WatchList::WatchItem::evaluate(bool firstTime) {
 }
 
 
-QString WatchList::WatchItem::getWatchString() const {
+QString WatchList::Watcher::getWatchString() const {
     if (tag) {
-        return static_cast<QString>(tag);
+        ren::String str {tag};
+        return str.spellingOf<QString>();
     }
 
     // Should there be a way to automatically debug based on the
@@ -148,35 +150,10 @@ QString WatchList::WatchItem::getWatchString() const {
 }
 
 
-QString WatchList::WatchItem::getValueString() const {
+QString WatchList::Watcher::getValueString() const {
     if (error)
         return static_cast<QString>(error);
     return static_cast<QString>(value);
-}
-
-
-ren::Value WatchList::WatchItem::getValue() const {
-    return value;
-}
-
-
-bool WatchList::WatchItem::hadError() const {
-    return static_cast<bool>(error);
-}
-
-
-ren::Value WatchList::WatchItem::getError() const {
-    return error;
-}
-
-
-bool WatchList::WatchItem::isCell() const {
-    return useCell;
-}
-
-
-bool WatchList::WatchItem::isLabeled() const {
-    return static_cast<bool>(tag);
 }
 
 
@@ -194,6 +171,18 @@ WatchList::WatchList(QWidget * parent) :
     // or dock widget give it more space
 
     horizontalHeader()->setStretchLastSection(true);
+
+    // Lots of interesting options for right click menus on watch items,
+    // although we are exploring what can be done with the "watch dialect"
+    // to keep your hands off the mouse and still be productive
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(
+        this, &WatchList::customContextMenuRequested,
+        this, &WatchList::customMenuRequested,
+        Qt::DirectConnection
+    );
+
 
     // Create the function that will be added to the environment to be bound
     // to the word WATCH.  If you give it a word or path it will be quoted,
@@ -222,10 +211,16 @@ WatchList::WatchList(QWidget * parent) :
         [this](ren::Value const & arg) -> ren::Value {
 
             if (arg.isBlock()) {
-                ren::print("First argument is", arg);
-                for (auto item : ren::Block {arg}) {
-                    //watchDialect(item, false, false, ren::none);
+                ren::Block blockArg = static_cast<ren::Block>(arg);
+                auto it = blockArg.begin();
+                while (it != blockArg.end()) {
+                    ren::print(*it);
+                    it++;
                 }
+                /*
+                for (auto item : static_cast<ren::Block>(arg)) {
+                    watchDialect(item, false, false, ren::none);
+                }*/
                 return ren::none;
             }
 
@@ -241,36 +236,42 @@ WatchList::WatchList(QWidget * parent) :
     // have to hold up the running evaluator when watch is called
 
     connect(
-        this, &WatchList::watchItemPushed,
-        this, &WatchList::handlePushedWatchItem,
+        this, &WatchList::pushWatcherRequested,
+        this, &WatchList::pushWatcher,
         Qt::BlockingQueuedConnection
     );
 
-   connect(
-        this, &WatchList::removeWatchItemRequested,
-        this, &WatchList::handleRemoveWatchItemRequest,
+    connect(
+        this, &WatchList::removeWatcherRequested,
+        this, &WatchList::removeWatcher,
+        Qt::BlockingQueuedConnection
+    );
+
+    connect(
+        this, &WatchList::freezeItemRequested,
+        this, &WatchList::freezeWatcher,
         Qt::BlockingQueuedConnection
     );
 }
 
 
-void WatchList::handlePushedWatchItem() {
-    WatchItem & watchItem = watchList.back();
+void WatchList::pushWatcher() {
+    Watcher & watcher = watchList.back();
 
-    QTableWidgetItem * name = new QTableWidgetItem;
-    QTableWidgetItem * value = new QTableWidgetItem;
+    WatchWidgetItem * name = new WatchWidgetItem;
+    WatchWidgetItem * value = new WatchWidgetItem;
 
-    name->setText(watchItem.getWatchString());
-    if (watchItem.isLabeled() or watchItem.isCell())
+    name->setText(watcher.getWatchString());
+    if (watcher.tag or watcher.useCell)
         name->setForeground(Qt::darkMagenta);
 
-    QString temp = watchItem.getValueString();
-    value->setText(watchItem.getValueString());
+    QString temp = watcher.getValueString();
+    value->setText(watcher.getValueString());
 
-    if (watchItem.isCell()) {
+    if (watcher.useCell) {
         value->setForeground(Qt::darkGreen);
     }
-    else if (watchItem.hadError()) {
+    else if (watcher.error) {
         value->setForeground(Qt::darkRed);
     }
 
@@ -284,8 +285,7 @@ void WatchList::handlePushedWatchItem() {
 }
 
 
-
-void WatchList::handleRemoveWatchItemRequest(int index) {
+void WatchList::removeWatcher(int index) {
     if (static_cast<size_t>(index) > watchList.size())
         return;
 
@@ -295,6 +295,16 @@ void WatchList::handleRemoveWatchItemRequest(int index) {
     return;
 }
 
+
+void WatchList::freezeWatcher(int index, bool) {
+    if (static_cast<size_t>(index) > watchList.size())
+        return;
+
+    watchList.erase(std::begin(watchList) + (index - 1));
+    removeRow(index - 1);
+
+    return;
+}
 
 void WatchList::mousePressEvent(QMouseEvent * event) {
     setSelectionMode(QAbstractItemView::SingleSelection);
@@ -312,20 +322,20 @@ void WatchList::updateWatches() {
     setSelectionMode(QAbstractItemView::MultiSelection);
 
     int row = 0;
-    for (WatchItem & watchItem : watchList) {
+    for (Watcher & watcher : watchList) {
         QString oldText = item(row, 1)->text();
         QBrush oldBrush = item(row, 1)->foreground();
         QBrush newBrush = QBrush(Qt::black);
 
-        watchItem.evaluate();
-        if (watchItem.isCell()) {
+        watcher.evaluate();
+        if (watcher.useCell) {
             newBrush = QBrush(Qt::darkGreen);
         }
-        else if (watchItem.hadError()) {
+        else if (watcher.error) {
             newBrush = QBrush(Qt::darkRed);
         }
 
-        QString newText = watchItem.getValueString();
+        QString newText = watcher.getValueString();
 
         // We only update the table if it has changed for (possible)
         // efficiency, but also to give visual feedback by selecting the
@@ -337,7 +347,7 @@ void WatchList::updateWatches() {
 
         item(row, 0)->setSelected(false);
         if ((oldText != newText) or (oldBrush != newBrush)) {
-            QTableWidgetItem * newValueItem = new QTableWidgetItem;
+            WatchWidgetItem * newValueItem = new WatchWidgetItem;
 
             newValueItem->setForeground(newBrush);
             newValueItem->setText(newText);
@@ -382,16 +392,22 @@ ren::Value WatchList::watchDialect(
         }
 
         if (removal) {
-            emit removeWatchItemRequested(-index);
+            emit removeWatcherRequested(-index);
             return ren::unset;
         }
 
-        if (watchList[index - 1].hadError()) {
-            watchList[index - 1].getError()(); // apply the error
-            return ren::unset; // unreachable
-        }
+        // Experimental trick: apply the error, if it is none it is a no-op
+        // Nifty benefit of Generalized Apply!  But double check that it's
+        // an error or a none, first, here :-)
 
-        return watchList[index - 1].getValue();
+        Q_ASSERT(
+            watchList[index - 1].error.isNone()
+            or watchList[index - 1].error.isError()
+        );
+
+        watchList[index - 1].error(); // apply the error-or-none
+
+        return watchList[index - 1].value();
     }
 
     // Let's use the evaluator for this trick.  :-)  Have it give us back
@@ -445,21 +461,21 @@ ren::Value WatchList::watchDialect(
     }
 
     // With those words out of the way, we should be able to take
-    // for granted the creation of a WatchItem for words.  Then we
+    // for granted the creation of a Watcher for words.  Then we
     // can throw an error up to the console on a /cell request.
     // Because there's no use adding it to the watch list if it will
     // never be evaluated again (a regular watch may become good...)
 
     if (arg.isWord() or arg.isPath() or arg.isParen()) {
 
-        WatchItem watchItem {
+        Watcher watcher {
             arg,
             static_cast<bool>(useCell),
             useLabel ? ren::Tag {tag} : ren::Value {ren::none}
         };
 
-        if (watchItem.isCell() and watchItem.hadError()) {
-            watchItem.getError()(); // should throw...
+        if (watcher.useCell and watcher.error) {
+            watcher.error(); // should throw...
 
             throw std::runtime_error("Unreachable");
         }
@@ -468,14 +484,123 @@ ren::Value WatchList::watchDialect(
         // it keeps the numbering more consistent.  some people might
         // desire it added at the top and consider it better that way.
 
-        watchList.push_back(watchItem);
+        watchList.push_back(watcher);
 
-        emit watchItemPushed();
+        emit pushWatcherRequested();
         return ren::unset;
     }
 
     throw std::runtime_error("unexpected type passed to watch dialect");
 
     return ren::unset;
+}
+
+
+///
+/// POPUP CONTEXT MENU
+///
+
+//
+// Because it's not particularly computationally intensive to create a
+// popup menu, we make a new one on each request and use lambda functions
+// instead of worrying about setting up a bunch of slots to deal with
+// QAction triggers.
+//
+
+void WatchList::customMenuRequested(QPoint pos){
+
+    QMenu * menu = new QMenu {this};
+
+    int index = currentRow() + 1;
+
+
+    //
+    // Create the actions for the popup menu
+    //
+
+    QAction * frozenAction = new QAction("Frozen", this);
+    frozenAction->setCheckable(true);
+    frozenAction->setChecked(watchList[index].frozen);
+    frozenAction->setStatusTip(
+        QString("Freeze or unfreeze this watcher, or [watch [freeze +/-")
+        + QString::number(index) + "]"
+    );
+
+    QAction * duplicateAction = new QAction("Duplicate", this);
+    duplicateAction->setStatusTip(
+        QString("Make a copy of this watcher, or [copy ")
+        + QString::number(index) + "]"
+    );
+
+    QAction * unwatchAction = new QAction("Unwatch", this);
+    unwatchAction->setShortcuts(
+        QList<QKeySequence> {
+            QKeySequence::Delete,
+            QKeySequence(Qt::Key_Backspace)
+        }
+    );
+    unwatchAction->setStatusTip(
+        QString("Stop watching this expression, or [watch -")
+        + QString::number(index) + "]"
+    );
+
+
+    //
+    // Order the items in the menu.  Ideally this would use some kind of
+    // heuristic about your common operations to order it (or be configurable)
+    // but we try to guess so that the most useful items are at the top,
+    // the most dangerous at the bottom, etc.
+    //
+
+    menu->addAction(frozenAction);
+    menu->addAction(duplicateAction);
+    menu->addAction(unwatchAction);
+
+
+    //
+    // Connect menu item actions to code that implements them
+    //
+
+    connect(
+        unwatchAction, &QAction::triggered,
+        [this, index](bool) { // bool is "checked"
+
+            // Note the threading issues tied up here.  We are on the GUI
+            // thread, we may be in mid-evaluation of code in the console,
+            // etc.  Because we're on the GUI we shouldn't emit the blocking
+            // queued signal for requesting a watch.  Review all this.
+
+            removeWatcher(index);
+        }
+    );
+
+    connect(
+        frozenAction, &QAction::triggered,
+        [this, index](bool frozen) { // bool is "checked"
+
+            // Note the threading issues tied up here.  We are on the GUI
+            // thread, we may be in mid-evaluation of code in the console,
+            // etc.  Because we're on the GUI we shouldn't emit the blocking
+            // queued signal for requesting a watch.  Review all this.
+
+            if (frozen)
+                freezeWatcher(index, frozen);
+        }
+    );
+
+    //
+    // Pop up the menu.  Note this call returns while the menu is up, so we
+    // can't just delete it...we instead register a hook to clean it up when
+    // it's hidden.
+    //
+
+    menu->popup(viewport()->mapToGlobal(pos));
+
+    connect(
+        menu, &QMenu::aboutToHide,
+        menu, &QObject::deleteLater,
+        Qt::DirectConnection // it's "deleteLater", already queued...
+    );
+
 }
 

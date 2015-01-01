@@ -73,6 +73,15 @@ MainWindow::MainWindow()
         Qt::QueuedConnection
     );
 
+    connect(
+        watchList, &WatchList::watchStatus,
+        statusBar(), [this](QString const & message) {
+            // Slot wants a "timeout" (0 for "until next message")
+            statusBar()->showMessage(message, 0);
+        },
+        Qt::DirectConnection
+    );
+
     addDockWidget(Qt::RightDockWidgetArea, dockWatch);
     dockWatch->hide();
 

@@ -29,12 +29,21 @@
 
 class MainWindow;
 
+class WatchWidgetItem;
+
 class WatchList : public QTableWidget
 {
     Q_OBJECT
 
 public:
     WatchList (QWidget * parent = nullptr);
+
+private:
+    friend class WatchWidgetItem;
+    void setItemData(WatchWidgetItem * item, const QVariant & value);
+
+protected slots:
+    void customMenuRequested(QPoint pos);
 
 signals:
     void watchCalled(
@@ -47,33 +56,44 @@ signals:
 
     void hideDockRequested();
 
-    void watchItemPushed(); // last element in the vector
+    // last element in the vector ATM, probably should make Watcher able
+    // to go against signal/slots with metaobject
+    void pushWatcherRequested();
 
-    void removeWatchItemRequested(int index);
+    void removeWatcherRequested(int index);
+
+    void freezeItemRequested(int index, bool frozen);
+
+    void watchStatus(QString message);
 
 public slots:
     void updateWatches();
 
 private slots:
-    void handlePushedWatchItem();
+    void pushWatcher();
 
-    void handleRemoveWatchItemRequest(int index);
+    void removeWatcher(int index);
+
+    void freezeWatcher(int index, bool frozen);
 
 protected:
     void mousePressEvent(QMouseEvent * event) override;
 
 private:
-    class WatchItem {
+    class Watcher {
+        friend class WatchList;
+
         ren::Value watch;
         bool useCell;
         ren::Value value;
         ren::Value error;
         ren::Value tag;
+        bool frozen;
 
     public:
         // Construct will also evaluate to capture at the time of the watch
         // being added (particularly important if it's a cell)
-        WatchItem (
+        Watcher (
             ren::Value const & watch,
             bool useCell,
             ren::Value const & tag
@@ -85,19 +105,9 @@ private:
         QString getWatchString() const;
 
         QString getValueString() const;
-
-        ren::Value getValue() const;
-
-        ren::Value getError() const;
-
-        bool hadError() const;
-
-        bool isLabeled() const;
-
-        bool isCell() const;
     };
 
-    std::vector<WatchItem> watchList;
+    std::vector<Watcher> watchList;
 
 private:
     // aaaand... magic! :-)

@@ -29,6 +29,7 @@
 #include "rencpp/ren.hpp"
 
 #include "replpad.h"
+#include "rensyntaxer.h"
 
 class FakeStdout;
 class FakeStdoutBuffer;
@@ -37,6 +38,10 @@ class MainWindow;
 class RenConsole : public ReplPad
 {
     Q_OBJECT
+
+private:
+    RenSyntaxer syntaxer;
+    RenSyntaxer & getSyntaxer() override { return syntaxer; }
 
 public:
     RenConsole (QWidget * parent = nullptr);

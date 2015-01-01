@@ -16,8 +16,7 @@ int main(int, char **) {
     int contextNumber = 1;
 
     Context::setFinder(
-        [&](Engine * enginePtr) -> Context & {
-            UNUSED(enginePtr);
+        [&](Engine *) -> Context & {
             if (contextNumber == 1)
                 return contextOne;
             if (contextNumber == 2)

@@ -24,6 +24,8 @@
 
 #include <QTextEdit>
 
+#include "syntaxer.h"
+
 class ReplPad : public QTextEdit
 {
     Q_OBJECT
@@ -55,15 +57,18 @@ public slots:
     void dontFollowLatestOutput();
 
 protected:
-    QString getCurrentInput() const;
     void clearCurrentInput();
     void containInputSelection();
+
+protected:
+    virtual Syntaxer & getSyntaxer() = 0;
 
 protected:
     virtual bool isReadyToModify(QKeyEvent * event) = 0;
 
     void keyPressEvent(QKeyEvent * event) override final;
     void mousePressEvent(QMouseEvent * event) override;
+    void mouseDoubleClickEvent(QMouseEvent * event) override;
 
 signals:
     void commandStatus(QString const & str);
@@ -90,6 +95,8 @@ private:
             endPos (-1)
         {
         }
+    public:
+        QString getInput(ReplPad & pad) const;
     };
     std::vector<HistoryEntry> history;
 protected:

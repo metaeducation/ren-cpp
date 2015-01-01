@@ -274,6 +274,10 @@ bool Value::isFunction() const {
     return IS_FUNCTION(&cell);
 }
 
+bool Value::isError() const {
+    return IS_ERROR(&cell);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 None::None (Engine & engine) :
@@ -297,6 +301,33 @@ Float::operator double() const {
     return VAL_DECIMAL(&cell);
 }
 
+
+#if REN_CLASSLIB_QT
+AnyString::AnyString (
+    QString const & str,
+    bool (Value::*validMemFn)(RenCell *) const
+)
+    : Series(Dont::Initialize)
+{
+    // can't return char * without intermediate
+    // http://stackoverflow.com/questions/17936160/
+    QByteArray array = str.toLocal8Bit();
+    char const * buffer = array.data();
+
+    internal::Loadable loadable (buffer);
+    (this->*validMemFn)(&this->cell);
+
+    Context::runFinder(nullptr).constructOrApplyInitialize(
+        nullptr,
+        &loadable,
+        1,
+        // Do construct
+        this,
+        // Don't apply
+        nullptr
+    );
+}
+#endif
 
 #if REN_CLASSLIB_STD
 std::string AnyWord::spellingOf_STD() const {
@@ -325,6 +356,33 @@ QString AnyWord::spellingOf_QT() const {
 }
 #endif
 
+
+
+#if REN_CLASSLIB_STD
+std::string AnyString::spellingOf_STD() const {
+    std::string result = static_cast<std::string>(*this);
+    if (isString() /* or isUrl() or isEmail() or isFile() */)
+        return result;
+    if (isTag()) {
+        result.erase(0, 1);
+        return result.erase(result.length() - 1, 1);
+    }
+    throw std::runtime_error {"Invalid String Type"};
+}
+#endif
+
+
+#if REN_CLASSLIB_QT
+QString AnyString::spellingOf_QT() const {
+    QString result = static_cast<QString>(*this);
+    if (isString() /* or isUrl() or isEmail() or isFile() */)
+        return result;
+    if (isTag()) {
+        return result.right(result.length() - 1).left(result.length() - 1);
+    }
+    throw std::runtime_error {"Invalid String Type"};
+}
+#endif
 
 
 

@@ -247,10 +247,8 @@ static REBINT Init_Depth(void)
 
 #define CHECK_DEPTH(d) if ((d = Init_Depth()) < 0) return;\
 
-static void Trace_Line(REBSER *block, REBINT index, REBVAL *value)
+static void Trace_Line(REBSER *, REBINT index, REBVAL *value)
 {
-    UNUSED(block);
-
 	int depth;
 
 	if (GET_FLAG(Trace_Flags, 1)) return; // function
@@ -2202,11 +2200,10 @@ xx*/	REBVAL *Do_Path(REBVAL **path_val, REBVAL *val)
 
 /***********************************************************************
 **
-*/	REBINT Init_Mezz(REBINT reserved)
+*/	REBINT Init_Mezz(REBINT)
 /*
 ***********************************************************************/
 {
-    UNUSED(reserved);
 	REBINT result = 0;
 	//REBVAL *val;
 	REBOL_STATE state;

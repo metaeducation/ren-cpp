@@ -29,6 +29,7 @@
 #include "mainwindow.h"
 #include "fakestdio.h"
 #include "watchlist.h"
+#include "rensyntaxer.h"
 
 
 

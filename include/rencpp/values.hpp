@@ -419,6 +419,8 @@ public:
 public:
     bool isFunction() const;
 
+    bool isError() const;
+
 protected:
     bool needsRefcount() const;
 
@@ -1046,8 +1048,48 @@ public:
 
     iterator begin();
     iterator end();
+
+public:
+    template <
+        class T =
+#if REN_CLASSLIB_STD
+            std::string
+#elif REN_CLASSLIB_QT
+            QString
+#else
+    static_assert(false, "https://github.com/hostilefork/rencpp/issues/22");
+#endif
+    >
+    T spellingOf() const {
+        throw std::runtime_error("Unspecialized version of spellingOf called");
+    }
+
+#if REN_CLASSLIB_STD
+    std::string spellingOf_STD() const;
+#endif
+
+#if REN_CLASSLIB_QT
+    QString spellingOf_QT() const;
+#endif
+
 };
 
+
+// http://stackoverflow.com/a/3052604/211160
+
+#if REN_CLASSLIB_STD
+template<>
+inline std::string AnyString::spellingOf<std::string>() const {
+    return spellingOf_STD();
+}
+#endif
+
+#if REN_CLASSLIB_QT
+template<>
+inline QString AnyString::spellingOf<QString>() const {
+    return spellingOf_QT();
+}
+#endif
 
 
 class AnyBlock : public Series {
@@ -1142,7 +1184,7 @@ public:
 
 #if REN_CLASSLIB_STD
     explicit AnyStringSubtype (std::string const & str) :
-        AnyString (str, validMemFn)
+        AnyString (str.c_str(), validMemFn)
     {
     }
 #endif

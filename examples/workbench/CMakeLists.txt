@@ -58,6 +58,7 @@ add_executable(
     replpad.cpp
     renconsole.cpp
     watchlist.cpp
+    rensyntaxer.cpp
 
     # Include files - not technically needed for the build but good to have
     # a mention of because then the generated project file will show them in
@@ -68,6 +69,8 @@ add_executable(
     replpad.h
     fakestdio.h
     watchlist.h    
+    syntaxer.h
+    rensyntaxer.h
 )
 
 
