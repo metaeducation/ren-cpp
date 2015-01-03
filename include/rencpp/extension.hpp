@@ -73,11 +73,11 @@ namespace internal {
 
 extern std::mutex extensionTablesMutex;
 
-typedef int RenShimId;
+using RenShimId = int;
 
 extern RenShimId shimIdToCapture;
 
-typedef RenResult (* RenShimBouncer)(RenShimId id, RenCell * stack);
+using RenShimBouncer = RenResult (*)(RenShimId id, RenCell * stack);
 
 extern RenShimBouncer shimBouncerToCapture;
 
@@ -102,9 +102,9 @@ private:
     // examining the type signature, so that it can call the C++ hook.
     //
 
-    typedef std::function<R(Ts...)> FunType;
+    using FunType = std::function<R(Ts...)>;
 
-    typedef std::tuple<Ts...> ParamsType;
+    using ParamsType = std::tuple<Ts...>;
 
 
     // When a "self-aware" shim forwards its parameter and its function
@@ -330,14 +330,14 @@ Function makeFunction_(
     Fun && fun,
     utility::indices<Ind...>
 ) {
-    typedef internal::FunctionGenerator<
+    using Gen = internal::FunctionGenerator<
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::result_type,
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::template arg<Ind>...
-    > Gen;
+    >;
 
     using Ret = typename utility::function_traits<
         typename std::remove_reference<Fun>::type

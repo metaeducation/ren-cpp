@@ -50,7 +50,7 @@ namespace ren {
 
 class Engine {
 public:
-    typedef std::function<Engine&()> Finder;
+    using Finder = std::function<Engine&()>;
 
 private:
     friend class Value;
