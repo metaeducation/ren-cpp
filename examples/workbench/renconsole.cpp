@@ -367,7 +367,7 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
             return false;
         }
 
-        emit commandStatus("Evaluation in progress, can't edit");
+        emit reportStatus("Evaluation in progress, can't edit");
         followLatestOutput();
         return false;
     }
@@ -444,7 +444,7 @@ void RenConsole::handleResults(
     appendNewPrompt();
 
     if (delta) {
-        emit commandStatus(
+        emit reportStatus(
             QString("Command completed in ") + static_cast<QString>(delta)
         );
     }

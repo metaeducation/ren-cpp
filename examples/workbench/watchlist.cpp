@@ -37,46 +37,33 @@
 ///
 
 //
-// Even if we allowed editing in the watch widget table cells (such as to poke
-// into the memory), we'd still want to subclass the cells to get notified
-// *prior* to the edit to do data validation.  As it is, allowing the user
-// to select in and edit copy/paste is a convenience...we just reject any
-// actual commits to that tinkering.
+// Currently no support for editing the *values*, only the labels for the
+// names.  Technically speaking, value editing isn't difficult, and should
+// be included at some point.
 //
 
-class WatchWidgetItem : public QTableWidgetItem {
-public:
-    using QTableWidgetItem::QTableWidgetItem; // inherit constructors
-
-public:
-    void setData(int role, QVariant const & value) override {
-        if (role != Qt::EditRole) {
-            // We only trap attempts to edit the shown string (not
-            // programmatic changes to color, etc.)
-
-            QTableWidgetItem::setData(role, value);
-            return;
-        }
-
-        auto watchList = qobject_cast<WatchList *>(tableWidget());
-        watchList->setItemData(this, value);
-    }
-};
-
-void WatchList::setItemData(WatchWidgetItem * item, QVariant const & value) {
-
+void WatchList::onItemChanged(QTableWidgetItem * item) {
     switch (item->column()) {
         case 0: {
+            QString contents = item->data(Qt::DisplayRole).toString();
+
+            if (contents == watchers[item->row()].getWatchString()) {
+                // If the text is the same as what it was, then odds are they
+                // selected in the cell adn clicked away...vs having the
+                // expression (x + y) and wanting to label it (x + y), for
+                // instance.
+                return;
+            }
+
             // If they type text into the first column and it doesn't match the
             // text that was there, then consider it to be a label.  If they
             // delete everything, consider it to be "unlabeling"
 
-            QString contents = value.toString();
             if (contents.isEmpty()) {
-                watchList[item->row()].tag = ren::none;
+                watchers[item->row()].tag = ren::none;
                 item->QTableWidgetItem::setTextColor(Qt::black);
             } else {
-                watchList[item->row()].tag = ren::String {
+                watchers[item->row()].tag = ren::String {
                     QString("{") + contents + "}"
                 };
                 item->QTableWidgetItem::setTextColor(Qt::darkMagenta);
@@ -84,13 +71,13 @@ void WatchList::setItemData(WatchWidgetItem * item, QVariant const & value) {
 
             item->QTableWidgetItem::setData(
                 Qt::EditRole,
-                watchList[item->row()].getWatchString()
+                watchers[item->row()].getWatchString()
             );
             break;
         }
 
         case 1:
-            watchStatus(
+            reportStatus(
                 "Memory editing of variables not supported (yet...)"
             );
             break;
@@ -203,7 +190,7 @@ WatchList::WatchList(QWidget * parent) :
 
     auto watchFunction = ren::makeFunction(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
-        ":arg [word! path! block! paren! integer!]"
+        ":arg [word! path! block! paren! integer! tag!]"
         "    {word to watch or other legal parameter, see documentation)}",
 
         REN_STD_FUNCTION,
@@ -249,17 +236,23 @@ WatchList::WatchList(QWidget * parent) :
 
     connect(
         this, &WatchList::freezeItemRequested,
-        this, &WatchList::freezeWatcher,
+        this, &WatchList::setFreezeState,
         Qt::BlockingQueuedConnection
+    );
+
+    connect(
+        this, &WatchList::itemChanged,
+        this, &WatchList::onItemChanged,
+        Qt::AutoConnection
     );
 }
 
 
 void WatchList::pushWatcher() {
-    Watcher & watcher = watchList.back();
+    Watcher & watcher = watchers.back();
 
-    WatchWidgetItem * name = new WatchWidgetItem;
-    WatchWidgetItem * value = new WatchWidgetItem;
+    QTableWidgetItem * name = new QTableWidgetItem;
+    QTableWidgetItem * value = new QTableWidgetItem;
 
     name->setText(watcher.getWatchString());
     if (watcher.tag or watcher.useCell)
@@ -286,22 +279,37 @@ void WatchList::pushWatcher() {
 
 
 void WatchList::removeWatcher(int index) {
-    if (static_cast<size_t>(index) > watchList.size())
-        return;
-
-    watchList.erase(std::begin(watchList) + (index - 1));
+    watchers.erase(std::begin(watchers) + (index - 1));
     removeRow(index - 1);
 
     return;
 }
 
 
-void WatchList::freezeWatcher(int index, bool) {
-    if (static_cast<size_t>(index) > watchList.size())
-        return;
+void WatchList::duplicateWatcher(int index) {
+    watchers.insert(std::begin(watchers) + (index - 1), watchers[index - 1]);
 
-    watchList.erase(std::begin(watchList) + (index - 1));
-    removeRow(index - 1);
+    QTableWidgetItem * name = item(index - 1, 0)->clone();
+    QTableWidgetItem * value = item(index - 1, 1)->clone();
+    insertRow(index - 1);
+    setItem(index - 1, 0, name);
+    setItem(index  - 1, 1, value);
+
+    return;
+}
+
+
+void WatchList::setFreezeState(int index, bool frozen) {
+    watchers[index - 1].frozen = frozen;
+    if (frozen) {
+        item(index - 1, 0)->setBackground(Qt::gray);
+        item(index - 1, 1)->setBackground(Qt::gray);
+    } else {
+        item(index - 1, 0)->setBackground(Qt::white);
+        item(index - 1, 1)->setBackground(Qt::white);
+
+        updateWatches();
+    }
 
     return;
 }
@@ -321,21 +329,24 @@ void WatchList::updateWatches() {
 
     setSelectionMode(QAbstractItemView::MultiSelection);
 
-    int row = 0;
-    for (Watcher & watcher : watchList) {
+    for (int row = 0; row < rowCount(); row++) {
+        Watcher & w = watchers[row];
+        if (w.frozen)
+            continue;
+
         QString oldText = item(row, 1)->text();
         QBrush oldBrush = item(row, 1)->foreground();
         QBrush newBrush = QBrush(Qt::black);
 
-        watcher.evaluate();
-        if (watcher.useCell) {
+        w.evaluate();
+        if (w.useCell) {
             newBrush = QBrush(Qt::darkGreen);
         }
-        else if (watcher.error) {
+        else if (w.error) {
             newBrush = QBrush(Qt::darkRed);
         }
 
-        QString newText = watcher.getValueString();
+        QString newText = w.getValueString();
 
         // We only update the table if it has changed for (possible)
         // efficiency, but also to give visual feedback by selecting the
@@ -347,7 +358,7 @@ void WatchList::updateWatches() {
 
         item(row, 0)->setSelected(false);
         if ((oldText != newText) or (oldBrush != newBrush)) {
-            WatchWidgetItem * newValueItem = new WatchWidgetItem;
+            QTableWidgetItem * newValueItem = new QTableWidgetItem;
 
             newValueItem->setForeground(newBrush);
             newValueItem->setText(newText);
@@ -360,8 +371,6 @@ void WatchList::updateWatches() {
         else {
             item(row, 1)->setSelected(false);
         }
-
-        row++;
     }
 }
 
@@ -386,7 +395,7 @@ ren::Value WatchList::watchDialect(
         // watch, which we need to do here and return synchronously.
         // Negative integers affect the GUI and run on GUI thread.
 
-        if (index > this->watchList.size()) {
+        if (index > this->watchers.size()) {
             ren::runtime("do make error! {No such watchlist item index}");
             return ren::unset; // unreachable
         }
@@ -401,13 +410,13 @@ ren::Value WatchList::watchDialect(
         // an error or a none, first, here :-)
 
         Q_ASSERT(
-            watchList[index - 1].error.isNone()
-            or watchList[index - 1].error.isError()
+            watchers[index - 1].error.isNone()
+            or watchers[index - 1].error.isError()
         );
 
-        watchList[index - 1].error(); // apply the error-or-none
+        watchers[index - 1].error(); // apply the error-or-none
 
-        return watchList[index - 1].value();
+        return watchers[index - 1].value();
     }
 
     // Let's use the evaluator for this trick.  :-)  Have it give us back
@@ -484,9 +493,17 @@ ren::Value WatchList::watchDialect(
         // it keeps the numbering more consistent.  some people might
         // desire it added at the top and consider it better that way.
 
-        watchList.push_back(watcher);
+        watchers.push_back(watcher);
 
         emit pushWatcherRequested();
+        return ren::unset;
+    }
+
+    if (arg.isTag()) {
+        for (auto & watcher : watchers) {
+            if (watcher.getWatchString() == ren::Tag {arg}.spellingOf<QString>())
+                return watcher.value;
+        }
         return ren::unset;
     }
 
@@ -520,7 +537,7 @@ void WatchList::customMenuRequested(QPoint pos){
 
     QAction * frozenAction = new QAction("Frozen", this);
     frozenAction->setCheckable(true);
-    frozenAction->setChecked(watchList[index].frozen);
+    frozenAction->setChecked(watchers[index - 1].frozen);
     frozenAction->setStatusTip(
         QString("Freeze or unfreeze this watcher, or [watch [freeze +/-")
         + QString::number(index) + "]"
@@ -533,12 +550,6 @@ void WatchList::customMenuRequested(QPoint pos){
     );
 
     QAction * unwatchAction = new QAction("Unwatch", this);
-    unwatchAction->setShortcuts(
-        QList<QKeySequence> {
-            QKeySequence::Delete,
-            QKeySequence(Qt::Key_Backspace)
-        }
-    );
     unwatchAction->setStatusTip(
         QString("Stop watching this expression, or [watch -")
         + QString::number(index) + "]"
@@ -558,33 +569,33 @@ void WatchList::customMenuRequested(QPoint pos){
 
 
     //
-    // Connect menu item actions to code that implements them
+    // Connect menu item actions to code that implements them.
+    //
+    // Note the threading issues tied up here.  We are on the GUI
+    // thread, we may be in mid-evaluation of code in the console,
+    // etc.  Because we're on the GUI we shouldn't emit the blocking
+    // queued signal for requesting a watch.  Review all this.
     //
 
     connect(
-        unwatchAction, &QAction::triggered,
-        [this, index](bool) { // bool is "checked"
-
-            // Note the threading issues tied up here.  We are on the GUI
-            // thread, we may be in mid-evaluation of code in the console,
-            // etc.  Because we're on the GUI we shouldn't emit the blocking
-            // queued signal for requesting a watch.  Review all this.
-
-            removeWatcher(index);
+        frozenAction, &QAction::triggered,
+        [this, index](bool frozen) {
+            setFreezeState(index, frozen);
         }
     );
 
     connect(
-        frozenAction, &QAction::triggered,
-        [this, index](bool frozen) { // bool is "checked"
+        duplicateAction, &QAction::triggered,
+        [this, index](bool) {
+            duplicateWatcher(index);
+        }
+    );
 
-            // Note the threading issues tied up here.  We are on the GUI
-            // thread, we may be in mid-evaluation of code in the console,
-            // etc.  Because we're on the GUI we shouldn't emit the blocking
-            // queued signal for requesting a watch.  Review all this.
 
-            if (frozen)
-                freezeWatcher(index, frozen);
+    connect(
+        unwatchAction, &QAction::triggered,
+        [this, index](bool) {
+            removeWatcher(index);
         }
     );
 

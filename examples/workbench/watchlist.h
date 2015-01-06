@@ -29,18 +29,12 @@
 
 class MainWindow;
 
-class WatchWidgetItem;
-
 class WatchList : public QTableWidget
 {
     Q_OBJECT
 
 public:
     WatchList (QWidget * parent = nullptr);
-
-private:
-    friend class WatchWidgetItem;
-    void setItemData(WatchWidgetItem * item, const QVariant & value);
 
 protected slots:
     void customMenuRequested(QPoint pos);
@@ -64,7 +58,7 @@ signals:
 
     void freezeItemRequested(int index, bool frozen);
 
-    void watchStatus(QString message);
+    void reportStatus(QString message);
 
 public slots:
     void updateWatches();
@@ -74,7 +68,11 @@ private slots:
 
     void removeWatcher(int index);
 
-    void freezeWatcher(int index, bool frozen);
+    void duplicateWatcher(int index);
+
+    void setFreezeState(int index, bool frozen);
+
+    void onItemChanged(QTableWidgetItem * item);
 
 protected:
     void mousePressEvent(QMouseEvent * event) override;
@@ -107,7 +105,7 @@ private:
         QString getValueString() const;
     };
 
-    std::vector<Watcher> watchList;
+    std::vector<Watcher> watchers;
 
 private:
     // aaaand... magic! :-)

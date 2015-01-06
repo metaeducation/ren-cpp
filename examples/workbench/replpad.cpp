@@ -502,7 +502,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // it.  Rather than simply clearing it, we should set up something more
     // formal to ensure all paths have some kind of success or failure report
 
-    emit commandStatus("");
+    emit reportStatus("");
 
 
     // Temporarily allow writing to the console during the rest of this
@@ -525,7 +525,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
         assert(not history.back().multiLineMode);
-        emit commandStatus("UP/DOWN history nav not finished.");
+        emit reportStatus("UP/DOWN history nav not finished.");
         return;
     }
 
@@ -544,7 +544,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         // Nested dialect shells not implemented... YET!
 
-        emit commandStatus(
+        emit reportStatus(
             "Cannot escape further - you are in the root console dialect."
         );
         return;
@@ -588,7 +588,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
-        emit commandStatus("Nothing available for undo.");
+        emit reportStatus("Nothing available for undo.");
         return;
     }
 
@@ -785,7 +785,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (key == Qt::Key_Backspace) {
         if (textCursor().position() <= history.back().inputPos) {
-            emit commandStatus(
+            emit reportStatus(
                 "Can't backspace beginning of input."
             );
             return;
