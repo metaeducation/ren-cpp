@@ -41,7 +41,7 @@ class Engine;
 
 class Context {
 public:
-    typedef std::function<Context & (Engine *)> Finder;
+    using Finder = std::function<Context & (Engine *)>;
 
 private:
     friend class Value;

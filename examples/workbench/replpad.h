@@ -71,7 +71,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent * event) override;
 
 signals:
-    void commandStatus(QString const & str);
+    void reportStatus(QString const & str);
 
 protected:
     virtual void evaluate(QString const & input) = 0;

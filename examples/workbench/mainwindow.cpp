@@ -50,7 +50,7 @@ MainWindow::MainWindow()
     );
 
     connect(
-        console, &ReplPad::commandStatus,
+        console, &ReplPad::reportStatus,
         statusBar(), [this](QString const & message) {
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);
@@ -74,7 +74,7 @@ MainWindow::MainWindow()
     );
 
     connect(
-        watchList, &WatchList::watchStatus,
+        watchList, &WatchList::reportStatus,
         statusBar(), [this](QString const & message) {
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);

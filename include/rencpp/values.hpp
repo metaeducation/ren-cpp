@@ -168,7 +168,7 @@ public: // temporary for the lambda in function, find better way
     // the plus side: copying that value around won't make any more of them,
     // and non-series values don't have them at all.
     //
-    typedef std::atomic<unsigned int> RefcountType;
+    using RefcountType = std::atomic<unsigned int>;
     RefcountType * refcountPtr;
 
     //

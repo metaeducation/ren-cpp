@@ -2,14 +2,24 @@
 
 #include "rencpp/ren.hpp"
 
-// No reason to abbreviate this, just demonstrating you can
-using BLK = ren::Block;
+using namespace ren;
 
 int main(int, char **) {
 
-    BLK empty {};
+    Block empty {};
 
-    BLK threeEmpties {BLK {}, BLK {}, BLK {}};
+    // This is a tricky case
 
-    BLK randomStuff {"blue", BLK {true, 1020}, 3.04};
+    Block singleton {"foo"};
+    Value singletonAsValue = singleton;
+
+    static_cast<Block>(singletonAsValue);
+
+    Block singletonInitializer {singleton};
+
+
+
+    Block threeEmpties {Block {}, Block {}, Block {}};
+
+    Block randomStuff {"blue", Block {true, 1020}, 3.04};
 }
