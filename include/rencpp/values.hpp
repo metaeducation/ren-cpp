@@ -251,7 +251,7 @@ protected:
     template<
         class T,
         typename = typename std::enable_if<
-            std::is_base_of<Value, T>::value, void *
+            std::is_base_of<Value, T>::value
         >::type
     >
     static T construct (Dont const &) {
@@ -279,7 +279,7 @@ protected:
     template<
         class T,
         typename = typename std::enable_if<
-            std::is_base_of<Value, T>::value, void *
+            std::is_base_of<Value, T>::value
         >::type
     >
     static T construct (RenEngineHandle engine, RenCell const & cell) {
@@ -598,8 +598,7 @@ public:
         class T,
         typename = typename std::enable_if<
             std::is_base_of<Value, T>::value
-            and not std::is_same<Value, T>::value,
-            T
+            and not std::is_same<Value, T>::value
         >::type
     >
     explicit operator T () const
