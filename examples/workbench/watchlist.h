@@ -22,6 +22,7 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+#include <memory>
 
 #include <QTableWidget>
 
@@ -38,21 +39,18 @@ public:
         friend class WatchList;
 
         ren::Value watch;
-        bool useCell;
+        bool recalculates;
         ren::Value value;
         ren::Value error;
         ren::Value label;
         bool frozen;
 
     public:
-        // Must be default constructible for signal/slots
-        Watcher () { }
-
         // Construct will also evaluate to capture at the time of the watch
         // being added (particularly important if it's a cell)
         Watcher (
             ren::Value const & watch,
-            bool useCell,
+            bool recalculates,
             ren::Value const & label
         );
 
@@ -64,7 +62,7 @@ public:
         QString getValueString() const;
     };
 
-    std::vector<Watcher> watchers;
+    std::vector<std::unique_ptr<Watcher>> watchers;
 
 public:
     WatchList (QWidget * parent = nullptr);
@@ -75,7 +73,7 @@ protected slots:
 signals:
     void watchCalled(
         ren::Value vars,
-        bool useCell,
+        bool recalculates,
         ren::Value label
     );
 
@@ -83,25 +81,31 @@ signals:
 
     void hideDockRequested();
 
-    void pushWatcherRequested(Watcher watcher);
+    void pushWatcherRequested(Watcher * watcherUnique);
 
     void removeWatcherRequested(int index);
 
     void freezeItemRequested(int index, bool frozen);
 
+    void recalulatesItemRequested(int index, bool recalculates);
+
     void reportStatus(QString message);
 
 public slots:
-    void updateWatches();
+    void updateWatcher(int index);
+
+    void updateAllWatchers();
 
 private slots:
-    void pushWatcher(Watcher w);
+    void pushWatcher(Watcher * watcherUnique);
 
     void removeWatcher(int index);
 
     void duplicateWatcher(int index);
 
     void setFreezeState(int index, bool frozen);
+
+    void setRecalculatesState(int index, bool recalculates);
 
     void onItemChanged(QTableWidgetItem * item);
 
@@ -112,7 +116,7 @@ private:
     // aaaand... magic! :-)
     ren::Value watchDialect(
         ren::Value const & arg,
-        bool useCell,
+        bool recalculates,
         ren::Value const & tag
     );
 };

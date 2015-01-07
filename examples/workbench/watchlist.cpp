@@ -43,13 +43,15 @@
 //
 
 void WatchList::onItemChanged(QTableWidgetItem * item) {
+    Watcher & w = *watchers[item->row()];
+
     switch (item->column()) {
         case 0: {
             QString contents = item->data(Qt::DisplayRole).toString();
 
-            if (contents == watchers[item->row()].getWatchString()) {
+            if (contents == w.getWatchString()) {
                 // If the text is the same as what it was, then odds are they
-                // selected in the cell adn clicked away...vs having the
+                // selected in the cell and clicked away...vs having the
                 // expression (x + y) and wanting to label it (x + y), for
                 // instance.
                 return;
@@ -59,20 +61,12 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // text that was there, then consider it to be a label.  If they
             // delete everything, consider it to be "unlabeling"
 
-            if (contents.isEmpty()) {
-                watchers[item->row()].label = ren::none;
-                item->QTableWidgetItem::setTextColor(Qt::black);
-            } else {
-                watchers[item->row()].label = ren::Tag {
-                    QString("<") + contents + ">"
-                };
-                item->QTableWidgetItem::setTextColor(Qt::darkMagenta);
-            }
+            if (contents.isEmpty())
+                w.label = ren::none;
+            else
+                w.label = ren::Tag {QString("<") + contents + ">"};
 
-            item->QTableWidgetItem::setData(
-                Qt::EditRole,
-                watchers[item->row()].getWatchString()
-            );
+            updateWatcher(item->row() + 1);
             break;
         }
 
@@ -96,11 +90,11 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 
 WatchList::Watcher::Watcher (
     ren::Value const & watch,
-    bool useCell,
+    bool recalculates,
     ren::Value const & label
 ) :
     watch (watch),
-    useCell (useCell),
+    recalculates (recalculates),
     label (label),
     frozen (false)
 {
@@ -110,7 +104,7 @@ WatchList::Watcher::Watcher (
 
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
-        if (firstTime or ((not useCell) and (not frozen)))
+        if (firstTime or (recalculates and (not frozen)))
             value = watch(); // apply it
         error = ren::none;
     }
@@ -202,38 +196,41 @@ WatchList::WatchList(QWidget * parent) :
 
         [this](ren::Value const & arg) -> ren::Value {
 
-            ren::Value nextTag = ren::none;
+            ren::Value nextLabel = ren::none;
             if (arg.isBlock()) {
                 ren::Block aggregate {};
-                bool nextCell = false;
+                bool nextRecalculates = true;
 
                 for (auto item : static_cast<ren::Block>(arg)) {
                     if (item.isTag())
-                        nextTag = item;
+                        nextLabel = item;
                     else if (item.isRefinement()) {
                         auto ref = static_cast<ren::Refinement>(item);
                         if (ref.spellingOf<QString>().toUpper() == "CELL")
-                            nextCell = true;
+                            nextRecalculates = false;
                         else
                             ren::runtime(
                                 "do make error! {refinements can only"
                                 "be /CELL right now in watch dialect}"
                             );
                     } else {
+                        // REVIEW: exception handling if they watch something
+                        // with no value in the block form?  e.g. watch [x y]
+                        // and x gets added as a watch where both undefined,
+                        // but y doesn't?
+
                         ren::Value result
-                            = watchDialect(item, nextCell, nextTag);
-                        nextCell = false;
-                        nextTag = ren::none;
-                        if (not result.isUnset()) {
+                            = watchDialect(item, nextRecalculates, nextLabel);
+                        nextRecalculates = true;
+                        nextLabel = ren::none;
+                        if (not result.isUnset())
                             ren::runtime("append", aggregate, result);
-                        }
-                        nextTag = ren::none;
                     }
                 }
                 return aggregate;
             }
 
-            return watchDialect(arg, false, ren::none);
+            return watchDialect(arg, true, ren::none);
         }
     );
 
@@ -270,37 +267,17 @@ WatchList::WatchList(QWidget * parent) :
 }
 
 
-void WatchList::pushWatcher(Watcher w) {
-    // We get the watcher by value, but put it into the vector
-    watchers.push_back(w);
-    Watcher & watcher = watchers.back();
+void WatchList::pushWatcher(Watcher * watcherUnique) {
+    // Note that because we are passing a unique pointer, more than one
+    // client can not listen to the pushWatcherRequest signal.  Should this
+    // be a shared pointer?
 
-    QTableWidgetItem * name = new QTableWidgetItem;
-    QTableWidgetItem * value = new QTableWidgetItem;
-
-    name->setText(watcher.getWatchString());
-    if (watcher.label or watcher.useCell)
-        name->setForeground(Qt::darkMagenta);
-
-    QString valueString = watcher.getValueString();
-    value->setText(valueString);
-
-    if (watcher.useCell) {
-        value->setForeground(Qt::darkGreen);
-    }
-    else if (watcher.error) {
-        value->setForeground(Qt::darkRed);
-    }
+    watchers.push_back(std::unique_ptr<Watcher>(watcherUnique));
 
     int count = rowCount();
     insertRow(count);
 
-    // We don't want to receive edit notifications on the widget as if the
-    // user tried to edit, so we temporarily block signals.
-    blockSignals(true);
-    setItem(count, 0, name);
-    setItem(count, 1, value);
-    blockSignals(false);
+    updateWatcher(count + 1);
 
     emit showDockRequested();
 }
@@ -309,42 +286,35 @@ void WatchList::pushWatcher(Watcher w) {
 void WatchList::removeWatcher(int index) {
     watchers.erase(std::begin(watchers) + (index - 1));
     removeRow(index - 1);
-
-    return;
 }
 
 
 void WatchList::duplicateWatcher(int index) {
-    watchers.insert(std::begin(watchers) + (index - 1), watchers[index - 1]);
+    watchers.insert(
+        std::begin(watchers) + (index - 1),
+        std::unique_ptr<Watcher> {new Watcher {*watchers[index - 1]}}
+    );
 
-    QTableWidgetItem * name = item(index - 1, 0)->clone();
-    QTableWidgetItem * value = item(index - 1, 1)->clone();
-
+    assert(watchers[0]->label.isEqualTo(watchers[1]->label));
     blockSignals(true);
     insertRow(index - 1);
-    setItem(index - 1, 0, name);
-    setItem(index  - 1, 1, value);
     blockSignals(false);
-    return;
+
+    updateWatcher(index);
 }
 
 
 void WatchList::setFreezeState(int index, bool frozen) {
-    watchers[index - 1].frozen = frozen;
-
-    blockSignals(true);
-    if (frozen) {
-        item(index - 1, 0)->setBackground(Qt::gray);
-        item(index - 1, 1)->setBackground(Qt::gray);
-    } else {
-        item(index - 1, 0)->setBackground(Qt::white);
-        item(index - 1, 1)->setBackground(Qt::white);
-    }
-    blockSignals(false);
-
-    updateWatches(); // should be able to update just one...
-    return;
+    watchers[index - 1]->frozen = frozen;
+    updateWatcher(index);
 }
+
+
+void WatchList::setRecalculatesState(int index, bool recalculates) {
+    watchers[index - 1]->recalculates = recalculates;
+    updateWatcher(index);
+}
+
 
 void WatchList::mousePressEvent(QMouseEvent * event) {
     setSelectionMode(QAbstractItemView::SingleSelection);
@@ -352,7 +322,70 @@ void WatchList::mousePressEvent(QMouseEvent * event) {
 }
 
 
-void WatchList::updateWatches() {
+void WatchList::updateWatcher(int index) {
+    Watcher & w = *watchers[index - 1];
+
+    w.evaluate(); // will not evaluate if frozen
+
+    // We only insert a row at the table call sites (duplicate, add); this
+    // won't have a table widget item by default.  Hence the if null check.
+    // with an allocate.  REVIEW.
+
+    blockSignals(true);
+
+    QTableWidgetItem * nameItem = item(index - 1, 0);
+    if (not nameItem) {
+        nameItem = new QTableWidgetItem;
+        setItem(index - 1, 0, nameItem);
+    }
+    QTableWidgetItem * valueItem = item(index - 1, 1);
+    if (not valueItem) {
+        valueItem = new QTableWidgetItem;
+        setItem(index - 1, 1, valueItem);
+    }
+
+    if (not w.recalculates)
+        valueItem->setForeground(Qt::darkGreen);
+    else if (w.error)
+        valueItem->setForeground(Qt::darkRed);
+    else
+        valueItem->setForeground(Qt::black);
+
+    if (w.frozen) {
+        nameItem->setBackground(Qt::gray);
+        valueItem->setBackground(Qt::gray);
+    } else {
+        nameItem->setBackground(Qt::white);
+        valueItem->setBackground(Qt::white);
+    }
+
+    if (w.label)
+        nameItem->setForeground(Qt::darkMagenta);
+    else
+        nameItem->setForeground(Qt::black);
+
+    // We give visual feedback by selecting the watches that have changed
+    // since the last update.
+    //
+    // REVIEW: Need to check for value/error change, not just the text
+    // changing
+
+    QString newText = w.getValueString();
+
+    nameItem->setSelected(false);
+    nameItem->setText(w.getWatchString());
+    if (valueItem->text() != newText) {
+        valueItem->setText(newText);
+        valueItem->setSelected(true);
+    }
+    else
+        valueItem->setSelected(false);
+
+    blockSignals(false);
+}
+
+
+void WatchList::updateAllWatchers() {
     if (not isVisible())
         return;
 
@@ -362,50 +395,14 @@ void WatchList::updateWatches() {
     setSelectionMode(QAbstractItemView::MultiSelection);
 
     for (int row = 0; row < rowCount(); row++) {
-        Watcher & w = watchers[row];
-        if (w.frozen)
-            continue;
-
-        QString oldText = item(row, 1)->text();
-        QBrush oldBrush = item(row, 1)->foreground();
-        QBrush newBrush = QBrush(Qt::black);
-
-        w.evaluate();
-        if (w.useCell) {
-            newBrush = QBrush(Qt::darkGreen);
-        }
-        else if (w.error) {
-            newBrush = QBrush(Qt::darkRed);
-        }
-
-        QString newText = w.getValueString();
-
-        // We only update the table if it has changed for (possible)
-        // efficiency, but also to give visual feedback by selecting the
-        // watches that have changed since the last update.  Esoteric
-        // case of having a string that was formatted like an error
-        // because of an evaluation problem vs. being the literal string
-        // aren't so esoteric in systems where you convert errors to strings,
-        // so checking the brush color is actually not pointless.
-
-        blockSignals(true);
-        item(row, 0)->setSelected(false);
-        if ((oldText != newText) or (oldBrush != newBrush)) {
-            item(row, 1)->setText(newText);
-            item(row, 1)->setForeground(newBrush);
-            item(row, 1)->setSelected(true);
-        }
-        else {
-            item(row, 1)->setSelected(false);
-        }
-        blockSignals(false);
+        updateWatcher(row + 1);
     }
 }
 
 
 ren::Value WatchList::watchDialect(
     ren::Value const & arg,
-    bool useCell,
+    bool recalculates,
     ren::Value const & label
 ) {
     if (arg.isInteger()) {
@@ -427,8 +424,8 @@ ren::Value WatchList::watchDialect(
             return ren::unset; // unreachable
         }
 
-        ren::Value watchValue = watchers[index - 1].value;
-        ren::Value watchError = watchers[index - 1].error;
+        ren::Value watchValue = watchers[index - 1]->value;
+        ren::Value watchError = watchers[index - 1]->error;
         if (removal) {
             emit removeWatcherRequested(index);
             return watchValue;
@@ -502,32 +499,35 @@ ren::Value WatchList::watchDialect(
 
     if (arg.isWord() or arg.isPath() or arg.isParen()) {
 
-        Watcher watcher {arg, static_cast<bool>(useCell), label};
+        Watcher * watcherUnique = new Watcher {arg, recalculates, label};
 
         // we append to end instead of inserting at the top because
         // it keeps the numbering more consistent.  But some people might
         // desire it added at the top and consider it better that way?
 
-        emit pushWatcherRequested(watcher);
+        emit pushWatcherRequested(watcherUnique);
+
+        Watcher & w = *watcherUnique; // signal handler took ownership
 
         // it might not seem we need to technically invoke the error here,
         // but if there was an error and people are scripting then they
         // need to handle that with try blocks...because we don't want to
         // quietly give back an unset if the operation failed.
 
-        if (watcher.error)
-            watcher.error.apply(); // should throw...
+        if (w.error)
+            w.error.apply(); // should throw...
 
-        return watcher.value.apply();
+        return w.value.apply();
     }
 
     if (arg.isTag()) {
-        for (auto & watcher : watchers) {
+        for (auto & watcherPtr : watchers) {
+            Watcher & w = *watcherPtr;
             if (
-                watcher.getWatchString()
+                w.getWatchString()
                 == static_cast<ren::Tag>(arg).spellingOf<QString>()
             ) {
-                return watcher.value;
+                return w.value;
             }
         }
         ren::runtime("do make error! {unknown tag name in watch list}");
@@ -555,7 +555,9 @@ void WatchList::customMenuRequested(QPoint pos){
 
     QMenu * menu = new QMenu {this};
 
+    // Review: reconcile mix of indexing
     int index = currentRow() + 1;
+    Watcher & w = *watchers[currentRow()];
 
 
     //
@@ -564,11 +566,19 @@ void WatchList::customMenuRequested(QPoint pos){
 
     QAction * frozenAction = new QAction("Frozen", this);
     frozenAction->setCheckable(true);
-    frozenAction->setChecked(watchers[index - 1].frozen);
+    frozenAction->setChecked(w.frozen);
     frozenAction->setStatusTip(
         QString("Freeze or unfreeze this watcher, or [watch [freeze +/-")
         + QString::number(index) + "]"
     );
+
+    QAction * recalculatesAction = new QAction("Recalculates", this);
+    recalculatesAction->setCheckable(true);
+    recalculatesAction->setChecked(w.recalculates);
+    recalculatesAction->setStatusTip(
+        QString("Watcher calculates or just watches value cell")
+    );
+
 
     QAction * duplicateAction = new QAction("Duplicate", this);
     duplicateAction->setStatusTip(
@@ -591,6 +601,7 @@ void WatchList::customMenuRequested(QPoint pos){
     //
 
     menu->addAction(frozenAction);
+    menu->addAction(recalculatesAction);
     menu->addAction(duplicateAction);
     menu->addAction(unwatchAction);
 
@@ -608,6 +619,13 @@ void WatchList::customMenuRequested(QPoint pos){
         frozenAction, &QAction::triggered,
         [this, index](bool frozen) {
             setFreezeState(index, frozen);
+        }
+    );
+
+    connect(
+        recalculatesAction, &QAction::triggered,
+        [this, index](bool recalculates) {
+            setRecalculatesState(index, recalculates);
         }
     );
 
