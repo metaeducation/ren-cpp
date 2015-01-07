@@ -167,6 +167,7 @@ add_cxx_flags("-Wstrict-overflow=5")
 add_cxx_flags("-Wswitch-default")
 add_cxx_flags("-Wundef")
 add_cxx_flags("-Werror")
+add_cxx_flags("-Wno-unknown-pragmas")
 add_cxx_flags("-Wno-unused")
 add_cxx_flags("-pedantic")
 add_cxx_flags("-Wold-style-cast")
@@ -375,6 +376,7 @@ elseif(RUNTIME STREQUAL "rebol")
     remove_cxx_flag("-Wold-style-cast")
     remove_cxx_flag("-Wsign-conversion")
     remove_cxx_flag("-Wcast-align")
+    remove_cxx_flag("-Wcast-qual")
 
     # Add any extra includes for the project browser
 
@@ -389,7 +391,16 @@ elseif(RUNTIME STREQUAL "rebol")
     # It's important to make sure you're set to the right platform, as it
     # affects endianness and other things.
 
-    add_definitions(-DTO_LINUX)
+    if(WIN32)
+
+        add_definitions(-DTO_WIN32)
+        add_definitions(-DUNICODE)
+
+    else()
+
+        add_definitions(-DTO_LINUX)
+
+    endif()
 
     # Try and get all the guts out of the Rebol Core executable to
     # include in the binding.  Take out the main and Host_Lib
