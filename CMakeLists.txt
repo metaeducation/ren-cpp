@@ -451,6 +451,14 @@ elseif(RUNTIME STREQUAL "rebol")
 
     set(LIBS_ALL ${LIBS_ALL} ${CMAKE_DL_LIBS})
 
+    if(WIN32)
+
+        # Rebol depends on Winsocks when built on Windows.
+
+        set(LIBS_ALL ${LIBS_ALL} ws2_32)
+
+    endif()
+
 else()
 
     message(FATAL_ERROR "Invalid Runtime Specified (not none, red, rebol)")
