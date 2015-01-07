@@ -187,11 +187,19 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // don't have a way to give you the executable's path if we are
     // a binding"
 
-    REBCHR fakeArgv0 []
-        = "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
+    #ifdef TO_WIN32
+        REBCHR * fakeArgv0
+            = (REBCHR*) L"/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
 
-    REBCHR argvQuiet []
-        = "--quiet";
+        REBCHR * argvQuiet
+            = (REBCHR*) L"--quiet";
+    #else
+        REBCHR fakeArgv0 []
+            = "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
+
+        REBCHR argvQuiet []
+            = L"--quiet";
+    #endif
 
     // Theoretically we could offer hooks for this deferred initialization
     // to pass something here, or even change it while running.  Right
