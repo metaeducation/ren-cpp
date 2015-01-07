@@ -141,6 +141,10 @@ add_cxx_flags("-std=c++11")
 # arguments the same thing as the variables they initialize.
 #
 # http://stackoverflow.com/a/9862800/211160
+#
+# For compiler identification notes:
+#
+# http://stackoverflow.com/a/10055571/211160
 
 add_cxx_flags("-Wall")
 add_cxx_flags("-Wsign-conversion")
@@ -166,6 +170,20 @@ add_cxx_flags("-Werror")
 add_cxx_flags("-Wno-unused")
 add_cxx_flags("-pedantic")
 add_cxx_flags("-Wold-style-cast")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # using regular Clang or AppleClang
+
+  remove_cxx_flag("-Wlogical-op")
+  remove_cxx_flag("-Wnoexcept")
+  remove_cxx_flag("-Wstrict-null-sentinel")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  # using GCC
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+  # using Intel C++
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  # using Visual Studio C++
+endif()
 
 
 # Include files intended to be used by clients of the binding are under
@@ -356,6 +374,7 @@ elseif(RUNTIME STREQUAL "rebol")
     remove_cxx_flag("-pedantic")
     remove_cxx_flag("-Wold-style-cast")
     remove_cxx_flag("-Wsign-conversion")
+    remove_cxx_flag("-Wcast-align")
 
     # Add any extra includes for the project browser
 
@@ -439,7 +458,7 @@ add_library(
     ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST}
 )
 
-target_link_libraries(RenCpp ${LIBS_ALL})
+target_link_libraries(RenCpp ${LIBS_ALL} -lstdc++ -lm)
 
 
 #

@@ -59,13 +59,13 @@ public slots:
             result = ren::runtime(input.toUtf8().constData());
             success = true;
         }
-        catch (ren::evaluation_error & e) {
+        catch (ren::evaluation_error const & e) {
             result = e.error();
         }
-        catch (ren::exit_command & e) {
+        catch (ren::exit_command const & e) {
             qApp->exit(e.code());
         }
-        catch (ren::evaluation_cancelled & e) {
+        catch (ren::evaluation_cancelled const & e) {
             // Let returning none for the error mean cancellation
             result = ren::none;
         }
@@ -212,6 +212,14 @@ RenConsole::RenConsole (QWidget * parent) :
 
     ren::runtime("console: quote", consoleFunction);
 
+    // Load the incubator routines that are not written in C++ from the
+    // resource file
+
+    QFile file(":/scripts/incubator.reb");
+    file.open(QIODevice::ReadOnly);
+
+    QByteArray dump = file.readAll();
+    ren::runtime(dump.data());
 
     // Print the banner and the first prompt.  Any time we're going to do
     // a write to the console, we need to do so while the modifyMutex is
@@ -432,7 +440,14 @@ void RenConsole::handleResults(
         pushFormat(inputFormat);
         appendText(" ");
 
-        appendText(static_cast<QString>(result));
+        // Technically this should run through a hook that is "guaranteed"
+        // not to hang or crash; we cannot escape out of this call.  So
+        // just like to_string works, this should too.
+
+        QString molded = static_cast<QString>(
+            ren::runtime("mold/all", result)
+        );
+        appendText(molded);
         appendText("\n");
     }
 

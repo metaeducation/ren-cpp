@@ -305,21 +305,21 @@ Float::operator double() const {
 #if REN_CLASSLIB_QT
 AnyString::AnyString (
     QString const & str,
-    bool (Value::*validMemFn)(RenCell *) const
+    bool (Value::*validMemFn)(RenCell *) const,
+    Engine * engine
 )
     : Series(Dont::Initialize)
 {
+    (this->*validMemFn)(&this->cell);
+
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
     QByteArray array = str.toLocal8Bit();
-    char const * buffer = array.data();
+    internal::Loadable loadable (array.data());
 
-    internal::Loadable loadable (buffer);
-    (this->*validMemFn)(&this->cell);
-
-    Context::runFinder(nullptr).constructOrApplyInitialize(
+    Context::runFinder(engine).constructOrApplyInitialize(
         nullptr,
-        &loadable,
+        &loadable.cell,
         1,
         // Do construct
         this,
@@ -378,7 +378,8 @@ QString AnyString::spellingOf_QT() const {
     if (isString() /* or isUrl() or isEmail() or isFile() */)
         return result;
     if (isTag()) {
-        return result.right(result.length() - 1).left(result.length() - 1);
+        assert(result.length() >= 2);
+        return result.mid(1, result.length() - 2);
     }
     throw std::runtime_error {"Invalid String Type"};
 }
@@ -445,7 +446,7 @@ Value * Series::iterator::operator->() const {
 }
 
 Series::iterator::operator Series() const {
-    return Series {state};
+    return static_cast<Series>(state);
 }
 
 Series::iterator Series::begin() {
@@ -513,7 +514,7 @@ Character * AnyString::iterator::operator-> () const {
 }
 
 AnyString::iterator::operator AnyString() const {
-    return AnyString {state};
+    return static_cast<AnyString>(state);
 }
 
 AnyString::iterator AnyString::begin() {

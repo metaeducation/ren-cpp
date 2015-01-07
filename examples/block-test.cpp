@@ -17,9 +17,10 @@ int main(int, char **) {
 
     Block singletonInitializer {singleton};
 
-
+    print(singletonInitializer);
 
     Block threeEmpties {Block {}, Block {}, Block {}};
 
     Block randomStuff {"blue", Block {true, 1020}, 3.04};
+    print(randomStuff);
 }

@@ -40,5 +40,5 @@ int main(int, char **) {
     //     http://stackoverflow.com/questions/27641809/
     //
 
-    assert(Integer {runtime("10 +", addFive, 100)} == 115);
+    assert(static_cast<Integer>(runtime("10 +", addFive, 100)) == 115);
 }

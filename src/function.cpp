@@ -18,7 +18,7 @@
 //
 
 #include "rencpp/values.hpp"
-#include "rencpp/extension.hpp"
+#include "rencpp/function.hpp"
 
 namespace ren {
 

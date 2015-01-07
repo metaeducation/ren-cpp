@@ -103,19 +103,19 @@ protected:
         RenEngineHandle engineHandle,
         RenContextHandle contextHandle,
         Value const * applicandPtr,
-        internal::Loadable * argsPtr,
+        RenCell * argsPtr,
         size_t numArgs,
         Value * constructResultUninitialized,
-        Value * applyResultUninitialized
+        Value * applyOutUninitialized
     );
 
 
     void constructOrApplyInitialize(
         Value const * applicandPtr,
-        internal::Loadable * argsPtr,
+        RenCell * argsPtr,
         size_t numArgs,
         Value * constructResultUninitialized,
-        Value * applyResultUninitialized
+        Value * applyOutUninitialized
     );
 
 public:
@@ -143,39 +143,13 @@ public:
 
         constructOrApplyInitialize(
             nullptr, // no value to apply to; treat "as if" block
-            &loadables[0],
+            &loadables[0].cell,
             sizeof...(args),
             nullptr, // don't construct it
             &result // apply it
         );
 
         return result; // move optimized
-    }
-
-
-    //
-    // All ren::Value classes support explicit allocation in a specific
-    // context via a version of the constructor where the context
-    // is given as the first parameter:
-    //
-    //    ren::SetWord {ctxOne, "whatever"};
-    //
-    // The problem is that it becomes a little unclear for instance in blocks
-    //
-    //    ren::Block {ctxOne, varOne, varTwo, varThree};
-    //
-    // The compiler detects that ctxOne is a Context and does the right
-    // thing (and in fact is used here under the hood).  Yet to a casual
-    // reader it looks like envOne is part of the block.
-    //
-    // This alternate notation is exactly the same and less confusing:
-    //
-    //     ctxOne<ren::Block>.construct(varOne, varTwo, varThree);
-    //
-
-    template <class V, typename... Ts>
-    V construct(Ts... args) {
-        return V (*this, args...);
     }
 };
 

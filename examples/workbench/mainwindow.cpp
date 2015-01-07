@@ -45,7 +45,7 @@ MainWindow::MainWindow()
 
     connect(
         console, &RenConsole::finishedEvaluation,
-        watchList, &WatchList::updateWatches,
+        watchList, &WatchList::updateAllWatchers,
         Qt::DirectConnection
     );
 

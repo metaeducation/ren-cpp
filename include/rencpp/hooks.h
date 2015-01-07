@@ -53,10 +53,13 @@
  */
 typedef int RenResult;
 #define REN_SUCCESS 0
-#define REN_ERROR_TOO_MANY_ARGS 10
-#define REN_ERROR_NO_SUCH_CONTEXT 11
-#define REN_BUFFER_TOO_SMALL 12
-#define REN_SHIM_INITIALIZED 13
+#define REN_CONSTRUCT_ERROR 10
+#define REN_APPLY_ERROR 11
+#define REN_ERROR_NO_SUCH_CONTEXT 12
+#define REN_BUFFER_TOO_SMALL 13
+#define REN_SHIM_INITIALIZED 14
+#define REN_EVALUATION_CANCELLED 15
+#define REN_EVALUATION_EXITED 16
 
 
 /*
@@ -337,8 +340,6 @@ RenResult RenGetEngineForContext(
  * If the RedCell represents a series, then inside the guts of the hook it
  * will remember that there is a reference being used by the binding.  A
  * reference count will be added by the runtime.
- *
- * Should probably return a RedCell in order to give back rich errors.
  */
 
 RenResult RenConstructOrApply(
@@ -349,7 +350,8 @@ RenResult RenConstructOrApply(
     size_t numLoadables,
     size_t sizeofLoadable,
     RenCell * constructOutDatatypeIn,
-    RenCell * applyOut
+    RenCell * applyOut,
+    RenCell * errorOut
 );
 
 

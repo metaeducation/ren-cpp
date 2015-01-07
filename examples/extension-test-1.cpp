@@ -10,14 +10,12 @@ int main(int, char **) {
 
     Function printBlockString = makeFunction(
         "{Demonstration of the C++ Extension mechanism}"
-        "blk [block!] {The block to print}"
-        "str [string!] {The string to print}",
+        "blk [block!] {The block to print}",
 
         REN_STD_FUNCTION,
 
-        [](Block const & blk, String const & str) -> Logic {
+        [](Block const & blk) -> Logic {
             print("blk is", blk);
-            print("str is", str);
             return true;
         }
     );
@@ -31,5 +29,5 @@ int main(int, char **) {
 
     // Call the extension under its new name
 
-    runtime("some-ext [1 2 3] {foo}");
+    runtime("some-ext [1 2 3]");
 }

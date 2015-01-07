@@ -8,5 +8,7 @@
     <file>images/save.png</file>
     <file>images/rebol-logo.png</file>
     <file>images/red-logo.png</file>
+
+    <file>scripts/incubator.reb</file>
 </qresource>
 </RCC>

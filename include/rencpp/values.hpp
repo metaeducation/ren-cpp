@@ -21,6 +21,8 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cassert>
+#include <utility> // std::forward
 
 #include <atomic>
 #include <type_traits>
@@ -145,6 +147,7 @@ protected:
     friend class Context; // Value::Dont::Initialize
     friend class Series; // Value::Dont::Initialize for dereference
     friend class AnyBlock; // Value::Dont::Initialize for dereference
+    friend class AnyString;
 
 public: // temporary for the lambda in function, find better way
     RenCell cell;
@@ -269,7 +272,8 @@ protected:
     // friends access to this construction for any derived class.
     //
 protected:
-    template <class R, class... Ts> friend class FunctionGenerator;
+    template <class R, class... Ts>
+    friend class internal::FunctionGenerator;
 
     explicit Value (RenEngineHandle engine, RenCell const & cell) {
         this->cell = cell;
@@ -549,35 +553,31 @@ public:
     // where x were spliced at the head of it with y and z following.
     //
     // It's sort of DO-like and kind of APPLY like if it's a function value.
-    // I'm calling it apply here for "generalized apply"; although it is
-    // protected so people won't be using the term directly.  So far it's
+    // I'm calling it apply here for "generalized apply".  So far it's
     // the best generalization I have come up with which puts a nice syntax on
     // do (which is a C++ keyword and not available)
     //
 protected:
     Value apply(
-        Context * contextPtr,
-        internal::Loadable loadables[],
-        size_t numLoadables
+        RenCell loadables[],
+        size_t numLoadables,
+        Context * context
     ) const;
 
 public:
+    Value apply(
+        std::initializer_list<internal::Loadable> loadables,
+        Context * context = nullptr
+    ) const;
+
     template <typename... Ts>
-    inline Value operator()(Context & context, Ts const &... args) const {
-        // http://stackoverflow.com/q/14178264/211160
-        auto loadables = std::array<
-            internal::Loadable, sizeof...(Ts)
-        >{{args...}};
-        return apply(&context, &loadables[0], sizeof...(Ts));
+    inline Value apply(Ts const &... args) const {
+        return apply(std::initializer_list<internal::Loadable>{args...});
     }
 
     template <typename... Ts>
-    inline Value operator()(Ts const &... args) const {
-        // http://stackoverflow.com/q/14178264/211160
-        auto loadables = std::array<
-            internal::Loadable, sizeof...(Ts)
-        >{{args...}};
-        return apply(nullptr, &loadables[0], sizeof...(Ts));
+    inline Value operator()(Ts... args) const {
+        return apply(std::forward<Ts>(args)...);
     }
 
     // The explicit (and throwing) cast operators are defined via template
@@ -825,31 +825,19 @@ protected:
 
 protected:
     explicit AnyWord (
-        Context & context, char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    explicit AnyWord (
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 
 
 #if REN_CLASSLIB_STD
     explicit AnyWord (
-        Context & context,
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     ) :
-        AnyWord (context, str.c_str(), validMemFn)
-    {
-    }
-
-    explicit AnyWord (
-        std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
-    ) :
-        AnyWord (str.c_str(), validMemFn)
+        AnyWord (str.c_str(), validMemFn, context)
     {
     }
 #endif
@@ -857,14 +845,9 @@ protected:
 
 #if REN_CLASSLIB_QT
     explicit AnyWord (
-        Context & context,
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    explicit AnyWord (
-        QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 #endif
 
@@ -968,27 +951,24 @@ protected:
 
 protected:
     AnyString(
-        Engine & engine,
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    AnyString(
-        char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 
 #if REN_CLASSLIB_STD
     AnyString (
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 #endif
 
 #if REN_CLASSLIB_QT
     AnyString (
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 #endif
 
@@ -1110,16 +1090,10 @@ protected:
     //
 
     AnyBlock (
-        Context & context,
-        internal::Loadable * loadablesPtr,
+        RenCell loadables[],
         size_t numLoadables,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    AnyBlock (
-        internal::Loadable * loadablesPtr,
-        size_t numLoadables,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 };
 
@@ -1148,23 +1122,33 @@ protected:
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
 public:
-    explicit AnyWordSubtype (Context & context, char const * cstr) :
-        AnyWord (context, cstr, validMemFn)
-    {
-    }
-    explicit AnyWordSubtype (char const * cstr) :
-        AnyWord (cstr, validMemFn)
+    explicit AnyWordSubtype (
+        char const * cstr,
+        Context * context = nullptr
+    ) :
+        AnyWord (cstr, validMemFn, context)
     {
     }
 
-    explicit AnyWordSubtype (Context & context, std::string const & str) :
-        AnyWord (context, str.c_str(), validMemFn)
+#if REN_CLASSLIB_STD
+    explicit AnyWordSubtype (
+        std::string const & str,
+        Context * context = nullptr
+    ) :
+        AnyWord (str.c_str(), validMemFn, context)
     {
     }
-    explicit AnyWordSubtype (std::string const & str) :
-        AnyWord (str.c_str(), validMemFn)
+#endif
+
+#if REN_CLASSLIB_QT
+    explicit AnyWordSubtype (
+        QString const & str,
+        Context * context = nullptr
+    ) :
+        AnyWord (str, validMemFn, context)
     {
     }
+#endif
 };
 
 
@@ -1182,18 +1166,69 @@ public:
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyStringSubtype (std::string const & str) :
-        AnyString (str.c_str(), validMemFn)
+    explicit AnyStringSubtype (
+        std::string const & str,
+        Engine * engine = nullptr
+    ) :
+        AnyString (str.c_str(), validMemFn, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyStringSubtype (QString const & str) :
-        AnyString (str, validMemFn)
+    explicit AnyStringSubtype (
+        QString const & str,
+        Engine * engine = nullptr
+    ) :
+        AnyString (str, validMemFn, engine)
     {
     }
 #endif
+};
+
+
+///
+/// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
+///
+
+//
+// Loadable is a "lazy-loading type" distinct from Value, which unlike a
+// ren::Value can be implicitly constructed from a string and loaded as a
+// series of values.  It's lazy so that it won't wind up being forced to
+// interpret "foo baz bar" immediately as [foo baz bar], but to be able
+// to decide if the programmer intent was to compose it together to form
+// a single level of block hierarchy.
+//
+// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4} here:
+//
+//     https://github.com/hostilefork/rencpp/issues/1
+//
+// While private inheritance is one of those "frowned upon" institutions,
+// here we really do want it.  It's a perfect fit for the problem.
+//
+
+class Loadable final : private Value {
+private:
+    friend class ::ren::Value;
+    friend class ::ren::AnyWord;
+    friend class ::ren::AnyString;
+    friend class ::ren::Context;
+
+    template <class C, bool (Value::*validMemFn)(RenCell *) const>
+    friend class AnyBlockSubtype;
+
+    // These constructors *must* be public, although we really don't want
+    // users of the binding instantiating loadables explicitly.
+public:
+    using Value::Value;
+
+    // Constructor inheritance does not inherit move or copy constructors
+
+    Loadable (Value const & value) : Value (value) {}
+
+    Loadable (Value && value) : Value (value) {}
+
+    Loadable (char const * sourceCstr);
 };
 
 
@@ -1213,45 +1248,47 @@ public:
 //
 //     http://codereview.stackexchange.com/q/72252/9042
 //
-template <bool (Value::*validMemFn)(RenCell *) const>
+template <class C, bool (Value::*validMemFn)(RenCell *) const>
 class AnyBlockSubtype : public AnyBlock {
 protected:
     friend class Value;
     AnyBlockSubtype (Dont const &) : AnyBlock (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
-private:
-    template <size_t N>
-    AnyBlockSubtype (
-        Context & context,
-        std::array<internal::Loadable, N> && loadables
-    ) :
-        AnyBlock (context, loadables.data(), N, validMemFn)
-    {
-    }
-
-    template <size_t N>
-    AnyBlockSubtype (
-        std::array<internal::Loadable, N> && loadables
-    ) :
-        AnyBlock (loadables.data(), N, validMemFn)
-    {
-    }
-
 public:
-    template <typename... Ts>
-    explicit AnyBlockSubtype (Context & context, Ts const & ...args) :
-        AnyBlockSubtype (
-            context,
-            std::array<internal::Loadable, sizeof...(args)>{{args...}}
+    AnyBlockSubtype (
+        Value * values,
+        size_t numValues,
+        Context * context = nullptr
+    ) :
+        AnyBlock (
+            numValues > 0 ? &values[0].cell : nullptr,
+            numValues,
+            validMemFn,
+            context
         )
     {
     }
 
-    template <typename... Ts>
-    explicit AnyBlockSubtype (Ts const & ...args) :
-        AnyBlockSubtype (
-            std::array<internal::Loadable, sizeof...(args)>{{args...}}
+    explicit AnyBlockSubtype (
+        std::initializer_list<internal::Loadable> args,
+        Context * context = nullptr
+    ) :
+        AnyBlock (
+            const_cast<RenCell *>(&args.begin()->cell),
+            args.size(),
+            validMemFn,
+            context
+        )
+    {
+    }
+
+    explicit AnyBlockSubtype (Context * context = nullptr) :
+        AnyBlock (
+            nullptr,
+            0,
+            validMemFn,
+            context
         )
     {
     }
@@ -1379,64 +1416,31 @@ public:
 
 
 
-class Block final : public internal::AnyBlockSubtype<&Value::isBlock> {
+class Block final :
+    public internal::AnyBlockSubtype<Block, &Value::isBlock> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isBlock>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Block, &Value::isBlock>::AnyBlockSubtype;
 };
 
 
 
-class Paren final : public internal::AnyBlockSubtype<&Value::isParen> {
+class Paren final :
+    public internal::AnyBlockSubtype<Paren, &Value::isParen> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isParen>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Paren, &Value::isParen>::AnyBlockSubtype;
 };
 
 
 
-class Path final : public internal::AnyBlockSubtype<&Value::isPath> {
+class Path final :
+    public internal::AnyBlockSubtype<Path, &Value::isPath> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isPath>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Path, &Value::isPath>::AnyBlockSubtype;
 };
 
-
-
-///
-/// FUNCTION TYPE(S?)
-///
-
-//
-// In the current implementation, an FunctionGenerator is really just a FUNCTION!
-// where the native function pointer (that processes the argument stack) is
-// built automatically by the system.  It's not possible to have a term be
-// both a template and a class, so if FunctionGenerator was going to be Function
-// then Function would have to be written Function<> and be specialized
-// for that.
-//
-
-class Function : public Value {
-protected:
-    friend class Value;
-    Function (Dont const &) : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isFunction(); }
-
-private:
-    // Most classes can get away with setting up cell bits all in the
-    // implementation files, but FunctionGenerator is a template.  It
-    // needs to be able to finalize "in view".  We might consider another
-    // way of shaping this, by having a public "set cell bits for function"
-    // API in the hooks.h, then just use normal finishInit.  Might be what
-    // has to be done.
-
-    template <class R, class... Ts> friend class internal::FunctionGenerator;
-    void finishInit(
-        RenEngineHandle engine,
-        Block const & spec,
-        RenShimPointer const & shim
-    );
-};
 
 } // end namespace ren
 

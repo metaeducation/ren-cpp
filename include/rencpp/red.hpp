@@ -21,7 +21,6 @@
 
 #include "ren.hpp"
 #include "runtime.hpp"
-#include "extension.hpp"
 
 namespace ren {
 

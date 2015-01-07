@@ -22,6 +22,7 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+#include <memory>
 
 #include <QTableWidget>
 
@@ -34,58 +35,14 @@ class WatchList : public QTableWidget
     Q_OBJECT
 
 public:
-    WatchList (QWidget * parent = nullptr);
-
-protected slots:
-    void customMenuRequested(QPoint pos);
-
-signals:
-    void watchCalled(
-        ren::Value vars,
-        bool useCell,
-        ren::Value label
-    );
-
-    void showDockRequested();
-
-    void hideDockRequested();
-
-    // last element in the vector ATM, probably should make Watcher able
-    // to go against signal/slots with metaobject
-    void pushWatcherRequested();
-
-    void removeWatcherRequested(int index);
-
-    void freezeItemRequested(int index, bool frozen);
-
-    void reportStatus(QString message);
-
-public slots:
-    void updateWatches();
-
-private slots:
-    void pushWatcher();
-
-    void removeWatcher(int index);
-
-    void duplicateWatcher(int index);
-
-    void setFreezeState(int index, bool frozen);
-
-    void onItemChanged(QTableWidgetItem * item);
-
-protected:
-    void mousePressEvent(QMouseEvent * event) override;
-
-private:
     class Watcher {
         friend class WatchList;
 
         ren::Value watch;
-        bool useCell;
+        bool recalculates;
         ren::Value value;
         ren::Value error;
-        ren::Value tag;
+        ren::Value label;
         bool frozen;
 
     public:
@@ -93,8 +50,8 @@ private:
         // being added (particularly important if it's a cell)
         Watcher (
             ren::Value const & watch,
-            bool useCell,
-            ren::Value const & tag
+            bool recalculates,
+            ren::Value const & label
         );
 
         // Evaluates and returns error if there was one, or none
@@ -105,14 +62,61 @@ private:
         QString getValueString() const;
     };
 
-    std::vector<Watcher> watchers;
+    std::vector<std::unique_ptr<Watcher>> watchers;
+
+public:
+    WatchList (QWidget * parent = nullptr);
+
+protected slots:
+    void customMenuRequested(QPoint pos);
+
+signals:
+    void watchCalled(
+        ren::Value vars,
+        bool recalculates,
+        ren::Value label
+    );
+
+    void showDockRequested();
+
+    void hideDockRequested();
+
+    void pushWatcherRequested(Watcher * watcherUnique);
+
+    void removeWatcherRequested(int index);
+
+    void freezeItemRequested(int index, bool frozen);
+
+    void recalulatesItemRequested(int index, bool recalculates);
+
+    void reportStatus(QString message);
+
+public slots:
+    void updateWatcher(int index);
+
+    void updateAllWatchers();
+
+private slots:
+    void pushWatcher(Watcher * watcherUnique);
+
+    void removeWatcher(int index);
+
+    void duplicateWatcher(int index);
+
+    void setFreezeState(int index, bool frozen);
+
+    void setRecalculatesState(int index, bool recalculates);
+
+    void onItemChanged(QTableWidgetItem * item);
+
+protected:
+    void mousePressEvent(QMouseEvent * event) override;
 
 private:
     // aaaand... magic! :-)
     ren::Value watchDialect(
         ren::Value const & arg,
-        bool useCell,
-        bool useLabel,
+        bool recalculates,
         ren::Value const & tag
     );
 };

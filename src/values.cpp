@@ -186,10 +186,10 @@ std::ostream & operator<<(std::ostream & os, ren::Value const & value)
 }
 
 
-ren::Value ren::Value::apply(
-    Context * context,
-    internal::Loadable * loadablesPtr,
-    size_t numLoadables
+Value Value::apply(
+    RenCell * loadablesPtr,
+    size_t numLoadables,
+    Context * context
 ) const {
     Value result {Dont::Initialize};
     if (context == nullptr)
@@ -205,17 +205,26 @@ ren::Value ren::Value::apply(
 }
 
 
+Value Value::apply(
+    std::initializer_list<internal::Loadable> loadables,
+    Context * context
+) const {
+    RenCell * load = const_cast<RenCell *>(&loadables.begin()->cell);
+    return apply(load, loadables.size(), context);
+}
+
 AnyBlock::AnyBlock (
-    Context & context,
-    internal::Loadable * loadablesPtr,
+    RenCell * loadablesPtr,
     size_t numLoadables,
-    bool (Value::*validMemFn)(RenCell *) const
+    bool (Value::*validMemFn)(RenCell *) const,
+    Context * context
 ) :
     AnyBlock (Dont::Initialize)
 {
     (this->*validMemFn)(&this->cell);
 
-    context.constructOrApplyInitialize(
+    Context & actualContext = context ? *context : Context::runFinder(nullptr);
+    actualContext.constructOrApplyInitialize(
         nullptr,
         loadablesPtr,
         numLoadables,
@@ -225,34 +234,21 @@ AnyBlock::AnyBlock (
 }
 
 
-AnyBlock::AnyBlock (
-    internal::Loadable * loadablesPtr,
-    size_t numLoadables,
-    bool (Value::*validMemFn)(RenCell *) const
-) :
-    AnyBlock (
-        Context::runFinder(nullptr),
-        loadablesPtr,
-        numLoadables,
-        validMemFn
-    )
-{
-}
-
-
 AnyWord::AnyWord (
-    Context & context,
     char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const
+    bool (Value::*validMemFn)(RenCell *) const,
+    Context * context
 ) :
     Value (Dont::Initialize)
 {
-    internal::Loadable loadable (cstr);
     (this->*validMemFn)(&this->cell);
 
-    context.constructOrApplyInitialize(
+    internal::Loadable loadable (cstr);
+
+    Context & actualContext = context ? *context : Context::runFinder(nullptr);
+    actualContext.constructOrApplyInitialize(
         nullptr,
-        &loadable,
+        &loadable.cell,
         1,
         // Do construct
         this,
@@ -261,58 +257,41 @@ AnyWord::AnyWord (
     );
 }
 
-
-AnyWord::AnyWord (
-    char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const
-) :
-    AnyWord (Context::runFinder(nullptr), cstr, validMemFn)
-{
-}
 
 
 #if REN_CLASSLIB_QT
 AnyWord::AnyWord (
-    Context & context,
     QString const & str,
-    bool (Value::*validMemFn)(RenCell *) const
+    bool (Value::*validMemFn)(RenCell *) const,
+    Context * context
 ) :
     Value (Dont::Initialize)
 {
+    (this->*validMemFn)(&this->cell);
+
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
     QByteArray array = str.toLocal8Bit();
-    char const * buffer = array.data();
+    internal::Loadable loadable (array.data());
 
-    internal::Loadable loadable (buffer);
-    (this->*validMemFn)(&this->cell);
-
-    context.constructOrApplyInitialize(
+    Context & actualContext = context ? *context : Context::runFinder(nullptr);
+    actualContext.constructOrApplyInitialize(
         nullptr,
-        &loadable,
+        &loadable.cell,
         1,
         // Do construct
         this,
         // Don't apply
         nullptr
     );
-}
-
-
-AnyWord::AnyWord (
-    QString const & str,
-    bool (Value::*validMemFn)(RenCell *) const
-) :
-    AnyWord (Context::runFinder(nullptr), str, validMemFn)
-{
 }
 #endif
 
 
 AnyString::AnyString (
-    Engine & engine,
     char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const
+    bool (Value::*validMemFn)(RenCell *) const,
+    Engine * engine
 ) :
     Series (Dont::Initialize)
 {
@@ -320,22 +299,13 @@ AnyString::AnyString (
 
     internal::Loadable loadable (cstr);
 
-    Context::runFinder(&engine).constructOrApplyInitialize(
+    Context::runFinder(engine).constructOrApplyInitialize(
         nullptr,
-        &loadable,
+        &loadable.cell,
         1,
         this, // Do construct
         nullptr // Don't apply
     );
-}
-
-
-AnyString::AnyString (
-    char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const
-) :
-    AnyString (Engine::runFinder(), cstr, validMemFn)
-{
 }
 
 } // end namespace ren
