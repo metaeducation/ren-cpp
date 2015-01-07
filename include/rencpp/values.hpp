@@ -572,11 +572,11 @@ public:
 
     template <typename... Ts>
     inline Value apply(Ts const &... args) const {
-        return apply(std::initializer_list<internal::Loadable>{args...});
+        return apply({ args... });
     }
 
     template <typename... Ts>
-    inline Value operator()(Ts... args) const {
+    inline Value operator()(Ts&&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 
