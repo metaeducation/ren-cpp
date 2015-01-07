@@ -216,12 +216,12 @@ Value Value::apply(
 AnyBlock::AnyBlock (
     RenCell * loadablesPtr,
     size_t numLoadables,
-    bool (Value::*validMemFn)(RenCell *) const,
+    internal::CellFunction cellfun,
     Context * context
 ) :
     AnyBlock (Dont::Initialize)
 {
-    (this->*validMemFn)(&this->cell);
+    (this->*cellfun)(&this->cell);
 
     Context & actualContext = context ? *context : Context::runFinder(nullptr);
     actualContext.constructOrApplyInitialize(
@@ -236,12 +236,12 @@ AnyBlock::AnyBlock (
 
 AnyWord::AnyWord (
     char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const,
+    internal::CellFunction cellfun,
     Context * context
 ) :
     Value (Dont::Initialize)
 {
-    (this->*validMemFn)(&this->cell);
+    (this->*cellfun)(&this->cell);
 
     internal::Loadable loadable (cstr);
 
@@ -262,12 +262,12 @@ AnyWord::AnyWord (
 #if REN_CLASSLIB_QT
 AnyWord::AnyWord (
     QString const & str,
-    bool (Value::*validMemFn)(RenCell *) const,
+    internal::CellFunction cellfun,
     Context * context
 ) :
     Value (Dont::Initialize)
 {
-    (this->*validMemFn)(&this->cell);
+    (this->*cellfun)(&this->cell);
 
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
@@ -290,12 +290,12 @@ AnyWord::AnyWord (
 
 AnyString::AnyString (
     char const * cstr,
-    bool (Value::*validMemFn)(RenCell *) const,
+    internal::CellFunction cellfun,
     Engine * engine
 ) :
     Series (Dont::Initialize)
 {
-    (this->*validMemFn)(&this->cell);
+    (this->*cellfun)(&this->cell);
 
     internal::Loadable loadable (cstr);
 
