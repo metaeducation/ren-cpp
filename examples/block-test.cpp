@@ -10,12 +10,12 @@ int main(int, char **) {
 
     // This is a tricky case
 
-    Block singleton = Block::construct("foo");
+    Block singleton {"foo"};
     Value singletonAsValue = singleton;
 
     static_cast<Block>(singletonAsValue);
 
-    Block singletonInitializer = Block::construct(singleton);
+    Block singletonInitializer {singleton};
 
     print(singletonInitializer);
 

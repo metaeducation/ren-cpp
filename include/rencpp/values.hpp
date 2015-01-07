@@ -272,7 +272,8 @@ protected:
     // friends access to this construction for any derived class.
     //
 protected:
-    template <class R, class... Ts> friend class FunctionGenerator;
+    template <class R, class... Ts>
+    friend class internal::FunctionGenerator;
 
     explicit Value (RenEngineHandle engine, RenCell const & cell) {
         this->cell = cell;
@@ -558,30 +559,20 @@ public:
     //
 protected:
     Value apply(
-        Context * contextPtr,
-        internal::Loadable loadables[],
-        size_t numLoadables
+        RenCell loadables[],
+        size_t numLoadables,
+        Context * context
     ) const;
 
 public:
-    template <typename... Ts>
-    inline Value apply(Context & context, Ts const &... args) const {
-        // http://stackoverflow.com/q/14178264/211160
-        auto loadables = std::array<
-            internal::Loadable, sizeof...(Ts)
-        >{{args...}};
-        return apply(&context, &loadables[0], sizeof...(Ts));
-    }
+    Value apply(
+        std::initializer_list<internal::Loadable> loadables,
+        Context * context = nullptr
+    ) const;
 
     template <typename... Ts>
     inline Value apply(Ts const &... args) const {
-        // http://stackoverflow.com/q/14178264/211160
-        auto loadables = std::array<
-            internal::Loadable, sizeof...(Ts)
-        >{{args...}};
-        return apply(
-            static_cast<Context *>(nullptr), &loadables[0], sizeof...(Ts)
-        );
+        return apply(std::initializer_list<internal::Loadable>{args...});
     }
 
     template <typename... Ts>
@@ -834,31 +825,19 @@ protected:
 
 protected:
     explicit AnyWord (
-        Context & context, char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    explicit AnyWord (
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 
 
 #if REN_CLASSLIB_STD
     explicit AnyWord (
-        Context & context,
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     ) :
-        AnyWord (context, str.c_str(), validMemFn)
-    {
-    }
-
-    explicit AnyWord (
-        std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
-    ) :
-        AnyWord (str.c_str(), validMemFn)
+        AnyWord (str.c_str(), validMemFn, context)
     {
     }
 #endif
@@ -866,14 +845,9 @@ protected:
 
 #if REN_CLASSLIB_QT
     explicit AnyWord (
-        Context & context,
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    explicit AnyWord (
-        QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 #endif
 
@@ -977,27 +951,24 @@ protected:
 
 protected:
     AnyString(
-        Engine & engine,
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    AnyString(
-        char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 
 #if REN_CLASSLIB_STD
     AnyString (
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 #endif
 
 #if REN_CLASSLIB_QT
     AnyString (
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Engine * engine = nullptr
     );
 #endif
 
@@ -1119,16 +1090,10 @@ protected:
     //
 
     AnyBlock (
-        Context & context,
-        internal::Loadable * loadablesPtr,
+        RenCell loadables[],
         size_t numLoadables,
-        bool (Value::*validMemFn)(RenCell *) const
-    );
-
-    AnyBlock (
-        internal::Loadable * loadablesPtr,
-        size_t numLoadables,
-        bool (Value::*validMemFn)(RenCell *) const
+        bool (Value::*validMemFn)(RenCell *) const,
+        Context * context = nullptr
     );
 };
 
@@ -1157,23 +1122,33 @@ protected:
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
 public:
-    explicit AnyWordSubtype (Context & context, char const * cstr) :
-        AnyWord (context, cstr, validMemFn)
-    {
-    }
-    explicit AnyWordSubtype (char const * cstr) :
-        AnyWord (cstr, validMemFn)
+    explicit AnyWordSubtype (
+        char const * cstr,
+        Context * context = nullptr
+    ) :
+        AnyWord (cstr, validMemFn, context)
     {
     }
 
-    explicit AnyWordSubtype (Context & context, std::string const & str) :
-        AnyWord (context, str.c_str(), validMemFn)
+#if REN_CLASSLIB_STD
+    explicit AnyWordSubtype (
+        std::string const & str,
+        Context * context = nullptr
+    ) :
+        AnyWord (str.c_str(), validMemFn, context)
     {
     }
-    explicit AnyWordSubtype (std::string const & str) :
-        AnyWord (str.c_str(), validMemFn)
+#endif
+
+#if REN_CLASSLIB_QT
+    explicit AnyWordSubtype (
+        QString const & str,
+        Context * context = nullptr
+    ) :
+        AnyWord (str, validMemFn, context)
     {
     }
+#endif
 };
 
 
@@ -1191,18 +1166,69 @@ public:
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyStringSubtype (std::string const & str) :
-        AnyString (str.c_str(), validMemFn)
+    explicit AnyStringSubtype (
+        std::string const & str,
+        Engine * engine = nullptr
+    ) :
+        AnyString (str.c_str(), validMemFn, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyStringSubtype (QString const & str) :
-        AnyString (str, validMemFn)
+    explicit AnyStringSubtype (
+        QString const & str,
+        Engine * engine = nullptr
+    ) :
+        AnyString (str, validMemFn, engine)
     {
     }
 #endif
+};
+
+
+///
+/// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
+///
+
+//
+// Loadable is a "lazy-loading type" distinct from Value, which unlike a
+// ren::Value can be implicitly constructed from a string and loaded as a
+// series of values.  It's lazy so that it won't wind up being forced to
+// interpret "foo baz bar" immediately as [foo baz bar], but to be able
+// to decide if the programmer intent was to compose it together to form
+// a single level of block hierarchy.
+//
+// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4} here:
+//
+//     https://github.com/hostilefork/rencpp/issues/1
+//
+// While private inheritance is one of those "frowned upon" institutions,
+// here we really do want it.  It's a perfect fit for the problem.
+//
+
+class Loadable final : private Value {
+private:
+    friend class ::ren::Value;
+    friend class ::ren::AnyWord;
+    friend class ::ren::AnyString;
+    friend class ::ren::Context;
+
+    template <class C, bool (Value::*validMemFn)(RenCell *) const>
+    friend class AnyBlockSubtype;
+
+    // These constructors *must* be public, although we really don't want
+    // users of the binding instantiating loadables explicitly.
+public:
+    using Value::Value;
+
+    // Constructor inheritance does not inherit move or copy constructors
+
+    Loadable (Value const & value) : Value (value) {}
+
+    Loadable (Value && value) : Value (value) {}
+
+    Loadable (char const * sourceCstr);
 };
 
 
@@ -1229,98 +1255,41 @@ protected:
     AnyBlockSubtype (Dont const &) : AnyBlock (Dont::Initialize) {}
     inline bool isValid() const { return (this->*validMemFn)(nullptr); }
 
-private:
-    template <size_t N>
-    AnyBlockSubtype (
-        Context & context,
-        std::array<internal::Loadable, N> && loadables
-    ) :
-        AnyBlock (context, loadables.data(), N, validMemFn)
-    {
-    }
-
-    template <size_t N>
-    AnyBlockSubtype (
-        std::array<internal::Loadable, N> && loadables
-    ) :
-        AnyBlock (loadables.data(), N, validMemFn)
-    {
-    }
-
 public:
-    template <typename... Ts>
-    static C construct(Context &, Ts const & ...)
-    {
-        C result = Value::construct<C>(Dont::Initialize);
-        //AnyBlockSubtype temp (context, args...); // need to reorganize
-        //result.cell = temp;
-        throw std::runtime_error("construct in blocks not implemented");
-        return result;
-    }
-
-    template <typename... Ts>
-    static C construct(Ts const & ...)
-    {
-        C result = Value::construct<C>(Dont::Initialize);
-        //AnyBlockSubtype temp (args...); // need to reorganize for this...
-        //result.cell = temp;
-        throw std::runtime_error("construct in blocks not implemented");
-        return result;
-    }
-
-    // For technical reasons, we cannot allow the single-arity version of
-    // the constructor to "construct" a block when the parameter is itself
-    // a block.  Currently saying you have to use "construct" or any
-    // single construction from a Value.
-
-    template <
-        typename T,
-        typename... Ts,
-        typename = typename std::enable_if<
-            /*(not std::is_base_of<Value, T>::value) or*/
-            (sizeof...(Ts) != 0)
-            or std::is_convertible<T, char const *>::value
-            or std::is_convertible<T, int>::value
-        >::type
-    >
-    explicit AnyBlockSubtype (
-        Context & context, T const & first, Ts const & ...rest
+    AnyBlockSubtype (
+        Value * values,
+        size_t numValues,
+        Context * context = nullptr
     ) :
-        AnyBlockSubtype (
-            context,
-            std::array<internal::Loadable, sizeof...(rest) + 1>{
-                {first, rest...}
-            }
+        AnyBlock (
+            numValues > 0 ? &values[0].cell : nullptr,
+            numValues,
+            validMemFn,
+            context
         )
     {
     }
 
-    template <
-        typename T,
-        typename... Ts,
-        typename = typename std::enable_if<
-            /* (not std::is_base_of<Value, T>::value) or */
-            (sizeof...(Ts) != 0)
-            or std::is_convertible<T, char const *>::value
-            or std::is_convertible<T, int>::value
-        >::type
-    >
-    explicit AnyBlockSubtype (T const & first, Ts const & ...rest) :
-        AnyBlockSubtype (
-            std::array<internal::Loadable, sizeof...(rest) + 1>{
-                {first, rest...}
-            }
+    explicit AnyBlockSubtype (
+        std::initializer_list<internal::Loadable> args,
+        Context * context = nullptr
+    ) :
+        AnyBlock (
+            const_cast<RenCell *>(&args.begin()->cell),
+            args.size(),
+            validMemFn,
+            context
         )
     {
     }
 
-    explicit AnyBlockSubtype () :
-        AnyBlock (nullptr, 0, validMemFn)
-    {
-    }
-
-    explicit AnyBlockSubtype (Context & context) :
-        AnyBlock (nullptr, 0, validMemFn)
+    explicit AnyBlockSubtype (Context * context = nullptr) :
+        AnyBlock (
+            nullptr,
+            0,
+            validMemFn,
+            context
+        )
     {
     }
 };

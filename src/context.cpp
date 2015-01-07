@@ -81,7 +81,7 @@ Context & Context::runFinder(Engine * enginePtr) {
 
 void Context::constructOrApplyInitialize(
     Value const * applicandPtr,
-    internal::Loadable * argsPtr,
+    RenCell * argsPtr,
     size_t numArgs,
     Value * constructResultUninitialized,
     Value * applyOutUninitialized
@@ -102,7 +102,7 @@ void Context::constructOrApplyInitializeCore(
     RenEngineHandle engineHandle,
     RenContextHandle contextHandle,
     Value const * applicandPtr,
-    internal::Loadable * argsPtr,
+    RenCell * argsPtr,
     size_t numArgs,
     Value * constructOutUninitialized,
     Value * applyOutUninitialized
@@ -113,7 +113,7 @@ void Context::constructOrApplyInitializeCore(
         engineHandle,
         contextHandle,
         evilMutablePointerCast(&applicandPtr->cell),
-        &argsPtr->cell,
+        argsPtr,
         numArgs,
         sizeof(internal::Loadable),
         constructOutUninitialized ? &constructOutUninitialized->cell : nullptr,

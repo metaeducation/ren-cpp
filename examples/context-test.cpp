@@ -47,10 +47,10 @@ int main(int, char **) {
     assert(runtime("integer? x"));
 
     // even though our default is to run in the second runtime
-    // at the moment, let's override it using "construct" method to create
-    // a SetWord bound into contextOne
+    // at the moment, let's override it using an additional parameter
+    // to the constructor
 
-    auto y = contextOne->construct<SetWord>("y:");
+    auto y = SetWord("y:", contextOne.get());
     y(30);
 
     // Switch active contexts and see that we set y

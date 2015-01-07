@@ -39,50 +39,6 @@ class Runtime;
 
 
 ///
-/// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
-///
-
-//
-// Loadable is a "lazy-loading type" distinct from Value, which unlike a
-// ren::Value can be implicitly constructed from a string and loaded as a
-// series of values.  It's lazy so that it won't wind up being forced to
-// interpret "foo baz bar" immediately as [foo baz bar], but to be able
-// to decide if the programmer intent was to compose it together to form
-// a single level of block hierarchy.
-//
-// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4} here:
-//
-//     https://github.com/hostilefork/rencpp/issues/1
-//
-// While private inheritance is one of those "frowned upon" institutions,
-// here we really do want it.  It's a perfect fit for the problem.
-//
-
-namespace internal {
-
-class Loadable final : private Value {
-private:
-    friend class ::ren::Context;
-
-    // These constructors *must* be public, although we really don't want
-    // users of the binding instantiating loadables explicitly.
-public:
-    using Value::Value;
-
-    // Constructor inheritance does not inherit move or copy constructors
-
-    Loadable (Value const & value) : Value (value) {}
-
-    Loadable (Value && value) : Value (value) {}
-
-    Loadable (char const * sourceCstr);
-};
-
-}
-
-
-
-///
 /// ABSTRACT BASE RUNTIME CLASS
 ///
 
