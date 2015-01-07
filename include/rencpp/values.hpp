@@ -1121,73 +1121,58 @@ protected:
 namespace internal {
 
 
-template <class C>
+template <class C, CellFunction F>
 class AnyWord_ : public AnyWord {
 protected:
     friend class Value;
     AnyWord_ (Dont const &) : AnyWord (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
+    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    explicit AnyWord_ (
-        char const * cstr,
-        Context * context = nullptr
-    ) :
-        AnyWord (cstr, C::cellfun, context)
+    explicit AnyWord_ (char const * cstr, Context * context = nullptr) :
+        AnyWord (cstr, F, context)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyWord_ (
-        std::string const & str,
-        Context * context = nullptr
-    ) :
-        AnyWord (str.c_str(), C::cellfun, context)
+    explicit AnyWord_ (std::string const & str, Context * context = nullptr) :
+        AnyWord (str.c_str(), F, context)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyWord_ (
-        QString const & str,
-        Context * context = nullptr
-    ) :
-        AnyWord (str, C::cellfun, context)
+    explicit AnyWord_ (QString const & str, Context * context = nullptr) :
+        AnyWord (str, F, context)
     {
     }
 #endif
 };
 
 
-template <class C>
+template <class C, CellFunction F>
 class AnyString_ : public AnyString {
 protected:
     friend class Value;
     AnyString_ (Dont const &) : AnyString (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
+    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
     explicit AnyString_ (char const * cstr) :
-        AnyString (cstr, C::cellfun)
+        AnyString (cstr, F)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyString_ (
-        std::string const & str,
-        Engine * engine = nullptr
-    ) :
-        AnyString (str.c_str(), C::cellfun, engine)
+    explicit AnyString_ (std::string const & str, Engine * engine = nullptr) :
+        AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyString_ (
-        QString const & str,
-        Engine * engine = nullptr
-    ) :
-        AnyString (str, C::cellfun, engine)
+    explicit AnyString_ (QString const & str, Engine * engine = nullptr) :
+        AnyString (str, F, engine)
     {
     }
 #endif
@@ -1221,7 +1206,7 @@ private:
     friend class ::ren::AnyString;
     friend class ::ren::Context;
 
-    template <class C>
+    template <class C, CellFunction F>
     friend class AnyBlock_;
 
     // These constructors *must* be public, although we really don't want
@@ -1255,23 +1240,19 @@ public:
 //
 //     http://codereview.stackexchange.com/q/72252/9042
 //
-template <class C>
+template <class C, CellFunction F>
 class AnyBlock_ : public AnyBlock {
 protected:
     friend class Value;
     AnyBlock_ (Dont const &) : AnyBlock (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
+    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyBlock_ (
-        Value * values,
-        size_t numValues,
-        Context * context = nullptr
-    ) :
+    AnyBlock_ (Value * values, size_t numValues, Context * context = nullptr) :
         AnyBlock (
             numValues > 0 ? &values[0].cell : nullptr,
             numValues,
-            C::cellfun,
+            F,
             context
         )
     {
@@ -1284,14 +1265,14 @@ public:
         AnyBlock (
             const_cast<RenCell *>(&args.begin()->cell),
             args.size(),
-            C::cellfun,
+            F,
             context
         )
     {
     }
 
     explicit AnyBlock_ (Context * context = nullptr) :
-        AnyBlock (nullptr, 0, C::cellfun, context)
+        AnyBlock (nullptr, 0, F, context)
     {
     }
 };
@@ -1317,68 +1298,56 @@ public:
 //
 
 
-class Word : public internal::AnyWord_<Word>
+class Word : public internal::AnyWord_<Word, &Value::isWord>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isWord;
-
     friend class Value;
-    using AnyWord_<Word>::AnyWord_;
+    using AnyWord_<Word, &Value::isWord>::AnyWord_;
 };
 
 
 
-class SetWord : public internal::AnyWord_<SetWord>
+class SetWord : public internal::AnyWord_<SetWord, &Value::isSetWord>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isSetWord;
-
     friend class Value;
-    using AnyWord_<SetWord>::AnyWord_;
+    using AnyWord_<SetWord, &Value::isSetWord>::AnyWord_;
 };
 
 
 
-class GetWord : public internal::AnyWord_<GetWord>
+class GetWord : public internal::AnyWord_<GetWord, &Value::isGetWord>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isGetWord;
-
     friend class Value;
-    using AnyWord_<GetWord>::AnyWord_;
+    using AnyWord_<GetWord, &Value::isGetWord>::AnyWord_;
 };
 
 
 
-class LitWord : public internal::AnyWord_<LitWord>
+class LitWord : public internal::AnyWord_<LitWord, &Value::isLitWord>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isLitWord;
-
     friend class Value;
-    using AnyWord_<LitWord>::AnyWord_;
+    using AnyWord_<LitWord, &Value::isLitWord>::AnyWord_;
 };
 
 
 
-class Refinement : public internal::AnyWord_<Refinement>
+class Refinement : public internal::AnyWord_<Refinement, &Value::isRefinement>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isRefinement;
-
     friend class Value;
-    using AnyWord_<Refinement>::AnyWord_;
+    using AnyWord_<Refinement, &Value::isRefinement>::AnyWord_;
 };
 
 
 
-class String : public internal::AnyString_<String>
+class String : public internal::AnyString_<String, &Value::isString>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isString;
-
     friend class Value;
-    using AnyString_<String>::AnyString_;
+    using AnyString_<String, &Value::isString>::AnyString_;
 
 public:
     // For String only, allow implicit cast instead of explicit.
@@ -1406,12 +1375,10 @@ public:
 
 
 
-class Tag : public internal::AnyString_<Tag> {
+class Tag : public internal::AnyString_<Tag, &Value::isTag> {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isTag;
-
     friend class Value;
-    using AnyString_<Tag>::AnyString_;
+    using AnyString_<Tag, &Value::isTag>::AnyString_;
 
 public:
     bool operator==(char const * cstr) const {
@@ -1425,35 +1392,29 @@ public:
 
 
 
-class Block : public internal::AnyBlock_<Block>
+class Block : public internal::AnyBlock_<Block, &Value::isBlock>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isBlock;
-
     friend class Value;
-    using internal::AnyBlock_<Block>::AnyBlock_;
+    using internal::AnyBlock_<Block, &Value::isBlock>::AnyBlock_;
 };
 
 
 
-class Paren : public internal::AnyBlock_<Paren>
+class Paren : public internal::AnyBlock_<Paren, &Value::isParen>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isParen;
-
     friend class Value;
-    using internal::AnyBlock_<Paren>::AnyBlock_;
+    using internal::AnyBlock_<Paren, &Value::isParen>::AnyBlock_;
 };
 
 
 
-class Path : public internal::AnyBlock_<Path>
+class Path : public internal::AnyBlock_<Path, &Value::isPath>
 {
 public:
-    static constexpr internal::CellFunction cellfun = &Value::isPath;
-
     friend class Value;
-    using internal::AnyBlock_<Path>::AnyBlock_;
+    using internal::AnyBlock_<Path, &Value::isPath>::AnyBlock_;
 };
 
 
