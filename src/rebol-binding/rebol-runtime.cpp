@@ -198,7 +198,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
             = "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
 
         REBCHR argvQuiet []
-            = L"--quiet";
+            = "--quiet";
     #endif
 
     // Theoretically we could offer hooks for this deferred initialization
