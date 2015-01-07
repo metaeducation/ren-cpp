@@ -677,7 +677,7 @@ constexpr unset_t unset {unset_t::init{}};
 //
 
 
-class Unset final : public Value {
+class Unset : public Value {
 protected:
     friend class Value;
     Unset (Dont const &) : Value (Dont::Initialize) {}
@@ -693,7 +693,7 @@ public:
 };
 
 
-class None final : public Value {
+class None : public Value {
 protected:
     friend class Value;
     None (Dont const &) : Value (Dont::Initialize) {}
@@ -705,7 +705,7 @@ public:
 };
 
 
-class Logic final : public Value {
+class Logic : public Value {
 protected:
     friend class Value;
     Logic (Dont const &) : Value (Dont::Initialize) {}
@@ -723,7 +723,7 @@ public:
 };
 
 
-class Character final : public Value {
+class Character : public Value {
 protected:
     friend class Value;
     Character (Dont const &) : Value (Dont::Initialize) {}
@@ -752,7 +752,7 @@ public:
 };
 
 
-class Integer final : public Value {
+class Integer : public Value {
 protected:
     friend class Value;
     Integer (Dont const &) : Value (Dont::Initialize) {}
@@ -768,7 +768,7 @@ public:
 };
 
 
-class Float final : public Value {
+class Float : public Value {
 protected:
     friend class Value;
     Float (Dont const &) : Value (Dont::Initialize) {}
@@ -784,7 +784,7 @@ public:
 };
 
 
-class Date final : public Value {
+class Date : public Value {
 protected:
     friend class Value;
     Date (Dont const &) : Value (Dont::Initialize) {}
@@ -811,11 +811,18 @@ public:
 // to a member function.  This pointer takes the place of having to expose
 // an enumerated type in the interface that corresponds numbers to types.
 //
-// One trick is that the validMem(ber)F(u)n(c)tion can not only test if a
-// type is valid for its instance or category, but if you pass them a
-// pointer to a cell they can write their type signature into that cell.
-// It's actually rather cool, I think.
+// It can not only test if a type is valid for its instance or category, but
+// if you pass them a pointer to a cell they can write their type signature
+// into that cell.  This helps avoid RTTI or virtual dispatch and in theory
+// the reason templates can be parameterized with functions has to do with
+// inlining and optimization...so it might be about the fastest way to do it.
 //
+namespace internal {
+
+using CellFunction = bool (Value::*)(RenCell *) const;
+
+} // end namespace internal
+
 
 class AnyWord : public Value {
 protected:
@@ -826,7 +833,7 @@ protected:
 protected:
     explicit AnyWord (
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Context * context = nullptr
     );
 
@@ -834,10 +841,10 @@ protected:
 #if REN_CLASSLIB_STD
     explicit AnyWord (
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Context * context = nullptr
     ) :
-        AnyWord (str.c_str(), validMemFn, context)
+        AnyWord (str.c_str(), cellfun, context)
     {
     }
 #endif
@@ -846,7 +853,7 @@ protected:
 #if REN_CLASSLIB_QT
     explicit AnyWord (
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Context * context = nullptr
     );
 #endif
@@ -952,14 +959,14 @@ protected:
 protected:
     AnyString(
         char const * cstr,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Engine * engine = nullptr
     );
 
 #if REN_CLASSLIB_STD
     AnyString (
         std::string const & str,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Engine * engine = nullptr
     );
 #endif
@@ -967,7 +974,7 @@ protected:
 #if REN_CLASSLIB_QT
     AnyString (
         QString const & str,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Engine * engine = nullptr
     );
 #endif
@@ -1092,7 +1099,7 @@ protected:
     AnyBlock (
         RenCell loadables[],
         size_t numLoadables,
-        bool (Value::*validMemFn)(RenCell *) const,
+        internal::CellFunction cellfun,
         Context * context = nullptr
     );
 };
@@ -1114,73 +1121,73 @@ protected:
 namespace internal {
 
 
-template <bool (Value::*validMemFn)(RenCell *) const>
-class AnyWordSubtype : public AnyWord {
+template <class C>
+class AnyWord_ : public AnyWord {
 protected:
     friend class Value;
-    AnyWordSubtype (Dont const &) : AnyWord (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*validMemFn)(nullptr); }
+    AnyWord_ (Dont const &) : AnyWord (Dont::Initialize) {}
+    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
 
 public:
-    explicit AnyWordSubtype (
+    explicit AnyWord_ (
         char const * cstr,
         Context * context = nullptr
     ) :
-        AnyWord (cstr, validMemFn, context)
+        AnyWord (cstr, C::cellfun, context)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyWordSubtype (
+    explicit AnyWord_ (
         std::string const & str,
         Context * context = nullptr
     ) :
-        AnyWord (str.c_str(), validMemFn, context)
+        AnyWord (str.c_str(), C::cellfun, context)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyWordSubtype (
+    explicit AnyWord_ (
         QString const & str,
         Context * context = nullptr
     ) :
-        AnyWord (str, validMemFn, context)
+        AnyWord (str, C::cellfun, context)
     {
     }
 #endif
 };
 
 
-template <bool (Value::*validMemFn)(RenCell *) const>
-class AnyStringSubtype : public AnyString {
+template <class C>
+class AnyString_ : public AnyString {
 protected:
     friend class Value;
-    AnyStringSubtype (Dont const &) : AnyString (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*validMemFn)(nullptr); }
+    AnyString_ (Dont const &) : AnyString (Dont::Initialize) {}
+    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
 
 public:
-    explicit AnyStringSubtype (char const * cstr) :
-        AnyString (cstr, validMemFn)
+    explicit AnyString_ (char const * cstr) :
+        AnyString (cstr, C::cellfun)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyStringSubtype (
+    explicit AnyString_ (
         std::string const & str,
         Engine * engine = nullptr
     ) :
-        AnyString (str.c_str(), validMemFn, engine)
+        AnyString (str.c_str(), C::cellfun, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyStringSubtype (
+    explicit AnyString_ (
         QString const & str,
         Engine * engine = nullptr
     ) :
-        AnyString (str, validMemFn, engine)
+        AnyString (str, C::cellfun, engine)
     {
     }
 #endif
@@ -1207,15 +1214,15 @@ public:
 // here we really do want it.  It's a perfect fit for the problem.
 //
 
-class Loadable final : private Value {
+class Loadable : private Value {
 private:
     friend class ::ren::Value;
     friend class ::ren::AnyWord;
     friend class ::ren::AnyString;
     friend class ::ren::Context;
 
-    template <class C, bool (Value::*validMemFn)(RenCell *) const>
-    friend class AnyBlockSubtype;
+    template <class C>
+    friend class AnyBlock_;
 
     // These constructors *must* be public, although we really don't want
     // users of the binding instantiating loadables explicitly.
@@ -1233,7 +1240,7 @@ public:
 
 
 //
-// AnyBlockSubtype
+// AnyBlock Subtype Helper
 //
 // This bears some explanation, because it's a little bit tricky.  There's a
 // little bit of over-the-top avoidance of paying for the overhead
@@ -1248,15 +1255,15 @@ public:
 //
 //     http://codereview.stackexchange.com/q/72252/9042
 //
-template <class C, bool (Value::*validMemFn)(RenCell *) const>
-class AnyBlockSubtype : public AnyBlock {
+template <class C>
+class AnyBlock_ : public AnyBlock {
 protected:
     friend class Value;
-    AnyBlockSubtype (Dont const &) : AnyBlock (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*validMemFn)(nullptr); }
+    AnyBlock_ (Dont const &) : AnyBlock (Dont::Initialize) {}
+    inline bool isValid() const { return (this->*(C::cellfun))(nullptr); }
 
 public:
-    AnyBlockSubtype (
+    AnyBlock_ (
         Value * values,
         size_t numValues,
         Context * context = nullptr
@@ -1264,32 +1271,27 @@ public:
         AnyBlock (
             numValues > 0 ? &values[0].cell : nullptr,
             numValues,
-            validMemFn,
+            C::cellfun,
             context
         )
     {
     }
 
-    explicit AnyBlockSubtype (
+    explicit AnyBlock_ (
         std::initializer_list<internal::Loadable> args,
         Context * context = nullptr
     ) :
         AnyBlock (
             const_cast<RenCell *>(&args.begin()->cell),
             args.size(),
-            validMemFn,
+            C::cellfun,
             context
         )
     {
     }
 
-    explicit AnyBlockSubtype (Context * context = nullptr) :
-        AnyBlock (
-            nullptr,
-            0,
-            validMemFn,
-            context
-        )
+    explicit AnyBlock_ (Context * context = nullptr) :
+        AnyBlock (nullptr, 0, C::cellfun, context)
     {
     }
 };
@@ -1315,62 +1317,68 @@ public:
 //
 
 
-class Word final :
-    public internal::AnyWordSubtype<&Value::isWord>
+class Word : public internal::AnyWord_<Word>
 {
 public:
-    friend class Value;
+    static constexpr internal::CellFunction cellfun = &Value::isWord;
 
-    using AnyWordSubtype<&Value::isWord>::AnyWordSubtype;
+    friend class Value;
+    using AnyWord_<Word>::AnyWord_;
 };
 
 
 
-class SetWord final :
-    public internal::AnyWordSubtype<&Value::isSetWord>
+class SetWord : public internal::AnyWord_<SetWord>
 {
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isSetWord;
+
     friend class Value;
-    using AnyWordSubtype<&Value::isSetWord>::AnyWordSubtype;
+    using AnyWord_<SetWord>::AnyWord_;
 };
 
 
 
-class GetWord final :
-    public internal::AnyWordSubtype<&Value::isGetWord>
+class GetWord : public internal::AnyWord_<GetWord>
 {
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isGetWord;
+
     friend class Value;
-    using AnyWordSubtype<&Value::isGetWord>::AnyWordSubtype;
+    using AnyWord_<GetWord>::AnyWord_;
 };
 
 
 
-class LitWord final :
-    public internal::AnyWordSubtype<&Value::isLitWord>
+class LitWord : public internal::AnyWord_<LitWord>
 {
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isLitWord;
+
     friend class Value;
-    using AnyWordSubtype<&Value::isLitWord>::AnyWordSubtype;
+    using AnyWord_<LitWord>::AnyWord_;
 };
 
 
 
-class Refinement final :
-    public internal::AnyWordSubtype<&Value::isRefinement>
+class Refinement : public internal::AnyWord_<Refinement>
 {
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isRefinement;
+
     friend class Value;
-    using AnyWordSubtype<&Value::isRefinement>::AnyWordSubtype;
+    using AnyWord_<Refinement>::AnyWord_;
 };
 
 
 
-class String final : public internal::AnyStringSubtype<&Value::isString>
+class String : public internal::AnyString_<String>
 {
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isString;
+
     friend class Value;
-    using AnyStringSubtype<&Value::isString>::AnyStringSubtype;
+    using AnyString_<String>::AnyString_;
 
 public:
     // For String only, allow implicit cast instead of explicit.
@@ -1398,11 +1406,12 @@ public:
 
 
 
-class Tag final : public internal::AnyStringSubtype<&Value::isTag> {
+class Tag : public internal::AnyString_<Tag> {
 public:
-    friend class Value;
+    static constexpr internal::CellFunction cellfun = &Value::isTag;
 
-    using AnyStringSubtype<&Value::isTag>::AnyStringSubtype;
+    friend class Value;
+    using AnyString_<Tag>::AnyString_;
 
 public:
     bool operator==(char const * cstr) const {
@@ -1416,29 +1425,35 @@ public:
 
 
 
-class Block final :
-    public internal::AnyBlockSubtype<Block, &Value::isBlock> {
+class Block : public internal::AnyBlock_<Block>
+{
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isBlock;
+
     friend class Value;
-    using internal::AnyBlockSubtype<Block, &Value::isBlock>::AnyBlockSubtype;
+    using internal::AnyBlock_<Block>::AnyBlock_;
 };
 
 
 
-class Paren final :
-    public internal::AnyBlockSubtype<Paren, &Value::isParen> {
+class Paren : public internal::AnyBlock_<Paren>
+{
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isParen;
+
     friend class Value;
-    using internal::AnyBlockSubtype<Paren, &Value::isParen>::AnyBlockSubtype;
+    using internal::AnyBlock_<Paren>::AnyBlock_;
 };
 
 
 
-class Path final :
-    public internal::AnyBlockSubtype<Path, &Value::isPath> {
+class Path : public internal::AnyBlock_<Path>
+{
 public:
+    static constexpr internal::CellFunction cellfun = &Value::isPath;
+
     friend class Value;
-    using internal::AnyBlockSubtype<Path, &Value::isPath>::AnyBlockSubtype;
+    using internal::AnyBlock_<Path>::AnyBlock_;
 };
 
 

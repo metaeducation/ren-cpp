@@ -305,12 +305,12 @@ Float::operator double() const {
 #if REN_CLASSLIB_QT
 AnyString::AnyString (
     QString const & str,
-    bool (Value::*validMemFn)(RenCell *) const,
+    internal::CellFunction cellfun,
     Engine * engine
 )
     : Series(Dont::Initialize)
 {
-    (this->*validMemFn)(&this->cell);
+    (this->*cellfun)(&this->cell);
 
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
