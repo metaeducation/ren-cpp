@@ -31,6 +31,7 @@
 MainWindow::MainWindow()
 {
     qRegisterMetaType<ren::Value>("ren::Value");
+    qRegisterMetaType<WatchList::Watcher>("Watcher");
 
     console = new RenConsole;
     setCentralWidget(console);

@@ -378,7 +378,8 @@ QString AnyString::spellingOf_QT() const {
     if (isString() /* or isUrl() or isEmail() or isFile() */)
         return result;
     if (isTag()) {
-        return result.right(result.length() - 1).left(result.length() - 1);
+        assert(result.length() >= 2);
+        return result.mid(1, result.length() - 2);
     }
     throw std::runtime_error {"Invalid String Type"};
 }

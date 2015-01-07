@@ -84,7 +84,7 @@ void Context::constructOrApplyInitialize(
     internal::Loadable * argsPtr,
     size_t numArgs,
     Value * constructResultUninitialized,
-    Value * applyResultUninitialized
+    Value * applyOutUninitialized
 ) {
     return constructOrApplyInitializeCore(
         enginePtr->handle,
@@ -93,7 +93,8 @@ void Context::constructOrApplyInitialize(
         argsPtr,
         numArgs,
         constructResultUninitialized,
-        applyResultUninitialized
+        applyOutUninitialized
+
     );
 }
 
@@ -106,6 +107,8 @@ void Context::constructOrApplyInitializeCore(
     Value * constructOutUninitialized,
     Value * applyOutUninitialized
 ) {
+    Value errorOutUninitialized {Value::Dont::Initialize};
+
     auto result = ::RenConstructOrApply(
         engineHandle,
         contextHandle,
@@ -114,25 +117,30 @@ void Context::constructOrApplyInitializeCore(
         numArgs,
         sizeof(internal::Loadable),
         constructOutUninitialized ? &constructOutUninitialized->cell : nullptr,
-        applyOutUninitialized ? &applyOutUninitialized->cell : nullptr
+        applyOutUninitialized ? &applyOutUninitialized->cell : nullptr,
+        &errorOutUninitialized.cell
     );
 
     // We must finalize the values before throwing errors
 
-    if (constructOutUninitialized) {
+    if (constructOutUninitialized)
         constructOutUninitialized->finishInit(engineHandle);
-    }
 
-    if (applyOutUninitialized) {
+    if (applyOutUninitialized)
         applyOutUninitialized->finishInit(engineHandle);
-    }
 
     switch (result) {
         case REN_SUCCESS:
             break;
-        case REN_ERROR_TOO_MANY_ARGS:
-            throw too_many_args("Too many arguments for Generalized Apply");
+        case REN_CONSTRUCT_ERROR:
+        case REN_APPLY_ERROR:
+            errorOutUninitialized.finishInit(engineHandle);
+            throw evaluation_error(errorOutUninitialized);
             break;
+        case REN_EVALUATION_CANCELLED:
+            throw evaluation_cancelled();
+        case REN_EVALUATION_EXITED:
+            throw exit_command(VAL_INT32(&errorOutUninitialized.cell));
         default:
             throw std::runtime_error("Unknown error in RenConstructOrApply");
     }

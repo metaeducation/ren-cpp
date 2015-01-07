@@ -299,7 +299,9 @@ public:
     // where the applicand is a function.
     //
 
-    int Generalized_Apply(REBVAL * applicand, REBSER * args, REBFLG reduce) {
+    int Generalized_Apply(
+        REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
+    ) {
 
         if (IS_FUNCTION(applicand)) {
 
@@ -312,18 +314,17 @@ public:
 
         }
         else if (IS_ERROR(applicand)) {
-            if (SERIES_LEN(args) - 1 != 0)
-                return REN_ERROR_TOO_MANY_ARGS;
+            if (SERIES_LEN(args) - 1 != 0) {
+                *error = *applicand;
+                return REN_APPLY_ERROR;
+            }
 
             // from REBNATIVE(do) ?  What's the difference?  How return?
             if (IS_THROW(applicand)) {
                 DS_PUSH(applicand);
             } else {
-                Throw_Error(VAL_ERR_OBJECT(applicand));
-
-                throw std::runtime_error(
-                    "Threw error from Generalized_Apply but it kept running"
-                );
+                VAL_SET(error, REB_ERROR);
+                *VAL_SERIES(error) = *VAL_ERR_OBJECT(applicand);
             }
         }
         else {
@@ -333,7 +334,8 @@ public:
 
             REBCNT index = Do_Next(args, 0, FALSE /* not op! */);
             if (index != SERIES_TAIL(args)) {
-                return REN_ERROR_TOO_MANY_ARGS;
+                VAL_SET(error, REB_NONE); // improve?
+                return REN_APPLY_ERROR;
             }
 
             Remove_Series(args, 0, 1);
@@ -367,7 +369,8 @@ public:
         size_t numLoadables,
         size_t sizeofLoadable,
         REBVAL * constructOutDatatypeIn,
-        REBVAL * applyOut
+        REBVAL * applyOut,
+        REBVAL * errorOut
     ) {
         lazyThreadInitializeIfNeeded(engine);
 
@@ -384,6 +387,8 @@ public:
         // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
         // with a new function, but evaluation interrupts can't.)
 
+        bool applying = false;
+
         PUSH_STATE(state, Halt_State);
         if (SET_JUMP(state)) {
             POP_STATE(state, Halt_State);
@@ -391,13 +396,26 @@ public:
             Catch_Error(DS_NEXT); // Stores error value here
             REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
             *val = *DS_NEXT;
+
             if (VAL_ERR_NUM(val) == RE_QUIT) {
-                throw exit_command (VAL_INT32(VAL_ERR_VALUE(DS_NEXT)));
+                // Cancellation to exit to the OS with an error code number,
+                // purposefully requested by the programmer
+                *errorOut = *VAL_ERR_VALUE(DS_NEXT);
+                return REN_EVALUATION_EXITED;
             }
+
             if (VAL_ERR_NUM(val) == RE_HALT) {
-                throw evaluation_cancelled {};
+                // cancellation in middle of interpretation from outside
+                // the evaluation loop (e.g. Escape)
+                return REN_EVALUATION_CANCELLED;
             }
-            throw evaluation_error (Value (engine, *val));
+
+            // Some other generic error; it may have occurred during the
+            // construct phase or the apply phase
+            *errorOut = *val;
+            if (not applying)
+                return REN_CONSTRUCT_ERROR;
+            return REN_APPLY_ERROR;
         }
         SET_STATE(state, Halt_State);
 
@@ -486,11 +504,13 @@ public:
         }
 
         if (applyOut) {
+            applying = true;
             if (valuePtr) {
                 result = Generalized_Apply(
                     const_cast<REBVAL *>(valuePtr),
                     const_cast<REBSER *>(aggregate),
-                    FALSE
+                    FALSE,
+                    errorOut
                 );
                 // even if there was an error, we need to keep going and
                 // safely clean things up.
@@ -508,6 +528,7 @@ public:
         }
 
         if (constructOutDatatypeIn) {
+            applying = false;
             REBOL_Types resultType = static_cast<REBOL_Types>(
                 VAL_TYPE(constructOutDatatypeIn)
             );
@@ -522,22 +543,25 @@ public:
 
                 REBCNT len = BLK_LEN(aggregate);
 
-                if (len == 0)
-                    throw std::runtime_error(
-                        "Requested construct and no value"
-                    );
+                if (len == 0) {
+                    // Requested construct, but no value came back.
+                    VAL_SET(errorOut, REB_NONE); // improve?
+                    return REN_CONSTRUCT_ERROR;
+                }
 
-                if (len > 1)
-                    throw std::runtime_error(
-                        "Requested construct and more than one value"
-                    );
+                if (len > 1) {
+                    // Requested construct and more than one value
+                    VAL_SET(errorOut, REB_NONE); // improve?
+                    return REN_CONSTRUCT_ERROR;
+                }
 
                 *constructOutDatatypeIn = *BLK_HEAD(aggregate);
 
-                if (resultType != VAL_TYPE(constructOutDatatypeIn))
-                    throw std::runtime_error(
-                        "Requested construct and value type was wrong"
-                    );
+                if (resultType != VAL_TYPE(constructOutDatatypeIn)) {
+                    // Requested construct and value type was wrong
+                    VAL_SET(errorOut, REB_NONE); // improve?
+                    return REN_CONSTRUCT_ERROR;
+                }
             }
         }
 
@@ -645,6 +669,11 @@ public:
 
 
     ~RebolHooks () {
+        for (auto item : nodes) {
+            for (auto item2 : item.second) {
+                print("Leak of", item2.first);
+            }
+        }
         assert(nodes.empty());
     }
 };
@@ -696,7 +725,8 @@ RenResult RenConstructOrApply(
     size_t numLoadables,
     size_t sizeofLoadable,
     REBVAL * constructOutWithDatatype,
-    REBVAL * applyOut
+    REBVAL * applyOut,
+    REBVAL * errorOut
 ) {
     return ren::internal::hooks.ConstructOrApply(
         engine,
@@ -706,7 +736,8 @@ RenResult RenConstructOrApply(
         numLoadables,
         sizeofLoadable,
         constructOutWithDatatype,
-        applyOut
+        applyOut,
+        errorOut
     );
 
 }

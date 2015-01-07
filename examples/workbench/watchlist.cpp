@@ -63,8 +63,8 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
                 watchers[item->row()].label = ren::none;
                 item->QTableWidgetItem::setTextColor(Qt::black);
             } else {
-                watchers[item->row()].label = ren::String {
-                    QString("{") + contents + "}"
+                watchers[item->row()].label = ren::Tag {
+                    QString("<") + contents + ">"
                 };
                 item->QTableWidgetItem::setTextColor(Qt::darkMagenta);
             }
@@ -112,14 +112,19 @@ void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (not useCell) or (not frozen))
             value = watch(); // apply it
+        error = ren::none;
     }
-    catch (ren::evaluation_error & e) {
-        value = ren::Value {};
+    catch (ren::evaluation_error const & e) {
+        value = ren::unset;
         error = e.error();
-        return;
     }
-
-    error = ren::none;
+    catch (std::exception const & e) {
+        assert(false);
+        error = ren::none;
+    }
+    catch (...) {
+        assert(false);
+    }
 }
 
 
@@ -197,21 +202,25 @@ WatchList::WatchList(QWidget * parent) :
 
         [this](ren::Value const & arg) -> ren::Value {
 
+            ren::Value nextTag = ren::none;
             if (arg.isBlock()) {
-                ren::Block blockArg = static_cast<ren::Block>(arg);
-                auto it = blockArg.begin();
-                while (it != blockArg.end()) {
-                    ren::print(*it);
-                    it++;
-                }
-                /*
+                ren::Block aggregate {};
+
                 for (auto item : static_cast<ren::Block>(arg)) {
-                    watchDialect(item, false, false, ren::none);
-                }*/
-                return ren::none;
+                    if (item.isTag())
+                        nextTag = item;
+                    else {
+                        ren::Value result
+                            = watchDialect(item, false, nextTag);
+                        if (not result.isUnset()) {
+                            ren::runtime("append", aggregate, result);
+                        }
+                    }
+                }
+                return aggregate;
             }
 
-            return watchDialect(arg, false, false, ren::none);
+            return watchDialect(arg, false, ren::none);
         }
     );
 
@@ -248,7 +257,9 @@ WatchList::WatchList(QWidget * parent) :
 }
 
 
-void WatchList::pushWatcher() {
+void WatchList::pushWatcher(Watcher w) {
+    // We get the watcher by value, but put it into the vector
+    watchers.push_back(w);
     Watcher & watcher = watchers.back();
 
     QTableWidgetItem * name = new QTableWidgetItem;
@@ -271,8 +282,12 @@ void WatchList::pushWatcher() {
     int count = rowCount();
     insertRow(count);
 
+    // We don't want to receive edit notifications on the widget as if the
+    // user tried to edit, so we temporarily block signals.
+    blockSignals(true);
     setItem(count, 0, name);
     setItem(count, 1, value);
+    blockSignals(false);
 
     emit showDockRequested();
 }
@@ -291,26 +306,30 @@ void WatchList::duplicateWatcher(int index) {
 
     QTableWidgetItem * name = item(index - 1, 0)->clone();
     QTableWidgetItem * value = item(index - 1, 1)->clone();
+
+    blockSignals(true);
     insertRow(index - 1);
     setItem(index - 1, 0, name);
     setItem(index  - 1, 1, value);
-
+    blockSignals(false);
     return;
 }
 
 
 void WatchList::setFreezeState(int index, bool frozen) {
     watchers[index - 1].frozen = frozen;
+
+    blockSignals(true);
     if (frozen) {
         item(index - 1, 0)->setBackground(Qt::gray);
         item(index - 1, 1)->setBackground(Qt::gray);
     } else {
         item(index - 1, 0)->setBackground(Qt::white);
         item(index - 1, 1)->setBackground(Qt::white);
-
-        updateWatches();
     }
+    blockSignals(false);
 
+    updateWatches(); // should be able to update just one...
     return;
 }
 
@@ -356,21 +375,17 @@ void WatchList::updateWatches() {
         // aren't so esoteric in systems where you convert errors to strings,
         // so checking the brush color is actually not pointless.
 
+        blockSignals(true);
         item(row, 0)->setSelected(false);
         if ((oldText != newText) or (oldBrush != newBrush)) {
-            QTableWidgetItem * newValueItem = new QTableWidgetItem;
-
-            newValueItem->setForeground(newBrush);
-            newValueItem->setText(newText);
-            setItem(row, 1, newValueItem);
-
-            // Can't set a newly created element selected before insertion
-
+            item(row, 1)->setText(newText);
+            item(row, 1)->setForeground(newBrush);
             item(row, 1)->setSelected(true);
         }
         else {
             item(row, 1)->setSelected(false);
         }
+        blockSignals(false);
     }
 }
 
@@ -378,7 +393,6 @@ void WatchList::updateWatches() {
 ren::Value WatchList::watchDialect(
     ren::Value const & arg,
     bool useCell,
-    bool useLabel,
     ren::Value const & label
 ) {
     if (arg.isInteger()) {
@@ -400,23 +414,21 @@ ren::Value WatchList::watchDialect(
             return ren::unset; // unreachable
         }
 
+        ren::Value watchValue = watchers[index - 1].value;
+        ren::Value watchError = watchers[index - 1].error;
         if (removal) {
-            emit removeWatcherRequested(-index);
-            return ren::unset;
+            emit removeWatcherRequested(index);
+            return watchValue;
         }
 
         // Experimental trick: apply the error, if it is none it is a no-op
         // Nifty benefit of Generalized Apply!  But double check that it's
         // an error or a none, first, here :-)
 
-        Q_ASSERT(
-            watchers[index - 1].error.isNone()
-            or watchers[index - 1].error.isError()
-        );
+        Q_ASSERT(watchError.isNone() or watchError.isError());
+        watchError(); // apply the error-or-none
 
-        watchers[index - 1].error(); // apply the error-or-none
-
-        return watchers[index - 1].value();
+        return watchValue;
     }
 
     // Let's use the evaluator for this trick.  :-)  Have it give us back
@@ -477,11 +489,7 @@ ren::Value WatchList::watchDialect(
 
     if (arg.isWord() or arg.isPath() or arg.isParen()) {
 
-        Watcher watcher {
-            arg,
-            static_cast<bool>(useCell),
-            useLabel ? label : ren::none
-        };
+        Watcher watcher {arg, static_cast<bool>(useCell), label};
 
         if (watcher.useCell and watcher.error) {
             watcher.error(); // should throw...
@@ -490,12 +498,10 @@ ren::Value WatchList::watchDialect(
         }
 
         // we append to end instead of inserting at the top because
-        // it keeps the numbering more consistent.  some people might
-        // desire it added at the top and consider it better that way.
+        // it keeps the numbering more consistent.  But some people might
+        // desire it added at the top and consider it better that way?
 
-        watchers.push_back(watcher);
-
-        emit pushWatcherRequested();
+        emit pushWatcherRequested(watcher);
         return ren::unset;
     }
 

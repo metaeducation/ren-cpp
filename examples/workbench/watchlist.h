@@ -34,50 +34,6 @@ class WatchList : public QTableWidget
     Q_OBJECT
 
 public:
-    WatchList (QWidget * parent = nullptr);
-
-protected slots:
-    void customMenuRequested(QPoint pos);
-
-signals:
-    void watchCalled(
-        ren::Value vars,
-        bool useCell,
-        ren::Value label
-    );
-
-    void showDockRequested();
-
-    void hideDockRequested();
-
-    // last element in the vector ATM, probably should make Watcher able
-    // to go against signal/slots with metaobject
-    void pushWatcherRequested();
-
-    void removeWatcherRequested(int index);
-
-    void freezeItemRequested(int index, bool frozen);
-
-    void reportStatus(QString message);
-
-public slots:
-    void updateWatches();
-
-private slots:
-    void pushWatcher();
-
-    void removeWatcher(int index);
-
-    void duplicateWatcher(int index);
-
-    void setFreezeState(int index, bool frozen);
-
-    void onItemChanged(QTableWidgetItem * item);
-
-protected:
-    void mousePressEvent(QMouseEvent * event) override;
-
-private:
     class Watcher {
         friend class WatchList;
 
@@ -89,6 +45,9 @@ private:
         bool frozen;
 
     public:
+        // Must be default constructible for signal/slots
+        Watcher () { }
+
         // Construct will also evaluate to capture at the time of the watch
         // being added (particularly important if it's a cell)
         Watcher (
@@ -107,12 +66,53 @@ private:
 
     std::vector<Watcher> watchers;
 
+public:
+    WatchList (QWidget * parent = nullptr);
+
+protected slots:
+    void customMenuRequested(QPoint pos);
+
+signals:
+    void watchCalled(
+        ren::Value vars,
+        bool useCell,
+        ren::Value label
+    );
+
+    void showDockRequested();
+
+    void hideDockRequested();
+
+    void pushWatcherRequested(Watcher watcher);
+
+    void removeWatcherRequested(int index);
+
+    void freezeItemRequested(int index, bool frozen);
+
+    void reportStatus(QString message);
+
+public slots:
+    void updateWatches();
+
+private slots:
+    void pushWatcher(Watcher w);
+
+    void removeWatcher(int index);
+
+    void duplicateWatcher(int index);
+
+    void setFreezeState(int index, bool frozen);
+
+    void onItemChanged(QTableWidgetItem * item);
+
+protected:
+    void mousePressEvent(QMouseEvent * event) override;
+
 private:
     // aaaand... magic! :-)
     ren::Value watchDialect(
         ren::Value const & arg,
         bool useCell,
-        bool useLabel,
         ren::Value const & tag
     );
 };

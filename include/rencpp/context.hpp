@@ -106,7 +106,7 @@ protected:
         internal::Loadable * argsPtr,
         size_t numArgs,
         Value * constructResultUninitialized,
-        Value * applyResultUninitialized
+        Value * applyOutUninitialized
     );
 
 
@@ -115,7 +115,7 @@ protected:
         internal::Loadable * argsPtr,
         size_t numArgs,
         Value * constructResultUninitialized,
-        Value * applyResultUninitialized
+        Value * applyOutUninitialized
     );
 
 public:
