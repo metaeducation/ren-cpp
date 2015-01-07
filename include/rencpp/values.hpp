@@ -21,6 +21,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cassert>
 
 #include <atomic>
 #include <type_traits>
@@ -145,6 +146,7 @@ protected:
     friend class Context; // Value::Dont::Initialize
     friend class Series; // Value::Dont::Initialize for dereference
     friend class AnyBlock; // Value::Dont::Initialize for dereference
+    friend class AnyString;
 
 public: // temporary for the lambda in function, find better way
     RenCell cell;
@@ -1214,7 +1216,7 @@ public:
 //
 //     http://codereview.stackexchange.com/q/72252/9042
 //
-template <bool (Value::*validMemFn)(RenCell *) const>
+template <class C, bool (Value::*validMemFn)(RenCell *) const>
 class AnyBlockSubtype : public AnyBlock {
 protected:
     friend class Value;
@@ -1241,19 +1243,78 @@ private:
 
 public:
     template <typename... Ts>
-    explicit AnyBlockSubtype (Context & context, Ts const & ...args) :
+    static C construct(Context &, Ts const & ...)
+    {
+        C result = Value::construct<C>(Dont::Initialize);
+        //AnyBlockSubtype temp (context, args...); // need to reorganize
+        //result.cell = temp;
+        throw std::runtime_error("construct in blocks not implemented");
+        return result;
+    }
+
+    template <typename... Ts>
+    static C construct(Ts const & ...)
+    {
+        C result = Value::construct<C>(Dont::Initialize);
+        //AnyBlockSubtype temp (args...); // need to reorganize for this...
+        //result.cell = temp;
+        throw std::runtime_error("construct in blocks not implemented");
+        return result;
+    }
+
+    // For technical reasons, we cannot allow the single-arity version of
+    // the constructor to "construct" a block when the parameter is itself
+    // a block.  Currently saying you have to use "construct" or any
+    // single construction from a Value.
+
+    template <
+        typename T,
+        typename... Ts,
+        typename = typename std::enable_if<
+            /*(not std::is_base_of<Value, T>::value) or*/
+            (sizeof...(Ts) != 0)
+            or std::is_convertible<T, char const *>::value
+            or std::is_convertible<T, int>::value
+        >::type
+    >
+    explicit AnyBlockSubtype (
+        Context & context, T const & first, Ts const & ...rest
+    ) :
         AnyBlockSubtype (
             context,
-            std::array<internal::Loadable, sizeof...(args)>{{args...}}
+            std::array<internal::Loadable, sizeof...(rest) + 1>{
+                {first, rest...}
+            }
         )
     {
     }
 
-    template <typename... Ts>
-    explicit AnyBlockSubtype (Ts const & ...args) :
+    template <
+        typename T,
+        typename... Ts,
+        typename = typename std::enable_if<
+            /* (not std::is_base_of<Value, T>::value) or */
+            (sizeof...(Ts) != 0)
+            or std::is_convertible<T, char const *>::value
+            or std::is_convertible<T, int>::value
+        >::type
+    >
+    explicit AnyBlockSubtype (T const & first, Ts const & ...rest) :
         AnyBlockSubtype (
-            std::array<internal::Loadable, sizeof...(args)>{{args...}}
+            std::array<internal::Loadable, sizeof...(rest) + 1>{
+                {first, rest...}
+            }
         )
+    {
+    }
+
+    explicit AnyBlockSubtype () :
+        AnyBlock (nullptr, 0, validMemFn)
+    {
+    }
+
+    explicit AnyBlockSubtype (Context & context) :
+        AnyBlock (nullptr, 0, validMemFn)
     {
     }
 };
@@ -1380,26 +1441,29 @@ public:
 
 
 
-class Block final : public internal::AnyBlockSubtype<&Value::isBlock> {
+class Block final :
+    public internal::AnyBlockSubtype<Block, &Value::isBlock> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isBlock>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Block, &Value::isBlock>::AnyBlockSubtype;
 };
 
 
 
-class Paren final : public internal::AnyBlockSubtype<&Value::isParen> {
+class Paren final :
+    public internal::AnyBlockSubtype<Paren, &Value::isParen> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isParen>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Paren, &Value::isParen>::AnyBlockSubtype;
 };
 
 
 
-class Path final : public internal::AnyBlockSubtype<&Value::isPath> {
+class Path final :
+    public internal::AnyBlockSubtype<Path, &Value::isPath> {
 public:
     friend class Value;
-    using AnyBlockSubtype<&Value::isPath>::AnyBlockSubtype;
+    using internal::AnyBlockSubtype<Path, &Value::isPath>::AnyBlockSubtype;
 };
 
 

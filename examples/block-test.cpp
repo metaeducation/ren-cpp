@@ -10,16 +10,17 @@ int main(int, char **) {
 
     // This is a tricky case
 
-    Block singleton {"foo"};
+    Block singleton = Block::construct("foo");
     Value singletonAsValue = singleton;
 
     static_cast<Block>(singletonAsValue);
 
-    Block singletonInitializer {singleton};
+    Block singletonInitializer = Block::construct(singleton);
 
-
+    print(singletonInitializer);
 
     Block threeEmpties {Block {}, Block {}, Block {}};
 
     Block randomStuff {"blue", Block {true, 1020}, 3.04};
+    print(randomStuff);
 }

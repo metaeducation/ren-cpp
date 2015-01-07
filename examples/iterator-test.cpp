@@ -26,4 +26,8 @@ int main(int, char **) {
     it++;
     assert(it != blk.begin());
     assert(it == blk.end());
+
+    for (auto item : blk) {
+        print(item);
+    }
 }

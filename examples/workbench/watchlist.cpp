@@ -60,10 +60,10 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // delete everything, consider it to be "unlabeling"
 
             if (contents.isEmpty()) {
-                watchers[item->row()].tag = ren::none;
+                watchers[item->row()].label = ren::none;
                 item->QTableWidgetItem::setTextColor(Qt::black);
             } else {
-                watchers[item->row()].tag = ren::String {
+                watchers[item->row()].label = ren::String {
                     QString("{") + contents + "}"
                 };
                 item->QTableWidgetItem::setTextColor(Qt::darkMagenta);
@@ -97,11 +97,11 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 WatchList::Watcher::Watcher (
     ren::Value const & watch,
     bool useCell,
-    ren::Value const & tag
+    ren::Value const & label
 ) :
     watch (watch),
     useCell (useCell),
-    tag (tag),
+    label (label),
     frozen (false)
 {
     evaluate(true);
@@ -124,9 +124,9 @@ void WatchList::Watcher::evaluate(bool firstTime) {
 
 
 QString WatchList::Watcher::getWatchString() const {
-    if (tag) {
-        ren::String str {tag};
-        return str.spellingOf<QString>();
+    if (label) {
+        ren::Tag tag = static_cast<ren::Tag>(label);
+        return tag.spellingOf<QString>();
     }
 
     // Should there be a way to automatically debug based on the
@@ -255,7 +255,7 @@ void WatchList::pushWatcher() {
     QTableWidgetItem * value = new QTableWidgetItem;
 
     name->setText(watcher.getWatchString());
-    if (watcher.tag or watcher.useCell)
+    if (watcher.label or watcher.useCell)
         name->setForeground(Qt::darkMagenta);
 
     QString temp = watcher.getValueString();
@@ -379,10 +379,10 @@ ren::Value WatchList::watchDialect(
     ren::Value const & arg,
     bool useCell,
     bool useLabel,
-    ren::Value const & tag
+    ren::Value const & label
 ) {
     if (arg.isInteger()) {
-        int signedIndex = ren::Integer {arg};
+        int signedIndex = static_cast<ren::Integer>(arg);
         if (signedIndex == 0) {
             ren::runtime("do make error! {Integer arg must be nonzero}");
             return ren::unset; // unreachable
@@ -450,7 +450,7 @@ ren::Value WatchList::watchDialect(
         logicIndex = static_cast<bool>(arg);
     }
 #else
-    logicIndex = ren::Integer {
+    logicIndex = static_cast<ren::Integer>(
         ren::runtime(
             "case", ren::Block {
             "    find [off no false] quote", arg, "[0]"
@@ -458,7 +458,7 @@ ren::Value WatchList::watchDialect(
             "    true [-1]"
             }
         )
-    };
+    );
 #endif
 
     if (logicIndex != -1) {
@@ -480,7 +480,7 @@ ren::Value WatchList::watchDialect(
         Watcher watcher {
             arg,
             static_cast<bool>(useCell),
-            useLabel ? ren::Tag {tag} : ren::Value {ren::none}
+            useLabel ? label : ren::none
         };
 
         if (watcher.useCell and watcher.error) {
@@ -501,8 +501,12 @@ ren::Value WatchList::watchDialect(
 
     if (arg.isTag()) {
         for (auto & watcher : watchers) {
-            if (watcher.getWatchString() == ren::Tag {arg}.spellingOf<QString>())
+            if (
+                watcher.getWatchString()
+                == static_cast<ren::Tag>(arg).spellingOf<QString>()
+            ) {
                 return watcher.value;
+            }
         }
         return ren::unset;
     }

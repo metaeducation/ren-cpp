@@ -85,7 +85,7 @@ private:
         bool useCell;
         ren::Value value;
         ren::Value error;
-        ren::Value tag;
+        ren::Value label;
         bool frozen;
 
     public:
@@ -94,7 +94,7 @@ private:
         Watcher (
             ren::Value const & watch,
             bool useCell,
-            ren::Value const & tag
+            ren::Value const & label
         );
 
         // Evaluates and returns error if there was one, or none

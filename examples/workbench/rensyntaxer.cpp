@@ -39,7 +39,10 @@ std::pair<int, int> RenSyntaxer::rangeForWholeToken(
     if (buffer.isEmpty())
         return std::make_pair(0, 0);
 
-    return std::make_pair(0, ren::Integer {ren::runtime("0 +", offset)});
+    return std::make_pair(
+        0,
+        static_cast<ren::Integer>(ren::runtime("0 +", offset))
+    );
 }
 
 

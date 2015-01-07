@@ -445,7 +445,7 @@ Value * Series::iterator::operator->() const {
 }
 
 Series::iterator::operator Series() const {
-    return Series {state};
+    return static_cast<Series>(state);
 }
 
 Series::iterator Series::begin() {
@@ -513,7 +513,7 @@ Character * AnyString::iterator::operator-> () const {
 }
 
 AnyString::iterator::operator AnyString() const {
-    return AnyString {state};
+    return static_cast<AnyString>(state);
 }
 
 AnyString::iterator AnyString::begin() {
