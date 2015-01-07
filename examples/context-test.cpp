@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cassert>
+#include <memory>
 
 #include "rencpp/ren.hpp"
 #include "rencpp/runtime.hpp"
@@ -7,8 +8,11 @@
 using namespace ren;
 
 int main(int, char **) {
-    Context contextOne;
-    Context contextTwo;
+    // returning a local by reference from the setFinder upsets Clang, so we
+    // heap allocate
+
+    std::unique_ptr<Context> contextOne {new Context};
+    std::unique_ptr<Context> contextTwo {new Context};
 
     // test of making which runtime is used in creates a
     // property of some global factor...
@@ -18,9 +22,9 @@ int main(int, char **) {
     Context::setFinder(
         [&](Engine *) -> Context & {
             if (contextNumber == 1)
-                return contextOne;
+                return *contextOne;
             if (contextNumber == 2)
-                return contextTwo;
+                return *contextTwo;
             throw std::runtime_error("Invalid context number");
         }
     );
@@ -46,11 +50,11 @@ int main(int, char **) {
     // at the moment, let's override it using "construct" method to create
     // a SetWord bound into contextOne
 
-    auto y = contextOne.construct<SetWord>("y:");
+    auto y = contextOne->construct<SetWord>("y:");
     y(30);
 
     // Switch active contexts and see that we set y
     contextNumber = 1;
     assert(runtime("integer? get/any 'y"));
-    assert(contextOne("integer? get/any 'y"));
+    assert((*contextOne)("integer? get/any 'y"));
 }
