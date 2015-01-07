@@ -30,6 +30,7 @@
 #include "exceptions.hpp"
 #include "context.hpp"
 #include "engine.hpp"
+#include "function.hpp"
 
 
 namespace ren {

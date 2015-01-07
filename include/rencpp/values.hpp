@@ -1473,42 +1473,6 @@ public:
 };
 
 
-
-///
-/// FUNCTION TYPE(S?)
-///
-
-//
-// In the current implementation, an FunctionGenerator is really just a FUNCTION!
-// where the native function pointer (that processes the argument stack) is
-// built automatically by the system.  It's not possible to have a term be
-// both a template and a class, so if FunctionGenerator was going to be Function
-// then Function would have to be written Function<> and be specialized
-// for that.
-//
-
-class Function : public Value {
-protected:
-    friend class Value;
-    Function (Dont const &) : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isFunction(); }
-
-private:
-    // Most classes can get away with setting up cell bits all in the
-    // implementation files, but FunctionGenerator is a template.  It
-    // needs to be able to finalize "in view".  We might consider another
-    // way of shaping this, by having a public "set cell bits for function"
-    // API in the hooks.h, then just use normal finishInit.  Might be what
-    // has to be done.
-
-    template <class R, class... Ts> friend class internal::FunctionGenerator;
-    void finishInit(
-        RenEngineHandle engine,
-        Block const & spec,
-        RenShimPointer const & shim
-    );
-};
-
 } // end namespace ren
 
 #endif
