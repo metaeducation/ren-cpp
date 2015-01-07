@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cassert>
+#include <utility> // std::forward
 
 #include <atomic>
 #include <type_traits>
@@ -551,8 +552,7 @@ public:
     // where x were spliced at the head of it with y and z following.
     //
     // It's sort of DO-like and kind of APPLY like if it's a function value.
-    // I'm calling it apply here for "generalized apply"; although it is
-    // protected so people won't be using the term directly.  So far it's
+    // I'm calling it apply here for "generalized apply".  So far it's
     // the best generalization I have come up with which puts a nice syntax on
     // do (which is a C++ keyword and not available)
     //
@@ -565,7 +565,7 @@ protected:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Context & context, Ts const &... args) const {
+    inline Value apply(Context & context, Ts const &... args) const {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)
@@ -574,12 +574,19 @@ public:
     }
 
     template <typename... Ts>
-    inline Value operator()(Ts const &... args) const {
+    inline Value apply(Ts const &... args) const {
         // http://stackoverflow.com/q/14178264/211160
         auto loadables = std::array<
             internal::Loadable, sizeof...(Ts)
         >{{args...}};
-        return apply(nullptr, &loadables[0], sizeof...(Ts));
+        return apply(
+            static_cast<Context *>(nullptr), &loadables[0], sizeof...(Ts)
+        );
+    }
+
+    template <typename... Ts>
+    inline Value operator()(Ts... args) const {
+        return apply(std::forward<Ts>(args)...);
     }
 
     // The explicit (and throwing) cast operators are defined via template

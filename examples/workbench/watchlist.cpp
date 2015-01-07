@@ -110,7 +110,7 @@ WatchList::Watcher::Watcher (
 
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
-        if (firstTime or (not useCell) or (not frozen))
+        if (firstTime or ((not useCell) and (not frozen)))
             value = watch(); // apply it
         error = ren::none;
     }
@@ -145,7 +145,7 @@ QString WatchList::Watcher::getWatchString() const {
 QString WatchList::Watcher::getValueString() const {
     if (error)
         return static_cast<QString>(error);
-    return static_cast<QString>(value);
+    return static_cast<QString>(ren::runtime("mold/all", value));
 }
 
 
@@ -205,16 +205,29 @@ WatchList::WatchList(QWidget * parent) :
             ren::Value nextTag = ren::none;
             if (arg.isBlock()) {
                 ren::Block aggregate {};
+                bool nextCell = false;
 
                 for (auto item : static_cast<ren::Block>(arg)) {
                     if (item.isTag())
                         nextTag = item;
-                    else {
+                    else if (item.isRefinement()) {
+                        auto ref = static_cast<ren::Refinement>(item);
+                        if (ref.spellingOf<QString>().toUpper() == "CELL")
+                            nextCell = true;
+                        else
+                            ren::runtime(
+                                "do make error! {refinements can only"
+                                "be /CELL right now in watch dialect}"
+                            );
+                    } else {
                         ren::Value result
-                            = watchDialect(item, false, nextTag);
+                            = watchDialect(item, nextCell, nextTag);
+                        nextCell = false;
+                        nextTag = ren::none;
                         if (not result.isUnset()) {
                             ren::runtime("append", aggregate, result);
                         }
+                        nextTag = ren::none;
                     }
                 }
                 return aggregate;
@@ -269,8 +282,8 @@ void WatchList::pushWatcher(Watcher w) {
     if (watcher.label or watcher.useCell)
         name->setForeground(Qt::darkMagenta);
 
-    QString temp = watcher.getValueString();
-    value->setText(watcher.getValueString());
+    QString valueString = watcher.getValueString();
+    value->setText(valueString);
 
     if (watcher.useCell) {
         value->setForeground(Qt::darkGreen);
@@ -491,18 +504,21 @@ ren::Value WatchList::watchDialect(
 
         Watcher watcher {arg, static_cast<bool>(useCell), label};
 
-        if (watcher.useCell and watcher.error) {
-            watcher.error(); // should throw...
-
-            throw std::runtime_error("Unreachable");
-        }
-
         // we append to end instead of inserting at the top because
         // it keeps the numbering more consistent.  But some people might
         // desire it added at the top and consider it better that way?
 
         emit pushWatcherRequested(watcher);
-        return ren::unset;
+
+        // it might not seem we need to technically invoke the error here,
+        // but if there was an error and people are scripting then they
+        // need to handle that with try blocks...because we don't want to
+        // quietly give back an unset if the operation failed.
+
+        if (watcher.error)
+            watcher.error.apply(); // should throw...
+
+        return watcher.value.apply();
     }
 
     if (arg.isTag()) {
@@ -514,6 +530,7 @@ ren::Value WatchList::watchDialect(
                 return watcher.value;
             }
         }
+        ren::runtime("do make error! {unknown tag name in watch list}");
         return ren::unset;
     }
 

@@ -323,8 +323,8 @@ public:
             if (IS_THROW(applicand)) {
                 DS_PUSH(applicand);
             } else {
-                VAL_SET(error, REB_ERROR);
-                *VAL_SERIES(error) = *VAL_ERR_OBJECT(applicand);
+                *error = *applicand;
+                return REN_APPLY_ERROR;
             }
         }
         else {

@@ -212,6 +212,14 @@ RenConsole::RenConsole (QWidget * parent) :
 
     ren::runtime("console: quote", consoleFunction);
 
+    // Load the incubator routines that are not written in C++ from the
+    // resource file
+
+    QFile file(":/scripts/incubator.reb");
+    file.open(QIODevice::ReadOnly);
+
+    QByteArray dump = file.readAll();
+    ren::runtime(dump.data());
 
     // Print the banner and the first prompt.  Any time we're going to do
     // a write to the console, we need to do so while the modifyMutex is
