@@ -455,7 +455,7 @@ static void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 	case PE_BAD_SET_TYPE:
 		Trap2(RE_BAD_FIELD_SET, pvs->path, Of_Type(pvs->setval));
     default:
-        throw std::runtime_error("Unreachable condition in Next_Path");
+        UNREACHABLE_CODE();
 	}
 
 	if (NOT_END(pvs->path+1)) Next_Path(pvs);
@@ -564,7 +564,7 @@ static void Trace_Arg(REBINT num, REBVAL *arg, REBVAL *path)
 		Trap2(RE_BAD_PATH_SET, pvs.value, pvs.select);
 		break;
     default:
-        throw std::runtime_error("unreachable Pick_Path");
+        UNREACHABLE_CODE();
 	}
 }
 

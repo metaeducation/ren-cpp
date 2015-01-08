@@ -473,7 +473,7 @@ void RenConsole::handleResults(
 
 ren::Value RenConsole::consoleDialect(ren::Value const &) {
     ren::runtime("do make error! {Coming soon to a cross-platform near you}");
-    return ren::unset; // unreachable
+    UNREACHABLE_CODE();
 }
 
 

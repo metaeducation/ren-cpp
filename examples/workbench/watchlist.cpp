@@ -409,7 +409,7 @@ ren::Value WatchList::watchDialect(
         int signedIndex = static_cast<ren::Integer>(arg);
         if (signedIndex == 0) {
             ren::runtime("do make error! {Integer arg must be nonzero}");
-            return ren::unset; // unreachable
+            UNREACHABLE_CODE();
         }
 
         bool removal = signedIndex < 0;
@@ -421,7 +421,7 @@ ren::Value WatchList::watchDialect(
 
         if (index > this->watchers.size()) {
             ren::runtime("do make error! {No such watchlist item index}");
-            return ren::unset; // unreachable
+            UNREACHABLE_CODE();
         }
 
         ren::Value watchValue = watchers[index - 1]->value;

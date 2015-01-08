@@ -63,6 +63,7 @@ Value::operator bool() const {
         // Is there a better way to throw the "value is unset" error in a
         // way that matches what the runtime offers?
         (*this)();
+        UNREACHABLE_CODE();
     }
     return (not isNone()) and (not isFalse());
 }

@@ -109,6 +109,23 @@ inline T evilInt32ToPointerCast(int32_t someInt) {
 }
 
 
+///
+/// UNREACHABLE CODE MACRO
+///
+
+//
+// There are several points where we expect an exception and would like the
+// program to halt, but it's not totally certain.  Some ideas in this post
+// to consider, but I want the code to throw in release builds or now;
+// because DO of a MAKE ERROR! can be rewired in the interpreter to have
+// DO ignore the error (for instance) and the code needs to stop running
+//
+//     http://stackoverflow.com/questions/6031819/
+//
+
+#define UNREACHABLE_CODE() (throw std::runtime_error("Unreachable code"))
+
+
 
 ///
 /// COMPILE-TIME INTEGER SEQUENCES
