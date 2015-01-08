@@ -55,7 +55,7 @@
 #       -DCMAKE_BUILD_TYPE=Debug
 #
 # Also, should you be messing with this makefile and need to print out a
-# status message to check what's going on in the make process, then 
+# status message to check what's going on in the make process, then
 # use something like:
 #
 #       message(STATUS "Some string" ${SOME_VAR})
@@ -166,7 +166,10 @@ add_cxx_flags("-Wstrict-null-sentinel")
 add_cxx_flags("-Wstrict-overflow=5")
 add_cxx_flags("-Wswitch-default")
 add_cxx_flags("-Wundef")
+if (WIN32)
+else()
 add_cxx_flags("-Werror")
+endif()
 add_cxx_flags("-Wno-unknown-pragmas")
 add_cxx_flags("-Wno-unused")
 add_cxx_flags("-pedantic")
@@ -282,7 +285,7 @@ elseif(CLASSLIB_QT EQUAL 1)
     find_package(Qt5Core REQUIRED)
     add_definitions("-DREN_CLASSLIB_QT=1")
     include_directories(${Qt5Core_INCLUDE_DIRS})
-    add_cxx_flags(${Qt5Core_EXECUTABLE_COMPILE_FLAGS})
+    add_cxx_flags("${Qt5Core_EXECUTABLE_COMPILE_FLAGS}")
     set(LIBS_ALL ${LIBS_ALL} Qt5::Core)
 
 else()
@@ -372,6 +375,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # can have some complaints if the warnings are set too high.  We tone the
     # strictness down a little so the headers will work.
 
+    add_cxx_flags("-Wno-unknown-pragmas")
     remove_cxx_flag("-pedantic")
     remove_cxx_flag("-Wold-style-cast")
     remove_cxx_flag("-Wsign-conversion")

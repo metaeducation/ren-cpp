@@ -21,6 +21,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cstddef>
 #include <cassert>
 #include <utility> // std::forward
 
@@ -317,7 +318,7 @@ public:
 
     // Value (nullptr_t) = delete; ...doesn't work in clang, bad idea?
     // Just make it a link error by never defining it
-    Value (nullptr_t);
+    Value (std::nullptr_t);
 
     struct none_t
     {
