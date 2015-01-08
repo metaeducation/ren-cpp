@@ -71,7 +71,6 @@ project(rencpp)
 
 cmake_minimum_required(VERSION 2.8)
 
-
 # Simplify appending additional flags to CMAKE_CXX_FLAGS.
 
 macro(add_cxx_flags flags)
@@ -166,11 +165,7 @@ add_cxx_flags("-Wstrict-null-sentinel")
 add_cxx_flags("-Wstrict-overflow=5")
 add_cxx_flags("-Wswitch-default")
 add_cxx_flags("-Wundef")
-if (WIN32)
-else()
 add_cxx_flags("-Werror")
-endif()
-add_cxx_flags("-Wno-unknown-pragmas")
 add_cxx_flags("-Wno-unused")
 add_cxx_flags("-pedantic")
 add_cxx_flags("-Wold-style-cast")
@@ -255,6 +250,7 @@ endif()
 if((NOT CLASSLIB_STD) OR (CLASSLIB_STD EQUAL 1))
 
     # Assume we want the standard classlib if none specified
+
     add_definitions("-DREN_CLASSLIB_STD=1")
 
 elseif(CLASSLIB_STD EQUAL 0)
@@ -398,6 +394,7 @@ elseif(RUNTIME STREQUAL "rebol")
     if(WIN32)
 
         add_definitions(-DTO_WIN32)
+        add_definitions(-DOS_DEFS) # Kill warning about IS_ERROR redefinition.
         add_definitions(-DUNICODE)
 
     else()
