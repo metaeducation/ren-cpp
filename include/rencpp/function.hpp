@@ -2,7 +2,7 @@
 #define RENCPP_EXTENSION_HPP
 
 //
-// extension.hpp
+// function.hpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -61,7 +61,9 @@ private:
     // API in the hooks.h, then just use normal finishInit.  Might be what
     // has to be done.
 
-    template <class R, class... Ts> friend class internal::FunctionGenerator;
+    template <class R, class... Ts>
+    friend class internal::FunctionGenerator;
+
     void finishInit(
         RenEngineHandle engine,
         Block const & spec,
@@ -174,7 +176,7 @@ private:
     )
         -> decltype(
             fun(
-                Value::construct<
+                Value::construct_<
                     typename std::decay<
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
@@ -186,7 +188,7 @@ private:
         )
     {
         return fun(
-            Value::construct<
+            Value::construct_<
                 typename std::decay<
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
@@ -253,19 +255,19 @@ public:
 
         std::lock_guard<std::mutex> lock {internal::extensionTablesMutex};
 
-        assert(internal::shimIdToCapture == -1);
-        assert(not internal::shimBouncerToCapture);
+        assert(::ren::internal::shimIdToCapture == -1);
+        assert(not ::ren::internal::shimBouncerToCapture);
 
-        internal::shimIdToCapture = table.size();
-        internal::shimBouncerToCapture = &bounceShim;
+        ::ren::internal::shimIdToCapture = table.size();
+        ::ren::internal::shimBouncerToCapture = &bounceShim;
 
         if (shim(nullptr) != REN_SHIM_INITIALIZED)
             throw std::runtime_error(
                 "First shim call didn't return REN_SHIM_INITIALIZED"
             );
 
-        internal::shimIdToCapture = -1;
-        internal::shimBouncerToCapture = nullptr;
+        ::ren::internal::shimIdToCapture = -1;
+        ::ren::internal::shimBouncerToCapture = nullptr;
 
         // Insert the shim into the mapping table so it can find itself while
         // the shim code is running.  Note that the tableAdd code has

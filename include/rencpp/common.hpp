@@ -110,18 +110,6 @@ inline T evilInt32ToPointerCast(int32_t someInt) {
 
 
 
-//
-// Not putting const on functions in the C-like exported .h at the moment
-// Red/System 1.0 has no const.  It's still nice on the C++ side to keep
-// the bookkeeping on constness until the very last moment.
-//
-template<class T>
-inline T * evilMutablePointerCast(T const * somePointer) {
-    return const_cast<T*>(somePointer);
-}
-
-
-
 ///
 /// COMPILE-TIME INTEGER SEQUENCES
 ///

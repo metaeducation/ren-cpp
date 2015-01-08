@@ -150,7 +150,7 @@ RenConsole::RenConsole (QWidget * parent) :
     // (otherwise the output would be going to the terminal that launched
     // the GUI app, not a window inside that app).
 
-    ren::runtime.setOutputStream(*fakeOut);
+    ren::Engine::runFinder().setOutputStream(*fakeOut);
 
 
     // We call reset synchronously here, but we want to be able to call it
@@ -413,7 +413,7 @@ void RenConsole::handleResults(
     // such a bad idea for stdout, and works well for the console, but may
     // change later...so keep the flush here as a note.
 
-    ren::runtime.getOutputStream().flush();
+    ren::Engine::runFinder().getOutputStream().flush();
 
     QMutexLocker locker {&modifyMutex};
 

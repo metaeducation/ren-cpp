@@ -1,8 +1,7 @@
 //
-// extension.cpp
+// helpers.cpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
-//
 //
 // Licensed under the Boost License, Version 1.0 (the "License")
 //
@@ -12,37 +11,15 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.  See the License for the specific language governing
-// permissions and limitations under the License..
+// permissions and limitations under the License.
 //
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include "rencpp/values.hpp"
-#include "rencpp/function.hpp"
+#include "rencpp/helpers.hpp"
 
 namespace ren {
 
-namespace internal {
-    std::mutex extensionTablesMutex;
-
-    RenShimId shimIdToCapture = -1;
-
-    RenShimBouncer shimBouncerToCapture = nullptr;
-}
-
-
-///
-/// FUNCTION FINALIZER FOR EXTENSION
-///
-
-void Function::finishInit(
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer const & shim
-) {
-    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
-
-    Value::finishInit(engine);
-}
+Printer print;
 
 }

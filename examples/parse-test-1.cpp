@@ -3,7 +3,6 @@
 #include <cassert>
 
 #include "rencpp/ren.hpp"
-#include "rencpp/runtime.hpp"
 
 using namespace ren;
 
@@ -27,8 +26,7 @@ int main(int, char **) {
     auto result = Word {"parse"}(data, rule);
 
     if (result) {
-        std::cout <<
-            "Success and target was " << variable() << "\n";
+        std::cout << "Success and target was " << variable() << "\n";
     }
     else {
         std::cout << "PARSE failed.";

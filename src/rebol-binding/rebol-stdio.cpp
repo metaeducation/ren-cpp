@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "rencpp/rebol.hpp"
+#include "rencpp/engine.hpp"
 
 
 #define SF_DEV_NULL 31		// local flag to mark NULL device
@@ -105,7 +106,7 @@ extern REBDEV *Devices[];
 		return DR_DONE;
 	}
 
-    std::ostream & os = rebol::runtime.getOutputStream();
+    std::ostream & os = ren::Engine::runFinder().getOutputStream();
 
     os.write(reinterpret_cast<char*>(req->data), req->length);
 
@@ -158,7 +159,7 @@ extern REBDEV *Devices[];
 
 	req->actual = 0;
 
-    std::istream & is = rebol::runtime.getInputStream();
+    std::istream & is = ren::Engine::runFinder().getInputStream();
 
     is.read(reinterpret_cast<char*>(req->data), req->length);
 

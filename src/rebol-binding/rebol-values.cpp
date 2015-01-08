@@ -1,5 +1,6 @@
 #include "rencpp/values.hpp"
 #include "rencpp/context.hpp"
+#include "rencpp/engine.hpp"
 
 #include "rencpp/rebol.hpp"
 
@@ -315,11 +316,16 @@ AnyString::AnyString (
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
     QByteArray array = str.toLocal8Bit();
-    internal::Loadable loadable (array.data());
+    internal::Loadable loadable {array.data()};
 
-    Context::runFinder(engine).constructOrApplyInitialize(
+    if (not engine)
+        engine = &Engine::runFinder();
+
+    constructOrApplyInitialize(
+        engine->getHandle(),
+        REN_CONTEXT_HANDLE_INVALID,
         nullptr,
-        &loadable.cell,
+        &loadable,
         1,
         // Do construct
         this,
@@ -384,22 +390,6 @@ QString AnyString::spellingOf_QT() const {
     throw std::runtime_error {"Invalid String Type"};
 }
 #endif
-
-
-
-///
-/// FUNCTION FINALIZER FOR EXTENSION
-///
-
-void Function::finishInit(
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer const & shim
-) {
-    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
-
-    Value::finishInit(engine);
-}
 
 
 
@@ -492,7 +482,7 @@ AnyString::iterator AnyString::iterator::operator--(int) {
 }
 
 Character AnyString::iterator::operator* () const {
-    auto result = Value::construct<Character>(Dont::Initialize);
+    auto result = Value::construct_<Character>(Dont::Initialize);
 
     // from str_to_char
     SET_CHAR(

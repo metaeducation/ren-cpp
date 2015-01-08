@@ -4,6 +4,7 @@
 #include <csignal>
 #include <unistd.h>
 
+#include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
 
 // Implemented in rebol-runtime.cpp - we don't really do anything other than
@@ -17,8 +18,7 @@ namespace ren {
 
 
 RebolRuntime runtime {true};
-Runtime & runtimeRef = runtime;
-Printer print (runtime);
+
 
 namespace internal {
 
@@ -77,9 +77,7 @@ void Host_Crash(REBYTE * message) {
 
 RebolRuntime::RebolRuntime (bool) :
     Runtime (),
-    initialized (false),
-    osPtr (&std::cout),
-    isPtr (&std::cin)
+    initialized (false)
 {
     Host_Lib = &Host_Lib_Init; // OS host library (dispatch table)
 
@@ -240,7 +238,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // to be doing the evaluation on a worker thread and signal it from GUI
 
     auto signalHandler = [](int) {
-        runtime.getOutputStream() << "[escape]";
+        Engine::runFinder().getOutputStream() << "[escape]";
         SET_SIGNAL(SIG_ESCAPE);
     };
 
@@ -341,26 +339,26 @@ void RebolRuntime::cancel() {
 }
 
 
-std::ostream & RebolRuntime::setOutputStream(std::ostream & os) {
+std::ostream & Engine::setOutputStream(std::ostream & os) {
     auto temp = osPtr;
     osPtr = &os;
     return *temp;
 }
 
 
-std::istream & RebolRuntime::setInputStream(std::istream & is) {
+std::istream & Engine::setInputStream(std::istream & is) {
     auto temp = isPtr;
     isPtr = &is;
     return *temp;
 }
 
 
-std::ostream & RebolRuntime::getOutputStream() {
+std::ostream & Engine::getOutputStream() {
     return *osPtr;
 }
 
 
-std::istream & RebolRuntime::getInputStream() {
+std::istream & Engine::getInputStream() {
     return *isPtr;
 }
 

@@ -27,59 +27,77 @@
 
 #include "common.hpp"
 #include "values.hpp"
-#include "exceptions.hpp"
-#include "context.hpp"
-#include "engine.hpp"
-#include "function.hpp"
 
 
 namespace ren {
 
-class Runtime;
-
 
 ///
-/// ABSTRACT BASE RUNTIME CLASS
+/// BASE RUNTIME CLASS
 ///
 
 //
-// Since ren::runtime is just an instance of a Runtime, you can write:
+// The runtime class is a singleton, and at the time of writing a bit of
+// a hodge-podge as to whether it should be all static methods or
+// what.  One reason it is a singleton came from performance and also
+// having it "taken care of automatically" in the examples.  The downside
+// of instantiating it automatically is that people can't derive from it;
+// but the advantages of doing so are not clear when Engine() and Context()
+// exist.  evaluate is static, and used by Engine and Context which are
+// independent of either the Rebol or Red runtime instance (ren::runtime)
 //
-//     ren::runtime("print", "{hello}");
+// Note operator overloads must be members, so being able to talk to
+// a ren::runtime.foo as well as say ren::runtime(...) requires such
+// methods to *not* be static, which curiously could make evaluate faster
+// than the paren notation
 //
-// That will find the appropriate runtime using the EngineFinder which
-// is in effect.  It might be a little deceptive, giving the illusion of a
-// "single environment".  But the goal is to make it convenient for the most
-// common case, while providing more control if needed.
-//
-
 
 class Runtime {
 protected:
-    // Generalized apply for runtime; if valuePtr is nullptr then it will
-    // effectively DO the loadables.  The loadables are mutable and you are
-    // free to use their loaded state
     friend class AnyBlock;
     friend class Value;
     friend class AnyString;
     friend class AnyWord;
-    friend class Engine;
 
+    static bool needsRefcount(RenCell const & cell);
+
+    static Value evaluate(
+        internal::Loadable const loadables[],
+        size_t numLoadables,
+        Context * context
+    );
+
+    static Value evaluate(
+        internal::Loadable const loadables[],
+        size_t numLoadables,
+        Engine * engine
+    );
 
 public:
-    template <typename... Ts>
-    Value operator()(Ts... args) {
-        return Context::runFinder(nullptr)(args...);
+    static Value evaluate(
+        std::initializer_list<internal::Loadable> loadables,
+        Engine * engine = nullptr
+    ) {
+        return evaluate(loadables.begin(), loadables.size(), engine);
     }
 
+    static Value evaluate(
+        std::initializer_list<internal::Loadable> loadables,
+        Context * context = nullptr
+    ) {
+        return evaluate(loadables.begin(), loadables.size(), context);
+    }
 
-    virtual std::ostream & setOutputStream(std::ostream & os) = 0;
+    template <typename... Ts>
+    static inline Value evaluate(Ts const &... args) {
+        return evaluate({args...}, static_cast<Context *>(nullptr));
+    }
 
-    virtual std::istream & setInputStream(std::istream & is) = 0;
+    template <typename... Ts>
+    inline Value operator()(Ts const &... args) const {
+        return evaluate({args...}, static_cast<Context *>(nullptr));
+    }
 
-    virtual std::ostream & getOutputStream() = 0;
-
-    virtual std::istream & getInputStream() = 0;
 
     //
     // How to do a cancellation interface properly in threading environments
@@ -90,108 +108,15 @@ public:
     //
     //     https://github.com/hostilefork/rencpp/issues/19
     //
+public:
     virtual void cancel() = 0;
-
-    static bool needsRefcount(RenCell const & cell);
-
-    static inline RenCell const & getCell(Value const & value) {
-        return value.cell;
-    }
 
     virtual ~Runtime () {
     }
 };
 
 
+} // end namespace ren
 
-///
-/// PRINTING HELPER CLASS EXPERIMENT
-///
-
-//
-// One misses Rebol/Red PRINT when doing debugging, so this little printer
-// class brings you that functionality via variadic functions.  It's easy
-// to use, just say:
-//
-//     ren::print("This", "will", "have", "spaces");
-//
-// To not get the spaces, use the .only function call.
-//
-//     ren::print.only("This", "won't", "be", "spaced");
-//
-// This is JUST AN EXPERIMENT to see how people might use it if it were
-// available.  By writing it this way and not calling into the evaluator
-// it will not match up with what print does necessarily, even if it were
-// a complete reimplementation of the default print behavior (it is not).
-//
-
-
-class Printer {
-private:
-    Runtime & runtime;
-
-public:
-    Printer (Runtime & runtime)
-        : runtime (runtime)
-    {
-    }
-
-    template <typename T>
-    void writeArgs(bool , T && t) {
-        runtime.getOutputStream() << std::forward<T>(t);
-    }
-
-    template <typename T, typename... Ts>
-    void writeArgs(bool spaced, T && t, Ts &&... args) {
-        writeArgs(spaced, std::forward<T>(t));
-        if (spaced)
-            runtime.getOutputStream() << " ";
-        writeArgs(spaced, std::forward<Ts>(args)...);
-    }
-
-    template <typename... Ts>
-    void corePrint(bool spaced, bool linefeed, Ts &&... args) {
-        writeArgs(spaced, std::forward<Ts>(args)...);
-        if (linefeed)
-            runtime.getOutputStream() << std::endl;
-    }
-
-    template <typename... Ts>
-    void operator()(Ts &&... args) {
-        corePrint(true, true, std::forward<Ts>(args)...);
-    }
-
-    template <typename... Ts>
-    void only(Ts &&... args) {
-        corePrint(false, false, std::forward<Ts>(args)...);
-    }
-
-    ~Printer () {
-    }
-};
-
-extern Printer print;
-
-
-}
-
-
-#ifndef REN_RUNTIME
-
-static_assert(false, "No runtime defined");
-
-#elif REN_RUNTIME == REN_RUNTIME_RED
-
-#include "rencpp/red.hpp"
-
-#elif REN_RUNTIME == REN_RUNTIME_REBOL
-
-#include "rencpp/rebol.hpp"
-
-#else
-
-static_assert(false, "No runtime defined");
-
-#endif
 
 #endif

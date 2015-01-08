@@ -20,8 +20,7 @@
 //
 
 #include "values.hpp"
-#include "context.hpp" // needed for template execution of operator()
-
+#include "runtime.hpp"
 
 namespace ren {
 
@@ -63,6 +62,11 @@ private:
 
     static Finder finder;
 
+    // These should maybe be internalized behind the binding and not data
+    // members of the C++ class
+private:
+    std::ostream * osPtr;
+    std::istream * isPtr;
 
 public:
     // Disable copy construction and assignment.
@@ -72,12 +76,14 @@ public:
 
 
 public:
-    Engine () {
+    Engine () :
+        osPtr (&std::cout),
+        isPtr (&std::cin)
+    {
         if (::RenAllocEngine(&handle) != 0) {
             throw std::runtime_error ("Couldn't initialize red runtime");
         }
     }
-
 
     RenEngineHandle getHandle() const {
         return handle;
@@ -104,6 +110,23 @@ public:
 
 
     //
+    // As a C++ library it seemed fitting to let you hook your own istream
+    // and ostream up for the "host kit".  Writing a custom iostream is a
+    // bit confusing, however, and it may not be the best interface.
+    //
+    // One could easily imagine a different Engine having a different place
+    // it is streaming its output to.
+    //
+public:
+    std::ostream & setOutputStream(std::ostream & os);
+
+    std::istream & setInputStream(std::istream & is);
+
+    std::ostream & getOutputStream();
+
+    std::istream & getInputStream();
+
+    //
     // See notes on how close() is used for catching exceptions, while the
     // destructor should not throw:
     //
@@ -127,21 +150,7 @@ public:
 public:
     template <typename... Ts>
     Value operator()(Ts... args) {
-        auto loadables = std::array<internal::Loadable, sizeof...(args)>{
-            {args...}
-        };
-
-        Value result (Value::Dont::Initialize);
-
-        Context::runFinder(this).constructOrApplyInitialize(
-            nullptr, // no value to apply to; treat "as if" block
-            &loadables[0],
-            sizeof...(args),
-            nullptr, // don't construct it
-            &result // apply it
-        );
-
-        return result; // move optimized
+        return runtime({args...}, this);
     }
 };
 

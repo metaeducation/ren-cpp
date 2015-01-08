@@ -17,9 +17,10 @@
 //
 
 #include "rencpp/values.hpp"
+#include "rencpp/exceptions.hpp"
 #include "rencpp/runtime.hpp"
+#include "rencpp/engine.hpp"
 #include "rencpp/context.hpp"
-
 
 namespace ren {
 
@@ -186,35 +187,8 @@ std::ostream & operator<<(std::ostream & os, ren::Value const & value)
 }
 
 
-Value Value::apply(
-    RenCell * loadablesPtr,
-    size_t numLoadables,
-    Context * context
-) const {
-    Value result {Dont::Initialize};
-    if (context == nullptr)
-        context = &Context::runFinder(nullptr);
-    context->constructOrApplyInitialize(
-        this,
-        loadablesPtr,
-        numLoadables,
-        nullptr, // don't construct
-        &result // do apply
-    );
-    return result;
-}
-
-
-Value Value::apply(
-    std::initializer_list<internal::Loadable> loadables,
-    Context * context
-) const {
-    RenCell * load = const_cast<RenCell *>(&loadables.begin()->cell);
-    return apply(load, loadables.size(), context);
-}
-
 AnyBlock::AnyBlock (
-    RenCell * loadablesPtr,
+    internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
     Context * context
@@ -223,10 +197,14 @@ AnyBlock::AnyBlock (
 {
     (this->*cellfun)(&this->cell);
 
-    Context & actualContext = context ? *context : Context::runFinder(nullptr);
-    actualContext.constructOrApplyInitialize(
+    if (not context)
+        context = &Context::runFinder(nullptr);
+
+    constructOrApplyInitialize(
+        context->getEngine().getHandle(),
+        context->getHandle(),
         nullptr,
-        loadablesPtr,
+        loadables,
         numLoadables,
         this, // Do construct
         nullptr // Don't apply
@@ -243,12 +221,16 @@ AnyWord::AnyWord (
 {
     (this->*cellfun)(&this->cell);
 
-    internal::Loadable loadable (cstr);
+    if (not context)
+        context = &Context::runFinder(nullptr);
 
-    Context & actualContext = context ? *context : Context::runFinder(nullptr);
-    actualContext.constructOrApplyInitialize(
+    internal::Loadable loadable {cstr};
+
+    constructOrApplyInitialize(
+        context->getEngine().getHandle(),
+        context->getHandle(),
         nullptr,
-        &loadable.cell,
+        &loadable,
         1,
         // Do construct
         this,
@@ -272,12 +254,16 @@ AnyWord::AnyWord (
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
     QByteArray array = str.toLocal8Bit();
-    internal::Loadable loadable (array.data());
+    internal::Loadable loadable {array.data()};
 
-    Context & actualContext = context ? *context : Context::runFinder(nullptr);
-    actualContext.constructOrApplyInitialize(
+    if (not context)
+        context = &Context::runFinder(nullptr);
+
+    constructOrApplyInitialize(
+        context->getEngine().getHandle(),
+        context->getHandle(),
         nullptr,
-        &loadable.cell,
+        &loadable,
         1,
         // Do construct
         this,
@@ -297,15 +283,117 @@ AnyString::AnyString (
 {
     (this->*cellfun)(&this->cell);
 
-    internal::Loadable loadable (cstr);
+    if (not engine)
+        engine = &Engine::runFinder();
 
-    Context::runFinder(engine).constructOrApplyInitialize(
+    internal::Loadable loadable {cstr};
+
+    constructOrApplyInitialize(
+        engine->getHandle(),
+        REN_CONTEXT_HANDLE_INVALID,
         nullptr,
-        &loadable.cell,
+        &loadable,
         1,
         this, // Do construct
         nullptr // Don't apply
     );
 }
+
+
+///
+/// GENERALIZED APPLY
+///
+
+Value Value::apply_(
+    internal::Loadable const loadables[],
+    size_t numLoadables,
+    Context * context
+) const {
+    Value result {Dont::Initialize};
+
+    if (context == nullptr)
+        context = &Context::runFinder(nullptr);
+
+    constructOrApplyInitialize(
+        context->getEngine().getHandle(),
+        context->getHandle(),
+        this,
+        loadables,
+        numLoadables,
+        nullptr, // don't construct
+        &result // do apply
+    );
+
+    return result;
+}
+
+
+Value Value::apply(
+    std::initializer_list<internal::Loadable> loadables,
+    Context * context
+) const {
+    // This one has to be in the implementation file because it appears in
+    // Value, using Loadable, which is derived from Value...
+    return apply_(loadables.begin(), loadables.size(), context);
+}
+
+
+void Value::constructOrApplyInitialize(
+    RenEngineHandle engine,
+    RenContextHandle context,
+    Value const * applicand,
+    internal::Loadable const loadables[],
+    size_t numLoadables,
+    Value * constructOutTypeIn,
+    Value * applyOut
+) {
+    Value errorOut {Value::Dont::Initialize};
+
+    auto result = ::RenConstructOrApply(
+        engine,
+        context,
+        &applicand->cell,
+        numLoadables != 0 ? &loadables[0].cell : nullptr,
+        numLoadables,
+        sizeof(internal::Loadable),
+        constructOutTypeIn ? &constructOutTypeIn->cell : nullptr,
+        applyOut ? &applyOut->cell : nullptr,
+        &errorOut.cell
+    );
+
+    switch (result) {
+        case REN_SUCCESS:
+            break;
+
+        case REN_CONSTRUCT_ERROR:
+        case REN_APPLY_ERROR:
+            errorOut.finishInit(engine);
+            throw evaluation_error(errorOut);
+            break;
+
+        case REN_EVALUATION_CANCELLED:
+            throw evaluation_cancelled();
+
+        case REN_EVALUATION_EXITED:
+            throw exit_command(VAL_INT32(&errorOut.cell));
+
+        default:
+            throw std::runtime_error("Unknown error in RenConstructOrApply");
+    }
+
+    // It used to be required that we finalize the values before throwing
+    // errors because (for instance) the refcount could be initialized.
+    // That had to be changed because a Dont::Initialize was could construct
+    // a type that could not survive an exception being thrown.  So we will
+    // keep this finalization here just in case, because it should be safe now
+    // to skip it in the case of an exception.
+
+    if (constructOutTypeIn)
+        constructOutTypeIn->finishInit(engine);
+
+    if (applyOut)
+        applyOut->finishInit(engine);
+}
+
 
 } // end namespace ren

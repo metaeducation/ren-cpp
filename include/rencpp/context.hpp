@@ -22,7 +22,7 @@
 #include <functional>
 
 #include "values.hpp"
-// can't include Engine -- would be circular
+#include "runtime.hpp"
 
 namespace ren {
 
@@ -99,27 +99,8 @@ public:
     // have a handle and no Context object at that point
 protected:
     friend class Engine;
-    static void constructOrApplyInitializeCore(
-        RenEngineHandle engineHandle,
-        RenContextHandle contextHandle,
-        Value const * applicandPtr,
-        RenCell * argsPtr,
-        size_t numArgs,
-        Value * constructResultUninitialized,
-        Value * applyOutUninitialized
-    );
-
-
-    void constructOrApplyInitialize(
-        Value const * applicandPtr,
-        RenCell * argsPtr,
-        size_t numArgs,
-        Value * constructResultUninitialized,
-        Value * applyOutUninitialized
-    );
 
 public:
-
     //
     // See notes on how close() is used for catching exceptions, while the
     // destructor should not throw:
@@ -129,27 +110,12 @@ public:
 
     void close();
 
-
     virtual ~Context();
 
 public:
     template <typename... Ts>
     Value operator()(Ts... args) {
-        auto loadables = std::array<internal::Loadable, sizeof...(args)>{
-            {args...}
-        };
-
-        Value result (Value::Dont::Initialize);
-
-        constructOrApplyInitialize(
-            nullptr, // no value to apply to; treat "as if" block
-            &loadables[0].cell,
-            sizeof...(args),
-            nullptr, // don't construct it
-            &result // apply it
-        );
-
-        return result; // move optimized
+        return Runtime::evaluate({args...}, this);
     }
 };
 

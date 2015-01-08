@@ -6,6 +6,9 @@
 
 #include "rencpp/rebol.hpp"
 
+// REVIEW: hooks should not be throwing exceptions; still some in threadinit
+#include "rencpp/exceptions.hpp"
+
 #include <vector>
 #include <algorithm>
 
@@ -373,8 +376,8 @@ public:
     int ConstructOrApply(
         RebolEngineHandle engine,
         RebolContextHandle context,
-        REBVAL const * valuePtr,
-        REBVAL * loadablesPtr,
+        REBVAL const * applicand,
+        REBVAL const * loadablesPtr,
         size_t numLoadables,
         size_t sizeofLoadable,
         REBVAL * constructOutDatatypeIn,
@@ -435,7 +438,7 @@ public:
 
         int result = REN_SUCCESS;
 
-        if (valuePtr) {
+        if (applicand) {
             // This is the current rule and the code expects it to be true,
             // but if it were not what might it mean?  This would be giving
             // a value but not asking for a result.  It's free to return
@@ -443,7 +446,7 @@ public:
             assert(applyOut);
         }
 
-        char * current = reinterpret_cast<char *>(loadablesPtr);
+        auto current = reinterpret_cast<char const *>(loadablesPtr);
 
         // Vector is bad to use with setjmp/longjmp, fix this
 
@@ -463,8 +466,12 @@ public:
         SAVE_SERIES(aggregate);
 
         for (size_t index = 0; index < numLoadables; index++) {
-            REBVAL * loadable = reinterpret_cast<REBVAL *>(current);
-            if (VAL_TYPE(loadable) == REB_END) {
+
+            auto cell = const_cast<REBVAL *>(
+                reinterpret_cast<REBVAL const *>(current)
+            );
+
+            if (VAL_TYPE(cell) == REB_END) {
 
                 // This is our "Alien" type that wants to get loaded.  Key
                 // to his loading problem is that he wants to know whether
@@ -473,27 +480,31 @@ public:
                 // get through transcode which returns [foo bar] and
                 // [[foo bar]] that discern the cases
 
-                auto loadText = reinterpret_cast<REBYTE*>(
-                    loadable->data.integer
-                );
+                auto loadText = reinterpret_cast<REBYTE*>(cell->data.integer);
 
                 REBSER * transcoded = Scan_Source(
                     loadText, LEN_BYTES(loadText)
                 );
 
-                // This is what Do_String did by default...except it only
-                // worked with the user context.  Fell through to lib.
+                if (not REN_IS_CONTEXT_HANDLE_INVALID(context)) {
+                    // Binding Do_String did by default...except it only
+                    // worked with the user context.  Fell through to lib.
 
-                REBCNT len = context.series->tail;
+                    REBCNT len = context.series->tail;
 
-                Bind_Block(
-                    context.series, BLK_HEAD(transcoded), BIND_ALL | BIND_DEEP
-                );
+                    Bind_Block(
+                        context.series,
+                        BLK_HEAD(transcoded),
+                        BIND_ALL | BIND_DEEP
+                    );
 
-                REBVAL vali;
-                SET_INTEGER(&vali, len);
+                    REBVAL vali;
+                    SET_INTEGER(&vali, len);
 
-                Resolve_Context(context.series, Lib_Context, &vali, FALSE, 0);
+                    Resolve_Context(
+                        context.series, Lib_Context, &vali, FALSE, 0
+                    );
+                }
 
                 // Might think to use Append_Block here, but it's under
                 // an #ifdef and apparently unused.  This is its definition.
@@ -505,8 +516,8 @@ public:
                     transcoded->tail
                 );
             } else {
-                // Just an ordinary value
-                Append_Val(aggregate, loadable);
+                // Just an ordinary value cell
+                Append_Val(aggregate, cell);
             }
 
             current += sizeofLoadable;
@@ -514,9 +525,9 @@ public:
 
         if (applyOut) {
             applying = true;
-            if (valuePtr) {
+            if (applicand) {
                 result = Generalized_Apply(
-                    const_cast<REBVAL *>(valuePtr),
+                    const_cast<REBVAL *>(applicand),
                     const_cast<REBSER *>(aggregate),
                     FALSE,
                     errorOut
@@ -590,15 +601,17 @@ public:
 
     int ReleaseCells(
         RebolEngineHandle engine,
-        REBVAL * cellsPtr,
-        size_t numCells,
-        size_t sizeofCellBlock
+        REBVAL const * valuesPtr,
+        size_t numValues,
+        size_t sizeofValue
     ) {
         lazyThreadInitializeIfNeeded(engine);
 
-        char * current = reinterpret_cast<char *>(cellsPtr);
-        for (size_t index = 0; index < numCells; index++) {
-            REBVAL * cell = reinterpret_cast<REBVAL *>(current);
+        auto current = reinterpret_cast<char const *>(valuesPtr);
+        for (size_t index = 0; index < numValues; index++) {
+            auto cell = const_cast<REBVAL *>(
+                reinterpret_cast<REBVAL const *>(current)
+            );
 
         #ifndef NDEBUG
             assert(ANY_SERIES(cell));
@@ -614,7 +627,7 @@ public:
             }
         #endif
 
-            current += sizeofCellBlock;
+            current += sizeofValue;
         }
 
         return REN_SUCCESS;
@@ -678,11 +691,6 @@ public:
 
 
     ~RebolHooks () {
-        for (auto item : nodes) {
-            for (auto item2 : item.second) {
-                print("Leak of", item2.first);
-            }
-        }
         assert(nodes.empty());
     }
 };
@@ -730,10 +738,10 @@ RenResult RenConstructOrApply(
     RebolEngineHandle engine,
     RebolContextHandle context,
     REBVAL const * valuePtr,
-    REBVAL * loadablesPtr,
+    REBVAL const * loadablesPtr,
     size_t numLoadables,
     size_t sizeofLoadable,
-    REBVAL * constructOutWithDatatype,
+    REBVAL * constructOutTypeIn,
     REBVAL * applyOut,
     REBVAL * errorOut
 ) {
@@ -744,7 +752,7 @@ RenResult RenConstructOrApply(
         loadablesPtr,
         numLoadables,
         sizeofLoadable,
-        constructOutWithDatatype,
+        constructOutTypeIn,
         applyOut,
         errorOut
     );
@@ -754,12 +762,12 @@ RenResult RenConstructOrApply(
 
 RenResult RenReleaseCells(
     RebolEngineHandle engine,
-    REBVAL *cellsPtr,
-    size_t numCells,
-    size_t sizeofCellBlock
+    REBVAL const * valuesPtr,
+    size_t numValues,
+    size_t sizeofValue
 ) {
     return ren::internal::hooks.ReleaseCells(
-        engine, cellsPtr, numCells, sizeofCellBlock
+        engine, valuesPtr, numValues, sizeofValue
     );
 }
 

@@ -346,7 +346,7 @@ RenResult RenConstructOrApply(
     RenEngineHandle engine,
     RenContextHandle context,
     RenCell const * applicand,
-    RenCell loadables[],
+    RenCell const * loadablesCell,
     size_t numLoadables,
     size_t sizeofLoadable,
     RenCell * constructOutDatatypeIn,
@@ -368,9 +368,9 @@ RenResult RenConstructOrApply(
 
 RenResult RenReleaseCells(
     RenEngineHandle engine,
-    RenCell cells[],
-    size_t numCells,
-    size_t sizeofCellBlock
+    RenCell const * valuesCells,
+    size_t numValues,
+    size_t sizeofValue
 );
 
 
@@ -389,7 +389,7 @@ RenResult RenReleaseCells(
 
 RenResult RenFormAsUtf8(
     RenEngineHandle engine,
-    RenCell const * value,
+    RenCell const * cell,
     char * buffer,
     size_t bufSize,
     size_t * numBytesOut

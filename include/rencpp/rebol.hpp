@@ -19,7 +19,6 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include "ren.hpp"
 #include "runtime.hpp"
 
 #ifndef NDEBUG
@@ -29,9 +28,7 @@
 namespace ren {
 
 namespace internal {
-
-class RebolHooks;
-
+    class RebolHooks;
 }
 
 // Not only is Runtime implemented on a per-binding basis
@@ -42,9 +39,6 @@ class RebolRuntime : public Runtime {
 private:
     Context * defaultContext;
     bool initialized;
-
-    std::ostream * osPtr;
-    std::istream * isPtr;
 
 private:
     static REBVAL loadAndBindWord(
@@ -66,14 +60,6 @@ public:
     RebolRuntime (bool someExtraInitFlag);
 
     void doMagicOnlyRebolCanDo();
-
-    std::ostream & setOutputStream(std::ostream & os) override;
-
-    std::istream & setInputStream(std::istream & is) override;
-
-    std::ostream & getOutputStream() override;
-
-    std::istream & getInputStream() override;
 
     void cancel() override;
 

@@ -42,7 +42,7 @@ namespace ren {
 
 
 ///
-/// FORWARD DEFINITIONS FOR CLASSES IN RUNTIME.HPP
+/// FORWARD DEFINITIONS
 ///
 
 //
@@ -51,17 +51,18 @@ namespace ren {
 //
 //    https://github.com/humanistic/REN
 //
-// Given how long header files get, it's nice to break things up somehow;
-// and a delineation of runtime loading and evaluation seems a good breaking
-// point.  Yet although a bare-bones interface where the values themselves
-// were "dead data" and you always had to pass them to the appropriate
-// runtime...that's a bit lame.  You couldn't do something like:
+// So a bare-bones interface could be made where the values themselves were
+// "dead data"...and you always had to pass them to the appropriate
+// runtime service.  While it might make the architectural lines a bit more
+// rigid, it's lame because you couldn't do something like:
 //
 //     auto print = ren::Word("print");
 //     print(10 + 20);
 //
-// Hence the ren::Context (or "Context") has to be known to the values
-// that operate with them, to expose "generalized apply" and other functions.
+// So some of the runtime ideas like "Engine" and "Context" have leaked in
+// for various parameterizations.  Yet they are only defined by pointers that
+// default to null in the interface; a given RenCpp implementation could
+// throw errors if they were ever non-null.
 //
 
 
@@ -72,13 +73,9 @@ class Engine;
 
 namespace internal {
     //
-    // Note that you can't forward declare objects in nested scopes:
+    // Can't forward-declare in nested scopes, e.g. `class internal::Loadable`
     //
     //    http://stackoverflow.com/q/951234/211160
-    //
-    // However by putting Loadable inside a "::internal" namespace it might
-    // seem more obvious that users shouldn't be creating instances of it
-    // themselves, despite the requirement of public construction functions.
     //
     class Loadable;
 
@@ -91,7 +88,8 @@ namespace internal {
     static_assert(false, "Invalid runtime setting")
 #endif
 
-    template <class R, class... Ts> class FunctionGenerator;
+    template <class R, class... Ts>
+    class FunctionGenerator;
 }
 
 struct none_t;
@@ -141,15 +139,18 @@ public:
 //
 
 class Value {
+    // Function needs access to the spec block's series cell in its creation.
+    // Series::iterator wants to be able to just tweak the index of the cell
+    // as it enumerates and leave the rest alone.  Etc.
+    // There may be more "crossovers" of this form.  It's a tradeoff between
+    // making cell public, using some kind of pimpl idiom or opaque type,
+    // or making all Value's derived classes friends of value.
 protected:
-    friend class Runtime; // cell
-    friend class Engine; // Value::Dont::Initialize
-    friend class Context; // Value::Dont::Initialize
-    friend class Series; // Value::Dont::Initialize for dereference
-    friend class AnyBlock; // Value::Dont::Initialize for dereference
-    friend class AnyString;
+    friend class Function; // needs to extract series from spec block
+    friend class Series; // iterator state
+    friend class AnyBlock; // iterator state
+    friend class AnyString; // iterator state
 
-public: // temporary for the lambda in function, find better way
     RenCell cell;
 
 #ifndef REN_RUNTIME
@@ -257,7 +258,7 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct (Dont const &) {
+    static T construct_(Dont const &) {
         return T {Dont::Initialize};
     }
 
@@ -286,7 +287,7 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct (RenEngineHandle engine, RenCell const & cell) {
+    static T construct_(RenEngineHandle engine, RenCell const & cell) {
         T result {Dont::Initialize};
         result.cell = cell;
         result.finishInit(engine);
@@ -520,6 +521,7 @@ public:
     //
 public:
     bool isEqualTo(Value const & other) const;
+
     bool isSameAs(Value const & other) const;
 
 
@@ -558,8 +560,8 @@ public:
     // do (which is a C++ keyword and not available)
     //
 protected:
-    Value apply(
-        RenCell loadables[],
+    Value apply_(
+        internal::Loadable const loadables[],
         size_t numLoadables,
         Context * context
     ) const;
@@ -616,12 +618,37 @@ public:
 
         return result;
     }
+
+protected:
+    //
+    // This hook might not be used by all value types to construct (and a
+    // runtime may not be available to "apply" vs. merely construct).  Yet
+    // because of its generality, it may be used by any implementation to
+    // construct values... hence it makes sense to put it in Value and
+    // hence protectedly available to all subclasses.  It wraps the
+    // "universal hook" in hooks.h to be safely used, with errors converted
+    // to exceptions and finishInit() called on the "out" parameters
+    //
+
+    friend class Runtime;
+    friend class Engine;
+    friend class Context;
+
+    static void constructOrApplyInitialize(
+        RenEngineHandle engine,
+        RenContextHandle context,
+        Value const * applicand,
+        internal::Loadable const loadables[],
+        size_t numLoadables,
+        Value * constructOutTypeIn,
+        Value * applyOut
+    );
 };
 
 
 
 ///
-/// NONE CONSTRUCTION FUNCTION
+/// NONE AND UNSET CONSTRUCTION TYPES
 ///
 
 //
@@ -726,6 +753,7 @@ public:
 class Character : public Value {
 protected:
     friend class Value;
+    friend class AnyString;
     Character (Dont const &) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
 
@@ -1008,7 +1036,7 @@ public:
         mutable Character chForArrow;
         iterator (AnyString const & state) :
             state (state),
-            chForArrow (Value::construct<Character>(Dont::Initialize))
+            chForArrow (Dont::Initialize)
         {
         }
 
@@ -1097,7 +1125,7 @@ protected:
     //
 
     AnyBlock (
-        RenCell loadables[],
+        internal::Loadable const loadablesPtr[],
         size_t numLoadables,
         internal::CellFunction cellfun,
         Context * context = nullptr
@@ -1201,13 +1229,7 @@ public:
 
 class Loadable : private Value {
 private:
-    friend class ::ren::Value;
-    friend class ::ren::AnyWord;
-    friend class ::ren::AnyString;
-    friend class ::ren::Context;
-
-    template <class C, CellFunction F>
-    friend class AnyBlock_;
+    friend class Value;
 
     // These constructors *must* be public, although we really don't want
     // users of the binding instantiating loadables explicitly.
@@ -1222,6 +1244,7 @@ public:
 
     Loadable (char const * sourceCstr);
 };
+
 
 
 //
@@ -1259,15 +1282,10 @@ public:
     }
 
     explicit AnyBlock_ (
-        std::initializer_list<internal::Loadable> args,
+        std::initializer_list<Loadable> const & loadables,
         Context * context = nullptr
     ) :
-        AnyBlock (
-            const_cast<RenCell *>(&args.begin()->cell),
-            args.size(),
-            F,
-            context
-        )
+        AnyBlock (loadables.begin(), loadables.size(), F, context)
     {
     }
 

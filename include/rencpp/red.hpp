@@ -19,8 +19,8 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include "ren.hpp"
 #include "runtime.hpp"
+
 
 namespace ren {
 
