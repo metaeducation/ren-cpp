@@ -261,7 +261,17 @@ void RenConsole::printBanner() {
     );
 
     cursor.insertText("\n", headerFormat);
-    cursor.insertHtml("<h1>Ren [人] Garden</h1>");
+
+    // Show off/test RenCpp by picking off the letters of the title one at a
+    // time, (w/proper Unicode) via C++ iterator interface underneath a
+    // range-based for, then use the coercion of ren::Character to QChar
+    // to build a new string for the opening title
+
+    QString heading;
+    for (ren::Character ch : ren::String{"{<h1>Ren [人] Garden</h1>}"})
+        heading += ch;
+
+    cursor.insertHtml(heading);
 
     // Use a font we set the size explicitly for so this text intentionally
     // does not participate in zoom in and zoom out

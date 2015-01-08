@@ -79,6 +79,8 @@ namespace internal {
     //
     class Loadable;
 
+    class Series_;
+
 #ifndef REN_RUNTIME
 #elif REN_RUNTIME == REN_RUNTIME_RED
     class FakeRedHooks;
@@ -136,16 +138,14 @@ public:
 
 class Value {
     // Function needs access to the spec block's series cell in its creation.
-    // Series::iterator wants to be able to just tweak the index of the cell
+    // Series_ wants to be able to just tweak the index of the cell
     // as it enumerates and leave the rest alone.  Etc.
     // There may be more "crossovers" of this form.  It's a tradeoff between
     // making cell public, using some kind of pimpl idiom or opaque type,
     // or making all Value's derived classes friends of value.
 protected:
     friend class Function; // needs to extract series from spec block
-    friend class Series; // iterator state
-    friend class AnyBlock; // iterator state
-    friend class AnyString; // iterator state
+    friend class ren::internal::Series_; // iterator state
 
     RenCell cell;
 
@@ -533,6 +533,18 @@ public:
 
 
 public:
+    // Making Value support -> is kind of wacky; it acts as a pointer to
+    // itself.  But in the iterator model there aren't a lot of answers
+    // for supporting the syntax.  It's true that conceptionally a series
+    // does "point to" a value, so series->someValueMethod is interesting.
+    //
+    // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html
+
+    Value const * operator->() const { return this; }
+    Value * operator->() { return this; }
+
+
+public:
     friend std::ostream & operator<<(std::ostream & os, Value const & value);
 
     // If you explicitly ask for it, all ren::Value types can be static_cast
@@ -760,13 +772,27 @@ public:
 
 
     // Characters represent codepoints.  These conversion operators are for
-    // convenience, but note that they may throw.
+    // convenience, but note that the char and wchar_t may throw if your
+    // codepoint is too high for that; hence codepoint is explicitly long
+    // (minimum range for int would be
 
-    operator char () const;
-    operator wchar_t () const;
-    operator int () const;
+    explicit operator char () const;
+    explicit operator wchar_t () const;
+
+    long codepoint() const;
 
     // How to expose UTF8 encoding?
+
+#if REN_CLASSLIB_QT == 1
+    operator QChar () const;
+#endif
+
+public:
+    // Because Characters have a unique iteration in AnyString types, the
+    // -> override mentioned in Value applies to them too.  See note there.
+
+    Character const * operator->() const { return this; }
+    Character * operator->() { return this; }
 };
 
 
@@ -835,9 +861,40 @@ public:
 // the reason templates can be parameterized with functions has to do with
 // inlining and optimization...so it might be about the fastest way to do it.
 //
+
 namespace internal {
 
 using CellFunction = bool (Value::*)(RenCell *) const;
+
+// This class is necessary because we can't define a Series::iterator class
+// to wrap a Series inside of a Series--it would be an incomplete definition
+
+class Series_ : public Value {
+protected:
+    friend class Value;
+    Series_ (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isSeries(); }
+
+public:
+    // We don't return values here because that would leak the internal
+    // types.  It's technically possible to write a variant of things like
+    // head() and tail() for every type but reinventing Rebol/Red is not
+    // really the point.  Mutating types as they are vs. returning a new
+    // base type could be a good option for working in the C++ world, if
+    // iterators are available for things like enumerating.
+
+    void operator++();
+    void operator--();
+
+    void operator++(int);
+    void operator--(int);
+
+    Value operator*() const;
+    Value operator->() const; // see notes on Value::operator->
+
+    void head();
+    void tail();
+};
 
 } // end namespace internal
 
@@ -919,10 +976,10 @@ inline QString AnyWord::spellingOf<QString>() const {
 
 
 
-class Series : public Value {
+class Series : public ren::internal::Series_ {
 protected:
     friend class Value;
-    Series (Dont const &) : Value (Dont::Initialize) {}
+    Series (Dont const &) : Series_ (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
     //
@@ -931,38 +988,60 @@ protected:
     //
     //    https://github.com/hostilefork/rencpp/issues/25
     //
+    // The series thus functions as the state, but is a separate type that
+    // has to be wrapped up.
 public:
     class iterator {
         friend class Series;
-        Value state; // it's a Series, but that's incomplete type
-        mutable Value valForArrow;
-        iterator (Series const & state) :
-            state (state),
-            valForArrow (Dont::Initialize)
+        internal::Series_ state;
+        iterator (internal::Series_ const & state) :
+            state (state)
         {
         }
 
     public:
-        iterator & operator++(); // prefix
-        iterator & operator--();
+        iterator & operator++() {
+            state++;
+            return *this;
+        }
 
-        iterator operator++(int); // int means "postfix"
-        iterator operator--(int);
+        iterator & operator--() {
+            state--;
+            return *this;
+        }
+
+        iterator operator++(int) {
+            auto temp = *this;
+            ++*this;
+            return temp;
+        }
+
+        iterator operator--(int) {
+            auto temp = *this;
+            --*this;
+            return temp;
+        }
 
         bool operator==(iterator const & other)
             { return state.isSameAs(other.state); }
         bool operator!=(iterator const & other)
             { return not state.isSameAs(other.state); }
 
-        Value operator * () const;
-        Value * operator-> () const;
-        explicit operator Series () const;
+        Value operator * () const { return *state; }
+        Value operator-> () const { return state.operator->(); }
     };
 
     friend class iterator;
 
-    iterator begin();
-    iterator end();
+    iterator begin() {
+        return iterator (*this);
+    }
+
+    iterator end() {
+        auto temp = *this;
+        temp.tail(); // see remarks on tail modifying vs. returning a value
+        return iterator (temp);
+    }
 };
 
 
@@ -1022,36 +1101,58 @@ public:
 public:
     class iterator {
         friend class AnyString;
-        Value state; // It's an AnyString but that's incomplete type
-        mutable Character chForArrow;
-        iterator (AnyString const & state) :
-            state (state),
-            chForArrow (Dont::Initialize)
+        Series state;
+        iterator (Series const & state) :
+            state (state)
         {
         }
 
     public:
-        iterator & operator++(); // prefix
-        iterator & operator--();
+        iterator & operator++() {
+            state++;
+            return *this;
+        }
 
-        iterator operator++(int); // int means postfix
-        iterator operator--(int);
+        iterator & operator--() {
+            state--;
+            return *this;
+        }
+
+        iterator operator++(int) {
+            auto temp = *this;
+            ++*this;
+            return temp;
+        }
+
+        iterator operator--(int) {
+            auto temp = *this;
+            --*this;
+            return temp;
+        }
 
         bool operator==(iterator const & other)
             { return state.isSameAs(other.state); }
         bool operator!=(iterator const & other)
-            { return state.isSameAs(other.state);}
+            { return not state.isSameAs(other.state); }
 
-        Character operator* () const;
-        Character * operator-> () const;
-
-        explicit operator AnyString() const;
+        Character operator * () const {
+            return static_cast<Character>(*state);
+        }
+        Character operator-> () const {
+            return static_cast<Character>(state.operator->()); }
     };
 
     friend class iterator;
 
-    iterator begin();
-    iterator end();
+    iterator begin() {
+        return iterator (*this);
+    }
+
+    iterator end() {
+        auto temp = *this;
+        temp.tail();
+        return iterator (temp);
+    }
 
 public:
     template <

@@ -27,7 +27,18 @@ int main(int, char **) {
     assert(it != blk.begin());
     assert(it == blk.end());
 
-    for (auto item : blk) {
+    for (auto item : blk)
         print(item);
-    }
+
+    std::string s;
+    for (auto c : String{"{Hello World^/}"})
+        s.push_back(static_cast<char>(c));
+
+    std::cout << s;
+
+    std::wstring ws;
+    for (auto wc : String{"{MetÆducation^/}"})
+        ws.push_back(static_cast<wchar_t>(wc));
+
+    std::wcout << ws;
 }

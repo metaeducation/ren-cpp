@@ -303,7 +303,35 @@ Float::operator double() const {
 }
 
 
+Character::operator char () const {
+    REBUNI uni = VAL_CHAR(&cell);
+    if (uni > 127)
+        throw std::runtime_error("Non-ASCII codepoint cast to char");
+    return static_cast<char>(uni);
+}
+
+
+Character::operator wchar_t () const {
+    REBUNI uni = VAL_CHAR(&cell);
+    // will throw in Red for "astral plane" unicode codepoints
+    return static_cast<wchar_t>(uni);
+}
+
+
+long Character::codepoint() const {
+    REBUNI uni = VAL_CHAR(&cell);
+    // will probably not throw in Red, either
+    return uni;
+}
+
+
 #if REN_CLASSLIB_QT
+Character::operator QChar () const {
+    REBUNI uni = VAL_CHAR(&cell);
+    return QChar(uni);
+}
+
+
 AnyString::AnyString (
     QString const & str,
     internal::CellFunction cellfun,
@@ -397,127 +425,52 @@ QString AnyString::spellingOf_QT() const {
 /// ITERATORS (WORK IN PROGRESS)
 ///
 
-//
-// Series
-//
-
-Series::iterator & Series::iterator::operator++() {
-    state.cell.data.series.index++;
-    return *this;
+void ren::internal::Series_::operator++() {
+    cell.data.series.index++;
 }
 
-Series::iterator & Series::iterator::operator--() {
-    state.cell.data.series.index--;
-    return *this;
+void ren::internal::Series_::operator--() {
+    cell.data.series.index--;
 }
 
-Series::iterator Series::iterator::operator++(int) {
-    auto temp = *this;
+void ren::internal::Series_::operator++(int) {
     ++*this;
-    return temp;
 }
 
-Series::iterator Series::iterator::operator--(int) {
-    auto temp = *this;
+void ren::internal::Series_::operator--(int) {
     --*this;
-    return temp;
 }
 
-Value Series::iterator::operator*() const {
+Value ren::internal::Series_::operator*() const {
     Value result {Dont::Initialize};
-    result.cell = *VAL_BLK_SKIP(&state.cell, state.cell.data.series.index);
-    result.finishInit(state.origin);
+
+    if (isAnyString()) {
+        // from str_to_char in Rebol source
+        SET_CHAR(
+            &result.cell,
+            GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.series.index)
+        );
+    } else if (isAnyBlock()) {
+        result.cell = *VAL_BLK_SKIP(&cell, cell.data.series.index);
+    } else {
+        // Binary and such, would return an integer
+        UNREACHABLE_CODE();
+    }
+    result.finishInit(origin);
     return result;
 }
 
-Value * Series::iterator::operator->() const {
-    valForArrow = *(*this);
-    return &valForArrow;
+Value ren::internal::Series_::operator->() const {
+    return *(*this);
 }
 
-Series::iterator::operator Series() const {
-    return static_cast<Series>(state);
+void ren::internal::Series_::head() {
+    cell.data.series.index = static_cast<REBCNT>(0);
 }
 
-Series::iterator Series::begin() {
-    // Rebol iterations start at current position.  So return a *copy* at
-    // the current index.  It will be mutated by the operator++ and operator--
-    return Series::iterator(*this);
-}
-
-Series::iterator Series::end() {
-    Series result {*this};
-    result.cell.data.series.index = (REBCNT)cell.data.series.series->tail;
-    return Series::iterator(result);
-}
-
-
-
-
-
-//
-// AnyString
-//
-
-AnyString::iterator & AnyString::iterator::operator++() {
-    state.cell.data.series.index++;
-    return *this;
-}
-
-AnyString::iterator & AnyString::iterator::operator--() {
-    state.cell.data.series.index--;
-    return *this;
-}
-
-AnyString::iterator AnyString::iterator::operator++(int) {
-    auto temp = *this;
-    ++*this;
-    return temp;
-}
-
-AnyString::iterator AnyString::iterator::operator--(int) {
-    auto temp = *this;
-    ++*this;
-    return temp;
-}
-
-Character AnyString::iterator::operator* () const {
-    auto result = Value::construct_<Character>(Dont::Initialize);
-
-    // from str_to_char
-    SET_CHAR(
-        &result.cell,
-        GET_ANY_CHAR(VAL_SERIES(&state.cell),
-        state.cell.data.series.index)
-    );
-    /*result.finishInit(state.origin);*/
-    return result;
-}
-
-Character * AnyString::iterator::operator-> () const {
-    // Internal string packingmay be 8, 16 or (in Red) 32 bits based on
-    // size of largest codepoint in string.  We cannot just give back a
-    // pointer to existing memory, even if our Value didn't add more bits.
-
-    chForArrow = *(*this);
-    return &chForArrow;
-}
-
-AnyString::iterator::operator AnyString() const {
-    return static_cast<AnyString>(state);
-}
-
-AnyString::iterator AnyString::begin() {
-    // Rebol iterations start at current position.  So return a *copy* at
-    // the current index.  It will be mutated by the operator++ and operator--
-    return *this;
-}
-
-AnyString::iterator AnyString::end() {
-    AnyString result {*this};
-    result.cell.data.series.index =
-        static_cast<REBCNT>(cell.data.series.series->tail);
-    return AnyString::iterator {result};
+void ren::internal::Series_::tail() {
+    cell.data.series.index
+        = static_cast<REBCNT>(cell.data.series.series->tail);
 }
 
 
