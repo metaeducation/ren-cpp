@@ -17,5 +17,5 @@ int main(int, char **) {
     std::string converted = String {"{Hello World}"};
     assert(converted == "Hello World");
 
-    assert(String {"{Hello World}"} == "Hello World");
+    assert(String {"{Hello World}"}.isEqualTo("Hello World"));
 }

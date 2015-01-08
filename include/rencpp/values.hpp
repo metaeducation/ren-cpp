@@ -1176,24 +1176,28 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    explicit AnyString_ (char const * cstr) :
-        AnyString (cstr, F)
+    AnyString_ (char const * cstr, Engine * engine = nullptr) :
+        AnyString (cstr, F, engine)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyString_ (std::string const & str, Engine * engine = nullptr) :
+    AnyString_ (std::string const & str, Engine * engine = nullptr) :
         AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyString_ (QString const & str, Engine * engine = nullptr) :
+    AnyString_ (QString const & str, Engine * engine = nullptr) :
         AnyString (str, F, engine)
     {
     }
 #endif
+
+    bool isEqualTo(char const * cstr) const {
+        return static_cast<std::string>(*this) == cstr;
+    }
 };
 
 
@@ -1271,7 +1275,7 @@ public:
     {
     }
 
-    explicit AnyBlock_ (
+    AnyBlock_ (
         std::initializer_list<Loadable> const & loadables,
         Context * context = nullptr
     ) :
@@ -1279,7 +1283,7 @@ public:
     {
     }
 
-    explicit AnyBlock_ (Context * context = nullptr) :
+    AnyBlock_ (Context * context = nullptr) :
         AnyBlock (nullptr, 0, F, context)
     {
     }
@@ -1371,14 +1375,6 @@ public:
         return Value::operator QString ();
     }
 #endif
-
-    bool operator==(char const * cstr) const {
-        return static_cast<std::string>(*this) == cstr;
-    }
-
-    bool operator!=(char const * cstr) const {
-        return not (*this == cstr);
-    }
 };
 
 
@@ -1387,15 +1383,6 @@ class Tag : public internal::AnyString_<Tag, &Value::isTag> {
 public:
     friend class Value;
     using AnyString_<Tag, &Value::isTag>::AnyString_;
-
-public:
-    bool operator==(char const * cstr) const {
-        return static_cast<std::string>(*this) == cstr;
-    }
-
-    bool operator!=(char const * cstr) const {
-        return not (*this == cstr);
-    }
 };
 
 
