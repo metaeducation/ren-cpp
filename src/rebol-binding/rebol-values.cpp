@@ -23,53 +23,53 @@ bool Value::isSameAs(Value const & other) const {
 }
 
 
-Value::Value (Engine & engine) :
+Value::Value (unset_t const &, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_UNSET(&cell);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, none_t const &) :
+Value::Value (none_t const &, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_NONE(&cell);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, bool const & someBool) :
+Value::Value (bool const & someBool, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_LOGIC(&cell, someBool);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, char const & c) :
+Value::Value (char const & c, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, c);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, wchar_t const & wc) :
+Value::Value (wchar_t const & wc, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, wc);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, int const & someInt) :
+Value::Value (int const & someInt, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_INTEGER(&cell, someInt);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
-Value::Value (Engine & engine, double const & someDouble) :
+Value::Value (double const & someDouble, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_DECIMAL(&cell, someDouble);
-    finishInit(engine.getHandle());
+    finishInit(engine);
 }
 
 //
@@ -98,6 +98,14 @@ void Value::finishInit(RenEngineHandle engine) {
 
     origin = engine;
 }
+
+
+void Value::finishInit(Engine * engine) {
+    if (not engine)
+        engine = &Engine::runFinder();
+    finishInit(engine->getHandle());
+}
+
 
 
 ///
@@ -279,14 +287,6 @@ bool Value::isError() const {
     return IS_ERROR(&cell);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-None::None (Engine & engine) :
-    Value (Dont::Initialize)
-{
-    SET_NONE(&cell);
-    finishInit(engine.getHandle());
-}
 
 /////////////////////////////////////////////////////////////////////////////
 

@@ -181,8 +181,8 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    engine,
-                    *REN_STACK_ARGUMENT(stack, Indices)
+                    *REN_STACK_ARGUMENT(stack, Indices),
+                    engine
                 )...
             )
         )
@@ -193,8 +193,8 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                engine,
-                *REN_STACK_ARGUMENT(stack, Indices)
+                *REN_STACK_ARGUMENT(stack, Indices),
+                engine
             )...
         );
     }

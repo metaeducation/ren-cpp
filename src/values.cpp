@@ -30,11 +30,6 @@ bool Value::needsRefcount() const {
 }
 
 
-Value::Value () :
-    Value (Engine::runFinder())
-{
-}
-
 
 // Even if asked not to initialize, we can't leave the type in a state where
 // it cannot be safely freed.  A bad refcount pointer combined with bad data
@@ -46,21 +41,10 @@ Value::Value (Dont const &) :
 }
 
 
-Value::Value (none_t const &) :
-    Value (Engine::runFinder(), none)
-{
-}
-
-
-Value::Value (bool const & someBool) :
-    Value (Engine::runFinder(), someBool)
-{
-}
-
 
 Value::operator bool() const {
     if (isUnset()) {
-        // Is there a better way to throw the "value is unset" error in a
+        // Is there a better way to throw the same "value is unset" error in a
         // way that matches what the runtime offers?
         (*this)();
         UNREACHABLE_CODE();
@@ -69,16 +53,6 @@ Value::operator bool() const {
 }
 
 
-Value::Value (int const & someInt) :
-    Value (Engine::runFinder(), someInt)
-{
-}
-
-
-Value::Value (double const & someDouble) :
-    Value (Engine::runFinder(), someDouble)
-{
-}
 
 
 #if REN_CLASSLIB_STD

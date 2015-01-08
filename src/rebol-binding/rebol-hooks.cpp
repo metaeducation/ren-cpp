@@ -131,7 +131,7 @@ public:
                 if (VAL_ERR_NUM(val) == RE_HALT) {
                     throw evaluation_cancelled {};
                 }
-                throw evaluation_error (Value (engine, *val));
+                throw evaluation_error (Value (*val, engine));
             }
             SET_STATE(state, Halt_State);
 

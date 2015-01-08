@@ -92,10 +92,6 @@ namespace internal {
     class FunctionGenerator;
 }
 
-struct none_t;
-
-struct unset_t;
-
 
 
 ///
@@ -197,28 +193,6 @@ protected:
 
 
     //
-    // At first the only user-facing constructor that was exposed directly
-    // from Value was the default constructor, used to make an UNSET!
-    //
-    //     ren::Value something;
-    //
-    // But support for other construction types directly as Value has been
-    // incorporated.  For the rationale, see:
-    //
-    //     https://github.com/hostilefork/rencpp/issues/2
-    //
-public:
-    Value (Engine & engine);
-    Value ();
-
-    // Same as Value() but sometimes more clear to write ren::unset
-    Value (unset_t const &) : Value() {}
-
-
-    bool isUnset() const;
-
-
-    //
     // There is a default constructor, and it initializes the RenCell to be
     // a constructed value of type UNSET!
     //
@@ -251,6 +225,7 @@ protected:
     Value (Dont const &);
 
     void finishInit(RenEngineHandle engine);
+    void finishInit(Engine * engine = nullptr);
 
     template<
         class T,
@@ -276,7 +251,12 @@ protected:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    explicit Value (RenEngineHandle engine, RenCell const & cell) {
+    explicit Value (RenCell const & cell, RenEngineHandle engine) {
+        this->cell = cell;
+        finishInit(engine);
+    }
+
+    explicit Value (RenCell const & cell, Engine * engine = nullptr) {
         this->cell = cell;
         finishInit(engine);
     }
@@ -287,12 +267,40 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct_(RenEngineHandle engine, RenCell const & cell) {
+    static T construct_(RenCell const & cell, RenEngineHandle engine) {
         T result {Dont::Initialize};
         result.cell = cell;
         result.finishInit(engine);
         return result;
     }
+
+
+    //
+    // At first the only user-facing constructor that was exposed directly
+    // from Value was the default constructor, used to make an UNSET!
+    //
+    //     ren::Value something;
+    //
+    // But support for other construction types directly as Value has been
+    // incorporated.  For the rationale, see:
+    //
+    //     https://github.com/hostilefork/rencpp/issues/2
+    //
+public:
+    struct unset_t
+    {
+      struct init {};
+      constexpr unset_t(init) {}
+    };
+
+    Value (unset_t const &, Engine * engine = nullptr);
+
+    bool isUnset() const;
+
+    // Default constructor; same as unset.
+
+    Value (Engine * engine = nullptr) : Value(unset_t::init{}, engine) {}
+
 
 public:
     //
@@ -307,12 +315,17 @@ public:
     // actually never provide this; this is a disabling.  = delete is
     // apparently not a "better" way of doing such a disablement.
 
-    // disabling doesn't work in clang, bad idea?
-    /* Value (nullptr_t) = delete; */
-    /* Value (nullptr_t); */
+    // Value (nullptr_t) = delete; ...doesn't work in clang, bad idea?
+    // Just make it a link error by never defining it
+    Value (nullptr_t);
 
-    Value (Engine & engine, none_t const &);
-    Value (none_t const &);
+    struct none_t
+    {
+      struct init {};
+      constexpr none_t(init) {}
+    };
+
+    Value (none_t const &, Engine * engine = nullptr);
 
 
 public:
@@ -325,8 +338,7 @@ public:
     //
     // http://stackoverflow.com/questions/6242768/
     //
-    Value (Engine & engine, bool const & b);
-    Value (bool const & b);
+    Value (bool const & b, Engine * engine = nullptr);
 
     bool isLogic() const;
 
@@ -339,18 +351,14 @@ public:
 
 
 public:
-    Value (Engine & engine, char const & c);
-    Value (char const & c);
-
-    Value (Engine & engine, wchar_t const & c);
-    Value (wchar_t const & c);
+    Value (char const & c, Engine * engine = nullptr);
+    Value (wchar_t const & wc, Engine * engine = nullptr);
 
     bool isCharacter() const;
 
 
 public:
-    Value (Engine & engine, int const & i);
-    Value (int const & i);
+    Value (int const & i, Engine * engine = nullptr);
 
     bool isInteger() const;
 
@@ -358,8 +366,7 @@ public:
 public:
     // Literals are double by default unless you suffix with "f"
     //     http://stackoverflow.com/a/4353788/211160
-    Value (double const & d);
-    Value (Engine & engine, double const & d);
+    Value (double const & d, Engine * engine = nullptr);
 
     bool isFloat() const;
 
@@ -440,7 +447,7 @@ private:
                 != REN_SUCCESS
             ) {
                 throw std::runtime_error(
-                    "Refcounting problem reported by the Red binding hook"
+                    "Refcounting problem reported by the Ren binding hook"
                 );
             }
         }
@@ -648,34 +655,44 @@ protected:
 
 
 ///
-/// NONE AND UNSET CONSTRUCTION TYPES
+/// NONE AND UNSET CONSTRUCTION
 ///
 
 //
-// Can't use an extern variable of None statically initialized, because the
-// engine handle wouldn't be set...and static constructor ordering is
-// indeterminate anyway.
+// It makes sense to be able to create None and Unset *values*, which you
+// can do with Value construction.  But why would you need a static type
+// for the None and Unset *classes* in C++?  Do you need to statically
+// check to make sure someone actually passed you a None?  :-/
 //
-// Should you be able to "apply" a none directly, as none(arg1, arg2) etc?
-// It seems okay to disallow it.  But if you want that (just so it can fail
-// if you ever gave it parameters, for the sake of completeness) there'd
-// have to be an operator() here.
+// For completeness they are included for the moment, but are very unlikely
+// to be useful in practice.  They really only make sense as instances of
+// the Value base class.
 //
 
-struct none_t
-{
-  struct init {};
-  constexpr none_t(init) {}
+constexpr Value::none_t none {Value::none_t::init{}};
+
+constexpr Value::unset_t unset {Value::unset_t::init{}};
+
+class Unset : public Value {
+protected:
+    friend class Value;
+    Unset (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isUnset(); }
+
+public:
+    Unset (Engine * engine = nullptr) : Value (unset, engine) {}
 };
-constexpr none_t none {none_t::init{}};
 
 
-struct unset_t
-{
-  struct init {};
-  constexpr unset_t(init) {}
+class None : public Value {
+protected:
+    friend class Value;
+    None (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isNone(); }
+
+public:
+    explicit None (Engine * engine = nullptr) : Value(none, engine) {}
 };
-constexpr unset_t unset {unset_t::init{}};
 
 
 
@@ -703,35 +720,6 @@ constexpr unset_t unset {unset_t::init{}};
 // internal to users, which is why Value needs to be a friend.
 //
 
-
-class Unset : public Value {
-protected:
-    friend class Value;
-    Unset (Dont const &) : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isUnset(); }
-
-public:
-    Unset () :
-        Value ()
-    {
-    }
-
-    explicit operator bool() const = delete;
-};
-
-
-class None : public Value {
-protected:
-    friend class Value;
-    None (Dont const &) : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isUnset(); }
-
-public:
-    explicit None (Engine & engine);
-    explicit None ();
-};
-
-
 class Logic : public Value {
 protected:
     friend class Value;
@@ -741,8 +729,8 @@ protected:
 public:
     // Narrow the construction?
     // https://github.com/hostilefork/rencpp/issues/24
-    Logic (bool const & b) :
-        Value (b)
+    Logic (bool const & b, Engine * engine = nullptr) :
+        Value (b, engine)
     {
     }
 
@@ -758,15 +746,17 @@ protected:
     inline bool isValid() const { return isCharacter(); }
 
 public:
-    Character (char const & c) :
-        Value (c)
+    Character (char const & c, Engine * engine = nullptr) :
+        Value (c, engine)
     {
     }
 
-    Character (wchar_t const & wc) :
-        Value (wc)
+    Character (wchar_t const & wc, Engine * engine = nullptr) :
+        Value (wc, engine)
     {
     }
+
+    Character (int const & i, Engine * engine = nullptr);
 
 
     // Characters represent codepoints.  These conversion operators are for
@@ -787,8 +777,8 @@ protected:
     inline bool isValid() const { return isInteger(); }
 
 public:
-    Integer (int const & i) :
-        Value (i)
+    Integer (int const & i, Engine * engine = nullptr) :
+        Value (i, engine)
     {
     }
 
@@ -803,8 +793,8 @@ protected:
     inline bool isValid() const { return isFloat(); }
 
 public:
-    Float (double const & d) :
-        Value (d)
+    Float (double const & d, Engine * engine = nullptr) :
+        Value (d, engine)
     {
     }
 
@@ -819,7 +809,7 @@ protected:
     inline bool isValid() const { return isDate(); }
 
 public:
-    explicit Date (std::string const & str);
+    explicit Date (std::string const & str, Engine * engine = nullptr);
 };
 
 
