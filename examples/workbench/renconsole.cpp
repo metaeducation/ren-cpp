@@ -44,7 +44,7 @@
 // http://doc.qt.io/qt-5/qthread.html#details
 //
 
-class Worker : public QThread
+class Worker : public QObject
 {
     Q_OBJECT
 
@@ -294,6 +294,8 @@ void RenConsole::printBanner() {
 
         "<i><b>Rebol</b> is © 2015 REBOL Technologies, Apache 2 License</i>",
 
+        "<i><b>Ren</b> is a project by Humanistic Data Initiative</i>",
+
         "<i><b>RenCpp</b></b> is © 2015 HostileFork.com, Boost License</i>",
 
         "<i><b>Qt</b> is © 2015 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
@@ -499,7 +501,18 @@ ren::Value RenConsole::consoleDialect(ren::Value const &) {
 RenConsole::~RenConsole() {
     ren::runtime.cancel();
     workerThread.quit();
-    workerThread.wait();
+    if (not workerThread.wait(1000)) {
+        // How to print to console about quitting
+        QMessageBox::information(
+            nullptr,
+            "Ren Garden Terminated Abnormally",
+            "A cancel request was sent to the evaluator but the thread it was"
+            " running didn't exit in a timely manner.  This should not happen,"
+            " so if you can remember what you were doing or reproduce it then"
+            " please report it on the issue tracker!"
+        );
+        exit(1337); // REVIEW: What exit codes will Ren Garden use?
+    }
 }
 
 

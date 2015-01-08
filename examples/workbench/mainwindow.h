@@ -51,6 +51,8 @@ private slots:
     void updateMenus();
     void switchLayoutDirection();
 
+    void onFadeOutToQuit(bool active);
+
 private:
     void createActions();
     void createMenus();

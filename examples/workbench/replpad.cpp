@@ -362,8 +362,10 @@ void ReplPad::containInputSelection() {
 //
 
 void ReplPad::keyPressEvent(QKeyEvent * event) {
-
     int const key = event->key();
+
+    if (key == Qt::Key_Escape and (not event->isAutoRepeat()))
+        emit fadeOutToQuit(true);
 
     // Putting this list here for convenience.  In theory commands could take
     // into account whether you hit the 1 on a numeric kepad or on the top
@@ -539,14 +541,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     if ((key == Qt::Key_Escape)) {
         if (not history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
-            return;
         }
-
-        // Nested dialect shells not implemented... YET!
-
-        emit reportStatus(
-            "Cannot escape further - you are in the root console dialect."
-        );
         return;
     }
 
@@ -831,5 +826,24 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     }
 
     textCursor().insertText(event->text());
+}
+
+//
+// Testing fun gimmick for those upset over the loss of ordinary quit...a
+// way to cancel and exit by holding down escape
+//
+void ReplPad::keyReleaseEvent(QKeyEvent * event) {
+
+    // Strangely, on KDE/Linux at least...you get spurious key release events
+    // after a timer, followed by another key press event.  Presumably a
+    // guard against stuck keys in the GUI system?  You can work around it,
+    // but *technically* it makes it impossible to tell if the user merely
+    // released a key for a tiny amount of time or had it held down the whole
+    // (a distinction unimportant here.)
+
+    if ((event->key() == Qt::Key_Escape) and (not event->isAutoRepeat()))
+        emit fadeOutToQuit(false);
+
+    QTextEdit::keyReleaseEvent(event);
 }
 

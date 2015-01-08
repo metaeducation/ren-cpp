@@ -40,6 +40,7 @@ protected:
     QMutex modifyMutex;
 signals:
     void requestConsoleReset();
+    void fadeOutToQuit(bool escaping);
 protected slots:
     void onTextChanged();
     void onConsoleReset();
@@ -66,7 +67,8 @@ protected:
 protected:
     virtual bool isReadyToModify(QKeyEvent * event) = 0;
 
-    void keyPressEvent(QKeyEvent * event) override final;
+    void keyPressEvent(QKeyEvent * event) override;
+    void keyReleaseEvent(QKeyEvent * event) override;
     void mousePressEvent(QMouseEvent * event) override;
     void mouseDoubleClickEvent(QMouseEvent * event) override;
 

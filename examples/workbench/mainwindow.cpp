@@ -58,6 +58,12 @@ MainWindow::MainWindow()
         Qt::DirectConnection
     );
 
+    connect(
+        console, &ReplPad::fadeOutToQuit,
+        this, &MainWindow::onFadeOutToQuit,
+        Qt::DirectConnection
+    );
+
     // REVIEW: is there a better way of having a command say it wants to
     // hide the dock the watchList is in?
 
@@ -244,3 +250,86 @@ void MainWindow::switchLayoutDirection()
         qApp->setLayoutDirection(Qt::LeftToRight);
 }
 
+
+//
+// Removing the Q from the runtime for QUIT led to a thought about more
+// innovative ways to leave the console, and this was a thought inspired
+// by the power-off button "fade out" from ChromeOS.
+//
+// If you hold down escape, this begins fading the window, and then if you
+// release it, it starts fading back in.  Hold it down long enough without
+// releasing then the fade gets to a point where the app closes.
+//
+// As with the exit menu item, this can't be used to kill a hung GUI thread
+// (it wouldn't even run).  But as with that menu item this will force quit
+// a hung worker thread if the evaluator is not responding to cancel for
+// some reason.
+//
+void MainWindow::onFadeOutToQuit(bool escaping)
+{
+    static QTimer * timer = nullptr;
+
+    // We start the opacity value a little bit higher than 1.0, so the first
+    // short while after requesting a fade out no effect is seen (and we don't
+    // need a separate timing for that).
+
+    static qreal const initialOpacity = 1.1;
+    static qreal const quittingOpacity = 0.5;
+    static int const msecInterval = 150;
+
+    // State variables (lambdas don't need to capture statics)
+
+    static qreal opacity = initialOpacity;
+    static qreal delta = 0.0;
+
+    if (not escaping) {
+        // Timer should have been started by the original request to escape,
+        // we leave it running but let it count the opacity up.  (There is
+        // probably a usability design thing for making this all nonlinear.)
+
+        assert(timer);
+        delta = 0.05;
+        return;
+    }
+
+    delta = -0.05;
+
+    // If the timer is not null, we should only have to change the delta,
+    // otherwise we need to create and connect it up.  (We use a lambda
+    // function because this little piece of functionality is nicely tied
+    // up all in this one slot handler).
+
+    if (not timer) {
+        timer = new QTimer {this};
+        connect(
+            timer, &QTimer::timeout,
+            [this]() -> void {
+                opacity = opacity + delta;
+
+                if (opacity <= quittingOpacity) {
+                    timer->stop();
+                    qApp->quit();
+                }
+                else if (opacity >= initialOpacity) {
+                    opacity = initialOpacity;
+                    setWindowOpacity(1.0);
+                    timer->stop();
+                    timer->deleteLater();
+                    timer = nullptr;
+                }
+
+                // Qt tolerates setting window opacities to "more than 1.0"
+                // and treats it as 1.0.  But why propagate nonsense any
+                // further than you must?
+
+                if (opacity <= 1.0)
+                    setWindowOpacity(opacity);
+            }
+        );
+
+        // Now that the timer has been connected, it's safe to start it
+
+        timer->setInterval(msecInterval);
+        timer->start();
+    }
+}
