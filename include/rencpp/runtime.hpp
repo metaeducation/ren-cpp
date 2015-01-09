@@ -19,11 +19,7 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include <functional>
-
-#include <stdexcept>
-#include <iostream>
-#include <iomanip>
+#include <initializer_list>
 
 #include "common.hpp"
 #include "values.hpp"

@@ -19,10 +19,13 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
+#include <cassert>
 #include <functional>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <cassert>
 
 #include <mutex> // global table must be protected for thread safety
 

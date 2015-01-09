@@ -17,6 +17,7 @@
 //
 
 #include <cassert>
+#include <stdexcept>
 
 #include "rencpp/context.hpp"
 #include "rencpp/engine.hpp"

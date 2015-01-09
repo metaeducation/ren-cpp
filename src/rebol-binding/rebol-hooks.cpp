@@ -3,12 +3,14 @@
 #include <unordered_map>
 #endif
 #include <cassert>
+#include <stdexcept>
 
 #include "rencpp/rebol.hpp"
 
 // REVIEW: hooks should not be throwing exceptions; still some in threadinit
 #include "rencpp/exceptions.hpp"
 
+#include <utility>
 #include <vector>
 #include <algorithm>
 

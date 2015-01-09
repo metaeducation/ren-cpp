@@ -19,15 +19,14 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include <iostream>
-#include <cstdint>
-#include <cstddef>
 #include <cassert>
+#include <initializer_list>
+#include <iosfwd>
+#include <stdexcept>
 #include <utility> // std::forward
 
 #include <atomic>
 #include <type_traits>
-#include <array>
 
 #include <typeinfo> // std::bad_cast
 
@@ -88,7 +87,7 @@ namespace internal {
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
     class RebolHooks;
 #else
-    static_assert(false, "Invalid runtime setting")
+    static_assert(false, "Invalid runtime setting");
 #endif
 
     template <class R, class... Ts>
@@ -156,7 +155,7 @@ protected:
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
     friend class internal::RebolHooks;
 #else
-    static_assert(false, "Invalid runtime setting")
+    static_assert(false, "Invalid runtime setting");
 #endif
 
     //
@@ -546,7 +545,6 @@ public:
 
 
 public:
-    friend std::ostream & operator<<(std::ostream & os, Value const & value);
 
     // If you explicitly ask for it, all ren::Value types can be static_cast
     // to a std::string.  Internally it uses the runtime::form
@@ -664,6 +662,8 @@ protected:
         Value * applyOut
     );
 };
+
+std::ostream & operator<<(std::ostream & os, Value const & value);
 
 
 
@@ -1032,8 +1032,6 @@ public:
         Value operator-> () const { return state.operator->(); }
     };
 
-    friend class iterator;
-
     iterator begin() const {
         return iterator (*this);
     }
@@ -1142,8 +1140,6 @@ public:
         Character operator-> () const {
             return static_cast<Character>(state.operator->()); }
     };
-
-    friend class iterator;
 
     iterator begin() const {
         return iterator (*this);

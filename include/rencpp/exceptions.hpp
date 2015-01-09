@@ -19,7 +19,7 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include <stdexcept>
+#include <exception>
 #include <sstream>
 
 #include "values.hpp"
