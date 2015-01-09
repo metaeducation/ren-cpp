@@ -545,7 +545,6 @@ public:
 
 
 public:
-    friend std::ostream & operator<<(std::ostream & os, Value const & value);
 
     // If you explicitly ask for it, all ren::Value types can be static_cast
     // to a std::string.  Internally it uses the runtime::form
@@ -663,6 +662,8 @@ protected:
         Value * applyOut
     );
 };
+
+std::ostream & operator<<(std::ostream & os, Value const & value);
 
 
 
@@ -1031,8 +1032,6 @@ public:
         Value operator-> () const { return state.operator->(); }
     };
 
-    friend class iterator;
-
     iterator begin() const {
         return iterator (*this);
     }
@@ -1141,8 +1140,6 @@ public:
         Character operator-> () const {
             return static_cast<Character>(state.operator->()); }
     };
-
-    friend class iterator;
 
     iterator begin() const {
         return iterator (*this);
