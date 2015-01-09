@@ -213,13 +213,28 @@ RenConsole::RenConsole (QWidget * parent) :
     ren::runtime("console: quote", consoleFunction);
 
     // Load the incubator routines that are not written in C++ from the
-    // resource file
+    // resource file, and the ren-garden console helpers for syntax highlight
+    // or other such features
 
-    QFile file(":/scripts/incubator.reb");
-    file.open(QIODevice::ReadOnly);
+    std::vector<char const *> scripts {
+        ":/scripts/ren-garden.reb",
+        ":/scripts/rebol-proposals/combine.reb",
+        ":/scripts/rebol-proposals/while-until.reb",
+        ":/scripts/rebol-proposals/print-only-with.reb",
+        ":/scripts/rebol-proposals/charset-generators.reb",
+        ":/scripts/rebol-proposals/exit-end-quit.reb",
+        ":/scripts/rebol-proposals/question-marks.reb",
+        ":/scripts/rebol-proposals/remold-reform-repend.reb",
+        ":/scripts/rebol-proposals/to-string-spelling.reb",
+        ":/scripts/rebol-proposals/find-min-max.reb"
+    };
 
-    QByteArray dump = file.readAll();
-    ren::runtime(dump.data());
+    for (auto filename : scripts) {
+        QFile file {filename};
+        file.open(QIODevice::ReadOnly);
+        QByteArray dump = file.readAll();
+        ren::runtime(dump.data());
+    }
 
     // Print the banner and the first prompt.  Any time we're going to do
     // a write to the console, we need to do so while the modifyMutex is
@@ -300,15 +315,23 @@ void RenConsole::printBanner() {
 
         "<i><b>Qt</b> is © 2015 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
 
-        "",
-
-        "<i><b>Ren Garden</b> is © 2015 MetÆducation, GPL 3 License</i>"
     };
 
     for (auto & credit : components) {
         cursor.insertHtml(credit);
         cursor.insertText("\n");
     }
+
+    cursor.insertText("\n");
+
+    // For the sake of demonstration, get the Ren Garden copyright value
+    // out of a context set up in the resource file in ren-garden.reb
+
+    cursor.insertHtml(
+        ren::String{ren::runtime("ren-garden/copyright")}
+    );
+
+    cursor.insertText("\n");
 
     // Center all that stuff
 

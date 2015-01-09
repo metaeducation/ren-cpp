@@ -1034,11 +1034,11 @@ public:
 
     friend class iterator;
 
-    iterator begin() {
+    iterator begin() const {
         return iterator (*this);
     }
 
-    iterator end() {
+    iterator end() const {
         auto temp = *this;
         temp.tail(); // see remarks on tail modifying vs. returning a value
         return iterator (temp);
@@ -1145,11 +1145,11 @@ public:
 
     friend class iterator;
 
-    iterator begin() {
+    iterator begin() const {
         return iterator (*this);
     }
 
-    iterator end() {
+    iterator end() const {
         auto temp = *this;
         temp.tail();
         return iterator (temp);
@@ -1473,9 +1473,7 @@ public:
 #endif
 
 #if REN_CLASSLIB_QT
-    operator QString () const {
-        return Value::operator QString ();
-    }
+    operator QString () const;
 #endif
 };
 

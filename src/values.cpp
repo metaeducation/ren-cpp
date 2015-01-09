@@ -153,6 +153,15 @@ Value::operator QString () const {
     auto result = QString(buffer);
     return result;
 }
+
+String::operator QString () const {
+    // ridiculous way of doing it, but it's a start...and kind of impressive
+    // that it works...
+    QString result;
+    for (ren::Character ch : *this)
+        result += ch;
+    return result;
+}
 #endif
 
 
