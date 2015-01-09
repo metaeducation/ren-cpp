@@ -34,7 +34,7 @@
 
 
 ///
-/// WORKER OBJECT FOR HANDLING EVALUATIONS
+/// WORKER OBJECT FOR HANDLING REN EVALUATIONS
 ///
 
 //
@@ -43,13 +43,18 @@
 //
 // http://doc.qt.io/qt-5/qthread.html#details
 //
+// Ultimately it should be the case that the GUI never calls an "open coded"
+// arbitrary evaluation of user code in the ren::runtime.  Short things
+// might be okay if you are *certain* the evaluator is not currently running.
+//
 
-class Worker : public QObject
+class EvaluatorWorker : public QObject
 {
     Q_OBJECT
 
 public slots:
     void doWork(QString const & input) {
+
         ren::Value result;
         bool success = false;
 
@@ -123,7 +128,7 @@ RenConsole::RenConsole (QWidget * parent) :
     //
     //   http://doc.qt.io/qt-5/qthread.html#details
 
-    Worker * worker = new Worker;
+    EvaluatorWorker * worker = new EvaluatorWorker;
     worker->moveToThread(&workerThread);
     connect(
         &workerThread, &QThread::finished,
@@ -132,11 +137,11 @@ RenConsole::RenConsole (QWidget * parent) :
     );
     connect(
         this, &RenConsole::operate,
-        worker, &Worker::doWork,
+        worker, &EvaluatorWorker::doWork,
         Qt::QueuedConnection
     );
     connect(
-        worker, &Worker::resultReady,
+        worker, &EvaluatorWorker::resultReady,
         this, &RenConsole::handleResults,
         // technically it can't handle more results...but better perhaps
         // to crash than to block if some new invariant is introduced and
@@ -210,7 +215,11 @@ RenConsole::RenConsole (QWidget * parent) :
         }
     );
 
-    ren::runtime("console: quote", consoleFunction);
+    ren::runtime(
+        "console: quote", consoleFunction,
+        "shell: quote", shell.getDialectFunction()
+    );
+
 
     // Load the incubator routines that are not written in C++ from the
     // resource file, and the ren-garden console helpers for syntax highlight
@@ -226,7 +235,8 @@ RenConsole::RenConsole (QWidget * parent) :
         ":/scripts/rebol-proposals/question-marks.reb",
         ":/scripts/rebol-proposals/remold-reform-repend.reb",
         ":/scripts/rebol-proposals/to-string-spelling.reb",
-        ":/scripts/rebol-proposals/find-min-max.reb"
+        ":/scripts/rebol-proposals/find-min-max.reb",
+        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb"
     };
 
     for (auto filename : scripts) {

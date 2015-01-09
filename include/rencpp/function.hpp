@@ -67,7 +67,7 @@ private:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    void finishInit(
+    void finishInitSpecial(
         RenEngineHandle engine,
         Block const & spec,
         RenShimPointer const & shim
@@ -283,7 +283,7 @@ public:
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInit(engine, spec, shim);
+        Function::finishInitSpecial(engine, spec, shim);
     }
 };
 

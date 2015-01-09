@@ -23,5 +23,3 @@ exit: func [
 ;-- Can't be a wrapper function because it would return the exit
 end: :system/contexts/lib/exit
 
-;-- Ren Garden can finally offer fancier alternatives for "Q to quit"!!!
-unset 'q

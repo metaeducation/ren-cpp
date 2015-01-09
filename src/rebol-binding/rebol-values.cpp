@@ -282,7 +282,11 @@ bool Value::isTag(REBVAL * init) const {
 }
 
 bool Value::isFunction() const {
-    return IS_FUNCTION(&cell);
+    // Really, from a user's point of view...shouldn't there only be
+    // ANY_FUNCTION?  It's currently annoying if someone checks for
+    // taking a function and rejects closure.
+
+    return IS_FUNCTION(&cell) or IS_NATIVE(&cell) or IS_CLOSURE(&cell);
 }
 
 bool Value::isError() const {

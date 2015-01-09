@@ -35,7 +35,7 @@ namespace internal {
 /// FUNCTION FINALIZER FOR EXTENSION
 ///
 
-void Function::finishInit(
+void Function::finishInitSpecial(
     RenEngineHandle engine,
     Block const & spec,
     RenShimPointer const & shim
