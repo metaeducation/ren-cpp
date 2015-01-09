@@ -19,15 +19,13 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include <iostream>
-#include <cstdint>
-#include <cstddef>
 #include <cassert>
+#include <initializer_list>
+#include <iosfwd>
 #include <utility> // std::forward
 
 #include <atomic>
 #include <type_traits>
-#include <array>
 
 #include <typeinfo> // std::bad_cast
 

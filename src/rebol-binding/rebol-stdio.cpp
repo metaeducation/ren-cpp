@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <iostream>
+
 #include "rencpp/rebol.hpp"
 #include "rencpp/engine.hpp"
 

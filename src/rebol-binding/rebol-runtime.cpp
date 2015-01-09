@@ -1,5 +1,4 @@
 #include <iostream>
-#include <sstream>
 
 #include <csignal>
 #include <unistd.h>

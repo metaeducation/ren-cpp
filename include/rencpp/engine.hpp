@@ -19,6 +19,9 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
+#include <functional>
+#include <iostream>
+
 #include "values.hpp"
 #include "runtime.hpp"
 

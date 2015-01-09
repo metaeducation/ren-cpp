@@ -16,6 +16,9 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
+#include <ostream>
+#include <vector>
+
 #include "rencpp/values.hpp"
 #include "rencpp/exceptions.hpp"
 #include "rencpp/runtime.hpp"
