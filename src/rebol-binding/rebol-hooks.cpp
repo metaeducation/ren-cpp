@@ -214,11 +214,6 @@ public:
 
         contextOut->series = VAL_OBJ_FRAME(object);
 
-    #ifndef NDEBUG
-        assert(nodes.find(engine.data) == nodes.end());
-        nodes[engine.data]
-            = std::unordered_map<REBSER const *, unsigned int> {};
-    #endif
         return REN_SUCCESS;
     }
 
@@ -235,7 +230,7 @@ public:
         for (REBCNT index = 0; index < BLK_LEN(allocatedContexts); index++) {
             assert(IS_OBJECT(BLK_SKIP(allocatedContexts, index)));
             if (
-                reinterpret_cast<REBSER *>(context.series)
+                context.series
                 == VAL_OBJ_FRAME(BLK_SKIP(allocatedContexts, index))
             ) {
                 Remove_Series(allocatedContexts, index, 1);
@@ -252,18 +247,6 @@ public:
             /*SERIES_CLR_FLAG(allocatedContexts, SER_EXT); */
             UNSAVE_SERIES(allocatedContexts);
         }
-
-    #ifndef NDEBUG
-        auto it = nodes.find(engine.data);
-
-        assert(it != nodes.end());
-
-        std::unordered_map<REBSER const *, unsigned int> & leftovers
-            = it->second;
-        assert (leftovers.empty());
-
-        nodes.erase(it);
-    #endif
 
         return REN_SUCCESS;
     }

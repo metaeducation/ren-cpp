@@ -49,6 +49,13 @@ public:
         errorValue (error),
         whatString (static_cast<std::string>(errorValue))
     {
+        // REVIEW: catch any cases where this is not true in the future.
+        // Trying to narrow the RenCpp exception set to a vision of which
+        // are going to be not carrying Rebol objects, so more important to
+        // poke a NONE in here for convenience than keeping deprecated
+        // exceptions around.
+
+        /* assert(error.isError()); */
     }
 
     char const * what() const noexcept override {
@@ -58,29 +65,6 @@ public:
     Value error() const noexcept {
         return errorValue;
     }
-};
-
-
-//
-// too_many_args is thrown by the binding for generalized apply and there is
-// no error!, but maybe we could make one and fold it in with evaluation
-// error?
-//
-
-class too_many_args : public std::exception {
-private:
-    std::string whatString;
-
-public:
-    too_many_args (std::string const & whatString) :
-        whatString (whatString)
-    {
-    }
-
-    char const * what() const noexcept override {
-        return whatString.c_str();
-    }
-
 };
 
 

@@ -14,7 +14,7 @@ int main(int, char **) {
     try {
         SetWord {"w:"}(10, 20);
     }
-    catch (too_many_args const & e) {
+    catch (evaluation_error const & e) {
         print("2 is too many args to a generalized apply for set word!");
     }
 
@@ -25,7 +25,7 @@ int main(int, char **) {
         // technical note: explicit none(arg1, arg2...) is now illegal
         result(10);
     }
-    catch (too_many_args const & e) {
+    catch (evaluation_error const & e) {
         print("generalized apply for none cannot have any arguments");
     }
 
