@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include "rencpp/values.hpp"
 #include "rencpp/context.hpp"
 #include "rencpp/engine.hpp"

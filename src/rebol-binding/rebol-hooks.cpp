@@ -3,6 +3,7 @@
 #include <unordered_map>
 #endif
 #include <cassert>
+#include <stdexcept>
 
 #include "rencpp/rebol.hpp"
 

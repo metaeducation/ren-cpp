@@ -19,6 +19,9 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
+#include <ostream>
+#include <utility>
+
 #include "engine.hpp"
 
 namespace ren {

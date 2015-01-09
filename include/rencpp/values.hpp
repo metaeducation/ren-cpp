@@ -22,6 +22,7 @@
 #include <cassert>
 #include <initializer_list>
 #include <iosfwd>
+#include <stdexcept>
 #include <utility> // std::forward
 
 #include <atomic>

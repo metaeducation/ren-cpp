@@ -21,6 +21,7 @@
 
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 
 #include "values.hpp"
 #include "runtime.hpp"
