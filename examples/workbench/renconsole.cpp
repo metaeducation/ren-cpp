@@ -480,7 +480,7 @@ void RenConsole::handleResults(
         // just like to_string works, this should too.
 
         QString molded = static_cast<QString>(
-            ren::runtime("mold/all", result)
+            ren::runtime("mold/all quote", result)
         );
         appendText(molded);
         appendText("\n");
