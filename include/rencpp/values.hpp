@@ -86,7 +86,7 @@ namespace internal {
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
     class RebolHooks;
 #else
-    static_assert(false, "Invalid runtime setting")
+    static_assert(false, "Invalid runtime setting");
 #endif
 
     template <class R, class... Ts>
@@ -154,7 +154,7 @@ protected:
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
     friend class internal::RebolHooks;
 #else
-    static_assert(false, "Invalid runtime setting")
+    static_assert(false, "Invalid runtime setting");
 #endif
 
     //
