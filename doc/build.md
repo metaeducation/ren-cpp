@@ -22,7 +22,7 @@ CMake, you will need:
 
 * [A recent version of MinGW][1] (4.9+ with POSIX threads)
 * [A fairly recent version of CMake][2] (2.8+)
-* [Qt 5.4+ if you also want to build Ren Garden][3] (choose the MinGW binaries)
+* [Qt 5.4+ if you also want to build Ren Garden][3] (choose the MinGW binaries in "Other Downloads")
 * [The source code of Rebol][4]
 * [The Rebol interpreter][5]
 * [The source code of RenCpp][6]
@@ -89,7 +89,7 @@ went smoothly, you should be done!
 
 [1]: http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/
 [2]: http://www.cmake.org/download/
-[3]: http://www.qt.io/download-open-source/#section-1
+[3]: http://www.qt.io/download-open-source/
 [4]: https://github.com/rebol/rebol
 [5]: http://rebolsource.net/
 [6]: https://github.com/hostilefork/rencpp
