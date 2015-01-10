@@ -1023,9 +1023,9 @@ public:
             return temp;
         }
 
-        bool operator==(iterator const & other)
+        bool operator==(iterator const & other) const
             { return state.isSameAs(other.state); }
-        bool operator!=(iterator const & other)
+        bool operator!=(iterator const & other) const
             { return not state.isSameAs(other.state); }
 
         Value operator * () const { return *state; }
@@ -1129,9 +1129,9 @@ public:
             return temp;
         }
 
-        bool operator==(iterator const & other)
+        bool operator==(iterator const & other) const
             { return state.isSameAs(other.state); }
-        bool operator!=(iterator const & other)
+        bool operator!=(iterator const & other) const
             { return not state.isSameAs(other.state); }
 
         Character operator * () const {
