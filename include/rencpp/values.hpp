@@ -1002,24 +1002,24 @@ public:
 
     public:
         iterator & operator++() {
-            state++;
+            ++state;
             return *this;
         }
 
         iterator & operator--() {
-            state--;
+            --state;
             return *this;
         }
 
         iterator operator++(int) {
             auto temp = *this;
-            ++*this;
+            operator++();
             return temp;
         }
 
         iterator operator--(int) {
             auto temp = *this;
-            --*this;
+            operator--();
             return temp;
         }
 
@@ -1108,24 +1108,24 @@ public:
 
     public:
         iterator & operator++() {
-            state++;
+            ++state;
             return *this;
         }
 
         iterator & operator--() {
-            state--;
+            --state;
             return *this;
         }
 
         iterator operator++(int) {
             auto temp = *this;
-            ++*this;
+            operator++();
             return temp;
         }
 
         iterator operator--(int) {
             auto temp = *this;
-            --*this;
+            operator--();
             return temp;
         }
 
