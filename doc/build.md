@@ -20,12 +20,12 @@ explain how to build RenCpp with Red either; it focuses on Rebol.
 The simplest way to build RenCpp is to use CMake. To build RenCpp on Windows with
 CMake, you will need:
 
-* A recent version of MinGW (4.9+). [1]
-* A fairly recent version of CMake (2.8+). [2]
-* Qt 5.4+ if you also want to build Ren Garden (choose the MinGW binaries). [3]
-* The source code of Rebol. [4]
-* The Rebol interpreter. [5]
-* The source code of RenCpp. [6]
+* [A recent version of MinGW (4.9+)][1]
+* [A fairly recent version of CMake (2.8+)][2]
+* [Qt 5.4+ if you also want to build Ren Garden][3] (choose the MinGW binaries)
+* [The source code of Rebol][4]
+* [The Rebol interpreter][5]
+* [The source code of RenCpp][6]
 
 Note that if you don't have a version of MinGW recent enough and you also want to
 build Ren Garden, then you better download the Qt binaries with the corresponding
@@ -83,10 +83,9 @@ set(CMAKE_PREFIX_PATH "C:\\Qt\\Qt5.4.0\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core" "
 
 Of course, the absolute links above are examples and may not correspond to the
 version of Qt or MinGW that you use, but you get the idea. Now, if everything
-ent smoothly, you should be done!
+went smoothly, you should be done!
 
-Links
-=====
+
 
 [1]: http://www.cmake.org/download/
 [2]: http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/
