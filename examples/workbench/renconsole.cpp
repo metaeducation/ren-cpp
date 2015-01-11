@@ -491,10 +491,18 @@ void RenConsole::handleResults(
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
-        QString molded = static_cast<QString>(
-            ren::runtime("mold/all quote", result)
-        );
-        appendText(molded);
+        if (result.isFunction()) {
+            appendText("#[function! (");
+            appendText(static_cast<QString>(
+                ren::runtime("words-of quote", result)
+            ));
+            appendText(") [...]]");
+        } else {
+            appendText(static_cast<QString>(
+                ren::runtime("mold/all quote", result)
+            ));
+        }
+
         appendText("\n");
     }
 
