@@ -236,7 +236,8 @@ RenConsole::RenConsole (QWidget * parent) :
         ":/scripts/rebol-proposals/remold-reform-repend.reb",
         ":/scripts/rebol-proposals/to-string-spelling.reb",
         ":/scripts/rebol-proposals/find-min-max.reb",
-        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb"
+        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb",
+        ":/scripts/rebol-proposals/for-range-dialect.reb"
     };
 
     for (auto filename : scripts) {
