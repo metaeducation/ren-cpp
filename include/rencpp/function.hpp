@@ -367,24 +367,60 @@ std::vector<
 
 template<typename Fun, std::size_t... Ind>
 Function makeFunction_(
+    std::true_type, // Func return type is void
     RenEngineHandle engine,
     Block const & spec,
     RenShimPointer shim,
     Fun && fun,
     utility::indices<Ind...>
 ) {
+    using Ret = Unset;
+
     using Gen = internal::FunctionGenerator<
-        typename utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::result_type,
+        Ret,
         typename utility::function_traits<
             typename std::remove_reference<Fun>::type
         >::template arg<Ind>...
     >;
 
+    return Gen {
+        engine,
+        spec,
+        shim,
+        std::function<
+            Ret(
+                typename utility::function_traits<
+                    typename std::remove_reference<Fun>::type
+                >::template arg<Ind>...
+            )
+        >([&fun](typename utility::function_traits<
+                    typename std::remove_reference<Fun>::type
+                >::template arg<Ind>... args){
+            fun(args...);
+            return Unset();
+        })
+    };
+}
+
+template<typename Fun, std::size_t... Ind>
+Function makeFunction_(
+    std::false_type,    // Func return type is not void
+    RenEngineHandle engine,
+    Block const & spec,
+    RenShimPointer shim,
+    Fun && fun,
+    utility::indices<Ind...>
+) {
     using Ret = typename utility::function_traits<
         typename std::remove_reference<Fun>::type
     >::result_type;
+
+    using Gen = internal::FunctionGenerator<
+        Ret,
+        typename utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::template arg<Ind>...
+    >;
 
     return Gen {
         engine,
@@ -400,20 +436,40 @@ Function makeFunction_(
     };
 }
 
+template<typename Fun>
+Function makeFunction_(
+    RenEngineHandle engine,
+    Block const & spec,
+    RenShimPointer shim,
+    Fun && fun
+) {
+    using Ret = typename utility::function_traits<
+        typename std::remove_reference<Fun>::type
+    >::result_type;
+
+    using Indices = utility::make_indices<
+        utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::arity
+    >;
+
+    return makeFunction_(
+        typename std::is_void<Ret>::type{},  // tag dispatching
+        engine,
+        spec,
+        shim,
+        std::forward<Fun>(fun),
+        Indices{}
+    );
+}
+
 
 //
 // For convenience, we define specializations that let you be explicit about
 // the engine and/or provide an already built spec block.
 //
 
-template<
-    typename Fun,
-    typename Indices = utility::make_indices<
-        utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::arity
-    >
->
+template<typename Fun>
 Function makeFunction(
     char const * spec,
     RenShimPointer shim,
@@ -423,20 +479,12 @@ Function makeFunction(
         Engine::runFinder().getHandle(),
         Block {spec},
         shim,
-        std::forward<Fun>(fun),
-        Indices()
+        std::forward<Fun>(fun)
     );
 }
 
 
-template<
-    typename Fun,
-    typename Indices = utility::make_indices<
-        utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::arity
-    >
->
+template<typename Fun>
 Function makeFunction(
     Block const & spec,
     RenShimPointer shim,
@@ -446,20 +494,12 @@ Function makeFunction(
         Engine::runFinder().getHandle(),
         spec,
         shim,
-        std::forward<Fun>(fun),
-        Indices()
+        std::forward<Fun>(fun)
     );
 }
 
 
-template<
-    typename Fun,
-    typename Indices = utility::make_indices<
-        utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::arity
-    >
->
+template<typename Fun>
 Function makeFunction(
     Engine & engine,
     char const * spec,
@@ -470,8 +510,7 @@ Function makeFunction(
         engine,
         Block {spec},
         shim,
-        std::forward<Fun>(fun),
-        Indices()
+        std::forward<Fun>(fun)
     );
 }
 
@@ -494,8 +533,7 @@ Function makeFunction(
         engine.getHandle(),
         spec,
         shim,
-        std::forward<Fun>(fun),
-        Indices()
+        std::forward<Fun>(fun)
     );
 }
 
