@@ -39,7 +39,7 @@ namespace ren {
 
 namespace internal {
 
-#ifndef DEBUG
+#ifndef NDEBUG
     std::unordered_map<
         decltype(RebolEngineHandle::data),
         std::unordered_map<REBSER const *, unsigned int>
@@ -156,7 +156,7 @@ public:
 /// ENGINE ALLOCATION AND FREEING
 ///
 
-    int AllocEngine(RebolEngineHandle * engineOut) {
+    RenResult AllocEngine(RebolEngineHandle * engineOut) {
         if (not (REBOL_IS_ENGINE_HANDLE_INVALID(theEngine)))
             throw std::runtime_error(
                 "Rebol does not have Engine memory isolation at this"
@@ -176,9 +176,13 @@ public:
     }
 
 
-    int FreeEngine(RebolEngineHandle engine) {
+    RenResult FreeEngine(RebolEngineHandle engine) {
 
         assert(engine.data == 1020);
+
+        if (REBOL_IS_ENGINE_HANDLE_INVALID(engine))
+            return REN_BAD_ENGINE_HANDLE;
+
         theEngine = REBOL_ENGINE_HANDLE_INVALID;
 
         return REN_SUCCESS;
@@ -190,7 +194,7 @@ public:
 /// CONTEXT ALLOCATION AND FREEING
 ///
 
-    int AllocContext(
+    RenResult AllocContext(
         RebolEngineHandle engine,
         RebolContextHandle * contextOut
     ) {
@@ -219,7 +223,7 @@ public:
     }
 
 
-    int FreeContext(
+    RenResult FreeContext(
         RebolEngineHandle engine,
         RebolContextHandle context
     ) {
@@ -253,7 +257,7 @@ public:
     }
 
 
-    int FindContext(
+    RenResult FindContext(
         RebolEngineHandle engine,
         char const * name,
         RebolContextHandle * contextOut
@@ -295,7 +299,7 @@ public:
     // where the applicand is a function.
     //
 
-    int Generalized_Apply(
+    RenResult Generalized_Apply(
         REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
     ) {
 
@@ -357,7 +361,7 @@ public:
     // best be done by parameterizing the Rebol runtime functions directly
     //
 
-    int ConstructOrApply(
+    RenResult ConstructOrApply(
         RebolEngineHandle engine,
         RebolContextHandle context,
         REBVAL const * applicand,
@@ -430,7 +434,7 @@ public:
             assert(applyOut);
         }
 
-        auto current = reinterpret_cast<char const *>(loadablesPtr);
+        auto current = reinterpret_cast<volatile char const *>(loadablesPtr);
 
         // Vector is bad to use with setjmp/longjmp, fix this
 
@@ -452,7 +456,7 @@ public:
         for (size_t index = 0; index < numLoadables; index++) {
 
             auto cell = const_cast<REBVAL *>(
-                reinterpret_cast<REBVAL const *>(current)
+                reinterpret_cast<volatile REBVAL const *>(current)
             );
 
             if (VAL_TYPE(cell) == REB_END) {
@@ -583,7 +587,7 @@ public:
         return result;
     }
 
-    int ReleaseCells(
+    RenResult ReleaseCells(
         RebolEngineHandle engine,
         REBVAL const * valuesPtr,
         size_t numValues,

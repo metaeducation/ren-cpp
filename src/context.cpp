@@ -71,8 +71,10 @@ Engine & Context::getEngine() {
 Context & Context::runFinder(Engine * enginePtr) {
     if (not finder) {
         finder = [] (Engine * enginePtr) -> Context & {
-            assert(enginePtr == nullptr); // you are using default behavior
-            static Context user (Engine::runFinder(), "USER");
+            if (not enginePtr)
+                enginePtr = &Engine::runFinder();
+
+            static Context user (*enginePtr, "USER");
             return user;
         };
     }

@@ -340,7 +340,7 @@ void RenConsole::printBanner() {
     // out of a context set up in the resource file in ren-garden.reb
 
     cursor.insertHtml(
-        ren::String{ren::runtime("ren-garden/copyright")}
+        static_cast<ren::String>(ren::runtime("ren-garden/copyright"))
     );
 
     cursor.insertText("\n");
@@ -472,10 +472,11 @@ void RenConsole::handleResults(
         // that error is unset then assume a cancellation).  Formed errors
         // have an implicit newline on the end implicitly
 
-        if (result)
+        if (result) {
             appendText(static_cast<QString>(result));
-        else
+        } else {
             appendText("[Escape]\n");
+        }
 
     }
     else if (not result.isUnset()) {
