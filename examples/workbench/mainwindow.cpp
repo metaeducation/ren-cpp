@@ -299,6 +299,7 @@ void MainWindow::onFadeOutToQuit(bool escaping)
 
                 if (opacity <= quittingOpacity) {
                     fadeTimer->stop();
+                    forcingQuit = true;
                     qApp->quit();
                 }
                 else if (opacity >= initialOpacity) {
