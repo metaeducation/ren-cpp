@@ -1,0 +1,26 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>images/copy.png</file>
+    <file>images/cut.png</file>
+    <file>images/new.png</file>
+    <file>images/open.png</file>
+    <file>images/paste.png</file>
+    <file>images/save.png</file>
+
+    <file>images/rebol-logo.png</file>
+    <file>images/red-logo.png</file>
+
+    <file>scripts/ren-garden.reb</file>
+
+    <file>scripts/rebol-proposals/combine.reb</file>
+    <file>scripts/rebol-proposals/while-until.reb</file>
+    <file>scripts/rebol-proposals/print-only-with.reb</file>
+    <file>scripts/rebol-proposals/find-min-max.reb</file>
+    <file>scripts/rebol-proposals/charset-generators.reb</file>
+    <file>scripts/rebol-proposals/exit-end-quit.reb</file>
+    <file>scripts/rebol-proposals/question-marks.reb</file>
+    <file>scripts/rebol-proposals/remold-reform-repend.reb</file>
+    <file>scripts/rebol-proposals/to-string-spelling.reb</file>
+    <file>scripts/rebol-proposals/ls-cd-dt-short-names.reb</file>
+</qresource>
+</RCC>

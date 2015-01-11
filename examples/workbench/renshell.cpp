@@ -70,6 +70,9 @@ public:
 private:
     void initProcess();
 
+public:
+    bool hasProcess() { return process != nullptr; }
+
 public slots:
     void doWork(QString const & input) {
 
@@ -96,7 +99,15 @@ public slots:
 
             // first token will be the shell start and any startup message,
             // we toss that for now
+        #ifdef TO_WIN32
+            process->write("PROMPT=");
 
+            process->write(token);
+
+            process->write("\n");
+
+            tokenCount++;
+        #else
             process->write("PS1=\"");
 
             process->write(token);
@@ -116,6 +127,7 @@ public slots:
             process->write("PS4=\"\"\n");
 
             tokenCount++;
+        #endif
         }
 
         // assume they didn't provide the line feed, for now.
@@ -136,9 +148,17 @@ private slots:
     void onReadyReadStandardOutput();
     void onStateChanged(QProcess::ProcessState newState);
 
-
 signals:
     void resultReady(int status);
+
+public:
+    ~ShellWorker () {
+        if (process) {
+            process->write("exit\n");
+            process->waitForFinished(2000);
+            delete process;
+        }
+    }
 };
 
 
@@ -195,17 +215,31 @@ void ShellWorker::initProcess() {
     // case, how to access config if we are replacing "DO"?  A meta key
     // which knows to add /config when it's running?  Maybe shell/meta?
 
-    QString program = "/bin/sh";
+    QString program;
     QStringList arguments;
 
-    // Force interactivity
+#ifdef TO_WIN32
+    program = "CMD.EXE";
 
-    arguments << "-i";
+    // We want to start the command with echo off, but the command for doing
+    // that varies by language.  In English versions, it's /Q
+    //
+    // http://stackoverflow.com/questions/21649882/
+
+    arguments << "/Q";
+#else
+    program = "/bin/sh";
 
     // Read commands from standard input (set automatically if no file
     // arguments are present, so unnecessary.
 
     arguments << "-s";
+
+    // Run interactively (necessary for showing a prompt, which we need
+    // as a signal for when a command output boundary is hit).
+
+    arguments << "-i";
+#endif
 
     // we merge standard output and standard error ATM.
 
@@ -218,55 +252,93 @@ void ShellWorker::initProcess() {
 void ShellWorker::onError(QProcess::ProcessError error) {
     switch (error) {
         case QProcess::FailedToStart:
-            // Either the invoked program is missing, or you may have
-            // insufficient permissions to invoke the program.
+            QMessageBox::information(
+                nullptr,
+                "Shell process failed to start",
+                "Either the invoked program is missing, or you may have"
+                " insufficient permissions to invoke the program"
+            );
             break;
 
         case QProcess::Crashed:
-            // The process crashed some time after starting successfully.
+            QMessageBox::information(
+                nullptr,
+                "Shell process crashed",
+                "Either the invoked program is missing, or you may have"
+                " insufficient permissions to invoke the program"
+            );
             break;
 
         case QProcess::Timedout:
+            // "The last waitFor...() function timed out. The state of QProcess is
+            // unchanged, and you can try calling waitFor...() again."
+
+            // Good to know, I guess?  But really we handle the timed-outedness
+            // at the place we called the waitFor.
+            break;
+
         case QProcess::WriteError:
-            // An error occurred when attempting to write to the process. For
-            // example, the process may not be running, or it may have
-            // closed its input channel.
+            QMessageBox::information(
+                nullptr,
+                "Shell process write error",
+                "An error occurred when attempting to write to the process. For"
+                " example, the process may not be running, or it may have"
+                " closed its input channel."
+            );
             break;
 
         case QProcess::ReadError:
-            // An error occurred when attempting to read from the process. For
-            // example, the process may not be running.
+            QMessageBox::information(
+                nullptr,
+                "Shell process read error",
+                "An error occurred when attempting to read from the process. For"
+                " example, the process may not be running."
+            );
             break;
 
         case QProcess::UnknownError:
-            // This is the default return value of error().
+            QMessageBox::information(
+                nullptr,
+                "Shell process sent us QProcess::UnknownError",
+                "What went wrong?  Who knows.  This is everyone's favorite error"
+                " condition.  Sorry...but it's not Ren Garden's fault there's"
+                " nothing more to tell you.  Curse the fates and shake your fist"
+                " at the screen."
+            );
             break;
 
         default:
             UNREACHABLE_CODE();
     }
 
-    // we'd need a thing saying shell exited, and then allow
-    // people to try running it again.  Presumably you get this if you exit,
-    // but otherwise an error?
-
-    assert(false);
+    // We don't close the shell when an error happens; it will either finish
+    // itself or the user will have some kind of /meta command for doing it.
+    // if there's a meta command added, modify messages above to tell them
+    // that it's there and they can use it.
 }
 
 
-void ShellWorker::onFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+void ShellWorker::onFinished(int /*exitCode*/, QProcess::ExitStatus exitStatus)
+{
     switch (exitStatus) {
         case QProcess::NormalExit:
-            ren::print("process exited", exitCode);
+            // This can happen if you type in SHELL [exit], for instance
             break;
 
         case QProcess::CrashExit:
-            assert(false);
+            QMessageBox::information(
+                nullptr,
+                "Your shell process crashed",
+                "For some reason, your shell process crashed.  The next"
+                " shell dialect command you run will start a new one."
+            );
             break;
 
         default:
             UNREACHABLE_CODE();
     }
+    delete process;
+    process = nullptr;
 }
 
 
@@ -309,25 +381,62 @@ void ShellWorker::onReadyReadStandardOutput() {
     // BUT the last token.
 
     if (tokenCount == 1) {
-        // bad idea theater, just throw it into the default iostream
-        // for this moment of testing...
-
         index = buffer.indexOf(token);
         if (index != -1) {
             assert(index + token.size() == buffer.size());
             buffer.truncate(index);
-            ren::print(buffer.data());
+
+            // The linux shell doesn't always enforce a newline, but CMD.EXE
+            // does.  Powershell offers a -NoNewLine option
+            //
+            // http://stackoverflow.com/a/21368314/211160
+            //
+            // I'm a little uncomfortable about such mutations, because
+            // they obscure what is actually going over the line.  But it
+            // would be ugly if we didn't do it, since we put our own
+            // newlines in.
+
+        #ifdef TO_WIN32
+            int count = 1;
+        #else
+            int count = 0;
+        #endif
+
+            while (count > 0) {
+                if (buffer[index - 1] == '\n') {
+                    index--;
+                    buffer.truncate(index);
+                }
+                if (buffer[index - 1] == '\r') {
+                    index--;
+                    buffer.truncate(index);
+                }
+                count--;
+            }
+
+            // bad idea theater, just throw it into the default iostream
+            // for this moment of testing...
+
+            ren::Engine::runFinder().getOutputStream() << buffer.data();
+
             tokenCount--;
             buffer.clear();
         }
     }
 
-    // we can only toss or print up to token's length - 1 bytes to hold for
-    // the next check....
-    int pos = buffer.size() - (token.size() - 1);
+    // Our theoretical limit would be that we can only toss or print up to
+    // token's length - 1 bytes to hold for the next check.  Beyond that
+    // theoretical limit, we want to be able to strip the last \r\n on
+    // Windows (or \n) so as not to print it, because the shell always
+    // puts one on.  So hold off on dumping at least 2 more chars from
+    // the buffer.
+
+    int pos = buffer.size() - ((token.size() - 1) + 2);
     if (pos > 0) {
-        if (tokenCount == 1)
-            ren::print(buffer.left(pos).data());
+        if (tokenCount == 1) {
+            ren::Engine::runFinder().getOutputStream()
+                << buffer.left(pos).data();
+        }
 
         buffer = buffer.right(buffer.size() - pos);
     }
@@ -411,51 +520,77 @@ RenShell::RenShell (QObject * parent) :
 
         "{SHELL dialect for interacting with an OS shell process}"
         "'arg [word! block! paren! string!]"
-        "    {block in dialect or other to execute, see documentation)}",
+        "    {block in dialect or other to execute, see documentation)}"
+        "/meta {Interpret as a meta instruction instead of shell code}"
+        "/echo {Print command before running it}",
 
         REN_STD_FUNCTION,
 
-        [this](ren::Value const & arg) -> ren::Value
+        [this, worker](
+            ren::Value const & arg,
+            ren::Value const & meta,
+            ren::Value const & echo
+        )
+            -> ren::Value
         {
             shellDoneMutex.lock();
 
-            if (arg.isString()) {
-                evaluate(ren::String {arg});
-            }
-            else if (arg.isWord()) {
-                evaluate(static_cast<QString>(arg));
-            }
-            else if (arg.isBlock()) {
-                auto composed
-                    = ren::Block {ren::runtime("compose/deep", arg)};
-
-                evaluate(static_cast<QString>(composed));
-            }
-            else if (arg.isParen()) {
-                evaluate(static_cast<QString>(arg.apply()));
-            }
-            else {
-                ren::runtime("Hold your horses.");
+            if (meta) {
+                if (arg.isWord()) {
+                    return worker->hasProcess();
+                } else {
+                    ren::runtime("do make error! {Only running? supported}");
+                }
+                return ren::unset;
             }
 
-            // unlike when the GUI requested the evaluation and kept running,
-            // we do NOT want to keep running while the arbitrarily long
-            // shell process blocks.  And my savvy CS readership what do we
-            // need, then?  Wait condition.
+        #ifdef TO_WIN32
+            static const bool windows = true;
+        #else
+            static const bool windows = false;
+        #endif
 
-            shellDone.wait(&shellDoneMutex);
-            int result = shellDoneResult;
-            shellDoneMutex.unlock();
+            // generally easier to implement the dialect logic in Rebol code,
+            // see ren-garden.reb (it's built in as part of the resource file)
 
-            if (result != 0) {
-                // should we do an error here or just an integer?
-                return result;
+            auto commands = static_cast<ren::Block>(
+                ren::runtime(
+                    "ren-garden/shell-dialect-to-strings", arg, windows
+                )
+            );
+
+            if (echo) {
+                for (auto str : commands)
+                    ren::print(str);
             }
 
-            // it's annoying when sucessful shell commands print some kind
-            // of evaluative result, so we transform 0 to unset
+            std::vector<int> results;
 
-            return ren::unset;
+            for (auto str : commands) {
+                evaluate(static_cast<ren::String>(str));
+
+                // unlike when the GUI requested the evaluation and kept
+                // running, we do NOT want to keep running while the
+                // arbitrarily long shell process blocks.  And my savvy CS
+                // readership what do we need, then?  Wait condition.
+
+                shellDone.wait(&shellDoneMutex);
+                results.push_back(shellDoneResult);
+                shellDoneMutex.unlock();
+            }
+
+            // for now just return result of last command?  Or block of
+            // result codes from the shell calls? :-/
+
+            if (results.back() == 0) {
+                // it's annoying when sucessful shell commands print some kind
+                // of evaluative result on every command, so we transform 0
+                // to unset
+
+                return ren::unset;
+            }
+
+            return results.back();
         }
     );
 }
@@ -482,7 +617,7 @@ void RenShell::evaluate(QString const & input) {
 
 RenShell::~RenShell () {
     workerThread.quit();
-    if (not workerThread.wait(1000)) {
+    if ((not workerThread.wait(1000) and (not forcingQuit))) {
         // How to print to console about quitting
         QMessageBox::information(
             nullptr,
