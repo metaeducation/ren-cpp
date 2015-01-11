@@ -578,8 +578,9 @@ RenShell::RenShell (QObject * parent) :
 
                 shellDone.wait(&shellDoneMutex);
                 results.push_back(shellDoneResult);
-                shellDoneMutex.unlock();
             }
+
+            shellDoneMutex.unlock();
 
             // for now just return result of last command?  Or block of
             // result codes from the shell calls? :-/
