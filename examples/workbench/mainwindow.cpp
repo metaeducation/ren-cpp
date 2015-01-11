@@ -28,7 +28,12 @@
 
 #include "rencpp/ren.hpp"
 
-MainWindow::MainWindow()
+bool forcingQuit = false;
+
+MainWindow::MainWindow() :
+    opacity (initialOpacity),
+    fading (false),
+    fadeTimer (nullptr)
 {
     qRegisterMetaType<ren::Value>("ren::Value");
 
@@ -267,55 +272,41 @@ void MainWindow::switchLayoutDirection()
 //
 void MainWindow::onFadeOutToQuit(bool escaping)
 {
-    static QTimer * timer = nullptr;
-
-    // We start the opacity value a little bit higher than 1.0, so the first
-    // short while after requesting a fade out no effect is seen (and we don't
-    // need a separate timing for that).
-
-    static qreal const initialOpacity = 1.1;
-    static qreal const quittingOpacity = 0.5;
-    static int const msecInterval = 150;
-
-    // State variables (lambdas don't need to capture statics)
-
-    static qreal opacity = initialOpacity;
-    static qreal delta = 0.0;
-
     if (not escaping) {
         // Timer should have been started by the original request to escape,
         // we leave it running but let it count the opacity up.  (There is
         // probably a usability design thing for making this all nonlinear.)
+        // We might think of asserting the timer, but key events can be
+        // finicky and you might get a key up with no key down.
 
-        assert(timer);
-        delta = 0.05;
+        fading = false;
         return;
     }
 
-    delta = -0.05;
+    fading = true;
 
     // If the timer is not null, we should only have to change the delta,
     // otherwise we need to create and connect it up.  (We use a lambda
     // function because this little piece of functionality is nicely tied
     // up all in this one slot handler).
 
-    if (not timer) {
-        timer = new QTimer {this};
+    if (not fadeTimer) {
+        fadeTimer = new QTimer {this};
         connect(
-            timer, &QTimer::timeout,
+            fadeTimer, &QTimer::timeout,
             [this]() -> void {
-                opacity = opacity + delta;
+                opacity = opacity + (fading ? -deltaOpacity : deltaOpacity);
 
                 if (opacity <= quittingOpacity) {
-                    timer->stop();
+                    fadeTimer->stop();
                     qApp->quit();
                 }
                 else if (opacity >= initialOpacity) {
                     opacity = initialOpacity;
                     setWindowOpacity(1.0);
-                    timer->stop();
-                    timer->deleteLater();
-                    timer = nullptr;
+                    fadeTimer->stop();
+                    fadeTimer->deleteLater();
+                    fadeTimer = nullptr;
                 }
 
                 // Qt tolerates setting window opacities to "more than 1.0"
@@ -329,7 +320,7 @@ void MainWindow::onFadeOutToQuit(bool escaping)
 
         // Now that the timer has been connected, it's safe to start it
 
-        timer->setInterval(msecInterval);
-        timer->start();
+        fadeTimer->setInterval(msecInterval);
+        fadeTimer->start();
     }
 }

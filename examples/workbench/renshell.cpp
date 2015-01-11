@@ -25,6 +25,8 @@
 
 #include "rencpp/ren.hpp"
 
+extern bool forcingQuit;
+
 
 ///
 /// WORKER OBJECT FOR HANDLING SHELL REQUESTS

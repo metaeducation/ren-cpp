@@ -31,6 +31,7 @@
 #include "watchlist.h"
 #include "rensyntaxer.h"
 
+extern bool forcingQuit;
 
 
 ///
@@ -535,7 +536,7 @@ ren::Value RenConsole::consoleDialect(ren::Value const &) {
 RenConsole::~RenConsole() {
     ren::runtime.cancel();
     workerThread.quit();
-    if (not workerThread.wait(1000)) {
+    if ((not workerThread.wait(1000)) and (not forcingQuit)) {
         // How to print to console about quitting
         QMessageBox::information(
             nullptr,
