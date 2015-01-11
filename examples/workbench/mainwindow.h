@@ -31,6 +31,7 @@ class WatchList;
 class QAction;
 class QMenu;
 
+extern bool forcingQuit;
 
 class MainWindow : public QMainWindow
 {
@@ -50,6 +51,22 @@ private slots:
     void about();
     void updateMenus();
     void switchLayoutDirection();
+
+private:
+    // Cool trick... hold down escape to fade window and "poof".
+
+    // We start the opacity value a little bit higher than 1.0, so the first
+    // short while after requesting a fade out no effect is seen (and we don't
+    // need a separate timing for that).
+
+    static constexpr qreal const initialOpacity = 1.1;
+    static constexpr qreal const quittingOpacity = 0.5;
+    static constexpr qreal const deltaOpacity = 0.05;
+    static int const msecInterval = 150;
+
+    qreal opacity;
+    bool fading;
+    QTimer * fadeTimer;
 
     void onFadeOutToQuit(bool active);
 

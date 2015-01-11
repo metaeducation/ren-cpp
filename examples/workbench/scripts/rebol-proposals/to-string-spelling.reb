@@ -7,13 +7,37 @@ Rebol [
 ; whatever FORM was trying to be, and work from there
 ;
 
-to: func [
+to: function [
     "Converts to a specified datatype."
     type [any-type!] "The datatype or example value"
     value [any-type!] "The value to convert"
 ] [
     switch/default to-word type [
-       string! [system/contexts/lib/form value]
+       string! [
+           either block? value [
+               ; dumb heuristic, assume the average item is length 5?  :-/
+               result: make string! (5 * length value)
+               every value [
+                   append result case [
+                       block? value/1 ["["]
+                       paren? value/1 ["("]
+                       true [""]
+                   ]
+                   append result to-string value/1
+                   append result case [
+                       block? value/1 ["]"]
+                       paren? value/1 [")"]
+                       true [""]
+                   ]
+                   unless last? value [
+                       append result space
+                   ]
+               ]
+               result
+           ] [
+               system/contexts/lib/form value
+           ]
+       ]
     ] [
        system/contexts/lib/to type value
     ]

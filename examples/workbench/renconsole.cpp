@@ -31,6 +31,7 @@
 #include "watchlist.h"
 #include "rensyntaxer.h"
 
+extern bool forcingQuit;
 
 
 ///
@@ -236,7 +237,8 @@ RenConsole::RenConsole (QWidget * parent) :
         ":/scripts/rebol-proposals/remold-reform-repend.reb",
         ":/scripts/rebol-proposals/to-string-spelling.reb",
         ":/scripts/rebol-proposals/find-min-max.reb",
-        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb"
+        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb",
+        ":/scripts/rebol-proposals/for-range-dialect.reb"
     };
 
     for (auto filename : scripts) {
@@ -489,10 +491,18 @@ void RenConsole::handleResults(
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
-        QString molded = static_cast<QString>(
-            ren::runtime("mold/all quote", result)
-        );
-        appendText(molded);
+        if (result.isFunction()) {
+            appendText("#[function! (");
+            appendText(static_cast<QString>(
+                ren::runtime("words-of quote", result)
+            ));
+            appendText(") [...]]");
+        } else {
+            appendText(static_cast<QString>(
+                ren::runtime("mold/all quote", result)
+            ));
+        }
+
         appendText("\n");
     }
 
@@ -534,7 +544,7 @@ ren::Value RenConsole::consoleDialect(ren::Value const &) {
 RenConsole::~RenConsole() {
     ren::runtime.cancel();
     workerThread.quit();
-    if (not workerThread.wait(1000)) {
+    if ((not workerThread.wait(1000)) and (not forcingQuit)) {
         // How to print to console about quitting
         QMessageBox::information(
             nullptr,

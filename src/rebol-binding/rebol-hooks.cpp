@@ -87,19 +87,18 @@ public:
             )
             == std::end(threadsSeen)
         ) {
-            int marker;
-            REBCNT bounds = OS_CONFIG(1, 0);
-
-            if (bounds == 0)
-                bounds = STACK_BOUNDS;
+            // A misguided check in Rebol worries about the state of the CPU
+            // stack.  If you've somehow hopped around so that the state
+            // of the CPU stack it saw at its moment of initialization is
+            // such that it is no longer at that same depth, it crashes
+            // mysteriously even though nothing is actually wrong.  We beat
+            // the CHECK_STACK by making up either a really big pointer or a
+            // really small one for it to check against.  :-)
 
         #ifdef OS_STACK_GROWS_UP
-            Stack_Limit = (REBCNT)(&marker) + bounds;
+            Stack_Limit = static_cast<void*>(-1);
         #else
-            if (bounds > (REBCNT)(&marker))
-                Stack_Limit = 100;
-            else
-                Stack_Limit = (REBCNT)(&marker) - bounds;
+            Stack_Limit = 0;
         #endif
 
             REBOL_STATE state;
