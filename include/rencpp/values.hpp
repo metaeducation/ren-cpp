@@ -1002,30 +1002,30 @@ public:
 
     public:
         iterator & operator++() {
-            state++;
+            ++state;
             return *this;
         }
 
         iterator & operator--() {
-            state--;
+            --state;
             return *this;
         }
 
         iterator operator++(int) {
             auto temp = *this;
-            ++*this;
+            operator++();
             return temp;
         }
 
         iterator operator--(int) {
             auto temp = *this;
-            --*this;
+            operator--();
             return temp;
         }
 
-        bool operator==(iterator const & other)
+        bool operator==(iterator const & other) const
             { return state.isSameAs(other.state); }
-        bool operator!=(iterator const & other)
+        bool operator!=(iterator const & other) const
             { return not state.isSameAs(other.state); }
 
         Value operator * () const { return *state; }
@@ -1108,30 +1108,30 @@ public:
 
     public:
         iterator & operator++() {
-            state++;
+            ++state;
             return *this;
         }
 
         iterator & operator--() {
-            state--;
+            --state;
             return *this;
         }
 
         iterator operator++(int) {
             auto temp = *this;
-            ++*this;
+            operator++();
             return temp;
         }
 
         iterator operator--(int) {
             auto temp = *this;
-            --*this;
+            operator--();
             return temp;
         }
 
-        bool operator==(iterator const & other)
+        bool operator==(iterator const & other) const
             { return state.isSameAs(other.state); }
-        bool operator!=(iterator const & other)
+        bool operator!=(iterator const & other) const
             { return not state.isSameAs(other.state); }
 
         Character operator * () const {
