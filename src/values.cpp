@@ -52,7 +52,7 @@ Value::operator bool() const {
         (*this)();
         UNREACHABLE_CODE();
     }
-    return (not isNone()) and (not isFalse());
+    return not (isNone() or isFalse());
 }
 
 
