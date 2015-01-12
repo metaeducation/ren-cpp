@@ -14,13 +14,13 @@ Windows
 
 It's highly unlikely that RenCpp will build with Microsoft Visual Studio since its
 C++11 support is still too weak and RenCpp relies on some tricky C++11 things. It
-should build with MinGW and Clang (no tutorial yet) though. This tutorial does not
-explain how to build RenCpp with Red either; it focuses on Rebol.
+should build with MinGW and Clang (no tutorial yet for the latter). This tutorial
+does not explain how to build RenCpp with Red either; it focuses on Rebol.
 
 The simplest way to build RenCpp is to use CMake. To build RenCpp on Windows with
 CMake, you will need:
 
-* [A recent version of MinGW][1] (4.9+ with POSIX threads)
+* [A recent version of MinGW][1] (GCC 4.9+ with POSIX threads)
 * [A fairly recent version of CMake][2] (2.8+)
 * [Qt 5.4+ if you also want to build Ren Garden][3] (choose the MinGW binaries in "Other Downloads")
 * [The source code of Rebol][4]
@@ -29,7 +29,11 @@ CMake, you will need:
 
 Note that if you don't have a version of MinGW recent enough and you also want to
 build Ren Garden, then you better download the Qt binaries with the corresponding
-MinGW version (it's in Qt's download options).
+MinGW version (it's in Qt's install options).
+
+**Note:** Rebol only compiles fine in 32-bits mode. Therefore, you should either
+use a 32-bits compiler (MinGW-w64 allows 32-bits builds) or stick the flag `-m32`
+to the compiler options.
 
 To build RenCpp, you will need to build Rebol first. Get it from the source (you
 can choose "Download ZIP") and put it somewhere on your computer. Make sure that
@@ -39,7 +43,7 @@ Download the interpreter, put it in the `make` subdirectory of Rebol's source co
 and rename it `r3-make.exe` (or try to simply name it `r3-make` if you have it tells
 you that it is what it needs).
 
-Next step, we need to configure the makefile to be able to use it with MinGW. Open
+Next step, you need to configure the makefile to be able to use it with MinGW. Open
 a console in the `make` subdirectory of Rebol's source code and run the following
 lines:
 
@@ -78,12 +82,13 @@ couldn't get it to work with environment variables yet, ut if you manage to do
 so, then please use environment variables instead):
 
 ```
-set(CMAKE_PREFIX_PATH "C:\\Qt\\Qt5.4.0\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core" "C:\\Qt\\Qt5.4.0\\5.4\\mingw491_32\\lib\\cmake\\Qt5Widgets")
+set(CMAKE_PREFIX_PATH "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core" "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Widgets")
 ```
 
 Of course, the absolute links above are examples and may not correspond to the
-version of Qt or MinGW that you use, but you get the idea. Now, if everything
-went smoothly, you should be done!
+version of Qt or MinGW that you use (and the files organization in the Qt subdirs
+might even be slightly different), but you get the idea. Now, if everything went
+smoothly, you should be done!
 
 
 
