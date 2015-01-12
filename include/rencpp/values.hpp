@@ -749,10 +749,20 @@ protected:
     inline bool isValid() const { return isLogic(); }
 
 public:
-    // Narrow the construction?
-    // https://github.com/hostilefork/rencpp/issues/24
-    Logic (bool const & b, Engine * engine = nullptr) :
+    explicit Logic (bool const & b, Engine * engine = nullptr) :
         Value (b, engine)
+    {
+    }
+
+    // Trick so that Logic can be implicitly constructed from
+    // bool but not from a type implicitly convertible to bool.
+    //
+    //     https://github.com/hostilefork/rencpp/issues/24
+    //
+
+    template <typename T>
+    Logic (const T & value, Engine * engine = nullptr) :
+        Logic (bool(utility::safe_bool(value)), engine)
     {
     }
 
