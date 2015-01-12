@@ -68,8 +68,8 @@ static_assert(false, "Unsupported runtime defined");
 ///
 
 //
-// Things like the variadic print.  I don't know if these should be
-// automatically included, but fun to do so for now...grab bag ideas
+// Things like the variadic print.  These perhaps should not be automatically
+// included, but fun to do so for now.  Consider them a grab bag of ideas...
 // like premade parse helper classes should go in there.
 //
 

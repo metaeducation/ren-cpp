@@ -275,8 +275,8 @@ void ShellWorker::onError(QProcess::ProcessError error) {
             // "The last waitFor...() function timed out. The state of QProcess is
             // unchanged, and you can try calling waitFor...() again."
 
-            // Good to know, I guess?  But really we handle the timed-outedness
-            // at the place we called the waitFor.
+            // Thanks for sending the message?  But we handle the
+            // timed-outedness at the place we called the waitFor.
             break;
 
         case QProcess::WriteError:

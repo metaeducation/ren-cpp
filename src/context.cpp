@@ -61,7 +61,7 @@ Engine & Context::getEngine() {
     // Technically we do not need to hold onto the engine handle.
     // We should be able to use ::RenGetEngineForContext and look up
     // the engine object instance from that, if we tracked engines
-    // globally somehow.  Just stowing a pointer for now as I don't
+    // globally somehow.  Just stowing a pointer for now as we don't
     // expect a lot of contexts being created any time soon.
 
     return *enginePtr;

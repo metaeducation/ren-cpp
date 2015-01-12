@@ -503,8 +503,8 @@ void RenConsole::handleResults(
         appendText("\n");
     }
 
-    // I like this newline always, even though Rebol's console only puts in
-    // the newline if you get a non-unset evaluation...
+    // Rebol's console only puts in the newline if you get a non-unset
+    // evaluation... but here we put one in all cases to space out the prompts
 
     appendText("\n");
 

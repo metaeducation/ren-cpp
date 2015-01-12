@@ -275,7 +275,7 @@ public:
         if (strcmp(name, "SYS") == 0)
             ctx = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
 
-        // don't expose CTX_ROOT, I assume?
+        // don't expose CTX_ROOT?
 
         if (ctx) {
             contextOut->series = ctx;

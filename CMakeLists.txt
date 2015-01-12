@@ -78,6 +78,7 @@ macro(add_cxx_flags flags)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
 endmacro()
 
+add_cxx_flags(-Ofast)
 
 # Allow removing of flags from CMAKE_CXX_FLAGS
 #
@@ -137,14 +138,15 @@ add_cxx_flags("-std=c++11")
 
 
 # Turn up the warnings very high.
-# Currently not adding in -Wshadow, because I like naming constructor
-# arguments the same thing as the variables they initialize.
 #
-# http://stackoverflow.com/a/9862800/211160
+#     http://stackoverflow.com/a/9862800/211160
+#
+# Currently not adding in -Wshadow, because @HostileFork likes naming
+# constructor arguments the same thing as the variables they initialize.
 #
 # For compiler identification notes:
 #
-# http://stackoverflow.com/a/10055571/211160
+#     http://stackoverflow.com/a/10055571/211160
 
 add_cxx_flags(-Wall)
 add_cxx_flags(-Wsign-conversion)
@@ -215,7 +217,7 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_LIST)
 # so you have to process file additions and removals with a re-run
 # of CMake manually:
 #
-# http://stackoverflow.com/questions/1167154/#comment10556582_5843681
+#     http://stackoverflow.com/questions/1167154/#comment10556582_5843681
 #
 # Better ideas welcome.
 

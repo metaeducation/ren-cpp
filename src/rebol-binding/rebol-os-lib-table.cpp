@@ -22,10 +22,8 @@
 // old-school and "ioctl"-style way of thinking about that.  Moving on...
 // this is to work around a specifically ornery header file called
 // "host-lib.h".  You won't find it in the include directory on GitHub
-// because it's a generated file.  And it made it very difficult to do
-// what I wanted to do.
-//
-// (Firstly figuring it out, and then figuring out what to do).
+// because it's a generated file.  It was cryptic to figure out and made it
+// very hard to do what RenCpp needed to have done.
 //
 // It defines an important structure called REBOL_HOST_LIB...and it doesn't
 // do so with any kind of conditionality (or include guards...).  So you can't

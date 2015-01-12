@@ -209,8 +209,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     REBCHR * argv[] {fakeArgv0, argvQuiet};
 
     // There are (R)ebol (O)ption (F)lags telling it various things,
-    // in Main_Args.options, but I seem to have better luck with
-    // just letting it parse the ordinary command line args.
+    // in Main_Args.options, but there seems be better luck with
+    // just letting it parse the ordinary command line args than try to
+    // set those directly.
 
     REBARGS Main_Args;
     Parse_Args(2, argv, &Main_Args);
