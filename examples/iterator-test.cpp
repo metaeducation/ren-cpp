@@ -31,13 +31,13 @@ int main(int, char **) {
         print(item);
 
     std::string s;
-    for (auto c : String{"{Hello World^/}"})
+    for (auto c : String{"Hello^/There\nWorld^/"})
         s.push_back(static_cast<char>(c));
 
     std::cout << s;
 
     std::wstring ws;
-    for (auto wc : String{"{MetÆducation^/}"})
+    for (auto wc : String{"MetÆducation\n"})
         ws.push_back(static_cast<wchar_t>(wc));
 
     std::wcout << ws;

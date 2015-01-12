@@ -64,7 +64,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             if (contents.isEmpty())
                 w.label = ren::none;
             else
-                w.label = ren::Tag {QString("<") + contents + ">"};
+                w.label = ren::Tag {contents};
 
             updateWatcher(item->row() + 1);
             break;
@@ -451,7 +451,7 @@ ren::Value WatchList::watchDialect(
         static std::vector<QString> logicWords[2] =
             {{"off", "no", "false"}, {"on", "yes", "true"}};
 
-        ren::Word word = ren::Word {arg};
+        auto word = static_cast<ren::Word>(arg);
         auto spelling = word.spellingOf<QString>();
         for (int index = 0; index < 2; index++) {
             if (

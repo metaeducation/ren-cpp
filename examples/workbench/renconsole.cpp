@@ -295,7 +295,7 @@ void RenConsole::printBanner() {
     // to build a new string for the opening title
 
     QString heading;
-    for (ren::Character ch : ren::String{"{<h1>Ren [人] Garden</h1>}"})
+    for (ren::Character ch : ren::String{"<h1>Ren [人] Garden</h1>"})
         heading += ch;
 
     cursor.insertHtml(heading);

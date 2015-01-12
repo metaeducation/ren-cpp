@@ -30,7 +30,7 @@ int main(int, char **) {
     
     // make a set-word for x, then "apply" it to 10
     // we are creating this in contextOne
-    SetWord {"x:"}(10);
+    SetWord {"x"}(10);
 
     // now print using runtime apply notation
     assert(runtime("integer? x"));
@@ -42,14 +42,14 @@ int main(int, char **) {
     assert(runtime("unset? get/any 'x"));
 
     // now using the default let's set x in the second runtime...
-    SetWord {"x:"}(20);
+    SetWord {"x"}(20);
     assert(runtime("integer? x"));
 
     // even though our default is to run in the second runtime
     // at the moment, let's override it using an additional parameter
     // to the constructor
 
-    auto y = SetWord("y:", contextOne.get());
+    auto y = SetWord {"y", contextOne.get()};
     y(30);
 
     // Switch active contexts and see that we set y

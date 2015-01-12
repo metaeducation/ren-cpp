@@ -15,8 +15,12 @@ int main(int, char **) {
     // ren::String; all others must be explicit with to_string which
     // performs equivalently to TO-STRING (new behavior, formerly FORM)
 
-    std::string converted = String {"{Hello World}"};
+    std::string converted = String {"Hello World"};
     assert(converted == "Hello World");
 
-    assert(String {"{Hello World}"}.isEqualTo("Hello World"));
+    assert(String {"Hello World"}.isEqualTo("Hello World"));
+
+    // Yes, not a test suite, but one test is better than zero.
+    assert(String {"\n\t\u0444"}.isEqualTo("\n\t\u0444"));
+    assert(String {"^/^-^(0444)"}.isEqualTo("\n\t\u0444"));
 }

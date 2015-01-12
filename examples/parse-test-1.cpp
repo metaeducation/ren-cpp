@@ -13,7 +13,7 @@ using namespace ren;
 //
 
 int main(int, char **) {
-    String data {"{Hello [Ren C++ Binding] World!}"};
+    String data {"Hello [Ren C++ Binding] World!"};
 
     Word variable {"foo"};
 

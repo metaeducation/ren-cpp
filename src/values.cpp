@@ -200,7 +200,7 @@ AnyBlock::AnyBlock (
 
 
 AnyWord::AnyWord (
-    char const * cstr,
+    char const * spelling,
     internal::CellFunction cellfun,
     Context * context
 ) :
@@ -211,7 +211,34 @@ AnyWord::AnyWord (
     if (not context)
         context = &Context::runFinder(nullptr);
 
-    internal::Loadable loadable {cstr};
+    std::string array;
+
+    // Note: wouldn't be able to return char * without intermediate
+    // http://stackoverflow.com/questions/17936160/
+
+    if (isWord()) {
+        array += spelling;
+    }
+    else if (isSetWord()) {
+        array += spelling;
+        array += ':';
+    }
+    else if (isGetWord()) {
+        array += ':';
+        array += spelling;
+    }
+    else if (isLitWord()) {
+        array += '\'';
+        array += spelling;
+    }
+    else if (isRefinement()) {
+        array += '/';
+        array += spelling;
+    }
+    else
+        UNREACHABLE_CODE();
+
+    internal::Loadable loadable {array.data()};
 
     constructOrApplyInitialize(
         context->getEngine().getHandle(),
@@ -230,7 +257,7 @@ AnyWord::AnyWord (
 
 #if REN_CLASSLIB_QT
 AnyWord::AnyWord (
-    QString const & str,
+    QString const & spelling,
     internal::CellFunction cellfun,
     Context * context
 ) :
@@ -240,7 +267,30 @@ AnyWord::AnyWord (
 
     // can't return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
-    QByteArray array = str.toLocal8Bit();
+    QByteArray array;
+
+    if (isWord()) {
+        array += spelling.toLocal8Bit();
+    }
+    else if (isSetWord()) {
+        array += spelling.toLocal8Bit();
+        array += ':';
+    }
+    else if (isGetWord()) {
+        array += ':';
+        array += spelling.toLocal8Bit();
+    }
+    else if (isLitWord()) {
+        array += '\'';
+        array += spelling.toLocal8Bit();
+    }
+    else if (isRefinement()) {
+        array += '/';
+        array += spelling.toLocal8Bit();
+    }
+    else
+        UNREACHABLE_CODE();
+
     internal::Loadable loadable {array.data()};
 
     if (not context)
@@ -262,7 +312,7 @@ AnyWord::AnyWord (
 
 
 AnyString::AnyString (
-    char const * cstr,
+    char const * spelling,
     internal::CellFunction cellfun,
     Engine * engine
 ) :
@@ -273,7 +323,22 @@ AnyString::AnyString (
     if (not engine)
         engine = &Engine::runFinder();
 
-    internal::Loadable loadable {cstr};
+    std::string array;
+
+    if (isString()) {
+        array += '{';
+        array += spelling;
+        array += '}';
+    }
+    else if (isTag()) {
+        array += '<';
+        array += spelling;
+        array += '>';
+    }
+    else
+        UNREACHABLE_CODE();
+
+    internal::Loadable loadable {array.data()};
 
     constructOrApplyInitialize(
         engine->getHandle(),

@@ -8,11 +8,11 @@ using namespace ren;
 int main(int, char **) {
     Value result;
 
-    result = SetWord {"w:"}(10);
+    result = SetWord {"w"}(10);
     assert(result.isInteger());
 
     try {
-        SetWord {"w:"}(10, 20);
+        SetWord {"w"}(10, 20);
     }
     catch (evaluation_error const & e) {
         print("2 is too many args to a generalized apply for set word!");

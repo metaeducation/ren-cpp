@@ -339,7 +339,7 @@ Character::operator QChar () const {
 
 
 AnyString::AnyString (
-    QString const & str,
+    QString const & spelling,
     internal::CellFunction cellfun,
     Engine * engine
 )
@@ -347,9 +347,24 @@ AnyString::AnyString (
 {
     (this->*cellfun)(&this->cell);
 
-    // can't return char * without intermediate
+    QByteArray array;
+
+    // Note: wouldn't be able to return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
-    QByteArray array = str.toLocal8Bit();
+
+    if (isString()) {
+        array += '{';
+        array += spelling.toLocal8Bit();
+        array += '}';
+    }
+    else if (isTag()) {
+        array += '<';
+        array += spelling.toLocal8Bit();
+        array += '>';
+    }
+    else
+        UNREACHABLE_CODE();
+
     internal::Loadable loadable {array.data()};
 
     if (not engine)

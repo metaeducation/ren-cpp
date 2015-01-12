@@ -644,6 +644,9 @@ public:
         }
 #endif
 
+        // First we mold with the "FORM" settings and get a STRING!
+        // series out of that.
+
         REB_MOLD mo;
         mo.series = nullptr;
         mo.opts = 0;
@@ -651,19 +654,31 @@ public:
         mo.period = 0;
         mo.dash = 0;
         mo.digits = 0;
-
         Reset_Mold(&mo);
         Mold_Value(&mo, const_cast<REBVAL *>(value), 0);
 
-        // w_char internally.  Look into actually doing proper UTF8 encoding
-        // with binary.
 
-        REBCNT len = SERIES_LEN(mo.series) - 1;
+        // Now that we've got our STRING! we need to encode it as UTF8 into
+        // a "shared buffer".  How is that that TO conversions use a shared
+        // buffer and then Set_Series to that, without having a problem?
+        // Who knows, but we've got our own buffer so that's not important.
+
+        REBVAL strValue;
+        Set_Series(REB_STRING, &strValue, mo.series);
+
+        REBSER * utf8 = Encode_UTF8_Value(&strValue, VAL_LEN(&strValue), 0);
+
+
+        // Okay that should be the UTF8 data.  Let's copy it into the buffer
+        // the caller sent us.
+
+        REBCNT len = SERIES_LEN(utf8) - 1;
         *numBytesOut = static_cast<size_t>(len);
 
         RenResult result;
         if (len > bufSize) {
             len = bufSize;
+            // should copy portion of buffer in anyway
             result = REN_BUFFER_TOO_SMALL;
         }
         else {
@@ -671,7 +686,7 @@ public:
         }
 
         for (REBCNT index = 0; index < len; index++) {
-            buffer[index] = reinterpret_cast<char*>(SERIES_DATA(mo.series))[index * 2];
+            buffer[index] = reinterpret_cast<char*>(SERIES_DATA(utf8))[index];
         }
 
         return result;
