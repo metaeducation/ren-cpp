@@ -11,7 +11,7 @@ Rebol [
 ;-- indexing not so common
 
 length: :system/contexts/lib/length?
-unset 'length?
+length?: does [do make error! "length? is now length"]
 
 index-of: :system/contexts/lib/index?
 unset 'index?
@@ -25,25 +25,25 @@ unset 'offset?
 
 type-of: :system/contexts/lib/type?
 type?: :system/contexts/lib/datatype?
-unset 'datatype?
+datatype?: does [do make error! "datatype? is now type?"]
 
 
 ;-- If "bind-of" always returned a context, shouldn't it be context-of?
 
 context-of: :system/contexts/lib/bind?
-unset 'bind?
+bind?: does [do make error! "bind? is now context-of"]
 
 
 ; would get media codec name of a file, how about codec-of
 
 codec-of: :system/contexts/lib/encoding?
-unset 'encoding?
+encoding?: does [do make error! "encoding? is now codec-of"]
 
 
 ; sign-of is more sensible than sign?
 
 sign-of: :system/contexts/lib/sign?
-unset 'sign?
+sign?: does [do make error! "sign? is now sign-of"]
 
 
 ;-- more to look over

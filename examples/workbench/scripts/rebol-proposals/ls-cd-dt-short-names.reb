@@ -16,11 +16,11 @@ Rebol [
     }
 ]
 
-unset 'ls
-unset 'cd
-unset 'pwd
+ls: does [do make error! "in user config `ls: does [shell [ls -alF]]`"]
+; cd: ; don't have an alternate way to change Rebol's working dir yet
+; pwd: ; same as above
 
-unset 'q
+q: does [do make error! "q is deprecated, use QUIT or EXIT"]
 
 unset 't
 

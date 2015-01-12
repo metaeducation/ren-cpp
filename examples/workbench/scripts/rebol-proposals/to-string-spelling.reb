@@ -50,7 +50,7 @@ to-string: func [
     to string! :value
 ]
 
-unset 'form
+form: does [make error! "form is now taken over by to-string"]
 
 spelling-of: func [
     "Gives the delimiter-less spelling of words or strings"
