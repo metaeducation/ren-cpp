@@ -47,7 +47,7 @@ private:
 public:
     evaluation_error (Value const & error) :
         errorValue (error),
-        whatString (static_cast<std::string>(errorValue))
+        whatString (to_string(errorValue))
     {
         // REVIEW: catch any cases where this is not true in the future.
         // Trying to narrow the RenCpp exception set to a vision of which

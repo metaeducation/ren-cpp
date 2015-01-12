@@ -65,6 +65,7 @@ namespace ren {
 // throw errors if they were ever non-null.
 //
 
+class Value;
 
 class Context;
 
@@ -119,6 +120,25 @@ public:
         return whatString.c_str();
     }
 };
+
+
+
+// All ren::Value types can be converted to a string, which under the hood
+// invokes TO-STRING.  (It invokes the modified specification, which is
+// an adaptation of what used to be called FORM).
+//
+// These functions take advantage of "Argument Dependent Lookup".  Though
+// you can call them explicitly as e.g. ren::to_string(...), if you do
+// `using std::to_string;` and then use the unqualified `to_string(...)`,
+// it will notice that the argument is a ren:: type and pick these versions
+
+#if REN_CLASSLIB_STD
+std::string to_string (Value const & value);
+#endif
+
+#if REN_CLASSLIB_QT
+QString to_QString(Value const & value);
+#endif
 
 
 
@@ -513,6 +533,16 @@ public:
     }
 
 
+public:
+#if REN_CLASSLIB_STD
+    friend std::string to_string (Value const & value);
+#endif
+
+#if REN_CLASSLIB_QT
+    friend QString to_QString(Value const & value);
+#endif
+
+
     //
     // Equality and Inequality
     //
@@ -543,22 +573,6 @@ public:
     Value const * operator->() const { return this; }
     Value * operator->() { return this; }
 
-
-public:
-
-    // If you explicitly ask for it, all ren::Value types can be static_cast
-    // to a std::string.  Internally it uses the runtime::form
-    // which is (ideally) bound to the native form and cannot be changed.
-    // Only the string type allows implicit casting, though it provides the
-    // same answer.
-
-#if REN_CLASSLIB_STD
-    explicit operator std::string () const;
-#endif
-
-#if REN_CLASSLIB_QT
-    explicit operator QString () const;
-#endif
 
     // The strategy is that ren::Values are not evaluated by default when
     // being passed around and used in C++.  For why this has to be the way
@@ -1084,7 +1098,7 @@ public:
 #if REN_CLASSLIB_STD
     operator std::string () const {
         Value const & thisValue = *this;
-        return static_cast<std::string>(thisValue);
+        return to_string(thisValue);
     }
 #endif
 
@@ -1092,7 +1106,7 @@ public:
 #if REN_CLASSLIB_QT
     operator QString () const {
         Value const & thisValue = *this;
-        return static_cast<QString>(thisValue);
+        return to_QString(thisValue);
     }
 #endif
 
@@ -1464,7 +1478,7 @@ public:
 
 #if REN_CLASSLIB_STD
     operator std::string () const {
-        return Value::operator std::string ();
+        return to_string(*this);
     }
 #endif
 

@@ -473,7 +473,7 @@ void RenConsole::handleResults(
         // have an implicit newline on the end implicitly
 
         if (result) {
-            appendText(static_cast<QString>(result));
+            appendText(to_QString(result));
         } else {
             appendText("[Escape]\n");
         }
@@ -494,14 +494,10 @@ void RenConsole::handleResults(
 
         if (result.isFunction()) {
             appendText("#[function! (");
-            appendText(static_cast<QString>(
-                ren::runtime("words-of quote", result)
-            ));
+            appendText(to_QString(ren::runtime("words-of quote", result)));
             appendText(") [...]]");
         } else {
-            appendText(static_cast<QString>(
-                ren::runtime("mold/all quote", result)
-            ));
+            appendText(to_QString(ren::runtime("mold/all quote", result)));
         }
 
         appendText("\n");
@@ -514,11 +510,8 @@ void RenConsole::handleResults(
 
     appendNewPrompt();
 
-    if (delta) {
-        emit reportStatus(
-            QString("Command completed in ") + static_cast<QString>(delta)
-        );
-    }
+    if (delta)
+        emit reportStatus(QString("Command finished in ") + to_QString(delta));
 
     emit finishedEvaluation();
 

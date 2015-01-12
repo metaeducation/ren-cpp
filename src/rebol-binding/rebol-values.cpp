@@ -371,7 +371,7 @@ AnyString::AnyString (
 
 #if REN_CLASSLIB_STD
 std::string AnyWord::spellingOf_STD() const {
-    std::string result = static_cast<std::string>(*this);
+    std::string result = to_string(*this);
     if (isWord())
         return result;
     if (isRefinement() or isGetWord() or isIssue())
@@ -385,7 +385,7 @@ std::string AnyWord::spellingOf_STD() const {
 
 #if REN_CLASSLIB_QT
 QString AnyWord::spellingOf_QT() const {
-    QString result = static_cast<QString>(*this);
+    QString result = to_QString(*this);
     if (isWord())
         return result;
     if (isRefinement() or isGetWord() or isIssue())
