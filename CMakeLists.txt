@@ -78,7 +78,6 @@ macro(add_cxx_flags flags)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
 endmacro()
 
-add_cxx_flags(-Ofast)
 
 # Allow removing of flags from CMAKE_CXX_FLAGS
 #
