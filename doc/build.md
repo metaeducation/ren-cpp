@@ -4,92 +4,166 @@ Building RenCpp
 This tutorial is still incomplete but it aims to explain at best how to build
 RenCpp on different systems.
 
+Be aware that although RenCpp was originally an initiative instigated by the
+[Red Project](http://red-lang.org/contributions.html), it turned out to be
+possible to abstract its design so it could also be used with Rebol. Due to
+Rebol's C heritage, it was more feasible to make the first `ren::runtime` be
+based on it for working out the design.
+
+*(@HostileFork adds: Do not confuse "feasible" with "easy".)*
+
+Hence at this time, RenCpp requires you to download and build Rebol from
+source. Object files from that build are then borrowed from
+`rebol/make/objs/*.o`, and statically linked against the C++ files. This
+produces the RenCpp library...and adds empirically about 100K to
+the half megabyte Rebol codebase (in release builds).
+
+Red support will be announced for preview as soon as it can be.
+
+
 Linux
 -----
 
 TODO
 
+
 Windows
 -------
 
-It's highly unlikely that RenCpp will build with Microsoft Visual Studio since its
-C++11 support is still too weak and RenCpp relies on some tricky C++11 things. It
-should build with MinGW and Clang (no tutorial yet for the latter). This tutorial
-does not explain how to build RenCpp with Red either; it focuses on Rebol.
+RenCpp should build with reasonably up-to-date versions of MinGW and Clang.
+It relies on some tricky C++11 features, so it's highly unlikely that RenCpp
+will build with Microsoft Visual Studio. At the time of writing, MSVC still
+does not support (for instance) constructor inheritance.
 
-The simplest way to build RenCpp is to use CMake. To build RenCpp on Windows with
-CMake, you will need:
+The simplest way to build RenCpp is to use CMake. These instructions will
+assume you are doing so and using MinGW, so you will need:
 
-* [A recent version of MinGW][1] (GCC 4.9+ with POSIX threads)
-* [A fairly recent version of CMake][2] (2.8+)
-* [Qt 5.4+ if you also want to build Ren Garden][3] (choose the MinGW binaries in "Other Downloads")
-* [The source code of Rebol][4]
-* [The Rebol interpreter][5]
-* [The source code of RenCpp][6]
+* [A recent version of MinGW][1]
+(e.g. GCC 4.9+ with POSIX threads works)
 
-Note that if you don't have a version of MinGW recent enough and you also want to
-build Ren Garden, then you better download the Qt binaries with the corresponding
-MinGW version (it's in Qt's install options).
+* [A fairly recent version of CMake][2]
+(2.8+)
 
-**Note:** Rebol only compiles fine in 32-bits mode. Therefore, you should either
-use a 32-bits compiler (MinGW-w64 allows 32-bits builds) or stick the flag `-m32`
-to the compiler options.
+* [The source code for Rebol][4]
 
-To build RenCpp, you will need to build Rebol first. Get it from the source (you
-can choose "Download ZIP") and put it somewhere on your computer. Make sure that
-the directory's name is `rebol`; this will be essential to run RenCpp. Now, to build
-Rebol, you will need the Rebol interpreter, so you may as well get the latest build.
-Download the interpreter, put it in the `make` subdirectory of Rebol's source code
-and rename it `r3-make.exe` (or try to simply name it `r3-make` if you have it tells
-you that it is what it needs).
+* [A binary of the Rebol.exe interpreter][5]
 
-Next step, you need to configure the makefile to be able to use it with MinGW. Open
-a console in the `make` subdirectory of Rebol's source code and run the following
-lines:
+* [The source code for RenCpp][6]
 
-```
-make make OS_ID=0.3.1
-make prep
-make
-```
+If you don't have a version of MinGW recent enough and you also want to build
+the *"Ren Garden"* GUI console demo, then you'll have to download the Qt
+binaries with the corresponding MinGW version:
 
-Now you should have a new subdirectory `objs` full of `.o` files as well as an
-executable named `r3.exe`. Great! You have built Rebol! Next step: RenCpp. So,
-download the source code of RenCpp and put it in a directory next to the one
-that you named `rebol`. Having these two directories side by side is essential
-if you want the following steps to work.
+* [Qt 5.4+ if you also want to build Ren Garden][3]
+(choose the MinGW binaries in "Other Downloads")
+
+
+**Building Rebol**
+
+To build RenCpp, you will need to build Rebol first. Git clone it from the
+source (or you can choose "Download ZIP").
+
+*(Note: While 64-bit patched versions of Rebol exist, the "official" repository
+has not accepted those pull requests. Hence it only compiles and runs correctly
+in 32-bits mode. MinGW-w64 allows 32-bits builds, and you can also stick the
+flag `-m32` onto the compiler options.)*
+
+The Rebol build process includes preprocessing steps that are--themselves--
+Rebol scripts. So download an interpreter, put it in the `make` subdirectory
+of Rebol's source code, and rename it `r3-make.exe`. (If you are using a shell
+other than CMD.EXE, then you might have to simply name it `r3-make`).
+
+Next step is to tell Rebol to build a makefile for use with MinGW. So in the
+`make` subdirectory of Rebol's source code, run the following lines:
+
+    make make OS_ID=0.3.1
+    make prep
+    make
+
+Now you should have a new subdirectory `objs` full of `.o` files, as well as an
+executable named `r3.exe` in the make directory. Great! You have built Rebol!
+
+Next step: RenCpp.
+
+
+**Building RenCpp**
+
+Download the source code of RenCpp and put it in a directory next to the one
+that you named `rebol`. Having these two directories side by side is the
+default assumption of the build process. If you put rebol somewhere else, you
+will need to specify `-DRUNTIME_PATH=/wherever/you/put/rebol-source`.
 
 Make sure that you have `cmake`, `make` and the other MinGW executables in your
 PATH, then open a console in RenCpp's main directory and type the following
 instructions:
 
-```
-cmake -G"MinGW Makefiles" -DRUNTIME=rebol
-make
-```
+    cmake -G"MinGW Makefiles" -DRUNTIME=rebol
+    make
 
-If you want to build Ren Garden along with RenCpp, type the following instructions
-instead:
+If all goes well, you should get a `libRenCpp.a` as well as some executables
+in the examples directory to try out.
 
-```
-cmake -G"MinGW Makefiles" -DRUNTIME=rebol -DGARDEN=1 -DCLASSLIB_QT=1
-make
-```
 
-You may need to tell CMake where to find the files required to use Qt5Core and
-Qt5Widgets. Adding the following line in `CMakeLists.txt` might be enough (I
-couldn't get it to work with environment variables yet, ut if you manage to do
-so, then please use environment variables instead):
+**Building Ren Garden**
 
-```
-set(CMAKE_PREFIX_PATH "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core" "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Widgets")
-```
+If you want to build Ren Garden along with RenCpp, then instead of the above,
+type the following instructions:
 
-Of course, the absolute links above are examples and may not correspond to the
-version of Qt or MinGW that you use (and the files organization in the Qt subdirs
-might even be slightly different), but you get the idea. Now, if everything went
-smoothly, you should be done!
+    cmake -G"MinGW Makefiles" -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+    make
 
+You will need to need to tell CMake where Qt installed its CMake "package
+finders".  This is generally done via the environment variable
+CMAKE_PREFIX_PATH. So if you installed Qt in `C:\Qt\5.4`, then make sure
+something along these lines is set in whatever environment you are
+invoking cmake from:
+
+    CMAKE_PREFIX_PATH=C:\Qt\5.4\mingw491_32\lib\cmake
+
+If that doesn't work for some reason, adding these lines to `CMakeLists.txt`
+may be enough of a workaround to get the build to happen
+
+    set(
+        CMAKE_PREFIX_PATH
+        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core"
+        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Widgets"
+        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Gui"
+    )
+
+*(Note: Of course, the absolute links above are examples, and may not
+correspond to the version of Qt or MinGW that you use. So be sure to check
+to make sure these directories are actually there, and make the necessary
+adjustments if not.)*
+
+Now, if everything went smoothly, you should have an executable! However, the
+required DLLs for the C++ runtime, pthreads, and Qt will likely not be in your
+path. So odds are you'll get several DLL not found errors when you try to run.
+
+Should all else fail, you can go through the DLL errors one by one and put
+those alongside the executable. The DLLs should be somewhere like:
+
+    C:\Qt\5.4\mingw491_32\bin
+
+If adding that to your system path does the trick, you might be happy with
+that. A less invasive option is to create a small batch file to launch the
+process that does it only for that session:
+
+    echo off
+    set PATH=%PATH%;C:\Qt\5.4\mingw491_32\bin
+    start workbench.exe
+
+
+Support
+-------
+
+Should these steps not work, the best place to get real-time help is via
+[Rebol and Red chat](http://rebolsource.net/go/chat-faq). There is also the
+[RenCpp Issue Tracker](https://github.com/hostilefork/rencpp/issues) on GitHub.
+
+Good luck! And if you find yourself frustrated by any aspect of this process,
+remember that's why Rebol and Red exist in the first place: *to fight software
+complexity*.  But it's easier to get traction in that fight if you can sneak
+your way in with subversive integration tools like RenCpp... :-)
 
 
 [1]: http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/
