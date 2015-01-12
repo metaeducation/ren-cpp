@@ -17,6 +17,13 @@
 #
 
 #
+# Comments in this CMakeLists.txt were originally the entirety of the "build
+# documentation".  However, look at doc/build.md for what is developing as the
+# more user-friendly instructions.  These instructions will be pared down
+# so as not to be redundant as that effort stabilizes.
+#
+
+#
 # If you want to run cmake in an interactive mode that gives you prompts
 # for build options, use "cmake -i" (or one of the graphical interfaces)
 # Otherwise you will get the default build.  Here are some resources:
@@ -36,18 +43,29 @@
 #
 #       -DRUNTIME=rebol
 #
-# The default will look for a directory named red or rebol for the code to
-# be bound to which is in the same directory that the rencpp main directory
-# can be found..  Clone your repository for red from:
+# (Note: Due to a schedule pacing issue, RenCpp has been pre-released in a
+# mode with Rebol functionality, while the Red function is unfinished. This
+# will hopefully be remedied soon; but until then, these instructions will
+# only work with -DRUNTIME=rebol)
+#
+# The default heuristic of this makefile is to look for a directory named red
+# or rebol which is in the same directory that the rencpp main directory
+# can be found.  If you wish to override this, specify:
+#
+#     -DRUNTIME_PATH=/wherever/you/put/runtime-source
+#
+# Clone your repository for red from:
 #
 #     https://github.com/red/red
 #
 # ...or if using Rebol, https://github.com/rebol/rebol
 #
-# (Note: It's helpful if the project has the Rebol include directories so you
-# can "jump to definition" and such on them.  In order for this to
-# work, you must put a symbolic link to rebol in the root directory of
-# the rencpp project.)
+# (Note: If you are using Qt Creator, it can be helpful if the project indexes
+# the Rebol include directories, so you can "jump to definition" on Rebol code.
+# In order for that indexing to work, you must put a symbolic link to rebol in
+# the root directory of the rencpp project.)
+#
+
 #
 # If you aren't aware of CMake's build settings, if doing development work
 # you will likely want the Debug build:
@@ -100,12 +118,12 @@ endmacro()
 
 
 # Equivalent to list(REMOVE_ITEM list item) but checks to make sure the
-# removal actually happened.
+# removal actually happened.  There must be an easier way to say this.
 
 macro(ensure_remove_item list_name item)
     list(FIND "${list_name}" ${item} ITEM_INDEX)
     if(ITEM_INDEX EQUAL -1)
-        message(FATAL_ERROR "Couldn't local removal item " ${item})
+        message(FATAL_ERROR "Couldn't find item to remove " ${item})
     endif()
     list(REMOVE_AT "${list_name}" ${ITEM_INDEX})
     list(FIND "${list_name}" ${item} ITEM_INDEX)
@@ -443,11 +461,6 @@ elseif(RUNTIME STREQUAL "rebol")
     # Note that the license inherited by c-do.cpp is Apache, not Boost.
 
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-do.o)
-
-    # To assist in debugging, dump out the EXTRA_OBJS list
-
-    dump_list("EXTRA OBJS:" "${EXTRA_OBJS}")
-
 
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
