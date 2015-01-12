@@ -392,15 +392,16 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         if (not ch.isPrint() or (ch == '\t')) {
             // Note that isPrint() includes whitespace, but not \r
             // we try to be sure by handling Enter and Return as if they
-            // were not printable.  I have a key on my keyboard labeled
-            // "enter RETURN" and it produces "\r", so it's important to
-            // handle it by keycode vs. just by the whitespace produced.
+            // were not printable.  Apple keyboards have a key labeled both
+            // "enter" and "return" that seem to produce "\r".  So it's
+            // important to handle it by keycode vs. just by the whitespace
+            // text produced produced.
 
             // As Rebol and Red are somewhat "religiously" driven languages,
-            // I think that tabs being invisible complexity in source is
-            // against that religion.  So the console treats tabs as
-            // non-printables, and will trap any attempt to insert the
-            // literal character (while substituting with 4 spaces)
+            // tabs being invisible complexity in source is against that
+            // religion.  So the console treats tabs as non-printables, and
+            // will trap any attempt to insert the literal character (while
+            // substituting with 4 spaces)
 
             hasRealText = false;
             break;
@@ -408,7 +409,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     }
 
 
-    // Matching the zoomIn seems to not work for some reason, the keysequence
+    // Matching QKeySequence::ZoomIn seems to not work; the keysequence
     // Ctrl and = or Ctrl and Shift and = (to get a textual plus) isn't
     // showing up.  However, ZoomOut works?  That's on KDE and a small apple
     // keyboard, despite the key code being correct and control key hit.
@@ -741,10 +742,12 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         if (key == Qt::Key_Tab) {
             // "You selected a large range of text and pressed tab?  And you
-            // didn't want me to erase it all?  Hmmm...I don't know what this
-            // entabbing and detabbing is you mention, but with that I'd have
-            // to hit BACKSPACE and tab.  Twice as many keystrokes, for that
-            // operation.  That I perform *all* the time"  ;-P
+            // didn't want me to erase it all?  Hmmm...what this entabbing
+            // and detabbing is you mention?  With that, I'd have
+            // to hit BACKSPACE and tab.  Twice as many keystrokes for an
+            // *extremely* common operation..." :-P
+            //
+            // Tab with a selection should entab and detab, but with spaces.
 
             QString contents = textCursor().selection().toPlainText();
             if (shifted) {

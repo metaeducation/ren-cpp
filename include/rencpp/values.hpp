@@ -65,6 +65,7 @@ namespace ren {
 // throw errors if they were ever non-null.
 //
 
+class Value;
 
 class Context;
 
@@ -122,6 +123,25 @@ public:
 
 
 
+// All ren::Value types can be converted to a string, which under the hood
+// invokes TO-STRING.  (It invokes the modified specification, which is
+// an adaptation of what used to be called FORM).
+//
+// These functions take advantage of "Argument Dependent Lookup".  Though
+// you can call them explicitly as e.g. ren::to_string(...), if you do
+// `using std::to_string;` and then use the unqualified `to_string(...)`,
+// it will notice that the argument is a ren:: type and pick these versions
+
+#if REN_CLASSLIB_STD
+std::string to_string (Value const & value);
+#endif
+
+#if REN_CLASSLIB_QT
+QString to_QString(Value const & value);
+#endif
+
+
+
 ///
 /// VALUE BASE CLASS
 ///
@@ -172,17 +192,16 @@ protected:
     RefcountType * refcountPtr;
 
     //
-    // While I realize that "adding a few more bytes here and there" in Red
-    // and Rebol culture is something that is considered a problem, this is
-    // a binding layer.  It does not store a reference for each value in a
-    // series...if your series is a million elements long and you hold a
-    // reference to that... you aren't paying for the added storage of a
-    // bound reference for each element.
+    // While "adding a few more bytes here and there" in Red and Rebol culture
+    // is something that is considered a problem, this is a binding layer.  It
+    // does not store a reference for each value in a series...if your series
+    // is a million elements long and you hold a reference to that... you
+    // aren't paying for the added storage of a Value for each element.
     //
     // Perhaps a raw cell based interface has applications, but really, isn't
     // the right "raw cell based interface" just to program in Red/System?
     //
-    // Anyway, the API is set up in such a way that we could have values
+    // In any case, the API is set up in such a way that we could have values
     // coming from different engines, and there is no enforcement that the
     // internals remember which handles go with which engine.  This little
     // bit of per-value bookkeeping helps keep things straight when we
@@ -207,8 +226,7 @@ protected:
     //        // derived class code that can cope with that
     //     }
     //
-    // Hadn't seen any precedent for this, but once I came up with it I
-    // did notice it in Qt::Uninitialized...
+    // It's not a common idiom, but precedent exists e.g. Qt::Uninitialized:
     //
     //     https://qt.gitorious.org/qt/icefox/commit/fbe0edc
     //
@@ -513,6 +531,16 @@ public:
     }
 
 
+public:
+#if REN_CLASSLIB_STD
+    friend std::string to_string (Value const & value);
+#endif
+
+#if REN_CLASSLIB_QT
+    friend QString to_QString(Value const & value);
+#endif
+
+
     //
     // Equality and Inequality
     //
@@ -544,22 +572,6 @@ public:
     Value * operator->() { return this; }
 
 
-public:
-
-    // If you explicitly ask for it, all ren::Value types can be static_cast
-    // to a std::string.  Internally it uses the runtime::form
-    // which is (ideally) bound to the native form and cannot be changed.
-    // Only the string type allows implicit casting, though it provides the
-    // same answer.
-
-#if REN_CLASSLIB_STD
-    explicit operator std::string () const;
-#endif
-
-#if REN_CLASSLIB_QT
-    explicit operator QString () const;
-#endif
-
     // The strategy is that ren::Values are not evaluated by default when
     // being passed around and used in C++.  For why this has to be the way
     // it is, see:
@@ -572,10 +584,9 @@ public:
     // x(y, z) can have the meaning of "execute as if you were DOing a block
     // where x were spliced at the head of it with y and z following.
     //
-    // It's sort of DO-like and kind of APPLY like if it's a function value.
-    // I'm calling it apply here for "generalized apply".  So far it's
-    // the best generalization I have come up with which puts a nice syntax on
-    // do (which is a C++ keyword and not available)
+    // This is also known as "generalized apply", which in Ren Garden actually
+    // is defined to be the meaning of APPLY.  It will hopefully be adopted
+    // by both Rebol and Red's core implementations.
     //
 protected:
     Value apply_(
@@ -608,8 +619,6 @@ public:
     // will throw an exception if you were wrong.  So don't be wrong, unless
     // you're prepared to catch exceptions or have your program crash.  Test
     // the type before the conversion first.
-    //
-    // Surprised this is possible?  I was too:
     //
     //     http://stackoverflow.com/q/27436039/211160
     //
@@ -1084,7 +1093,7 @@ public:
 #if REN_CLASSLIB_STD
     operator std::string () const {
         Value const & thisValue = *this;
-        return static_cast<std::string>(thisValue);
+        return to_string(thisValue);
     }
 #endif
 
@@ -1092,7 +1101,7 @@ public:
 #if REN_CLASSLIB_QT
     operator QString () const {
         Value const & thisValue = *this;
-        return static_cast<QString>(thisValue);
+        return to_QString(thisValue);
     }
 #endif
 
@@ -1464,7 +1473,7 @@ public:
 
 #if REN_CLASSLIB_STD
     operator std::string () const {
-        return Value::operator std::string ();
+        return to_string(*this);
     }
 #endif
 

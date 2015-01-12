@@ -132,14 +132,14 @@ QString WatchList::Watcher::getWatchString() const {
     // address values of the cell?  That could be helpful.  Could
     // also just have a mode that shows that anyway...tooltip?
 
-    return static_cast<QString>(watch);
+    return to_QString(watch);
 }
 
 
 QString WatchList::Watcher::getValueString() const {
     if (error)
-        return static_cast<QString>(error);
-    return static_cast<QString>(ren::runtime("mold/all", value));
+        return to_QString(error);
+    return to_QString(ren::runtime("mold/all", value));
 }
 
 

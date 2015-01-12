@@ -71,6 +71,7 @@ project(rencpp)
 
 cmake_minimum_required(VERSION 2.8)
 
+
 # Simplify appending additional flags to CMAKE_CXX_FLAGS.
 
 macro(add_cxx_flags flags)
@@ -136,46 +137,47 @@ add_cxx_flags("-std=c++11")
 
 
 # Turn up the warnings very high.
-# Currently not adding in -Wshadow, because I like naming constructor
-# arguments the same thing as the variables they initialize.
 #
-# http://stackoverflow.com/a/9862800/211160
+#     http://stackoverflow.com/a/9862800/211160
+#
+# Currently not adding in -Wshadow, because @HostileFork likes naming
+# constructor arguments the same thing as the variables they initialize.
 #
 # For compiler identification notes:
 #
-# http://stackoverflow.com/a/10055571/211160
+#     http://stackoverflow.com/a/10055571/211160
 
-add_cxx_flags("-Wall")
-add_cxx_flags("-Wsign-conversion")
-add_cxx_flags("-Wextra")
-add_cxx_flags("-Wcast-align")
-add_cxx_flags("-Wcast-qual")
-add_cxx_flags("-Wctor-dtor-privacy")
-add_cxx_flags("-Wdisabled-optimization")
-add_cxx_flags("-Wformat=2")
-add_cxx_flags("-Winit-self")
-add_cxx_flags("-Wlogical-op")
-add_cxx_flags("-Wmissing-declarations")
-add_cxx_flags("-Wmissing-include-dirs")
-add_cxx_flags("-Wnoexcept")
-add_cxx_flags("-Woverloaded-virtual")
-add_cxx_flags("-Wredundant-decls")
-add_cxx_flags("-Wsign-promo")
-add_cxx_flags("-Wstrict-null-sentinel")
-add_cxx_flags("-Wstrict-overflow=5")
-add_cxx_flags("-Wswitch-default")
-add_cxx_flags("-Wundef")
-add_cxx_flags("-Werror")
-add_cxx_flags("-Wno-unused")
-add_cxx_flags("-pedantic")
-add_cxx_flags("-Wold-style-cast")
+add_cxx_flags(-Wall)
+add_cxx_flags(-Wsign-conversion)
+add_cxx_flags(-Wextra)
+add_cxx_flags(-Wcast-align)
+add_cxx_flags(-Wcast-qual)
+add_cxx_flags(-Wctor-dtor-privacy)
+add_cxx_flags(-Wdisabled-optimization)
+add_cxx_flags(-Wformat=2)
+add_cxx_flags(-Winit-self)
+add_cxx_flags(-Wlogical-op)
+add_cxx_flags(-Wmissing-declarations)
+add_cxx_flags(-Wmissing-include-dirs)
+add_cxx_flags(-Wnoexcept)
+add_cxx_flags(-Woverloaded-virtual)
+add_cxx_flags(-Wredundant-decls)
+add_cxx_flags(-Wsign-promo)
+add_cxx_flags(-Wstrict-null-sentinel)
+add_cxx_flags(-Wstrict-overflow=5)
+add_cxx_flags(-Wswitch-default)
+add_cxx_flags(-Wundef)
+add_cxx_flags(-Werror)
+add_cxx_flags(-Wno-unused)
+add_cxx_flags(-pedantic)
+add_cxx_flags(-Wold-style-cast)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # using regular Clang or AppleClang
 
-  remove_cxx_flag("-Wlogical-op")
-  remove_cxx_flag("-Wnoexcept")
-  remove_cxx_flag("-Wstrict-null-sentinel")
+  remove_cxx_flag(-Wlogical-op)
+  remove_cxx_flag(-Wnoexcept)
+  remove_cxx_flag(-Wstrict-null-sentinel)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # using GCC
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
@@ -214,7 +216,7 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_LIST)
 # so you have to process file additions and removals with a re-run
 # of CMake manually:
 #
-# http://stackoverflow.com/questions/1167154/#comment10556582_5843681
+#     http://stackoverflow.com/questions/1167154/#comment10556582_5843681
 #
 # Better ideas welcome.
 
@@ -251,11 +253,11 @@ if((NOT CLASSLIB_STD) OR (CLASSLIB_STD EQUAL 1))
 
     # Assume we want the standard classlib if none specified
 
-    add_definitions("-DREN_CLASSLIB_STD=1")
+    add_definitions(-DREN_CLASSLIB_STD=1)
 
 elseif(CLASSLIB_STD EQUAL 0)
 
-    add_definitions("-DREN_CLASSLIB_STD=0")
+    add_definitions(-DREN_CLASSLIB_STD=0)
 
 else()
 
@@ -269,7 +271,7 @@ if((NOT CLASSLIB_QT) OR (CLASSLIB_QT EQUAL 0))
 
     # Assume we don't want the Qt classlib if none specified
 
-    add_definitions("-DREN_CLASSLIB_QT=0")
+    add_definitions(-DREN_CLASSLIB_QT=0)
 
 elseif(CLASSLIB_QT EQUAL 1)
 
@@ -279,7 +281,7 @@ elseif(CLASSLIB_QT EQUAL 1)
     #     http://www.kdab.com/using-cmake-with-qt-5/
 
     find_package(Qt5Core REQUIRED)
-    add_definitions("-DREN_CLASSLIB_QT=1")
+    add_definitions(-DREN_CLASSLIB_QT=1)
     include_directories(${Qt5Core_INCLUDE_DIRS})
     add_cxx_flags("${Qt5Core_EXECUTABLE_COMPILE_FLAGS}")
     set(LIBS_ALL ${LIBS_ALL} Qt5::Core)
@@ -371,12 +373,13 @@ elseif(RUNTIME STREQUAL "rebol")
     # can have some complaints if the warnings are set too high.  We tone the
     # strictness down a little so the headers will work.
 
-    add_cxx_flags("-Wno-unknown-pragmas")
-    remove_cxx_flag("-pedantic")
-    remove_cxx_flag("-Wold-style-cast")
-    remove_cxx_flag("-Wsign-conversion")
-    remove_cxx_flag("-Wcast-align")
-    remove_cxx_flag("-Wcast-qual")
+    add_cxx_flags(-Wno-unknown-pragmas)
+    remove_cxx_flag(-pedantic)
+    remove_cxx_flag(-Wold-style-cast)
+    remove_cxx_flag(-Wsign-conversion)
+    remove_cxx_flag(-Wcast-align)
+    remove_cxx_flag(-Wcast-qual)
+    add_cxx_flags(-Wno-clobbered)
 
     # Add any extra includes for the project browser
 

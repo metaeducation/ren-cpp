@@ -59,7 +59,7 @@ Value::operator bool() const {
 
 
 #if REN_CLASSLIB_STD
-Value::operator std::string () const {
+std::string to_string(Value const & value) {
     const size_t defaultBufLen = 100;
 
     std::vector<char> buffer (defaultBufLen);
@@ -71,7 +71,7 @@ Value::operator std::string () const {
 
     switch (
         RenFormAsUtf8(
-            origin, &cell, buffer.data(), defaultBufLen, &numBytes
+            value.origin, &value.cell, buffer.data(), defaultBufLen, &numBytes
         ))
     {
         case REN_SUCCESS:
@@ -85,8 +85,8 @@ Value::operator std::string () const {
             size_t numBytesNew;
             if (
                 RenFormAsUtf8(
-                    origin,
-                    &cell,
+                    value.origin,
+                    &value.cell,
                     buffer.data(),
                     numBytes,
                     &numBytesNew
@@ -109,7 +109,7 @@ Value::operator std::string () const {
 
 
 #if REN_CLASSLIB_QT
-Value::operator QString () const {
+QString to_QString(Value const & value) {
     const size_t defaultBufLen = 100;
 
     QByteArray buffer (defaultBufLen, Qt::Uninitialized);
@@ -121,7 +121,7 @@ Value::operator QString () const {
 
     switch (
         RenFormAsUtf8(
-            origin, &cell, buffer.data(), defaultBufLen, &numBytes
+            value.origin, &value.cell, buffer.data(), defaultBufLen, &numBytes
         ))
     {
         case REN_SUCCESS:
@@ -135,8 +135,8 @@ Value::operator QString () const {
             size_t numBytesNew;
             if (
                 RenFormAsUtf8(
-                    origin,
-                    &cell,
+                    value.origin,
+                    &value.cell,
                     buffer.data(),
                     numBytes,
                     &numBytesNew
@@ -153,7 +153,7 @@ Value::operator QString () const {
     }
 
     buffer.truncate(numBytes);
-    auto result = QString(buffer);
+    auto result = QString {buffer};
     return result;
 }
 
@@ -170,7 +170,7 @@ String::operator QString () const {
 
 std::ostream & operator<<(std::ostream & os, ren::Value const & value)
 {
-    return os << static_cast<std::string>(value);
+    return os << to_string(value);
 }
 
 

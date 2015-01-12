@@ -340,7 +340,7 @@ void RenConsole::printBanner() {
     // out of a context set up in the resource file in ren-garden.reb
 
     cursor.insertHtml(
-        ren::String{ren::runtime("ren-garden/copyright")}
+        static_cast<ren::String>(ren::runtime("ren-garden/copyright"))
     );
 
     cursor.insertText("\n");
@@ -472,10 +472,11 @@ void RenConsole::handleResults(
         // that error is unset then assume a cancellation).  Formed errors
         // have an implicit newline on the end implicitly
 
-        if (result)
-            appendText(static_cast<QString>(result));
-        else
+        if (result) {
+            appendText(to_QString(result));
+        } else {
             appendText("[Escape]\n");
+        }
 
     }
     else if (not result.isUnset()) {
@@ -493,31 +494,24 @@ void RenConsole::handleResults(
 
         if (result.isFunction()) {
             appendText("#[function! (");
-            appendText(static_cast<QString>(
-                ren::runtime("words-of quote", result)
-            ));
+            appendText(to_QString(ren::runtime("words-of quote", result)));
             appendText(") [...]]");
         } else {
-            appendText(static_cast<QString>(
-                ren::runtime("mold/all quote", result)
-            ));
+            appendText(to_QString(ren::runtime("mold/all quote", result)));
         }
 
         appendText("\n");
     }
 
-    // I like this newline always, even though Rebol's console only puts in
-    // the newline if you get a non-unset evaluation...
+    // Rebol's console only puts in the newline if you get a non-unset
+    // evaluation... but here we put one in all cases to space out the prompts
 
     appendText("\n");
 
     appendNewPrompt();
 
-    if (delta) {
-        emit reportStatus(
-            QString("Command completed in ") + static_cast<QString>(delta)
-        );
-    }
+    if (delta)
+        emit reportStatus(QString("Command finished in ") + to_QString(delta));
 
     emit finishedEvaluation();
 

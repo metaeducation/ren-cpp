@@ -60,6 +60,7 @@ typedef int RenResult;
 #define REN_SHIM_INITIALIZED 14
 #define REN_EVALUATION_CANCELLED 15
 #define REN_EVALUATION_EXITED 16
+#define REN_BAD_ENGINE_HANDLE 17
 
 
 /*

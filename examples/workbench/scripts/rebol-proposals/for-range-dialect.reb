@@ -9,7 +9,7 @@ Rebol [
 ; foreach is bad, but is "each" literate enough vs. for-each?
 
 each: :foreach
-unset 'foreach
+foreach: does [do make error! "foreach is now each"]
 
 
 ; this is a hard one to name, but a good rationale for every would be
@@ -17,7 +17,7 @@ unset 'foreach
 ; certainly foreach and forall were not as good.
 
 every: :forall
-unset 'forall
+forall: does [do make error! "forall is now every"]
 
 
 ; http://chat.stackoverflow.com/transcript/message/15915182#15915182

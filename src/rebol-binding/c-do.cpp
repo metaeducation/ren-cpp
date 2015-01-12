@@ -667,7 +667,7 @@ x*/	static REBINT Do_Args_Light(REBVAL *func, REBVAL *path, REBSER *block, REBCN
 
 	if (IS_OP(func)) dsf--; // adjust for extra arg
 
-	if ((dsp + 100) > (REBINT)SERIES_REST(DS_Series)) 
+    if (static_cast<REBCNT>(dsp + 100) > SERIES_REST(DS_Series))
 		Trap0(RE_STACK_OVERFLOW); //Expand_Stack();
 
 	// Get list of words:
@@ -859,7 +859,13 @@ more_path:
 
 	//CHECK_MEMORY(1);
 	CHECK_STACK(&value);
-	if ((DSP + 20) > (REBINT)SERIES_REST(DS_Series)) Expand_Stack(STACK_MIN); //Trap0(RE_STACK_OVERFLOW);
+    if (
+        static_cast<REBCNT>(DSP + 20) > SERIES_REST(DS_Series)
+    ) {
+        Expand_Stack(STACK_MIN);
+    }
+
+        //Trap0(RE_STACK_OVERFLOW);
 	if (--Eval_Count <= 0 || Eval_Signals) Do_Signals();
 
 	value = BLK_SKIP(block, index);

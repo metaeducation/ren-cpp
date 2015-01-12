@@ -14,5 +14,5 @@ Rebol [
 find-min: :system/contexts/lib/minimum-of
 find-max: :system/contexts/lib/maximum-of
 
-unset 'maximum-of
-unset 'minimum-of
+maximum-of: does [do error! "maximum-of is now find-max"]
+minimum-of: does [do error! "minimum-of is now find-min"]

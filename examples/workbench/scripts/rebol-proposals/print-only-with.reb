@@ -2,7 +2,7 @@ Rebol [
     Title: {Updated PRINT to use COMBINE and add /ONLY}
 ]
 
-unset 'prin
+prin: does [make error! "prin is now accomplished via print/only"]
 
 print: function [value [any-type!] /only /with delimiter] [
     prin: :system/contexts/lib/prin
