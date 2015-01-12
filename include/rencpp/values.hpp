@@ -367,6 +367,16 @@ public:
     // http://stackoverflow.com/q/6242768/211160
     explicit operator bool() const;
 
+    //
+    // The nasty behavior of implicitly converting pointers to booleans leads
+    // to frustrating bugs... disable it!
+    //
+    //     https://github.com/hostilefork/rencpp/issues/24
+    //
+
+    template <typename T>
+    Value (const T *, Engine * = nullptr); // never define this!
+
 
 public:
     Value (char const & c, Engine * engine = nullptr);
