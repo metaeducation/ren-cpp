@@ -1397,7 +1397,18 @@ public:
 
     Loadable (Value && value) : Value (value) {}
 
-    Loadable (char const * sourceCstr);
+    Loadable (char const * source);
+
+#if REN_CLASSLIB_STD == 1
+    Loadable (std::string const & source) :
+        Loadable (source.c_str())
+    {
+    }
+#endif
+
+#if REN_CLASSLIB_QT == 1
+    // TBD
+#endif
 };
 
 
