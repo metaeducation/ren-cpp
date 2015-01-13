@@ -397,7 +397,13 @@ elseif(RUNTIME STREQUAL "rebol")
     remove_cxx_flag(-Wsign-conversion)
     remove_cxx_flag(-Wcast-align)
     remove_cxx_flag(-Wcast-qual)
-    add_cxx_flags(-Wno-clobbered)
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # Rebol's use of setjmp and longjmp triggers several of these warnings,
+        # which exist on GCC but not Clang
+
+        add_cxx_flags(-Wno-clobbered)
+    endif()
 
     # Add any extra includes for the project browser
 

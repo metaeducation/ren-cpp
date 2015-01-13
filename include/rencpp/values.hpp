@@ -330,12 +330,7 @@ public:
 
     bool isNone() const;
 
-    // actually never provide this; this is a disabling.  = delete is
-    // apparently not a "better" way of doing such a disablement.
-
-    // Value (nullptr_t) = delete; ...doesn't work in clang, bad idea?
-    // Just make it a link error by never defining it
-    Value (std::nullptr_t);
+    Value (std::nullptr_t) = delete; // vetoed!
 
     struct none_t
     {
@@ -1280,10 +1275,17 @@ protected:
     //
 
     AnyBlock (
-        internal::Loadable const loadablesPtr[],
+        internal::Loadable const loadables[],
         size_t numLoadables,
         internal::CellFunction cellfun,
-        Context * context = nullptr
+        Context * context
+    );
+
+    AnyBlock (
+        Value const values[],
+        size_t numValues,
+        internal::CellFunction cellfun,
+        Context * context
     );
 };
 
@@ -1441,13 +1443,8 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyBlock_ (Value * values, size_t numValues, Context * context = nullptr) :
-        AnyBlock (
-            numValues > 0 ? &values[0].cell : nullptr,
-            numValues,
-            F,
-            context
-        )
+    AnyBlock_ (Value const values[], size_t numValues, Context * context) :
+        AnyBlock (values, numValues, F, context)
     {
     }
 
@@ -1460,7 +1457,7 @@ public:
     }
 
     AnyBlock_ (Context * context = nullptr) :
-        AnyBlock (nullptr, 0, F, context)
+        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, context)
     {
     }
 };
