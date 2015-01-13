@@ -54,7 +54,9 @@ private:
 private:
     ren::Value dialect;
 public:
-    ren::Function getDialectFunction() { return ren::Function {dialect}; }
+    ren::Function getDialectFunction() {
+        return static_cast<ren::Function>(dialect);
+    }
 
 private:
     QThread workerThread;
@@ -62,10 +64,11 @@ private:
 public slots:
     void handleResults(int result);
 signals:
-    void operate(QString const & input); // keep terminology from Qt sample
+    // keep terminology from Qt sample
+    void operate(QString const & input, std::ostream * os);
     void finishedEvaluation();
 public:
-    void evaluate(QString const & input);
+    void evaluate(QString const & input, std::ostream & os);
 };
 
 #endif

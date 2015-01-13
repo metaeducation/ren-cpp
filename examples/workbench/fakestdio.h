@@ -54,12 +54,12 @@ protected:
 class FakeStdoutBuffer : protected FakeStdoutResources, public std::streambuf
 {
 private:
-    RenConsole & mdi;
+    RenConsole & console;
 
 public:
-    explicit FakeStdoutBuffer(RenConsole & mdi, std::size_t buff_sz = 256) :
+    explicit FakeStdoutBuffer(RenConsole & console, std::size_t buff_sz = 256) :
         FakeStdoutResources (buff_sz),
-        mdi(mdi)
+        console (console)
     {
         // -1 makes authoring of overflow() easier, so it can put the character
         // into the buffer when it happens.
@@ -79,11 +79,23 @@ protected:
         // BUG: If this is UTF8 encoded we might end up on half a character...
         // https://github.com/metaeducation/ren-garden/issues/1
 
-        QMutexLocker locker {&mdi.modifyMutex};
+        QMutexLocker locker {&console.modifyMutex};
 
-        mdi.appendText(QString(pbase()));
+        if (not console.target) {
+            console.appendText(QString(pbase()));
+            return true;
+        }
 
-        return true;
+        if (console.target.isString()) {
+            // dangerous call here, if append has any sort of output!
+            // need versions of basic series routines that do not call out
+
+            ren::runtime("append", console.target, pbase());
+            return true;
+        }
+
+        assert(false);
+        return false;
     }
 
     int_type overflow(int_type ch) {
@@ -114,8 +126,8 @@ protected:
 
 class FakeStdout : protected FakeStdoutBuffer, public std::ostream {
 public:
-    FakeStdout (RenConsole & mdi) :
-        FakeStdoutBuffer (mdi),
+    FakeStdout (RenConsole & console) :
+        FakeStdoutBuffer (console),
         std::ostream (static_cast<FakeStdoutBuffer *>(this))
     {
     }

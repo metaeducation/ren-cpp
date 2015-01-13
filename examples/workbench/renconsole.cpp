@@ -63,25 +63,22 @@ public slots:
         bool success = false;
 
         try {
-            if (dialect) {
-                QString buffer {"{"};
-                buffer += input;
-                buffer += "}";
+            // We *always* generate a block to pass to the dialect.  This
+            // is Ren Garden, not "arbitrary shell"... so if you want to
+            // pass an arbitrary string you must type it in as {49+3hfa} in
+            // a properly loadable string.
 
-                ren::Value loaded
-                    = ren::runtime("load", buffer.toUtf8().constData());
+            QString buffer {"{["};
+            buffer += input;
+            buffer += "]}";
 
-                if (echo)
-                    ren::print(to_string(loaded));
+            ren::Value loaded
+                = ren::runtime("load", buffer.toUtf8().constData());
 
-                result = dialect(loaded);
-            }
-            else {
-                if (echo)
-                    ren::print(input.toUtf8().constData());
+            if (echo)
+                ren::print(to_string(loaded));
 
-                result = ren::runtime(input.toUtf8().constData());
-            }
+            result = dialect(loaded);
 
             success = true;
         }
@@ -127,7 +124,8 @@ RenConsole::RenConsole (QWidget * parent) :
     fakeOut (new FakeStdout (*this)),
     evaluating (false),
     echo (false),
-    dialect (ren::none)
+    dialect (ren::none),
+    target (ren::none)
 {    
     // We want to be able to append text from threads besides the GUI thread.
     // It is a synchronous operation for a worker, but still goes through the
@@ -216,38 +214,97 @@ RenConsole::RenConsole (QWidget * parent) :
     outputFormat.setFontFamily("Courier");
     outputFormat.setFontWeight(QFont::Bold);
 
-    auto consoleFunction = ren::makeFunction(
-        "{CONSOLE dialect for interacting with the Ren Garden host}"
-        "arg [block! any-function! string!]"
-        "    {)}",
+    consoleFunction = ren::makeFunction(
+        "{Default CONSOLE dialect for executing commands in Ren Garden}"
+        "arg [block! any-function! string! word!]"
+        "    {block to execute or other instruction (see documentation)}"
+        "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
         REN_STD_FUNCTION,
 
-        [this](ren::Value const & arg) -> ren::Value
+        [this](ren::Value const & arg, ren::Value const & meta) -> ren::Value
         {
-            if (arg.isFunction()) {
-                ren::Value wordsOf =
-                    ren::runtime("words-of quote", arg);
+            if (not meta) {
+                // the case that the unmodified CONSOLE make *some* exceptions
+                // and throw in some kind of behavior unknown to DO, like
+                // a more clever version of HELP that breaks the arity rules
+                // entirely.  But there's something to be said for consistency.
 
-                ren::Block blk = static_cast<ren::Block>(wordsOf);
+                if (arg.isBlock())
+                    return ren::runtime("do", arg);
 
-                if (
-                    blk.isEmpty()
-                    or not (
-                        blk[1].isWord()
-                        or blk[1].isLitWord()
-                        or blk[1].isGetWord()
-                    )
-                    or ((blk.length() > 1) and not blk[2].isRefinement())
-                ) {
-                    ren::runtime(
-                        "do make error! {Console dialect must be single arity"
-                        " (and optimally have a /meta switch for control)}"
-                    );
+                // Passing in a function is the way of swapping in a new
+                // dialect to be used in the console.  It has the opportunity
+                // to print out a banner, because it is called with the /meta
+                // refinement and a parameter of 'banner.
+
+                if (arg.isFunction()) {
+                    ren::Value wordsOf =
+                        ren::runtime("words-of quote", arg);
+
+                    ren::Block blk = static_cast<ren::Block>(wordsOf);
+
+                    if (
+                        blk.isEmpty()
+                        or not (
+                            blk[1].isWord()
+                            or blk[1].isLitWord()
+                            or blk[1].isGetWord()
+                        )
+                        or ((blk.length() > 1) and not blk[2].isRefinement())
+                    ) {
+                        ren::runtime(
+                            "do make error! {Console dialect must be single"
+                            " arity (/meta switch for control)}"
+                        );
+                    }
+
+                    if (not arg.isEqualTo(dialect)) {
+                        dialect = arg;
+                        if (ren::runtime("find words-of quote", dialect, "/meta"))
+                            ren::runtime(ren::Path {dialect, "meta"}, ren::LitWord {"banner"});
+                    }
+                    else {
+                        // setting to already-used dialect... should this
+                        // just be ignored?
+                    }
+
+                    return ren::unset;
                 }
 
-                dialect = arg;
+                // Passing a string and having it set the status bar is not
+                // any permanent guarantee of a feature, but it's useful for
+                // demonstration purposes so let's do that for now.
+
+                if (arg.isString()) {
+                    emit reportStatus(to_QString(arg));
+                    return ren::unset;
+                }
+
+                ren::runtime("do make error! {More CONSOLE features soon!}");
+
                 return ren::unset;
+            }
+
+            if (arg.isWord()) {
+                if (arg.isEqualTo<ren::Word>("prompt"))
+                    return ren::String {""}; // doesn't add before >> prompt
+
+                if (arg.isEqualTo<ren::Word>("banner")) {
+                    static bool bannerPrinted = false;
+
+                    if (not bannerPrinted) {
+                        printBanner();
+                        bannerPrinted = true;
+                        return ren::none;
+                    }
+                }
+
+                // Meta protocol may query you for lit-word features you
+                // do not support, so don't raise an error if you don't
+                // know what it is... just return none.
+
+                return ren::none;
             }
 
             if (arg.isBlock()) {
@@ -259,18 +316,22 @@ RenConsole::RenConsole (QWidget * parent) :
                     echo = (*next).isEqualTo<ren::Word>("on");
                     return ren::unset;
                 }
-            }
 
-            // Passing a string and having it set the status bar is not
-            // any permanent guarantee of a feature, but it's useful for
-            // demonstration purposes so let's do that for now.
+                if ((*blk).isEqualTo<ren::Word>("buffer")) {
+                    ren::Block next = blk;
+                    next++;
 
-            if (arg.isString()) {
-                emit reportStatus(to_QString(arg));
+                    // need to implement the ability to load a buffer and
+                    // at a cursor position
+                    assert(false);
+                    return ren::unset;
+                }
+
+                ren::runtime("do make error! {Unknown dialect options.}");
                 return ren::unset;
             }
 
-            ren::runtime("do make error! {More CONSOLE features soon...!}");
+            ren::runtime("do make error! {Unknown dialect options.}");
 
             return ren::unset;
         }
@@ -287,7 +348,7 @@ RenConsole::RenConsole (QWidget * parent) :
 
     // Load the incubator routines that are not written in C++ from the
     // resource file, and the ren-garden console helpers for syntax highlight
-    // or other such features
+    // or other such features.
 
     std::vector<char const *> scripts {
         ":/scripts/ren-garden.reb",
@@ -318,12 +379,16 @@ RenConsole::RenConsole (QWidget * parent) :
         ren::runtime(dump.data());
     }
 
-    // Print the banner and the first prompt.  Any time we're going to do
-    // a write to the console, we need to do so while the modifyMutex is
-    // locked.
+
+    // Now make console the default dialect we use to interpret commands
+    // Do it this way instead of with raw assignment just to keep the special
+    // case tested (users can type CONSOLE :CONSOLE as well...)  Switching
+    // dialects offers the ability to run (dialect)/meta 'banner, which may
+    // print.  Any time we're going to do a write to the console, we need to
+    // do so while the modifyMutex is locked.
 
     QMutexLocker locker {&modifyMutex};
-    printBanner();
+    ren::runtime(consoleFunction, "quote", consoleFunction);
     appendNewPrompt();
 }
 
@@ -440,13 +505,9 @@ void RenConsole::printPrompt() {
     QString customPrompt;
 
     if (dialect) {
-        ren::Value metaPosition {
-            ren::runtime("find words-of quote", dialect, "/meta")
-        };
-
-        if (metaPosition)
+        if (ren::runtime("find words-of quote", dialect, "/meta"))
             customPrompt = to_QString(ren::runtime(
-                ren::Path {dialect, "meta"}, ren::Word {"prompt"}
+                ren::Path {dialect, "meta"}, ren::LitWord {"prompt"}
             ));
         else
             customPrompt = "?";
@@ -534,8 +595,12 @@ void RenConsole::escape() {
         return;
     }
 
-    if (dialect) {
-        dialect = ren::none;
+    if (not dialect.isEqualTo(consoleFunction)) {
+
+        // give banner opportunity or other dialect switch code, which would
+        // not be able to run if we just said dialect = consoleFunction
+
+        ren::runtime(consoleFunction, "quote", consoleFunction);
 
         appendText("\n\n");
         appendNewPrompt();
@@ -574,12 +639,10 @@ void RenConsole::handleResults(
         // that error is unset then assume a cancellation).  Formed errors
         // have an implicit newline on the end implicitly
 
-        if (result) {
+        if (result)
             appendText(to_QString(result));
-        } else {
+        else
             appendText("[Escape]\n");
-        }
-
     }
     else if (not result.isUnset()) {
         // If we evaluated and it wasn't unset, print an eval result ==
@@ -598,7 +661,8 @@ void RenConsole::handleResults(
             appendText("#[function! (");
             appendText(to_QString(ren::runtime("words-of quote", result)));
             appendText(") [...]]");
-        } else {
+        }
+        else {
             appendText(to_QString(ren::runtime("mold/all quote", result)));
         }
 

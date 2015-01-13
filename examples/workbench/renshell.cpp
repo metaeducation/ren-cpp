@@ -52,6 +52,8 @@ class ShellWorker : public QObject
 private:
     QProcess * process;
 
+    std::ostream * outputStream;
+
     // We need to keep a buffer at least as long as the token string we are
     // looking for as a prompt before flushing the data we get back
 
@@ -64,6 +66,7 @@ public:
     ShellWorker(QObject * parent = nullptr) :
         QObject (parent),
         process (nullptr),
+        outputStream (nullptr),
         token ("***see RenGarden/renshell.cpp***"),
         tokenCount (0)
     {
@@ -76,7 +79,9 @@ public:
     bool hasProcess() { return process != nullptr; }
 
 public slots:
-    void doWork(QString const & input) {
+    void doWork(QString const & input, std::ostream * os) {
+
+        outputStream = os;
 
         // Initialize process if we haven't already; easier to write this
         // synchronously...
@@ -211,11 +216,8 @@ void ShellWorker::initProcess() {
     );
 
 
-    // We need to detect the shell or let them override it in the dialect.
-    // How will the dialect do this?  if shell [ls -alF] runs the code,
-    // then how to do options?  shell/config [...] perhaps?  If that's the
-    // case, how to access config if we are replacing "DO"?  A meta key
-    // which knows to add /config when it's running?  Maybe shell/meta?
+    // These should be configurable with shell/meta, but going for just CMD.EXE
+    // on Windows and /bin/sh on Unix for now.
 
     QString program;
     QStringList arguments;
@@ -314,9 +316,8 @@ void ShellWorker::onError(QProcess::ProcessError error) {
     }
 
     // We don't close the shell when an error happens; it will either finish
-    // itself or the user will have some kind of /meta command for doing it.
-    // if there's a meta command added, modify messages above to tell them
-    // that it's there and they can use it.
+    // itself or a /meta command for doing it.  When the /meta commands are
+    // written, modify messages above to tell the user they can use them.
 }
 
 
@@ -416,10 +417,7 @@ void ShellWorker::onReadyReadStandardOutput() {
                 count--;
             }
 
-            // bad idea theater, just throw it into the default iostream
-            // for this moment of testing...
-
-            ren::Engine::runFinder().getOutputStream() << buffer.data();
+            *outputStream << buffer.data();
 
             tokenCount--;
             buffer.clear();
@@ -436,8 +434,7 @@ void ShellWorker::onReadyReadStandardOutput() {
     int pos = buffer.size() - ((token.size() - 1) + 2);
     if (pos > 0) {
         if (tokenCount == 1) {
-            ren::Engine::runFinder().getOutputStream()
-                << buffer.left(pos).data();
+            *outputStream << buffer.left(pos).data();
         }
 
         buffer = buffer.right(buffer.size() - pos);
@@ -521,9 +518,9 @@ RenShell::RenShell (QObject * parent) :
     dialect = ren::makeFunction(
 
         "{SHELL dialect for interacting with an OS shell process}"
-        "'arg [unset! word! block! paren! string!]"
-        "    {block in dialect or other to execute, see documentation)}"
-        "/meta {Interpret as a meta instruction instead of shell code}"
+        "'arg [unset! word! lit-word! block! paren! string!]"
+        "    {block in dialect or other instruction (see documentation)}"
+        "/meta {Interpret in 'meta mode' for controlling the dialect}"
         "/echo {Print command before running it}",
 
         REN_STD_FUNCTION,
@@ -557,15 +554,35 @@ RenShell::RenShell (QObject * parent) :
                 // out of that (because this will consume NAME from the meta
                 // dialect, as written)
 
-                if (arg.isEqualTo<ren::Word>("prompt")) {
-                    // we aren't set up to capture shell output besides as
-                    // normal output, but when we are this could be the path
+                if (arg.isEqualTo<ren::LitWord>("prompt")) {
+                
+                    // Currently the GUI is the one asking for the prompt.
+                    // Like many situations where the GUI is doing an
+                    // evaluation of arbitrary user code, this is a bad
+                    // idea over the long run (and eventually the evalutor
+                    // should assert you never call it from the GUI, as
+                    // the demo matures).  But here it isn't just a bad idea,
+                    // it actually deadlocks...
+                    
+                #ifdef THREAD_FOR_PROMPT_SAFE
+                    std::stringstream pathCapture;
+
+                    QMutexLocker lock {&shellDoneMutex};
+                    evaluate("pwd", pathCapture);
+                    shellDone.wait(lock.mutex());
+                    return ren::String {pathCapture.str()};
+                #endif
+                
                     return ren::String {"shell"};
                 }
 
-                ren::runtime("do make error! {Shell meta coming soon!}");
+                // Should there be a banner?  The banner could start up the
+                // process and return things.
 
-                return ren::unset;
+                // Meta protocol may ask you for things you don't know about,
+                // so gracefully ignore them.
+
+                return ren::none;
             }
 
         #ifdef TO_WIN32
@@ -590,9 +607,13 @@ RenShell::RenShell (QObject * parent) :
 
             std::vector<int> results;
 
+
             QMutexLocker lock {&shellDoneMutex};
             for (auto str : commands) {
-                evaluate(static_cast<ren::String>(str));
+                evaluate(
+                    static_cast<ren::String>(str),
+                    ren::Engine::runFinder().getOutputStream()
+                );
 
                 // unlike when the GUI requested the evaluation and kept
                 // running, we do NOT want to keep running while the
@@ -634,8 +655,8 @@ void RenShell::handleResults(int result) {
 }
 
 
-void RenShell::evaluate(QString const & input) {
-    emit operate(input);
+void RenShell::evaluate(QString const & input, std::ostream & os) {
+    emit operate(input, &os);
 }
 
 

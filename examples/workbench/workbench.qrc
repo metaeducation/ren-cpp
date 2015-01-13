@@ -20,5 +20,6 @@
         <file>scripts/rebol-proposals/to-string-spelling.reb</file>
         <file>scripts/rebol-proposals/ls-cd-dt-short-names.reb</file>
         <file>scripts/rebol-proposals/for-range-dialect.reb</file>
+        <file>scripts/rebol-proposals/object-context.reb</file>
     </qresource>
 </RCC>

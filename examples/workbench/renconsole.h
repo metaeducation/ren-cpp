@@ -81,10 +81,17 @@ private:
     bool echo;
 
 private:
+    ren::Value consoleFunction;
+
     // Function representing the current dialect (registered with CONSOLE)
     ren::Value dialect;
 
     void escape() override;
+
+private:
+    // Experimental facility for writing the shell's output to a string
+
+    ren::Value target;
 
 public slots:
     void handleResults(
