@@ -494,5 +494,11 @@ void ren::internal::Series_::tail() {
         = static_cast<REBCNT>(cell.data.series.series->tail);
 }
 
+size_t Series::length() const {
+    REBINT index = (REBINT)VAL_INDEX(&cell);
+    REBINT tail = (REBINT)VAL_TAIL(&cell);
+    return tail > index ? tail - index : 0;
+}
+
 
 } // end namespace ren

@@ -448,4 +448,21 @@ void Value::constructOrApplyInitialize(
 }
 
 
+Value Series::operator[](size_t index) const {
+    // Terrible placeholder implementation (helps with testing in any case)
+
+    if (index > length())
+        return ren::none;
+
+    size_t count = index;
+    auto it = begin();
+    while (count > 1) {
+        count--;
+        it++;
+    }
+
+    return *it;
+}
+
+
 } // end namespace ren

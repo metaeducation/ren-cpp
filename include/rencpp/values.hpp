@@ -1070,6 +1070,14 @@ public:
         temp.tail(); // see remarks on tail modifying vs. returning a value
         return iterator (temp);
     }
+
+    size_t length() const;
+
+    bool isEmpty() const { return length() == 0; }
+
+    // Note: Rebol/Red use 1-based indexing with a "zero-hole" by default
+
+    Value operator[](size_t index) const;
 };
 
 
