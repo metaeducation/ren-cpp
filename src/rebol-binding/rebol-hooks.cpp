@@ -543,8 +543,11 @@ public:
             if (ANY_BLOCK(constructOutDatatypeIn)) {
                 // They actually wanted a constructed value, and they wanted
                 // effectively our aggregate...maybe with a different type.
-                Set_Block(constructOutDatatypeIn, aggregate);
-            } else {
+                // Depending on how much was set in the "datatype in" we may
+                // not have to rewrite the header bits, as Set_Series does.
+                Set_Series(resultType, constructOutDatatypeIn, aggregate);
+            }
+            else {
                 // If they didn't want a block, then they better want the type
                 // of the first thing in the block.  And there better be
                 // something in that block.
