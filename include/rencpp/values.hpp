@@ -648,11 +648,14 @@ public:
         // not virtual.
         T result (Dont::Initialize);
         result.cell = cell;
-        result.finishInit(origin);
 
         if (not result.isValid())
             throw bad_value_cast("Invalid cast");
 
+        // All constructed types, even Dont::Initialize, must be able to
+        // survive a throw.
+
+        result.finishInit(origin);
         return result;
     }
 
@@ -667,10 +670,11 @@ public:
     bool isEqualTo(char const * spelling) const {
         T result (Dont::Initialize);
         result.cell = cell;
-        result.finishInit(origin);
 
         if (not result.isValid())
-            throw bad_value_cast("Invalid cast");
+            return false;
+
+        // No need to finishInit() initialization.
 
         return result.hasSpelling(spelling);
     }
