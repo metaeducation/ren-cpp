@@ -54,19 +54,40 @@ class EvaluatorWorker : public QObject
     Q_OBJECT
 
 public slots:
-    void doWork(QString const & input) {
-
+    void doWork(
+        ren::Value const & dialect,
+        QString const & input,
+        bool echo
+    ) {
         ren::Value result;
         bool success = false;
 
-        ren::Value start = ren::runtime("stats/timer");
-
         try {
-            result = ren::runtime(input.toUtf8().constData());
+            if (dialect) {
+                QString buffer {"{"};
+                buffer += input;
+                buffer += "}";
+
+                ren::Value loaded
+                    = ren::runtime("load", buffer.toUtf8().constData());
+
+                if (echo)
+                    ren::print(to_string(loaded));
+
+                result = dialect(loaded);
+            }
+            else {
+                if (echo)
+                    ren::print(input.toUtf8().constData());
+
+                result = ren::runtime(input.toUtf8().constData());
+            }
+
             success = true;
         }
         catch (ren::evaluation_error const & e) {
             result = e.error();
+            assert(result);
         }
         catch (ren::exit_command const & e) {
             qApp->exit(e.code());
@@ -76,19 +97,13 @@ public slots:
             result = ren::none;
         }
 
-        // Console hook needs to run here for low latency for things like
-        // timers, otherwise a UI event could be holding it up.
-
-        ren::Value delta = ren::runtime("stats/timer -", start);
-
-        emit resultReady(success, result, delta);
+        emit resultReady(success, result);
     }
 
 signals:
     void resultReady(
         bool success,
-        ren::Value const & result,
-        ren::Value const & delta
+        ren::Value const & result
     );
 };
 
@@ -110,7 +125,9 @@ signals:
 RenConsole::RenConsole (QWidget * parent) :
     ReplPad (parent),
     fakeOut (new FakeStdout (*this)),
-    evaluating (false)
+    evaluating (false),
+    echo (false),
+    dialect (ren::none)
 {    
     // We want to be able to append text from threads besides the GUI thread.
     // It is a synchronous operation for a worker, but still goes through the
@@ -200,25 +217,71 @@ RenConsole::RenConsole (QWidget * parent) :
     outputFormat.setFontWeight(QFont::Bold);
 
     auto consoleFunction = ren::makeFunction(
-        "{CONSOLE dialect for customizing Ren Workbench commands}"
-        ":arg [word! path! block! paren! integer!]"
-        "    {word to watch or other legal parameter, see documentation)}",
+        "{CONSOLE dialect for interacting with the Ren Garden host}"
+        "arg [block! any-function! string!]"
+        "    {)}",
 
         REN_STD_FUNCTION,
 
         [this](ren::Value const & arg) -> ren::Value
         {
-            if (arg.isBlock()) {
-                ren::runtime("do make error! {Block form of dialect soon...}");
+            if (arg.isFunction()) {
+                ren::Value wordsOf =
+                    ren::runtime("words-of quote", arg);
+
+                ren::Block blk = static_cast<ren::Block>(wordsOf);
+
+                if (
+                    blk.isEmpty()
+                    or not (
+                        blk[1].isWord()
+                        or blk[1].isLitWord()
+                        or blk[1].isGetWord()
+                    )
+                    or ((blk.length() > 1) and not blk[2].isRefinement())
+                ) {
+                    ren::runtime(
+                        "do make error! {Console dialect must be single arity"
+                        " (and optimally have a /meta switch for control)}"
+                    );
+                }
+
+                dialect = arg;
+                return ren::unset;
             }
 
-            return consoleDialect(arg);
+            if (arg.isBlock()) {
+                auto blk = static_cast<ren::Block>(arg);
+
+                if ((*blk).isEqualTo<ren::Word>("echo")) {
+                    ren::Block next = blk;
+                    next++;
+                    echo = (*next).isEqualTo<ren::Word>("on");
+                    return ren::unset;
+                }
+            }
+
+            // Passing a string and having it set the status bar is not
+            // any permanent guarantee of a feature, but it's useful for
+            // demonstration purposes so let's do that for now.
+
+            if (arg.isString()) {
+                emit reportStatus(to_QString(arg));
+                return ren::unset;
+            }
+
+            ren::runtime("do make error! {More CONSOLE features soon...!}");
+
+            return ren::unset;
         }
     );
 
     ren::runtime(
         "console: quote", consoleFunction,
-        "shell: quote", shell.getDialectFunction()
+        "shell: quote", shell.getDialectFunction(),
+
+        // A bit too easy to overwrite them, e.g. `console: :shell`
+        "protect 'console protect 'shell"
     );
 
 
@@ -238,7 +301,8 @@ RenConsole::RenConsole (QWidget * parent) :
         ":/scripts/rebol-proposals/to-string-spelling.reb",
         ":/scripts/rebol-proposals/find-min-max.reb",
         ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb",
-        ":/scripts/rebol-proposals/for-range-dialect.reb"
+        ":/scripts/rebol-proposals/for-range-dialect.reb",
+        ":/scripts/rebol-proposals/object-context.reb"
     };
 
     for (auto filename : scripts) {
@@ -364,8 +428,26 @@ void RenConsole::printBanner() {
 
 
 void RenConsole::printPrompt() {
+    // If a function has a /meta refinement, we will ask it via the
+    // meta protocol what it wants its prompt to be.
+
+    QString customPrompt;
+
+    if (dialect) {
+        ren::Value metaPosition {
+            ren::runtime("find words-of quote", dialect, "/meta")
+        };
+
+        if (metaPosition)
+            customPrompt = to_QString(ren::runtime(
+                ren::Path {dialect, "meta"}, ren::Word {"prompt"}
+            ));
+        else
+            customPrompt = "?";
+    }
+
     pushFormat(promptFormat);
-    appendText(">>");
+    appendText(customPrompt + ">>");
 
     pushFormat(inputFormat);
     appendText(" ");
@@ -436,7 +518,22 @@ void RenConsole::evaluate(QString const & input) {
 
     pushFormat(outputFormat);
 
-    emit operate(input);
+    emit operate(dialect, input, echo);
+}
+
+
+void RenConsole::escape() {
+    if (evaluating) {
+        ren::runtime.cancel();
+        return;
+    }
+
+    if (dialect) {
+        dialect = ren::none;
+
+        appendText("\n\n");
+        appendNewPrompt();
+    }
 }
 
 
@@ -451,8 +548,7 @@ void RenConsole::evaluate(QString const & input) {
 
 void RenConsole::handleResults(
     bool success,
-    ren::Value const & result,
-    ren::Value const & delta
+    ren::Value const & result
 ) {
     assert(evaluating);
 
@@ -510,20 +606,16 @@ void RenConsole::handleResults(
 
     appendNewPrompt();
 
-    if (delta)
-        emit reportStatus(QString("Command finished in ") + to_QString(delta));
+    // TBD: divide status bar into "command succeeded" and "error" as well
+    // as parts controllable by the console automator
+
+    /*emit reportStatus(QString("..."));*/
 
     emit finishedEvaluation();
 
     evaluating = false;
 }
 
-
-
-ren::Value RenConsole::consoleDialect(ren::Value const &) {
-    ren::runtime("do make error! {Coming soon to a cross-platform near you}");
-    UNREACHABLE_CODE();
-}
 
 
 ///

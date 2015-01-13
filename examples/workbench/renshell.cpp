@@ -521,7 +521,7 @@ RenShell::RenShell (QObject * parent) :
     dialect = ren::makeFunction(
 
         "{SHELL dialect for interacting with an OS shell process}"
-        "'arg [word! block! paren! string!]"
+        "'arg [unset! word! block! paren! string!]"
         "    {block in dialect or other to execute, see documentation)}"
         "/meta {Interpret as a meta instruction instead of shell code}"
         "/echo {Print command before running it}",
@@ -535,13 +535,36 @@ RenShell::RenShell (QObject * parent) :
         )
             -> ren::Value
         {
+            if (arg.isUnset()) {
+                // Uses the "unset quoted" trick, same as HELP, to fake up the
+                // ability to have one less arity when used at the end of an
+                // evaluation.  Only sensible for interactive commands!
+
+                ren::runtime("console quote", dialect);
+                return ren::unset;
+            }
 
             if (meta) {
-                if (arg.isWord()) {
+                if (arg.isEqualTo<ren::Word>("running?"))
                     return worker->hasProcess();
-                } else {
-                    ren::runtime("do make error! {Only running? supported}");
+
+                // How about "kill", or maybe "on" and "off"...?
+
+                // Self awareness for things like name, which can be detected
+                // and used by the prompt.  It's the first need of the "meta"
+                // protocol, so hard to say if asking for a key by word is
+                // better than a properties object and then getting the name
+                // out of that (because this will consume NAME from the meta
+                // dialect, as written)
+
+                if (arg.isEqualTo<ren::Word>("prompt")) {
+                    // we aren't set up to capture shell output besides as
+                    // normal output, but when we are this could be the path
+                    return ren::String {"shell"};
                 }
+
+                ren::runtime("do make error! {Shell meta coming soon!}");
+
                 return ren::unset;
             }
 

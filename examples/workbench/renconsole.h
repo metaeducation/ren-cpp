@@ -78,22 +78,25 @@ protected:
 private:
     bool evaluating;
     QThread workerThread;
+    bool echo;
+
+private:
+    // Function representing the current dialect (registered with CONSOLE)
+    ren::Value dialect;
+
+    void escape() override;
 
 public slots:
     void handleResults(
         bool success,
-        ren::Value const & result,
-        ren::Value const & delta
+        ren::Value const & result
     );
 signals:
-    void operate(QString const & input); // keep terminology from Qt sample
+    // keep terminology from Qt sample
+    void operate(ren::Value const & processor, QString const & input, bool echo);
     void finishedEvaluation();
 protected:
     void evaluate(QString const & input) override;
-
-private:
-    // Now the magic!  :-)
-    ren::Value consoleDialect(ren::Value const &);
 };
 
 #endif

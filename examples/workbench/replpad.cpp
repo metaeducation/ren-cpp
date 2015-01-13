@@ -536,10 +536,20 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // Escape is given several meanings depending on the context.  If you
     // are evaluating, it will cancel.  If you are not evaluating, it will
     // clear any input you've given (an undoable action).  If you're not
-    // evaluating and it has cleared your input, it will bump you to the
-    // outermost shell.
+    // evaluating and it has cleared your input, and you hit it twice enough
+    // within the double click timer window, it will bump you out of the
+    // current shell.
 
-    if ((key == Qt::Key_Escape)) {
+    if (key == Qt::Key_Escape) {
+        if (not escapeTimer.hasExpired(
+            qApp->styleHints()->mouseDoubleClickInterval()
+        )) {
+            escape();
+            return;
+        }
+
+        escapeTimer.start();
+
         if (not history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
         }

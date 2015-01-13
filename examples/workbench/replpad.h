@@ -23,6 +23,7 @@
 //
 
 #include <QTextEdit>
+#include <QElapsedTimer>
 
 #include "syntaxer.h"
 
@@ -79,6 +80,15 @@ protected:
     virtual void evaluate(QString const & input) = 0;
     virtual void printPrompt() = 0;
     virtual void printMultilinePrompt() = 0;
+
+private:
+    // "Escape" in this sense refers to "escaping the current mode".  The
+    // way it is achieved by default is by pressing Qt::Key_Escape twice
+    // within the double click period, but it is more a "conceptual escape"
+    // that the virtual method is to implement.
+
+    QElapsedTimer escapeTimer;
+    virtual void escape() = 0;
 
 private:
     bool hasUndo;
