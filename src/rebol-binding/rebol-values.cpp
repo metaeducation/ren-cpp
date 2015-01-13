@@ -392,7 +392,7 @@ std::string AnyWord::spellingOf_STD() const {
     std::string result = to_string(*this);
     if (isWord())
         return result;
-    if (isRefinement() or isGetWord() or isIssue())
+    if (isRefinement() or isGetWord() or isLitWord() or isIssue())
         return result.erase(0, 1);
     if (isSetWord())
         return result.erase(result.length() - 1, 1);
@@ -406,7 +406,7 @@ QString AnyWord::spellingOf_QT() const {
     QString result = to_QString(*this);
     if (isWord())
         return result;
-    if (isRefinement() or isGetWord() or isIssue())
+    if (isRefinement() or isGetWord() or isLitWord() or isIssue())
         return result.right(result.length() - 1);
     if (isSetWord())
         return result.left(result.length() - 1);
