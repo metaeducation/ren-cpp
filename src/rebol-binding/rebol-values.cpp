@@ -286,7 +286,10 @@ bool Value::isFunction() const {
     // ANY_FUNCTION?  It's currently annoying if someone checks for
     // taking a function and rejects closure.
 
-    return IS_FUNCTION(&cell) or IS_NATIVE(&cell) or IS_CLOSURE(&cell);
+    return IS_FUNCTION(&cell)
+        or IS_NATIVE(&cell)
+        or IS_CLOSURE(&cell)
+        or IS_ACTION(&cell);
 }
 
 bool Value::isError() const {
