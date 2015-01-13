@@ -2,7 +2,7 @@ Rebol [
     Title: {Question mark revisted}
 
     Description: {
-        End in question marks only if a boolean result.  Adjust to drop 
+        End in question marks only if a boolean result.  Adjust to drop
         the question mark if not, or add an -of, or other rethinking.
     }
 ]

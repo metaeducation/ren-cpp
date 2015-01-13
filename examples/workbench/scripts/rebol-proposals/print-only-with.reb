@@ -9,7 +9,7 @@ print: function [value [any-type!] /only /with delimiter] [
     case [
         unset? :value [
             ;-- ignore it...
-        ] 
+        ]
 
         block? value [
             prin combine/with value (case [with [delimiter] only [none] true [space]])
@@ -26,7 +26,7 @@ print: function [value [any-type!] /only /with delimiter] [
         series? value [
             do make error! "Cannot print non-block!/string! series directly, use MOLD or lit-word"
         ]
-        
+
         word? value [
             prin mold get value
         ]
@@ -52,6 +52,6 @@ print: function [value [any-type!] /only /with delimiter] [
         prin newline
     ]
 
-    system/contexts/lib/exit 
+    system/contexts/lib/exit
 ]
 

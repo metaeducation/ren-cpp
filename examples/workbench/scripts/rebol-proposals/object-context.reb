@@ -2,7 +2,7 @@ Rebol [
     Title {Removal of the equivalences of CONTEXT and OBJECT}
 
     Description {
-        The words CONTEXT and OBJECT were used somewhat 
+        The words CONTEXT and OBJECT were used somewhat
         interchangeably, which is confusing.  The better word
         for what the Rebol concept is would be CONTEXT.  A
         more OOP abstraction with constructors, destructors

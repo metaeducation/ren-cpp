@@ -1,5 +1,5 @@
 Rebol [
-   Title: {Reform of the TO operation}     
+   Title: {Reform of the TO operation}
 ]
 
 ;
@@ -44,7 +44,7 @@ to: function [
 ]
 
 to-string: func [
-    "Converts to string! value." 
+    "Converts to string! value."
     value
 ] [
     to string! :value
