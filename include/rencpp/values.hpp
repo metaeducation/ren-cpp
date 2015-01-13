@@ -656,6 +656,26 @@ public:
         return result;
     }
 
+
+public:
+    // This can probably be done more efficiently, but the idea of wanting
+    // to specify a type and a spelling in a single check without having
+    // to go through a cast is a nice convenient.  Only works for types
+    // that have a "hasSpelling" method (strings, words)
+
+    template <class T>
+    bool isEqualTo(char const * spelling) const {
+        T result (Dont::Initialize);
+        result.cell = cell;
+        result.finishInit(origin);
+
+        if (not result.isValid())
+            throw bad_value_cast("Invalid cast");
+
+        return result.hasSpelling(spelling);
+    }
+
+
 protected:
     //
     // This hook might not be used by all value types to construct (and a
@@ -986,6 +1006,9 @@ public:
     QString spellingOf_QT() const;
 #endif
 
+    bool hasSpelling(char const * spelling) const {
+        return spellingOf_STD() == spelling;
+    }
 };
 
 // http://stackoverflow.com/a/3052604/211160
@@ -1211,6 +1234,9 @@ public:
     QString spellingOf_QT() const;
 #endif
 
+    bool hasSpelling(char const * spelling) const {
+        return spellingOf_STD() == spelling;
+    }
 };
 
 
