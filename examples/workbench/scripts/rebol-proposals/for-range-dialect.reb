@@ -22,7 +22,7 @@ forall: does [do make error! "forall is now every"]
 
 ; http://chat.stackoverflow.com/transcript/message/15915182#15915182
 
-cfor: func [
+c-for: func [
     init [block!] 
     test [block!] 
     step [block!] 
