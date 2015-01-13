@@ -535,7 +535,6 @@ RenShell::RenShell (QObject * parent) :
         )
             -> ren::Value
         {
-            shellDoneMutex.lock();
 
             if (meta) {
                 if (arg.isWord()) {
@@ -568,19 +567,18 @@ RenShell::RenShell (QObject * parent) :
 
             std::vector<int> results;
 
+            QMutexLocker lock {&shellDoneMutex};
             for (auto str : commands) {
                 evaluate(static_cast<ren::String>(str));
 
                 // unlike when the GUI requested the evaluation and kept
                 // running, we do NOT want to keep running while the
-                // arbitrarily long shell process blocks.  And my savvy CS
-                // readership what do we need, then?  Wait condition.
+                // arbitrarily long shell process blocks.
 
-                shellDone.wait(&shellDoneMutex);
+                shellDone.wait(lock.mutex());
+
                 results.push_back(shellDoneResult);
             }
-
-            shellDoneMutex.unlock();
 
             // for now just return result of last command?  Or block of
             // result codes from the shell calls? :-/
@@ -604,10 +602,10 @@ void RenShell::handleResults(int result) {
     // interested in that signal, it's of no benefit to the blocked thread
     // that was doing the eval.  So signal the wait condition.
 
-    shellDoneMutex.lock();
+    QMutexLocker lock {&shellDoneMutex};
+
     shellDoneResult = result;
     shellDone.wakeAll();
-    shellDoneMutex.unlock();
 
     emit finishedEvaluation();
 }
