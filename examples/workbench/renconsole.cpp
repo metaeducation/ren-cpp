@@ -301,8 +301,14 @@ RenConsole::RenConsole (QWidget * parent) :
         ":/scripts/rebol-proposals/to-string-spelling.reb",
         ":/scripts/rebol-proposals/find-min-max.reb",
         ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb",
-        ":/scripts/rebol-proposals/for-range-dialect.reb",
-        ":/scripts/rebol-proposals/object-context.reb"
+        ":/scripts/rebol-proposals/for-range-dialect.reb"
+
+        // This breaks too many things ATM to actually use in the system, but
+        // contains "talking points" about the terminology OBJECT, MODULE,
+        // CONTEXT and how these might relate.  CONTEXT seems like the right
+        // concept and name, and is what RenCpp is aligning with.
+
+        // ":/scripts/rebol-proposals/object-context.reb"
     };
 
     for (auto filename : scripts) {
