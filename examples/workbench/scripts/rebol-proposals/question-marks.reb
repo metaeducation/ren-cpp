@@ -32,6 +32,7 @@ datatype?: does [do make error! "datatype? is now type?"]
 
 context-of: :system/contexts/lib/bind?
 bind?: does [do make error! "bind? is now context-of"]
+bound?: does [do make error! "bound? is now context-of"]
 
 
 ; would get media codec name of a file, how about codec-of
