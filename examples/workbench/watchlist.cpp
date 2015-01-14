@@ -188,7 +188,7 @@ WatchList::WatchList(QWidget * parent) :
     // have been reassigned to something else the parens could work for that
     // as well.
 
-    auto watchFunction = makeFunction(
+    auto watchFunction = Function::construct(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
         ":arg [word! path! block! paren! integer! tag!]"
         "    {word to watch or other legal parameter, see documentation)}",
@@ -214,7 +214,8 @@ WatchList::WatchList(QWidget * parent) :
                                 "do make error! {refinements can only"
                                 "be /CELL right now in watch dialect}"
                             );
-                    } else {
+                    }
+                    else {
                         // REVIEW: exception handling if they watch something
                         // with no value in the block form?  e.g. watch [x y]
                         // and x gets added as a watch where both undefined,

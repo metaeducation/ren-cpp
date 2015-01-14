@@ -193,7 +193,7 @@ RenConsole::RenConsole (QWidget * parent) :
         Qt::QueuedConnection
     );
 
-    consoleFunction = makeFunction(
+    consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
         "arg [block! any-function! string! word!]"
         "    {block to execute or other instruction (see documentation)}"

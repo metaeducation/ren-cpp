@@ -518,8 +518,7 @@ RenShell::RenShell (QObject * parent) :
 
     // I keep saying it but... magic!
 
-    shellFunction = makeFunction(
-
+    shellFunction = Function::construct(
         "{SHELL dialect for interacting with an OS shell process}"
         "'arg [unset! word! lit-word! block! paren! string!]"
         "    {block in dialect or other instruction (see documentation)}"

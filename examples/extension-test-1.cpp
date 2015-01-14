@@ -7,7 +7,7 @@ using namespace ren;
 
 int main(int, char **) {
 
-    Function printBlockString = makeFunction(
+    auto printBlockString = Function::construct(
         "{Demonstration of the C++ Extension mechanism}"
         "blk [block!] {The block to print}",
 

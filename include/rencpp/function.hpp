@@ -34,6 +34,43 @@
 
 namespace ren {
 
+namespace internal {
+
+///
+/// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
+///
+
+//
+// While preprocessor macros are to be avoided whenever possible, the
+// particulars of this case require them.  At the moment, the only "identity"
+// the generated parameter-unpacking "shim" function gets when it is called
+// is its own pointer pushed on the stack.  That's the only way it can look
+// up the C++ function it's supposed to unpack and forward to.  And C/C++
+// functions *don't even know their own pointer*!
+//
+// So what we do here is a trick.  The first call to the function isn't asking
+// it to forward parameters, it's just asking it to save knowledge of its own
+// identity and the pointer to the function it should forward to in future
+// calls.  Because the macro is instantiated by each client, there is a
+// unique pointer for each lambda.  It's really probably the only way this
+// can be done without changing the runtime to pass something more to us.
+//
+
+#define REN_STD_FUNCTION \
+    [](RenCell * stack) -> int {\
+        static ren::internal::RenShimId id = -1; \
+        static ren::internal::RenShimBouncer bouncer = nullptr; \
+        if (id != -1) \
+            return bouncer(id, stack); \
+        id = ren::internal::shimIdToCapture; \
+        bouncer = ren::internal::shimBouncerToCapture; \
+        return REN_SHIM_INITIALIZED; \
+    }
+
+} // end namespace internal
+
+
+
 ///
 /// FUNCTION TYPE(S?)
 ///
@@ -72,7 +109,208 @@ private:
         Block const & spec,
         RenShimPointer const & shim
     );
+
+
+    //
+    // The FunctionGenerator is an internal class.  One reason why the
+    // interface is exposed as a function instead of as a class is because
+    // of a problem: C++11 is missing the feature of a convenient way to use
+    // type inference from a lambda to determine its signature.  So you can't
+    // make a templated class that automatically detects and extracts their
+    // type when passed as an argument to the constructor.  This creates an
+    // annoying repetition where you wind up typing the signature twice...once
+    // on what you're trying to pass the lambda to, once on the lambda itself.
+    //
+    //     Foo<Baz(Bar)> temp { [](Bar bar) -> Baz {...} }; // booo!
+    //
+    //     auto temp = makeFoo { [](Bar bar) -> Baz {...} }; // better!
+    //
+    // Eliminating the repetition is desirable.  So Morwenn adapted this
+    // technique from one of his StackOverflow answers:
+    //
+    //     http://stackoverflow.com/a/19934080/211160
+    //
+    // It will not work in the general case with "Callables", e.g. objects that
+    // have operator() overloading.  (There could be multiple overloads, which
+    // one to pick?  For a similar reason it will not work with "Generic
+    // Lambdas" from C++14.)  However, it works for ordinary lambdas...and that
+    // is the common case and hence worth addressing.
+    //
+
+public:
+    template<typename Fun, std::size_t... Ind>
+    static Function construct_(
+        std::true_type, // Func return type is void
+        RenEngineHandle engine,
+        Block const & spec,
+        RenShimPointer shim,
+        Fun && fun,
+        utility::indices<Ind...>
+    ) {
+        using Ret = Unset;
+
+        using Gen = internal::FunctionGenerator<
+            Ret,
+            typename utility::function_traits<
+                typename std::remove_reference<Fun>::type
+            >::template arg<Ind>...
+        >;
+
+        return Gen {
+            engine,
+            spec,
+            shim,
+            std::function<
+                Ret(
+                    typename utility::function_traits<
+                        typename std::remove_reference<Fun>::type
+                    >::template arg<Ind>...
+                )
+            >([&fun](typename utility::function_traits<
+                        typename std::remove_reference<Fun>::type
+                    >::template arg<Ind>... args){
+                fun(args...);
+                return Unset();
+            })
+        };
+    }
+
+    template<typename Fun, std::size_t... Ind>
+    static Function construct_(
+        std::false_type,    // Func return type is not void
+        RenEngineHandle engine,
+        Block const & spec,
+        RenShimPointer shim,
+        Fun && fun,
+        utility::indices<Ind...>
+    ) {
+        using Ret = typename utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::result_type;
+
+        using Gen = internal::FunctionGenerator<
+            Ret,
+            typename utility::function_traits<
+                typename std::remove_reference<Fun>::type
+            >::template arg<Ind>...
+        >;
+
+        return Gen {
+            engine,
+            spec,
+            shim,
+            std::function<
+                Ret(
+                    typename utility::function_traits<
+                        typename std::remove_reference<Fun>::type
+                    >::template arg<Ind>...
+                )
+            >(fun)
+        };
+    }
+
+    template<typename Fun>
+    static Function construct_(
+        RenEngineHandle engine,
+        Block const & spec,
+        RenShimPointer shim,
+        Fun && fun
+    ) {
+        using Ret = typename utility::function_traits<
+            typename std::remove_reference<Fun>::type
+        >::result_type;
+
+        using Indices = utility::make_indices<
+            utility::function_traits<
+                typename std::remove_reference<Fun>::type
+            >::arity
+        >;
+
+        return construct_(
+            typename std::is_void<Ret>::type{},  // tag dispatching
+            engine,
+            spec,
+            shim,
+            std::forward<Fun>(fun),
+            Indices{}
+        );
+    }
+
+
+    //
+    // For convenience, we define specializations that let you be explicit
+    // about the engine and/or provide an already built spec block.
+    //
+
+    template<typename Fun>
+    static Function construct(
+        char const * spec,
+        RenShimPointer shim,
+        Fun && fun
+    ) {
+        return construct_(
+            Engine::runFinder().getHandle(),
+            Block {spec},
+            shim,
+            std::forward<Fun>(fun)
+        );
+    }
+
+
+    template<typename Fun>
+    static Function construct(
+        Block const & spec,
+        RenShimPointer shim,
+        Fun && fun
+    ) {
+        return construct_(
+            Engine::runFinder().getHandle(),
+            spec,
+            shim,
+            std::forward<Fun>(fun)
+        );
+    }
+
+
+    template<typename Fun>
+    static Function construct(
+        Engine & engine,
+        char const * spec,
+        RenShimPointer shim,
+        Fun && fun
+    ) {
+        return construct_(
+            engine,
+            Block {spec},
+            shim,
+            std::forward<Fun>(fun)
+        );
+    }
+
+
+    template<
+        typename Fun,
+        typename Indices = utility::make_indices<
+            utility::function_traits<
+                typename std::remove_reference<Fun>::type
+            >::arity
+        >
+    >
+    static Function construct(
+        Engine & engine,
+        Block const & spec,
+        RenShimPointer shim,
+        Fun && fun
+    ) {
+        return construct_(
+            engine.getHandle(),
+            spec,
+            shim,
+            std::forward<Fun>(fun)
+        );
+    }
 };
+
 
 
 ///
@@ -300,37 +538,6 @@ std::vector<
 > FunctionGenerator<R, Ts...>::table;
 
 
-
-///
-/// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
-///
-
-//
-// While preprocessor macros are to be avoided whenever possible, the
-// particulars of this case require them.  At the moment, the only "identity"
-// the generated parameter-unpacking "shim" function gets when it is called
-// is its own pointer pushed on the stack.  That's the only way it can look
-// up the C++ function it's supposed to unpack and forward to.  And C/C++
-// functions *don't even know their own pointer*!
-//
-// So what we do here is a trick.  The first call to the function isn't asking
-// it to forward parameters, it's just asking it to save knowledge of its own
-// identity and the pointer to the function it should forward to in future
-// calls.  Because the macro is instantiated by each client, there is a
-// unique pointer for each lambda.  It's really probably the only way this
-// can be done without changing the runtime to pass something more to us.
-
-#define REN_STD_FUNCTION \
-    [](RenCell * stack) -> int {\
-        static ren::internal::RenShimId id = -1; \
-        static ren::internal::RenShimBouncer bouncer = nullptr; \
-        if (id != -1) \
-            return bouncer(id, stack); \
-        id = ren::internal::shimIdToCapture; \
-        bouncer = ren::internal::shimBouncerToCapture; \
-        return REN_SHIM_INITIALIZED; \
-    }
-
 } // end namespace internal
 
 
@@ -339,203 +546,7 @@ std::vector<
 /// USER-FACING CONSTRUCTION FOR MAKE FUNCTION
 ///
 
-//
-// The FunctionGenerator is an internal class.  One reason why the interface
-// is exposed as a function instead of as a class is because of a problem:
-// C++11 is missing the feature of a convenient way to use type inference from
-// a lambda to determine its signature.  So you can't make a templated class
-// that automatically detects and extracts their type when passed as an
-// argument to the constructor.  This creates an annoying repetition where
-// you wind up typing the signature twice...once on what you're trying to
-// pass the lambda to, and once on the lambda itself.
-//
-//     Foo<Baz(Bar)> temp { [](Bar bar) -> Baz {...} }; // booo!
-//
-//     auto temp = makeFoo { [](Bar bar) -> Baz {...} }; // better!
-//
-// Eliminating the repetition is desirable.  So Morwenn adapted this technique
-// from one of his StackOverflow answers:
-//
-//     http://stackoverflow.com/a/19934080/211160
-//
-// It will not work in the general case with "Callables", e.g. objects that
-// have operator() overloading.  (There could be multiple overloads, which one
-// to pick?  For a similar reason it will not work with "Generic Lambdas"
-// from C++14.)  However, it works for ordinary lambdas...and that leads to
-// enough benefit to make it worth including.
-//
 
-template<typename Fun, std::size_t... Ind>
-Function makeFunction_(
-    std::true_type, // Func return type is void
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer shim,
-    Fun && fun,
-    utility::indices<Ind...>
-) {
-    using Ret = Unset;
-
-    using Gen = internal::FunctionGenerator<
-        Ret,
-        typename utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::template arg<Ind>...
-    >;
-
-    return Gen {
-        engine,
-        spec,
-        shim,
-        std::function<
-            Ret(
-                typename utility::function_traits<
-                    typename std::remove_reference<Fun>::type
-                >::template arg<Ind>...
-            )
-        >([&fun](typename utility::function_traits<
-                    typename std::remove_reference<Fun>::type
-                >::template arg<Ind>... args){
-            fun(args...);
-            return Unset();
-        })
-    };
-}
-
-template<typename Fun, std::size_t... Ind>
-Function makeFunction_(
-    std::false_type,    // Func return type is not void
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer shim,
-    Fun && fun,
-    utility::indices<Ind...>
-) {
-    using Ret = typename utility::function_traits<
-        typename std::remove_reference<Fun>::type
-    >::result_type;
-
-    using Gen = internal::FunctionGenerator<
-        Ret,
-        typename utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::template arg<Ind>...
-    >;
-
-    return Gen {
-        engine,
-        spec,
-        shim,
-        std::function<
-            Ret(
-                typename utility::function_traits<
-                    typename std::remove_reference<Fun>::type
-                >::template arg<Ind>...
-            )
-        >(fun)
-    };
-}
-
-template<typename Fun>
-Function makeFunction_(
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer shim,
-    Fun && fun
-) {
-    using Ret = typename utility::function_traits<
-        typename std::remove_reference<Fun>::type
-    >::result_type;
-
-    using Indices = utility::make_indices<
-        utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::arity
-    >;
-
-    return makeFunction_(
-        typename std::is_void<Ret>::type{},  // tag dispatching
-        engine,
-        spec,
-        shim,
-        std::forward<Fun>(fun),
-        Indices{}
-    );
-}
-
-
-//
-// For convenience, we define specializations that let you be explicit about
-// the engine and/or provide an already built spec block.
-//
-
-template<typename Fun>
-Function makeFunction(
-    char const * spec,
-    RenShimPointer shim,
-    Fun && fun
-) {
-    return makeFunction_(
-        Engine::runFinder().getHandle(),
-        Block {spec},
-        shim,
-        std::forward<Fun>(fun)
-    );
-}
-
-
-template<typename Fun>
-Function makeFunction(
-    Block const & spec,
-    RenShimPointer shim,
-    Fun && fun
-) {
-    return makeFunction_(
-        Engine::runFinder().getHandle(),
-        spec,
-        shim,
-        std::forward<Fun>(fun)
-    );
-}
-
-
-template<typename Fun>
-Function makeFunction(
-    Engine & engine,
-    char const * spec,
-    RenShimPointer shim,
-    Fun && fun
-) {
-    return makeFunction_(
-        engine,
-        Block {spec},
-        shim,
-        std::forward<Fun>(fun)
-    );
-}
-
-
-template<
-    typename Fun,
-    typename Indices = utility::make_indices<
-        utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::arity
-    >
->
-Function makeFunction(
-    Engine & engine,
-    Block const & spec,
-    RenShimPointer shim,
-    Fun && fun
-) {
-    return makeFunction_(
-        engine.getHandle(),
-        spec,
-        shim,
-        std::forward<Fun>(fun)
-    );
-}
 
 
 }

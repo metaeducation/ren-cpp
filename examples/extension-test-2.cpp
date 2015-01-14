@@ -18,7 +18,7 @@ public:
 
 int main(int, char **) {
 
-    auto addFive = makeFunction(
+    auto addFive = Function::construct(
         "{Demonstration of using an operator() overloaded class}"
         "value [integer!]",
 
