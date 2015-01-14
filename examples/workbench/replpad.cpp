@@ -719,6 +719,13 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
+        if (history.back().multiLineMode or history.back().meta) {
+            history.back().multiLineMode = false;
+            history.back().meta = false;
+            rewritePrompt();
+            document()->clearUndoRedoStacks();
+        }
+
         emit reportStatus("Nothing available for undo.");
         return;
     }
