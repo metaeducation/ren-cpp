@@ -16,7 +16,7 @@ Rebol [
     }
 ]
 
-ls: does [do make error! "in user config `ls: does [shell [ls -alF]]`"]
+ls: does [do make error! "ls in main user context is supplanted by SHELL"]
 ; cd: ; don't have an alternate way to change Rebol's working dir yet
 ; pwd: ; same as above
 
