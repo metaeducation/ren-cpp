@@ -459,9 +459,24 @@ void ReplPad::containInputSelection() {
 //
 
 void ReplPad::keyPressEvent(QKeyEvent * event) {
+
     int const key = event->key();
 
-    if (key == Qt::Key_Escape and (not event->isAutoRepeat()))
+    // Debugging alted or ctrled or shifted keys is made difficult if you set
+    // a breakpoint and it tells you about hitting those keys themselves, so
+    // since we do nothing in that case (yet) return quickly.
+
+    if (
+        (key == Qt::Key_Control)
+        or (key == Qt::Key_Shift)
+        or (key == Qt::Key_Alt)
+    ) {
+        QTextEdit::keyPressEvent(event);
+        return;
+    }
+
+
+    if ((key == Qt::Key_Escape) and (not event->isAutoRepeat()))
         emit fadeOutToQuit(true);
 
 
@@ -541,7 +556,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // There are some exceptions, so we form it as a while loop to make it
     // easier to style with breaks.
 
-    while ((not hasRealText) or alted or metaed) {
+    while (not hasRealText) {
 
         if (
             (key == Qt::Key_Return)
@@ -587,6 +602,10 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 // fall through.
                 break;
             }
+
+
+        // Cut, Paste, and Delete variants obviously modify, and we can just
+        // pass them through to the QTextEdit with the write mutex locked here
 
         if (
             event->matches(QKeySequence::Cut)
