@@ -286,20 +286,25 @@ RenConsole::RenConsole (QWidget * parent) :
             if (arg.isBlock()) {
                 auto blk = static_cast<Block>(arg);
 
-                if ((*blk).isEqualTo<Word>("target")) {
-                    Block next = blk;
-                    next++;
-                    target = (*next).apply();
+                if (blk[1].isEqualTo<Word>("target")) {
+                    target = blk[2].apply();
                     return unset;
                 }
 
-                if ((*blk).isEqualTo<Word>("buffer")) {
-                    Block next = blk;
-                    next++;
+                if (blk[1].isEqualTo<Word>("buffer")) {
+                    // The console buffer helper examines the parameter
+                    // to "buffer" and tells us what the string is, the
+                    // location of the anchor point for the desired selection
+                    // and the location of the end point
 
-                    // need to implement the ability to load a buffer and
-                    // at a cursor position
-                    assert(false);
+                    auto triple = static_cast<Block>(runtime(
+                        "ren-garden/console-buffer-helper", blk[2]
+                    ));
+
+                    pendingBuffer = static_cast<String>(triple[1]);
+                    pendingPosition = static_cast<Integer>(triple[2]);
+                    pendingAnchor = static_cast<Integer>(triple[3]);
+
                     return unset;
                 }
 
@@ -600,6 +605,8 @@ void RenConsole::handleResults(
     QMutexLocker locker {&modifyMutex};
 
     if (not success) {
+        pendingBuffer.clear();
+
         pushFormat(errorFormat);
 
         // The value does not represent the result of the operation; it
@@ -643,6 +650,19 @@ void RenConsole::handleResults(
     appendText("\n");
 
     appendNewPrompt();
+
+    if (not pendingBuffer.isEmpty()) {
+        QTextCursor cursor = textCursor();
+
+        int pos = cursor.position();
+
+        appendText(pendingBuffer);
+        pendingBuffer.clear();
+
+        cursor.setPosition(pos + pendingAnchor);
+        cursor.setPosition(pos + pendingPosition, QTextCursor::KeepAnchor);
+        setTextCursor(cursor);
+    }
 
     // TBD: divide status bar into "command succeeded" and "error" as well
     // as parts controllable by the console automator

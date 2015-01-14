@@ -85,6 +85,15 @@ private:
 
     ren::Value target;
 
+    // You can set up a value that represents what the pending console
+    // buffer will be.  It is evaluated after the command is done to
+    // produce a string, and will be forgotten once used.  If there is
+    // an error in the command, no buffer will be loaded.
+
+    QString pendingBuffer;
+    int pendingAnchor;
+    int pendingPosition;
+
 public slots:
     void handleResults(
         bool success,

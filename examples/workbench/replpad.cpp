@@ -174,6 +174,7 @@ void ReplPad::onConsoleReset() {
 
     clear();
     appendNewPrompt();
+    dontFollowLatestOutput();
 }
 
 

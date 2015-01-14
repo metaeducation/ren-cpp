@@ -136,4 +136,58 @@ ren-garden: context [
 
         result
     ]
+
+    ; user may ask to preload the buffer, the dialect (at present) allows
+    ; to make selections as well.  So it might look like
+    ;
+    ;    ["Hello" space || space "There" space | space "World"]
+    ;
+    ; The | indicates the anchor point of a selection, and the || indicates
+    ; the ending.  What the console needs is a triple of the total string
+    ; and the integer positions of the start and the end.
+    ;
+    ; Bear in mind that if a string is N characters long, it has N + 1
+    ; positions... starting at 0 and going up to N.  (Because there's before
+    ; the first character, and after the last)
+
+    console-buffer-helper: function [value [block! string!]] [
+        if string? value [
+            return reduce [value (length value) (length value)]
+        ]
+
+        two-mark: find value '||
+        one-mark: find value '|
+
+        if not any [one-mark two-mark] [
+            str: combine value
+            return reduce [str (length str) (length str)]
+        ]
+
+        if all [one-mark (not two-mark)] [
+        print "what"
+            str: combine (copy/part value one-mark)
+            position: length str
+            append str combine (copy next one-mark)
+            return reduce [str position position]
+        ]
+
+        forward-selection: (index-of one-mark) > (index-of two-mark)
+        if forward-selection [
+            temp: one-mark
+            one-mark: two-mark
+            two-mark: temp
+        ]
+
+        str: combine (copy/part value one-mark)
+        position: length str
+        append str combine (copy/part next one-mark two-mark)
+        anchor: length str
+        append str combine (copy next two-mark)
+
+        return either forward-selection [
+            reduce [str anchor position]
+        ] [
+            reduce [str position anchor]
+        ]
+    ]
 ]

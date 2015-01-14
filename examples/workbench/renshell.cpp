@@ -588,9 +588,8 @@ RenShell::RenShell (QObject * parent) :
 
                 auto blk = static_cast<Block>(arg);
 
-                if ((*blk).isEqualTo<Word>("test")) {
-                    blk++;
-                    testMode = (*blk).isEqualTo<Word>("on");
+                if (blk[1].isEqualTo<Word>("test")) {
+                    testMode = blk[2].isEqualTo<Word>("on");
                     return unset;
                 };
 
