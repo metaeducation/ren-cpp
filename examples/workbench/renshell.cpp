@@ -486,7 +486,7 @@ void ShellWorker::onStateChanged(QProcess::ProcessState newState) {
 
 RenShell::RenShell (QObject * parent) :
     QObject (parent),
-    testMode (true)
+    testMode (false)
 {
     // Set up the Evaluator so it's wired up for signals and slots
     // and on another thread from the GUI.  This technique is taken directly
