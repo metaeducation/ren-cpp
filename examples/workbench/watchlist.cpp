@@ -28,7 +28,8 @@
 #include "mainwindow.h"
 
 #include "rencpp/ren.hpp"
-#include "rencpp/runtime.hpp"
+
+using namespace ren;
 
 
 
@@ -62,9 +63,9 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // delete everything, consider it to be "unlabeling"
 
             if (contents.isEmpty())
-                w.label = ren::none;
+                w.label = none;
             else
-                w.label = ren::Tag {contents};
+                w.label = Tag {contents};
 
             updateWatcher(item->row() + 1);
             break;
@@ -89,9 +90,9 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 
 
 WatchList::Watcher::Watcher (
-    ren::Value const & watch,
+    Value const & watch,
     bool recalculates,
-    ren::Value const & label
+    Value const & label
 ) :
     watch (watch),
     recalculates (recalculates),
@@ -106,15 +107,15 @@ void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (recalculates and (not frozen)))
             value = watch(); // apply it
-        error = ren::none;
+        error = none;
     }
-    catch (ren::evaluation_error const & e) {
-        value = ren::unset;
+    catch (evaluation_error const & e) {
+        value = unset;
         error = e.error();
     }
     catch (std::exception const & e) {
         assert(false);
-        error = ren::none;
+        error = none;
     }
     catch (...) {
         assert(false);
@@ -124,7 +125,7 @@ void WatchList::Watcher::evaluate(bool firstTime) {
 
 QString WatchList::Watcher::getWatchString() const {
     if (label) {
-        ren::Tag tag = static_cast<ren::Tag>(label);
+        Tag tag = static_cast<Tag>(label);
         return tag.spellingOf<QString>();
     }
 
@@ -139,7 +140,7 @@ QString WatchList::Watcher::getWatchString() const {
 QString WatchList::Watcher::getValueString() const {
     if (error)
         return to_QString(error);
-    return to_QString(ren::runtime("mold/all", value));
+    return to_QString(runtime("mold/all", value));
 }
 
 
@@ -187,29 +188,29 @@ WatchList::WatchList(QWidget * parent) :
     // have been reassigned to something else the parens could work for that
     // as well.
 
-    auto watchFunction = ren::makeFunction(
+    auto watchFunction = makeFunction(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
         ":arg [word! path! block! paren! integer! tag!]"
         "    {word to watch or other legal parameter, see documentation)}",
 
         REN_STD_FUNCTION,
 
-        [this](ren::Value const & arg) -> ren::Value {
+        [this](Value const & arg) -> Value {
 
-            ren::Value nextLabel = ren::none;
+            Value nextLabel = none;
             if (arg.isBlock()) {
-                ren::Block aggregate {};
+                Block aggregate {};
                 bool nextRecalculates = true;
 
-                for (auto item : static_cast<ren::Block>(arg)) {
+                for (auto item : static_cast<Block>(arg)) {
                     if (item.isTag())
                         nextLabel = item;
                     else if (item.isRefinement()) {
-                        auto ref = static_cast<ren::Refinement>(item);
+                        auto ref = static_cast<Refinement>(item);
                         if (ref.spellingOf<QString>().toUpper() == "CELL")
                             nextRecalculates = false;
                         else
-                            ren::runtime(
+                            runtime(
                                 "do make error! {refinements can only"
                                 "be /CELL right now in watch dialect}"
                             );
@@ -219,22 +220,22 @@ WatchList::WatchList(QWidget * parent) :
                         // and x gets added as a watch where both undefined,
                         // but y doesn't?
 
-                        ren::Value result
+                        Value result
                             = watchDialect(item, nextRecalculates, nextLabel);
                         nextRecalculates = true;
-                        nextLabel = ren::none;
+                        nextLabel = none;
                         if (not result.isUnset())
-                            ren::runtime("append", aggregate, result);
+                            runtime("append", aggregate, result);
                     }
                 }
                 return aggregate;
             }
 
-            return watchDialect(arg, true, ren::none);
+            return watchDialect(arg, true, none);
         }
     );
 
-    ren::runtime("watch: quote", watchFunction);
+    runtime("watch: quote", watchFunction);
 
     // We also have to hook up the watchCalled and handleWatch signals and
     // slots.  This could be asynchronous, however we actually are
@@ -400,15 +401,15 @@ void WatchList::updateAllWatchers() {
 }
 
 
-ren::Value WatchList::watchDialect(
-    ren::Value const & arg,
+Value WatchList::watchDialect(
+    Value const & arg,
     bool recalculates,
-    ren::Value const & label
+    Value const & label
 ) {
     if (arg.isInteger()) {
-        int signedIndex = static_cast<ren::Integer>(arg);
+        int signedIndex = static_cast<Integer>(arg);
         if (signedIndex == 0) {
-            ren::runtime("do make error! {Integer arg must be nonzero}");
+            runtime("do make error! {Integer arg must be nonzero}");
             UNREACHABLE_CODE();
         }
 
@@ -420,12 +421,12 @@ ren::Value WatchList::watchDialect(
         // Negative integers affect the GUI and run on GUI thread.
 
         if (index > this->watchers.size()) {
-            ren::runtime("do make error! {No such watchlist item index}");
+            runtime("do make error! {No such watchlist item index}");
             UNREACHABLE_CODE();
         }
 
-        ren::Value watchValue = watchers[index - 1]->value;
-        ren::Value watchError = watchers[index - 1]->error;
+        Value watchValue = watchers[index - 1]->value;
+        Value watchError = watchers[index - 1]->error;
         if (removal) {
             emit removeWatcherRequested(index);
             return watchValue;
@@ -451,7 +452,7 @@ ren::Value WatchList::watchDialect(
         static std::vector<QString> logicWords[2] =
             {{"off", "no", "false"}, {"on", "yes", "true"}};
 
-        auto word = static_cast<ren::Word>(arg);
+        auto word = static_cast<Word>(arg);
         auto spelling = word.spellingOf<QString>();
         for (int index = 0; index < 2; index++) {
             if (
@@ -472,9 +473,9 @@ ren::Value WatchList::watchDialect(
         logicIndex = static_cast<bool>(arg);
     }
 #else
-    logicIndex = static_cast<ren::Integer>(
-        ren::runtime(
-            "case", ren::Block {
+    logicIndex = static_cast<Integer>(
+        runtime(
+            "case", Block {
             "    find [off no false] quote", arg, "[0]"
             "    find [on yes true] quote", arg, "[1]"
             "    true [-1]"
@@ -488,7 +489,7 @@ ren::Value WatchList::watchDialect(
             emit showDockRequested();
         else
             emit hideDockRequested();
-        return ren::unset;
+        return unset;
     }
 
     // With those words out of the way, we should be able to take
@@ -525,18 +526,18 @@ ren::Value WatchList::watchDialect(
             Watcher & w = *watcherPtr;
             if (
                 w.getWatchString()
-                == static_cast<ren::Tag>(arg).spellingOf<QString>()
+                == static_cast<Tag>(arg).spellingOf<QString>()
             ) {
                 return w.value;
             }
         }
-        ren::runtime("do make error! {unknown tag name in watch list}");
-        return ren::unset;
+        runtime("do make error! {unknown tag name in watch list}");
+        return unset;
     }
 
     throw std::runtime_error("unexpected type passed to watch dialect");
 
-    return ren::unset;
+    return unset;
 }
 
 

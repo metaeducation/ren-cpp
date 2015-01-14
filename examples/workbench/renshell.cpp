@@ -25,6 +25,8 @@
 
 #include "rencpp/ren.hpp"
 
+using namespace ren;
+
 extern bool forcingQuit;
 
 
@@ -516,7 +518,7 @@ RenShell::RenShell (QObject * parent) :
 
     // I keep saying it but... magic!
 
-    shellFunction = ren::makeFunction(
+    shellFunction = makeFunction(
 
         "{SHELL dialect for interacting with an OS shell process}"
         "'arg [unset! word! lit-word! block! paren! string!]"
@@ -525,20 +527,20 @@ RenShell::RenShell (QObject * parent) :
 
         REN_STD_FUNCTION,
 
-        [this, worker](ren::Value const & arg, ren::Value const & meta)
-            -> ren::Value
+        [this, worker](Value const & arg, Value const & meta)
+            -> Value
         {
             if (arg.isUnset()) {
                 // Uses the "unset quoted" trick, same as HELP, to fake up the
                 // ability to have one less arity when used at the end of an
                 // evaluation.  Only sensible for interactive commands!
 
-                ren::runtime("console quote", shellFunction);
-                return ren::unset;
+                runtime("console quote", shellFunction);
+                return unset;
             }
 
             if (meta) {
-                if (arg.isEqualTo<ren::Word>("running?"))
+                if (arg.isEqualTo<Word>("running?"))
                     return worker->hasProcess();
 
                 // How about "kill", or maybe "on" and "off"...?
@@ -550,7 +552,7 @@ RenShell::RenShell (QObject * parent) :
                 // out of that (because this will consume NAME from the meta
                 // dialect, as written)
 
-                if (arg.isEqualTo<ren::LitWord>("prompt")) {
+                if (arg.isEqualTo<LitWord>("prompt")) {
                 
                     // Currently the GUI is the one asking for the prompt.
                     // Like many situations where the GUI is doing an
@@ -566,10 +568,10 @@ RenShell::RenShell (QObject * parent) :
                     QMutexLocker lock {&shellDoneMutex};
                     evaluate("pwd", pathCapture);
                     shellDone.wait(lock.mutex());
-                    return ren::String {pathCapture.str()};
+                    return String {pathCapture.str()};
                 #endif
                 
-                    return ren::String {"shell"};
+                    return String {"shell"};
                 }
 
                 // Should there be a banner?  The banner could start up the
@@ -578,24 +580,24 @@ RenShell::RenShell (QObject * parent) :
                 // Meta protocol may ask you for things you don't know about,
                 // so gracefully ignore them.
                 if (arg.isLitWord())
-                    return ren::none;
+                    return none;
 
                 if (not arg.isBlock()) {
-                    ren::runtime("do make error! {Unknown meta command}");
-                    return ren::unset;
+                    runtime("do make error! {Unknown meta command}");
+                    return unset;
                 }
 
-                auto blk = static_cast<ren::Block>(arg);
+                auto blk = static_cast<Block>(arg);
 
-                if ((*blk).isEqualTo<ren::Word>("test")) {
+                if ((*blk).isEqualTo<Word>("test")) {
                     blk++;
-                    testMode = (*blk).isEqualTo<ren::Word>("on");
-                    return ren::unset;
+                    testMode = (*blk).isEqualTo<Word>("on");
+                    return unset;
                 };
 
-                ren::runtime("do make error! {Unknown meta command}");
+                runtime("do make error! {Unknown meta command}");
 
-                return ren::unset;
+                return unset;
             }
 
         #ifdef TO_WIN32
@@ -607,17 +609,17 @@ RenShell::RenShell (QObject * parent) :
             // generally easier to implement the dialect logic in Rebol code,
             // see ren-garden.reb (it's built in as part of the resource file)
 
-            auto commands = static_cast<ren::Block>(
-                ren::runtime(
+            auto commands = static_cast<Block>(
+                runtime(
                     "ren-garden/shell-dialect-to-strings", arg, windows
                 )
             );
 
             if (testMode) {
                 for (auto str : commands)
-                    ren::print(str);
+                    print(str);
 
-                return ren::unset;
+                return unset;
             }
 
             std::vector<int> results;
@@ -626,8 +628,8 @@ RenShell::RenShell (QObject * parent) :
             QMutexLocker lock {&shellDoneMutex};
             for (auto str : commands) {
                 evaluate(
-                    static_cast<ren::String>(str),
-                    ren::Engine::runFinder().getOutputStream()
+                    static_cast<String>(str),
+                    Engine::runFinder().getOutputStream()
                 );
 
                 // unlike when the GUI requested the evaluation and kept
@@ -647,7 +649,7 @@ RenShell::RenShell (QObject * parent) :
                 // of evaluative result on every command, so we transform 0
                 // to unset
 
-                return ren::unset;
+                return unset;
             }
 
             return results.back();
