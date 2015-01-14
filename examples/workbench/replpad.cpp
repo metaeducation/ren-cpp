@@ -803,7 +803,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         if (
             ctrled or (not history.back().multiLineMode)
-            or (extraneousNewlines > 0)
+            or (extraneousNewlines > 1)
         ) {
             // Perform an evaluation.  But first, clean up all the whitespace
             // at the tail of the input (if it happens after our cursor
@@ -829,7 +829,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             if (input.isEmpty()) {
                 appendNewPrompt();
                 followLatestOutput();
-            } else {
+            }
+            else {
                 followLatestOutput();
                 // implementation may (does) queue...
                 evaluate(input, history.back().meta);
