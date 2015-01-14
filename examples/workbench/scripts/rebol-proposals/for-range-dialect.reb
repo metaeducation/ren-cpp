@@ -23,19 +23,19 @@ forall: does [do make error! "forall is now every"]
 ; http://chat.stackoverflow.com/transcript/message/15915182#15915182
 
 c-for: func [
-    init [block!] 
-    test [block!] 
-    step [block!] 
-    body [block!] 
+    init [block!]
+    test [block!]
+    step [block!]
+    body [block!]
     /local out
 ] [
-    init: context init 
+    init: context init
 
     while bind test init 
         bind compose/deep [
-           set/any 'out (to paren! body) 
+           set/any 'out (to paren! body)
            (step)
-        ] init 
+        ] init
 
     get/any 'out
 ]
@@ -58,25 +58,25 @@ generates: func [
     function/with [] [
        if all-done [
            return none
-       ] 
+       ]
        temp: state
        if state = final [
            all-done: true
        ]
        ++ state
-       return temp 
+       return temp
     ] [
         state: start
         final: finish
         first-run: true
         all-done: false
-    ] 
+    ]
 ]
 
 
 for: func [
     'word
-    spec [block!] 
+    spec [block!]
     body [block!]
     /local fun
 ] [

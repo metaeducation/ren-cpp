@@ -126,7 +126,7 @@ RenConsole::RenConsole (QWidget * parent) :
     echo (false),
     dialect (ren::none),
     target (ren::none)
-{    
+{
     // We want to be able to append text from threads besides the GUI thread.
     // It is a synchronous operation for a worker, but still goes through the
     // emit process.
