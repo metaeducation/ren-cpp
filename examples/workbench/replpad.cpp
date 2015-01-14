@@ -1016,10 +1016,14 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
 
 void ReplPad::cutSafely() {
     containInputSelection();
+
+    QMutexLocker lock {&modifyMutex};
     QTextEdit::cut();
 }
 
 void ReplPad::pasteSafely() {
     containInputSelection();
+
+    QMutexLocker lock {&modifyMutex};
     QTextEdit::paste();
 }
