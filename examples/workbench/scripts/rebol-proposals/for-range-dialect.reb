@@ -21,6 +21,7 @@ forall: does [do make error! "forall is now every"]
 
 
 ; http://chat.stackoverflow.com/transcript/message/15915182#15915182
+; http://issue.cc/r3/884
 
 c-for: func [
     init [block!]
@@ -31,7 +32,7 @@ c-for: func [
 ] [
     init: context init
 
-    while bind test init 
+    while bind/copy test init
         bind compose/deep [
            set/any 'out (to paren! body)
            (step)

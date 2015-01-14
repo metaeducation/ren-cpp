@@ -16,9 +16,9 @@ Rebol [
     }
 ]
 
-ls: does [do make error! "ls in main user context is supplanted by SHELL"]
-; cd: ; don't have an alternate way to change Rebol's working dir yet
-; pwd: ; same as above
+ls: does [do make error! "in user config `ls: :list-dir`"]
+cd: does [do make error! "in user config `cd: :change-dir`, as approximation"]
+pwd: does [do make error! "in user config `pwd: :what-dir`"]
 
 q: does [do make error! "q is deprecated, use QUIT or EXIT"]
 
