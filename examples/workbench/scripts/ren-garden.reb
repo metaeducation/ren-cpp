@@ -142,8 +142,8 @@ ren-garden: context [
     ;
     ;    ["Hello" space || space "There" space | space "World"]
     ;
-    ; The | indicates the anchor point of a selection, and the || indicates
-    ; the ending.  What the console needs is a triple of the total string
+    ; The | indicates the position point of a selection, and the || indicates
+    ; the anchor.  What the console needs is a triple of the total string
     ; and the integer positions of the start and the end.
     ;
     ; Bear in mind that if a string is N characters long, it has N + 1
@@ -155,8 +155,8 @@ ren-garden: context [
             return reduce [value (length value) (length value)]
         ]
 
-        two-mark: find value '||
         one-mark: find value '|
+        two-mark: find value '||
 
         if not any [one-mark two-mark] [
             str: combine value
@@ -164,7 +164,6 @@ ren-garden: context [
         ]
 
         if all [one-mark (not two-mark)] [
-        print "what"
             str: combine (copy/part value one-mark)
             position: length str
             append str combine (copy next one-mark)
