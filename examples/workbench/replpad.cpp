@@ -22,10 +22,7 @@
 
 #include <QtWidgets>
 
-// Rencpp dependency, see https://github.com/metaeducation/ren-garden/issues/5
-
-#include "rencpp/ren.hpp"
-#include "rencpp/runtime.hpp"
+#include <cassert>
 
 #include "replpad.h"
 
