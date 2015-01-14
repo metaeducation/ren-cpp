@@ -177,15 +177,22 @@ struct type_at<0, T, R...>
 /// FUNCTION TRAITS
 ///
 
-
+//
+// Enhanced version of Boost function_traits. Here is how:
+// * Template arg on size_t (in Boost: arg1_type, arg2_type, etc...)
+// * Boost only works up to 10 parameters
+// * Boost only works with regular function pointers
+// * Boost does not strip the qualifiers
+// * We provide helping alias templates
+//
 
 template <typename T>
 struct function_traits:
     function_traits<decltype(&T::operator())>
 {};
 
-template <typename C, typename Ret, typename... Args>
-struct function_traits<Ret(C::*)(Args...) const>
+template <typename Ret, typename... Args>
+struct function_traits<Ret(Args...)>
 {
     enum { arity = sizeof...(Args) };
 
@@ -195,6 +202,94 @@ struct function_traits<Ret(C::*)(Args...) const>
     using arg = typename type_at<N, Args...>::type;
 };
 
+//
+// Helpers to convert almost any function type to a simple
+// R(Args...) type. It helps making function_traits more
+// generic Unfortunately, we still have to list many cases
+// by hand in the implementation.
+//
+//     http://stackoverflow.com/q/27743745/1364752
+//
+
+template<typename Ret, typename... Args>
+struct function_traits<Ret(*)(Args...)>:
+    function_traits<Ret(Args...)>
+{};
+
+template<typename C, typename Ret, typename... Args>
+struct function_traits<Ret(C::*)(Args...)>:
+    function_traits<Ret(Args...)>
+{};
+
+template<typename C, typename Ret, typename... Args>
+struct function_traits<Ret(C::*)(Args...) const>:
+    function_traits<Ret(Args...)>
+{};
+
+template<typename C, typename Ret, typename... Args>
+struct function_traits<Ret(C::*)(Args...) volatile>:
+    function_traits<Ret(Args...)>
+{};
+
+template<typename C, typename Ret, typename... Args>
+struct function_traits<Ret(C::*)(Args...) const volatile>:
+    function_traits<Ret(Args...)>
+{};
+
+template<typename T>
+struct function_traits<T&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<const T&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<volatile T&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<const volatile T&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<T&&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<const T&&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<volatile T&&>:
+    function_traits<T>
+{};
+
+template<typename T>
+struct function_traits<const volatile T&&>:
+    function_traits<T>
+{};
+
+//
+// Template aliases so that function_traits is easier
+// to use. No need to always show the details of this
+// template wizardry.
+//
+// This is C++11, so there is no equivalent for arity.
+// There could be some with C++14 variable templates.
+//
+
+template<typename T>
+using result_type = typename function_traits<T>::result_type;
+
+template<typename T, std::size_t N>
+using argument_type = typename function_traits<T>::template arg<N>;
 
 
 ///

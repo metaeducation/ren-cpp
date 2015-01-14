@@ -140,7 +140,7 @@ private:
 public:
     template<typename Fun, std::size_t... Ind>
     static Function construct_(
-        std::true_type, // Func return type is void
+        std::true_type, // Fun return type is void
         RenEngineHandle engine,
         Block const & spec,
         RenShimPointer shim,
@@ -151,9 +151,7 @@ public:
 
         using Gen = internal::FunctionGenerator<
             Ret,
-            typename utility::function_traits<
-                typename std::remove_reference<Fun>::type
-            >::template arg<Ind>...
+            utility::argument_type<Fun, Ind>...
         >;
 
         return Gen {
@@ -161,38 +159,28 @@ public:
             spec,
             shim,
             std::function<
-                Ret(
-                    typename utility::function_traits<
-                        typename std::remove_reference<Fun>::type
-                    >::template arg<Ind>...
-                )
-            >([&fun](typename utility::function_traits<
-                        typename std::remove_reference<Fun>::type
-                    >::template arg<Ind>... args){
-                fun(args...);
-                return Unset();
+                Ret(utility::argument_type<Fun, Ind>...)
+            >([&fun](utility::argument_type<Fun, Ind>&&... args){
+                fun(std::forward<utility::argument_type<Fun, Ind>>(args)...);
+                return Unset{};
             })
         };
     }
 
     template<typename Fun, std::size_t... Ind>
     static Function construct_(
-        std::false_type,    // Func return type is not void
+        std::false_type,    // Fun return type is not void
         RenEngineHandle engine,
         Block const & spec,
         RenShimPointer shim,
         Fun && fun,
         utility::indices<Ind...>
     ) {
-        using Ret = typename utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::result_type;
+        using Ret = utility::result_type<Fun>;
 
         using Gen = internal::FunctionGenerator<
             Ret,
-            typename utility::function_traits<
-                typename std::remove_reference<Fun>::type
-            >::template arg<Ind>...
+            utility::argument_type<Fun, Ind>...
         >;
 
         return Gen {
@@ -200,11 +188,7 @@ public:
             spec,
             shim,
             std::function<
-                Ret(
-                    typename utility::function_traits<
-                        typename std::remove_reference<Fun>::type
-                    >::template arg<Ind>...
-                )
+                Ret(utility::argument_type<Fun, Ind>...)
             >(fun)
         };
     }
@@ -216,14 +200,10 @@ public:
         RenShimPointer shim,
         Fun && fun
     ) {
-        using Ret = typename utility::function_traits<
-            typename std::remove_reference<Fun>::type
-        >::result_type;
+        using Ret = utility::result_type<Fun>;
 
         using Indices = utility::make_indices<
-            utility::function_traits<
-                typename std::remove_reference<Fun>::type
-            >::arity
+            utility::function_traits<Fun>::arity
         >;
 
         return construct_(
@@ -291,9 +271,7 @@ public:
     template<
         typename Fun,
         typename Indices = utility::make_indices<
-            utility::function_traits<
-                typename std::remove_reference<Fun>::type
-            >::arity
+            utility::function_traits<Fun>::arity
         >
     >
     static Function construct(
