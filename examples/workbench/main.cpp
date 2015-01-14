@@ -122,12 +122,12 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
 #ifndef NDEBUG
-        // Because our "noisy" message handler uses the GUI subsystem for
-        // message boxes, we can't install it until after the QApplication is
-        // constructed.  But it is good to be the very next thing to run, to
-        // start catching warnings ASAP.
-        QtMessageHandler oldMsgHandler
-            = qInstallMessageHandler(noisyFailureMsgHandler);
+    // Because our "noisy" message handler uses the GUI subsystem for
+    // message boxes, we can't install it until after the QApplication is
+    // constructed.  But it is good to be the very next thing to run, to
+    // start catching warnings ASAP.
+
+    qInstallMessageHandler(noisyFailureMsgHandler);
 #endif
 
     MainWindow mainWin;
