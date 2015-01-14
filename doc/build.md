@@ -21,12 +21,6 @@ the half megabyte Rebol codebase (in release builds).
 Red support will be announced for preview as soon as it can be.
 
 
-Linux
------
-
-TODO
-
-
 Windows
 -------
 
@@ -106,36 +100,23 @@ in the examples directory to try out.
 
 **Building Ren Garden**
 
-If you want to build Ren Garden along with RenCpp, then instead of the above,
-type the following instructions:
+If you want to build Ren Garden along with RenCpp, then CMake will need to be
+able to find where Qt installed its CMake "package finders".  This is generally
+done via the environment variable CMAKE_PREFIX_PATH. So if you installed Qt
+in `C:\Qt\5.4`, then be sure something along these lines is set in whatever
+environment you are invoking cmake from:
+
+    CMAKE_PREFIX_PATH=C:\Qt\5.4\mingw491_32\lib\cmake
+
+*(Note: Be sure to check to make sure this directory is actually there, and
+make the necessary adjustments if not.)*
+
+Once that's ready, type the following instructions:
 
     cmake -G"MinGW Makefiles" -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
     make
 
-You will need to need to tell CMake where Qt installed its CMake "package
-finders".  This is generally done via the environment variable
-CMAKE_PREFIX_PATH. So if you installed Qt in `C:\Qt\5.4`, then make sure
-something along these lines is set in whatever environment you are
-invoking cmake from:
-
-    CMAKE_PREFIX_PATH=C:\Qt\5.4\mingw491_32\lib\cmake
-
-If that doesn't work for some reason, adding these lines to `CMakeLists.txt`
-may be enough of a workaround to get the build to happen
-
-    set(
-        CMAKE_PREFIX_PATH
-        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Core"
-        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Widgets"
-        "C:\\Qt\\5.4\\mingw491_32\\lib\\cmake\\Qt5Gui"
-    )
-
-*(Note: Of course, the absolute links above are examples, and may not
-correspond to the version of Qt or MinGW that you use. So be sure to check
-to make sure these directories are actually there, and make the necessary
-adjustments if not.)*
-
-Now, if everything went smoothly, you should have an executable! However, the
+If everything went smoothly, you should have an executable! However, the
 required DLLs for the C++ runtime, pthreads, and Qt will likely not be in your
 path. So odds are you'll get several DLL not found errors when you try to run.
 
@@ -153,12 +134,75 @@ process that does it only for that session:
     start workbench.exe
 
 
+Linux
+-----
+
+The initial development of RenCpp and Ren Garden was on a Kubuntu installation
+with Qt Creator.  Using Kubuntu and Qt Creator is about the easiest situation
+you can find.  Even if you don't run a Linux host, you might consider setting
+up a virtual machine with a recent installation:
+
+* [Kubuntu](http://www.kubuntu.org/)
+
+* [Qt](http://www.qt.io/download-open-source/)
+
+To get CMake, all you should need to run is:
+
+    sudo apt-get install cmake
+
+You will still have to install and build Rebol.  (TBD...)
+
+Once you've built Rebol, in Qt Creator open the CMakeLists.txt file.  It
+should offer you a command line to type your settings into.  To build RenCpp
+and Ren Garden type:
+
+    -DCMAKE_BUILD_TYPE=Debug -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+
+(Adaptations for other Linuxes TBD...)
+
+
+
+OS/X
+----
+
+While it is possible to install GCC on an OS/X machine, it involves some extra
+steps...so we will assume you are using Clang and/or XCode.
+
+Certainly no Clang older than 3.1 can build RenCpp (which introduced lambda
+support, and was released in May 2012).  So check your version with:
+
+   clang -v
+
+**Without Ren Garden**
+
+Follow the steps for building Rebol and placing the directories as in the
+Windows instructions, but with a different OS_ID.  There is also an issue
+at the time of writing which needs to be investigated which requires a small
+edit to the Rebol source:
+
+    make make OS_ID=0.2.5
+    make prep
+    make
+
+As on other platforms, if you're on a 64 bit system you will (for the moment)
+have to build as 32-bit:
+
+   cmake -DCMAKE_CXX_FLAGS=-m32 -DRUNTIME=rebol
+
+**With Ren Garden**
+
+On other platforms, 32-bit Qt libraries are distributed pre-built by the
+Qt project.  For Mac only 64-bit binaries are available.  Ren Garden has been
+built successfully using a 64-bit patched Rebol, and turnkey instructions for
+this process are still pending.  See [this chat log][7].
+
+
 Support
 -------
 
 Should these steps not work, the best place to get real-time help is via
-[Rebol and Red chat](http://rebolsource.net/go/chat-faq). There is also the
-[RenCpp Issue Tracker](https://github.com/hostilefork/rencpp/issues) on GitHub.
+[Rebol and Red chat][8]. There is also the [RenCpp Issue Tracker][9].
+on GitHub.
 
 Good luck! And if you find yourself frustrated by any aspect of this process,
 remember that's why Rebol and Red exist in the first place: *to fight software
@@ -172,3 +216,6 @@ your way in with subversive integration tools like RenCpp... :-)
 [4]: https://github.com/rebol/rebol
 [5]: http://rebolsource.net/
 [6]: https://github.com/hostilefork/rencpp
+[7]: http://chat.stackoverflow.com/transcript/message/20951003#20951003
+[8]: http://rebolsource.net/go/chat-faq
+[9]: https://github.com/hostilefork/rencpp/issues
