@@ -999,15 +999,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
-    if (ctrled) {
-        // For whatever reason, the usual behavior in widgets is to go ahead
-        // and consider hitting something like "control backslash" to mean
-        // the same thing as backslash.  We throw these out if they made
-        // it this far without special handling.
-
-        return;
-    }
-
     textCursor().insertText(event->text());
 }
 
