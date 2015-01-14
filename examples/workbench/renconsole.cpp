@@ -56,7 +56,7 @@ class EvaluatorWorker : public QObject
 
 public slots:
     void doWork(
-        Value const & dialect,
+        ren::Value const & dialect, // slot, so ren:: namespace needed!
         QString const & input,
         bool meta
     ) {
@@ -109,7 +109,7 @@ public slots:
 signals:
     void resultReady(
         bool success,
-        Value const & result
+        ren::Value const & result // namespace ren:: needed for signal!
     );
 };
 
@@ -135,7 +135,7 @@ RenConsole::RenConsole (QWidget * parent) :
     evaluating (false),
     dialect (none),
     target (none)
-{    
+{
     // We want to be able to append text from threads besides the GUI thread.
     // It is a synchronous operation for a worker, but still goes through the
     // emit process.
