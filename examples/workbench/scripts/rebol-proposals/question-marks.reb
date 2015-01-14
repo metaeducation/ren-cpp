@@ -20,12 +20,14 @@ offset-of: :system/contexts/lib/offset?
 offset?: does [do make error! "offset? is now offset-of"]
 
 
-; Use type-of to get the type of something
-; type? could actually be shorter for datatype?
+; Use type-of to get the type of something.
+;
+; With "type?" freed up, we could actually use type! as the type name
+; for, well, types. And then of course use "type?" as type-predicate for
+; type!.
 
 type-of: :system/contexts/lib/type?
-type?: :system/contexts/lib/datatype?
-datatype?: does [do make error! "datatype? is now type?"]
+type?: does [do make error! "type? is now type-of"]
 
 
 ;-- If "bind-of" always returned a context, shouldn't it be context-of?
