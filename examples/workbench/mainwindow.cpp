@@ -130,7 +130,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::cut()
 {
-    console->cut();
+    console->cutSafely();
 }
 
 void MainWindow::copy()
@@ -140,7 +140,7 @@ void MainWindow::copy()
 
 void MainWindow::paste()
 {
-    console->paste();
+    console->pasteSafely();
 }
 
 

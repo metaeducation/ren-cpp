@@ -81,6 +81,11 @@ protected:
     void mousePressEvent(QMouseEvent * event) override;
     void mouseDoubleClickEvent(QMouseEvent * event) override;
 
+    // Trap cut, paste, del so we can limit the selection to the edit buffer
+public slots:
+    void cutSafely();
+    void pasteSafely();
+
 signals:
     void reportStatus(QString const & str);
 

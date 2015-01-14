@@ -587,6 +587,21 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 break;
             }
 
+        if (
+            event->matches(QKeySequence::Cut)
+            or event->matches(QKeySequence::Paste)
+            or event->matches(QKeySequence::Delete)
+            or event->matches(QKeySequence::DeleteCompleteLine)
+            or event->matches(QKeySequence::DeleteEndOfLine)
+            or event->matches(QKeySequence::DeleteEndOfWord)
+            or event->matches(QKeySequence::DeleteStartOfWord)
+        ) {
+            containInputSelection();
+            QMutexLocker lock {&modifyMutex};
+            QTextEdit::keyPressEvent(event);
+            return;
+        }
+
 
         // That should be all the modifying operations.  But if we turn out
         // to be wrong and the QTextEdit default handler does modify the
@@ -995,3 +1010,16 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
     QTextEdit::keyReleaseEvent(event);
 }
 
+
+
+// Trap cut, paste so we can limit the selection to the edit buffer
+
+void ReplPad::cutSafely() {
+    containInputSelection();
+    QTextEdit::cut();
+}
+
+void ReplPad::pasteSafely() {
+    containInputSelection();
+    QTextEdit::paste();
+}
