@@ -14,10 +14,10 @@ length: :system/contexts/lib/length?
 length?: does [do make error! "length? is now length"]
 
 index-of: :system/contexts/lib/index?
-unset 'index?
+index?: does [do make error! "index? is now index-of"]
 
 offset-of: :system/contexts/lib/offset?
-unset 'offset?
+offset?: does [do make error! "offset? is now offset-of"]
 
 
 ; Use type-of to get the type of something
