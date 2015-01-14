@@ -57,7 +57,7 @@ public slots:
     void doWork(
         ren::Value const & dialect,
         QString const & input,
-        bool echo
+        bool meta
     ) {
         ren::Value result;
         bool success = false;
@@ -75,10 +75,18 @@ public slots:
             ren::Value loaded
                 = ren::runtime("load", buffer.toUtf8().constData());
 
-            if (echo)
-                ren::print(to_string(loaded));
+            if (meta) {
+                if (not ren::runtime("find words-of quote", dialect, "/meta")) {
+                    throw ren::evaluation_error(ren::runtime(
+                        "make error! {current dialect has no /meta refinement}"
+                    ));
+                }
 
-            result = dialect(loaded);
+                result = ren::runtime(ren::Path {dialect, "meta"}, loaded);
+            }
+            else {
+                result = dialect(loaded);
+            }
 
             success = true;
         }
@@ -121,9 +129,9 @@ signals:
 
 RenConsole::RenConsole (QWidget * parent) :
     ReplPad (parent),
+    bannerPrinted (false),
     fakeOut (new FakeStdout (*this)),
     evaluating (false),
-    echo (false),
     dialect (ren::none),
     target (ren::none)
 {
@@ -183,36 +191,6 @@ RenConsole::RenConsole (QWidget * parent) :
         this, &RenConsole::onConsoleReset,
         Qt::QueuedConnection
     );
-
-
-    // Initialize text formats used.  What makes this difficult is "zoom in"
-    // and "zoom out", so if you get too creative with the font settings then
-    // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
-    //
-    //     https://github.com/metaeducation/ren-garden/issues/7
-
-    // Make the input just a shade lighter black than the output.  (It's also
-    // not a fixed width font, so between those two differences you should be
-    // able to see what's what.)
-
-    inputFormat.setForeground(QColor {0x20, 0x20, 0x20});
-
-    promptFormat.setForeground(Qt::darkGray);
-    promptFormat.setFontWeight(QFont::Bold);
-
-    hintFormat.setForeground(Qt::darkGray);
-    hintFormat.setFontItalic(true);
-
-    errorFormat.setForeground(Qt::darkRed);
-
-    // See what works well enough on platforms to demo in terms of common
-    // monospace fonts (or if monospace is even what we want to differentiate
-    // the output...)
-    //
-    // http://stackoverflow.com/a/1835938/211160
-
-    outputFormat.setFontFamily("Courier");
-    outputFormat.setFontWeight(QFont::Bold);
 
     consoleFunction = ren::makeFunction(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
@@ -291,8 +269,6 @@ RenConsole::RenConsole (QWidget * parent) :
                     return ren::String {""}; // doesn't add before >> prompt
 
                 if (arg.isEqualTo<ren::Word>("banner")) {
-                    static bool bannerPrinted = false;
-
                     if (not bannerPrinted) {
                         printBanner();
                         bannerPrinted = true;
@@ -310,10 +286,10 @@ RenConsole::RenConsole (QWidget * parent) :
             if (arg.isBlock()) {
                 auto blk = static_cast<ren::Block>(arg);
 
-                if ((*blk).isEqualTo<ren::Word>("echo")) {
+                if ((*blk).isEqualTo<ren::Word>("target")) {
                     ren::Block next = blk;
                     next++;
-                    echo = (*next).isEqualTo<ren::Word>("on");
+                    target = (*next).apply();
                     return ren::unset;
                 }
 
@@ -339,7 +315,7 @@ RenConsole::RenConsole (QWidget * parent) :
 
     ren::runtime(
         "console: quote", consoleFunction,
-        "shell: quote", shell.getDialectFunction(),
+        "shell: quote", shell.getShellDialectFunction(),
 
         // A bit too easy to overwrite them, e.g. `console: :shell`
         "protect 'console protect 'shell"
@@ -498,7 +474,7 @@ void RenConsole::printBanner() {
 
 
 
-void RenConsole::printPrompt() {
+QString RenConsole::getPromptString() {
     // If a function has a /meta refinement, we will ask it via the
     // meta protocol what it wants its prompt to be.
 
@@ -513,21 +489,9 @@ void RenConsole::printPrompt() {
             customPrompt = "?";
     }
 
-    pushFormat(promptFormat);
-    appendText(customPrompt + ">>");
-
-    pushFormat(inputFormat);
-    appendText(" ");
+    return customPrompt;
 }
 
-
-void RenConsole::printMultilinePrompt() {
-    pushFormat(hintFormat);
-    appendText("[ctrl-enter to evaluate]");
-
-    pushFormat(inputFormat);
-    appendText("\n");
-}
 
 
 ///
@@ -580,12 +544,16 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
 }
 
 
-void RenConsole::evaluate(QString const & input) {
+void RenConsole::evaluate(QString const & input, bool meta) {
+    static int count = 0;
+
     evaluating = true;
 
     pushFormat(outputFormat);
 
-    emit operate(dialect, input, echo);
+    emit operate(dialect, input, meta);
+
+    count++;
 }
 
 
@@ -647,10 +615,10 @@ void RenConsole::handleResults(
     else if (not result.isUnset()) {
         // If we evaluated and it wasn't unset, print an eval result ==
 
-        pushFormat(promptFormat);
+        pushFormat(promptFormatNormal);
         appendText("==");
 
-        pushFormat(inputFormat);
+        pushFormat(inputFormatNormal);
         appendText(" ");
 
         // Technically this should run through a hook that is "guaranteed"

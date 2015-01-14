@@ -35,6 +35,14 @@ public:
     ReplPad (QWidget * parent);
 
 protected:
+    QTextCharFormat promptFormatNormal;
+    QTextCharFormat promptFormatMeta;
+    QTextCharFormat inputFormatNormal;
+    QTextCharFormat inputFormatMeta;
+    QTextCharFormat outputFormat;
+    QTextCharFormat errorFormat;
+
+protected:
     QFont defaultFont;
 
 protected:
@@ -77,9 +85,11 @@ signals:
     void reportStatus(QString const & str);
 
 protected:
-    virtual void evaluate(QString const & input) = 0;
-    virtual void printPrompt() = 0;
-    virtual void printMultilinePrompt() = 0;
+    virtual void evaluate(QString const & input, bool meta) = 0;
+    virtual QString getPromptString() = 0;
+
+private:
+    void rewritePrompt();
 
 private:
     // "Escape" in this sense refers to "escaping the current mode".  The
@@ -95,14 +105,20 @@ private:
     bool hasRedo;
     class HistoryEntry {
     public:
+        int startPos;
+        QString prompt;
         int inputPos;
         bool multiLineMode;
+        bool meta;
         int evalCursorPos;
         int endPos;
     public:
-        HistoryEntry (int inputPos) :
-            inputPos (inputPos),
+        HistoryEntry (int startPos, QString prompt) :
+            startPos (startPos),
+            prompt (prompt),
+            inputPos (startPos),
             multiLineMode (false),
+            meta (false),
             evalCursorPos (-1),
             endPos (-1)
         {

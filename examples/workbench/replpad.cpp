@@ -132,6 +132,36 @@ ReplPad::ReplPad (QWidget * parent) :
             hasRedo = b;
         }
     );
+
+    // Initialize text formats used.  What makes this difficult is "zoom in"
+    // and "zoom out", so if you get too creative with the font settings then
+    // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
+    //
+    //     https://github.com/metaeducation/ren-garden/issues/7
+
+    // Make the input just a shade lighter black than the output.  (It's also
+    // not a fixed width font, so between those two differences you should be
+    // able to see what's what.)
+
+    inputFormatNormal.setForeground(QColor {0x20, 0x20, 0x20});
+    inputFormatMeta.setForeground(Qt::darkGreen);
+
+    promptFormatNormal.setForeground(Qt::darkGray);
+    promptFormatNormal.setFontWeight(QFont::Bold);
+
+    promptFormatMeta.setForeground(Qt::darkMagenta);
+    promptFormatMeta.setFontWeight(QFont::Bold);
+
+    errorFormat.setForeground(Qt::darkRed);
+
+    // See what works well enough on platforms to demo in terms of common
+    // monospace fonts (or if monospace is even what we want to differentiate
+    // the output...)
+    //
+    //     http://stackoverflow.com/a/1835938/211160
+
+    outputFormat.setFontFamily("Courier");
+    outputFormat.setFontWeight(QFont::Bold);
 }
 
 
@@ -309,12 +339,14 @@ void ReplPad::appendText(QString const & text) {
 
 void ReplPad::appendNewPrompt() {
 
-    printPrompt();
+    int startPos = endCursor().position();
+    QString prompt = getPromptString();
 
     // You always have to ask for multi-line mode with shift-enter.  Maybe
     // someone will prefer the opposite?  Not likely.
 
-    history.emplace_back(endCursor().position());
+    history.emplace_back(startPos, prompt);
+    rewritePrompt();
 
     // We can't allow people to undo their edits past the last prompts,
     // but we do have a "magic Undo" stack that can undo unwanted commands
@@ -322,6 +354,71 @@ void ReplPad::appendNewPrompt() {
     document()->clearUndoRedoStacks();
 }
 
+
+
+void ReplPad::rewritePrompt() {
+
+    // In order to prevent corruption of the undo/redo history, we have to
+    // do this in one atomic replacement.  If we did it one insertion at
+    // a time, then it would let the user undo through that.  Unfortunately
+    // something is wrong with an interaction of doing setTextCursor()
+    // during an edit block. :-/  Seems to crash, sporadically (on linux)
+
+    bool saveShouldFollow = shouldFollow;
+    shouldFollow = false;
+
+    QTextCursor cursor {document()};
+    cursor.beginEditBlock();
+
+    QString buffer = history.back().getInput(*this);
+
+    cursor.setPosition(history.back().startPos, QTextCursor::MoveAnchor);
+    cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+
+    cursor.removeSelectedText();
+    setTextCursor(endCursor());
+
+    QTextCharFormat promptFormat = history.back().meta
+        ? promptFormatMeta
+        : promptFormatNormal;
+
+    pushFormat(promptFormat);
+    appendText(history.back().prompt + ">>");
+
+    QTextCharFormat inputFormat = history.back().meta
+        ? inputFormatMeta
+        : inputFormatNormal;
+
+    if (history.back().multiLineMode) {
+        QTextCharFormat hintFormat = promptFormat;
+        hintFormat.setFontItalic(true);
+        hintFormat.setFontWeight(QFont::Normal);
+
+        pushFormat(hintFormat);
+        appendText(" [ctrl-enter to evaluate]");
+
+        pushFormat(inputFormat);
+        appendText("\n");
+    }
+    else {
+        pushFormat(inputFormat);
+        appendText(" ");
+    }
+
+    history.back().inputPos = endCursor().position();
+
+    appendText(buffer);
+
+
+    // With the edit block closed, it's safe to set the text cursor, so update
+    // the follow status and add an empty text string.
+
+    cursor.endEditBlock();
+
+    shouldFollow = saveShouldFollow;
+
+    appendText("");
+}
 
 
 void ReplPad::clearCurrentInput() {
@@ -332,6 +429,8 @@ void ReplPad::clearCurrentInput() {
 
     cursor.removeSelectedText();
     setTextCursor(endCursor());
+
+    history.back().endPos = -1;
 }
 
 
@@ -363,6 +462,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (key == Qt::Key_Escape and (not event->isAutoRepeat()))
         emit fadeOutToQuit(true);
+
 
     // Putting this list here for convenience.  In theory commands could take
     // into account whether you hit the 1 on a numeric kepad or on the top
@@ -457,6 +557,12 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         }
 
 
+        if ((key == Qt::Key_Space) and ctrled) {
+            // Shifting into (or out of) meta mode, we edit the prompt
+            break;
+        }
+
+
         if (
             event->matches(QKeySequence::Undo)
             or event->matches(QKeySequence::Redo)
@@ -512,6 +618,17 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     QMutexLocker locker {&modifyMutex};
 
 
+    // What ctrl means on the platforms is different:
+    //
+    // http://stackoverflow.com/questions/16809139/
+
+    if ((key == Qt::Key_Space) and ctrled) {
+        history.back().meta = not history.back().meta;
+        rewritePrompt();
+        return;
+    }
+
+
     // If they have made a selection and have intent to modify, we must
     // contain that selection within the boundaries of the editable area.
 
@@ -547,8 +664,19 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         escapeTimer.start();
 
+        // If there's any text, clear it and take us back.
+
         if (not history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
+            history.back().multiLineMode = false;
+            rewritePrompt();
+        }
+
+        // If there's no text but we're in meta mode, get rid of it.
+
+        if (history.back().meta) {
+            history.back().meta = false;
+            rewritePrompt();
         }
         return;
     }
@@ -627,13 +755,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             QString input = history.back().getInput(*this);
             clearCurrentInput();
 
-            printMultilinePrompt();
-
-            history.back().inputPos = endCursor().position();
-
-            appendText(input);
-
             history.back().multiLineMode = true;
+            rewritePrompt();
+
+            // It may be possible to detect when we undo backwards across
+            // a multi-line switch and reset the history item, but until
+            // then allowing an undo might mess with our history record
+
+            document()->clearUndoRedoStacks();
             return;
         }
 
@@ -702,7 +831,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 followLatestOutput();
             } else {
                 followLatestOutput();
-                evaluate(input); // implementation may (does) queue...
+                // implementation may (does) queue...
+                evaluate(input, history.back().meta);
             }
 
             return;

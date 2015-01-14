@@ -483,7 +483,8 @@ void ShellWorker::onStateChanged(QProcess::ProcessState newState) {
 //
 
 RenShell::RenShell (QObject * parent) :
-    QObject (parent)
+    QObject (parent),
+    testMode (true)
 {
     // Set up the Evaluator so it's wired up for signals and slots
     // and on another thread from the GUI.  This technique is taken directly
@@ -515,21 +516,16 @@ RenShell::RenShell (QObject * parent) :
 
     // I keep saying it but... magic!
 
-    dialect = ren::makeFunction(
+    shellFunction = ren::makeFunction(
 
         "{SHELL dialect for interacting with an OS shell process}"
         "'arg [unset! word! lit-word! block! paren! string!]"
         "    {block in dialect or other instruction (see documentation)}"
-        "/meta {Interpret in 'meta mode' for controlling the dialect}"
-        "/echo {Print command before running it}",
+        "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
         REN_STD_FUNCTION,
 
-        [this, worker](
-            ren::Value const & arg,
-            ren::Value const & meta,
-            ren::Value const & echo
-        )
+        [this, worker](ren::Value const & arg, ren::Value const & meta)
             -> ren::Value
         {
             if (arg.isUnset()) {
@@ -537,7 +533,7 @@ RenShell::RenShell (QObject * parent) :
                 // ability to have one less arity when used at the end of an
                 // evaluation.  Only sensible for interactive commands!
 
-                ren::runtime("console quote", dialect);
+                ren::runtime("console quote", shellFunction);
                 return ren::unset;
             }
 
@@ -581,8 +577,25 @@ RenShell::RenShell (QObject * parent) :
 
                 // Meta protocol may ask you for things you don't know about,
                 // so gracefully ignore them.
+                if (arg.isLitWord())
+                    return ren::none;
 
-                return ren::none;
+                if (not arg.isBlock()) {
+                    ren::runtime("do make error! {Unknown meta command}");
+                    return ren::unset;
+                }
+
+                auto blk = static_cast<ren::Block>(arg);
+
+                if ((*blk).isEqualTo<ren::Word>("test")) {
+                    blk++;
+                    testMode = (*blk).isEqualTo<ren::Word>("on");
+                    return ren::unset;
+                };
+
+                ren::runtime("do make error! {Unknown meta command}");
+
+                return ren::unset;
             }
 
         #ifdef TO_WIN32
@@ -600,9 +613,11 @@ RenShell::RenShell (QObject * parent) :
                 )
             );
 
-            if (echo) {
+            if (testMode) {
                 for (auto str : commands)
                     ren::print(str);
+
+                return ren::unset;
             }
 
             std::vector<int> results;

@@ -50,17 +50,10 @@ public:
     RenConsole (QWidget * parent = nullptr);
     ~RenConsole () override;
 
-private:
-    QTextCharFormat promptFormat;
-    QTextCharFormat hintFormat;
-    QTextCharFormat inputFormat;
-    QTextCharFormat outputFormat;
-    QTextCharFormat errorFormat;
-
 protected:
+    bool bannerPrinted;
     void printBanner();
-    void printPrompt() override;
-    void printMultilinePrompt() override;
+    QString getPromptString() override;
 
 protected:
     friend class FakeStdoutBuffer;
@@ -78,7 +71,6 @@ protected:
 private:
     bool evaluating;
     QThread workerThread;
-    bool echo;
 
 private:
     ren::Value consoleFunction;
@@ -100,10 +92,14 @@ public slots:
     );
 signals:
     // keep terminology from Qt sample
-    void operate(ren::Value const & processor, QString const & input, bool echo);
+    void operate(
+        ren::Value const & dialect,
+        QString const & input,
+        bool meta
+    );
     void finishedEvaluation();
 protected:
-    void evaluate(QString const & input) override;
+    void evaluate(QString const & input, bool meta) override;
 };
 
 #endif

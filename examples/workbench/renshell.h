@@ -52,10 +52,11 @@ private:
     int shellDoneResult;
 
 private:
-    ren::Value dialect;
+    ren::Value shellFunction;
+    bool testMode;
 public:
-    ren::Function getDialectFunction() {
-        return static_cast<ren::Function>(dialect);
+    ren::Function getShellDialectFunction() {
+        return static_cast<ren::Function>(shellFunction);
     }
 
 private:
