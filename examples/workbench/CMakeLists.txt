@@ -26,6 +26,7 @@ set(CMAKE_AUTOMOC ON)
 # Find the QtWidgets library
 
 find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Network REQUIRED)
 
 
 # These rigid warnings thrown in are too strict for building Qt5 projects
@@ -60,6 +61,7 @@ add_executable(
     watchlist.cpp
     rensyntaxer.cpp
     renshell.cpp
+    renpackage.cpp
 
     # Include files - not technically needed for the build but good to have
     # a mention of because then the generated project file will show them in
@@ -73,6 +75,7 @@ add_executable(
     syntaxer.h
     rensyntaxer.h
     renshell.h
+    renpackage.h
 )
 
 
@@ -81,6 +84,7 @@ add_executable(
 target_link_libraries(
     workbench 
     RenCpp
-    Qt5::Widgets 
+    Qt5::Widgets
+    Qt5::Network
 )
 

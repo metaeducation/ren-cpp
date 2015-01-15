@@ -31,6 +31,7 @@
 #include "replpad.h"
 #include "rensyntaxer.h"
 #include "renshell.h"
+#include "renpackage.h"
 
 class FakeStdout;
 class FakeStdoutBuffer;
@@ -40,15 +41,15 @@ class RenConsole : public ReplPad
 {
     Q_OBJECT
 
+public:
+    RenConsole (QWidget * parent = nullptr);
+    ~RenConsole () override;
+
 private:
     RenSyntaxer syntaxer;
     RenSyntaxer & getSyntaxer() override { return syntaxer; }
 
     RenShell shell;
-
-public:
-    RenConsole (QWidget * parent = nullptr);
-    ~RenConsole () override;
 
 protected:
     bool bannerPrinted;
@@ -109,6 +110,13 @@ signals:
     void finishedEvaluation();
 protected:
     void evaluate(QString const & input, bool meta) override;
+
+    // Primitive "package management", which is just an experiment to get
+    // some basic caching and updating started (a test case for figuring out
+    // where to put local files and settings, etc.)
+private:
+    QSharedPointer<RenPackage> proposals;
+    QSharedPointer<RenPackage> helpers;
 };
 
 #endif

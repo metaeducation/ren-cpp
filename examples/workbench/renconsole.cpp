@@ -31,6 +31,7 @@ using namespace ren;
 #include "fakestdio.h"
 #include "watchlist.h"
 #include "rensyntaxer.h"
+#include "renpackage.h"
 
 extern bool forcingQuit;
 
@@ -322,38 +323,52 @@ RenConsole::RenConsole (QWidget * parent) :
     );
 
 
-    // Load the incubator routines that are not written in C++ from the
-    // resource file, and the ren-garden console helpers for syntax highlight
+    // Load the the ren-garden console helpers for syntax highlight
     // or other such features.
 
-    std::vector<char const *> scripts {
-        ":/scripts/ren-garden.reb",
-        ":/scripts/rebol-proposals/combine.reb",
-        ":/scripts/rebol-proposals/while-until.reb",
-        ":/scripts/rebol-proposals/print-only-with.reb",
-        ":/scripts/rebol-proposals/charset-generators.reb",
-        ":/scripts/rebol-proposals/exit-end-quit.reb",
-        ":/scripts/rebol-proposals/question-marks.reb",
-        ":/scripts/rebol-proposals/remold-reform-repend.reb",
-        ":/scripts/rebol-proposals/to-string-spelling.reb",
-        ":/scripts/rebol-proposals/find-min-max.reb",
-        ":/scripts/rebol-proposals/ls-cd-dt-short-names.reb",
-        ":/scripts/rebol-proposals/for-range-dialect.reb"
+    helpers = QSharedPointer<RenPackage>::create(
+        // resource file prefix
+        ":/scripts/",
 
-        // This breaks too many things ATM to actually use in the system, but
-        // contains "talking points" about the terminology OBJECT, MODULE,
-        // CONTEXT and how these might relate.  CONTEXT seems like the right
-        // concept and name, and is what RenCpp is aligning with.
+        // URL prefix...should we assume updating the helpers could break Ren
+        // Garden and not offer to update?
+        "https://raw.githubusercontent.com/hostilefork/rencpp"
+        "/develop/examples/workbench/scripts/",
 
-        // ":/scripts/rebol-proposals/object-context.reb"
-    };
+        Block {
+            "%ren-garden.reb"
+        }
+    );
 
-    for (auto filename : scripts) {
-        QFile file {filename};
-        file.open(QIODevice::ReadOnly);
-        QByteArray dump = file.readAll();
-        runtime(dump.data());
-    }
+
+    // Incubator routines for addressing as many design questions as
+    // possible without modifying the Rebol code itself
+
+    proposals = QSharedPointer<RenPackage>::create(
+        // resource file prefix
+        ":/scripts/rebol-proposals/",
+
+        // URL prefix
+        "https://raw.githubusercontent.com/hostilefork/rencpp"
+        "/develop/examples/workbench/scripts/rebol-proposals/",
+
+        Block {
+            "%combine.reb",
+            "%while-until.reb",
+            "%print-only-with.reb",
+            "%charset-generators.reb",
+            "%exit-end-quit.reb",
+            "%question-marks.reb",
+            "%remold-reform-repend.reb",
+            "%to-string-spelling.reb",
+            "%find-min-max.reb",
+            "%ls-cd-dt-short-names.reb",
+            "%for-range-dialect.reb"
+        }
+    );
+
+    // The beginnings of a test...
+    /* proposals->downloadLocally(); */
 
 
     // Now make console the default dialect we use to interpret commands
