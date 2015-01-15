@@ -1,5 +1,5 @@
 !.gitignore
-/CMakeLists.txt.user
+/CMakeLists.txt.user*
 *.autosave
 /rebol
 /red
