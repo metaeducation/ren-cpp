@@ -9,6 +9,7 @@
 #include "rencpp/context.hpp"
 #include "rencpp/engine.hpp"
 #include "rencpp/error.hpp"
+#include "rencpp/function.hpp"
 
 #include "rencpp/rebol.hpp"
 
@@ -301,7 +302,11 @@ bool Value::isFunction() const {
         or IS_ACTION(&cell);
 }
 
-bool Value::isContext() const {
+bool Value::isContext(REBVAL * init) const {
+    if (init) {
+        VAL_SET(init, REB_OBJECT);
+        return true;
+    }
     return IS_OBJECT(&cell);
 }
 
