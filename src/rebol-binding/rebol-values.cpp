@@ -281,6 +281,15 @@ bool Value::isTag(REBVAL * init) const {
     return IS_TAG(&cell);
 }
 
+bool Value::isFilename(REBVAL * init) const {
+    if (init) {
+        VAL_SET(init, REB_FILE);
+        return true;
+    }
+    return IS_FILE(&cell);
+}
+
+
 bool Value::isFunction() const {
     // Really, from a user's point of view...shouldn't there only be
     // ANY_FUNCTION?  It's currently annoying if someone checks for

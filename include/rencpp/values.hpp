@@ -453,6 +453,8 @@ public:
 
     bool isTag(RenCell * = nullptr) const;
 
+    bool isFilename(RenCell * = nullptr) const;
+
 public:
     bool isFunction() const;
 
@@ -1161,24 +1163,19 @@ protected:
 #endif
 
 public:
-    // This lets you pass ren::String to anything that expected a std::string
-    // and do so implicitly, which may or may not be a great idea.  See:
+    // This lets you pass ren::AnyString to anything that expected a
+    // std::string and do so implicitly, which may or may not be a great idea:
     //
     //     https://github.com/hostilefork/rencpp/issues/6
 
 #if REN_CLASSLIB_STD
     operator std::string () const {
-        Value const & thisValue = *this;
-        return to_string(thisValue);
+        return to_string(*this);
     }
 #endif
 
-
 #if REN_CLASSLIB_QT
-    operator QString () const {
-        Value const & thisValue = *this;
-        return to_QString(thisValue);
-    }
+    operator QString () const;
 #endif
 
 
@@ -1261,6 +1258,10 @@ public:
 
     bool hasSpelling(char const * spelling) const {
         return spellingOf_STD() == spelling;
+    }
+
+    bool isEqualTo(char const * cstr) const {
+        return static_cast<std::string>(*this) == cstr;
     }
 };
 
@@ -1405,9 +1406,6 @@ public:
     }
 #endif
 
-    bool isEqualTo(char const * cstr) const {
-        return static_cast<std::string>(*this) == cstr;
-    }
 };
 
 
@@ -1637,19 +1635,6 @@ class String : public internal::AnyString_<String, &Value::isString>
 public:
     friend class Value;
     using AnyString_<String, &Value::isString>::AnyString_;
-
-public:
-    // For String only, allow implicit cast instead of explicit.
-
-#if REN_CLASSLIB_STD
-    operator std::string () const {
-        return to_string(*this);
-    }
-#endif
-
-#if REN_CLASSLIB_QT
-    operator QString () const;
-#endif
 };
 
 
@@ -1658,6 +1643,13 @@ class Tag : public internal::AnyString_<Tag, &Value::isTag> {
 public:
     friend class Value;
     using AnyString_<Tag, &Value::isTag>::AnyString_;
+};
+
+
+class Filename : public internal::AnyString_<Filename, &Value::isFilename> {
+public:
+    friend class Value;
+    using AnyString_<Filename, &Value::isFilename>::AnyString_;
 };
 
 

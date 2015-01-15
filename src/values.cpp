@@ -157,7 +157,7 @@ QString to_QString(Value const & value) {
     return result;
 }
 
-String::operator QString () const {
+AnyString::operator QString () const {
     // ridiculous way of doing it, but it's a start...and kind of impressive
     // that it works...
     QString result;
