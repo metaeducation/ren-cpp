@@ -35,7 +35,17 @@ MainWindow::MainWindow() :
     fading (false),
     fadeTimer (nullptr)
 {
+    // Registration of ren::Value to allow them to be proxied across threads as
+    // parameters to Qt signals and slots.  See notes here on the importance
+    // of being consistent about using namespaces, as it is string based:
+    //
+    //     http://stackoverflow.com/questions/22044737/
+    //
+    // Note that only values that are *default constructible* may be registered
+    // in this way, which rules out all the other RenCpp types.  If you want
+
     qRegisterMetaType<ren::Value>("ren::Value");
+
 
     console = new RenConsole;
     setCentralWidget(console);

@@ -23,7 +23,7 @@ int main(int, char **) {
 
     try {
         // technical note: explicit none(arg1, arg2...) is now illegal
-        result(10);
+        result.apply(10);
     }
     catch (evaluation_error const & e) {
         print("generalized apply for none cannot have any arguments");

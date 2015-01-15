@@ -611,10 +611,6 @@ public:
         return apply({ args... });
     }
 
-    template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
-        return apply(std::forward<Ts>(args)...);
-    }
 
     // The explicit (and throwing) cast operators are defined via template
     // for any casts that don't already have valid paths in the hierarchy.
@@ -1492,6 +1488,14 @@ class Word : public internal::AnyWord_<Word, &Value::isWord>
 public:
     friend class Value;
     using AnyWord_<Word, &Value::isWord>::AnyWord_;
+
+    // This apply convenience overload used to be available to all values,
+    // but it really only makes sense for a few value types.
+public:
+    template <typename... Ts>
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
+    }
 };
 
 
@@ -1501,6 +1505,14 @@ class SetWord : public internal::AnyWord_<SetWord, &Value::isSetWord>
 public:
     friend class Value;
     using AnyWord_<SetWord, &Value::isSetWord>::AnyWord_;
+
+    // This apply convenience overload used to be available to all values,
+    // but it really only makes sense for a few value types.
+public:
+    template <typename... Ts>
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
+    }
 };
 
 
@@ -1510,6 +1522,13 @@ class GetWord : public internal::AnyWord_<GetWord, &Value::isGetWord>
 public:
     friend class Value;
     using AnyWord_<GetWord, &Value::isGetWord>::AnyWord_;
+
+    // A get-word! does not take any parameters, but it's nice to have a
+    // shorthand for treating it something like a zero-parameter function
+public:
+    inline Value operator()() const {
+        return apply();
+    }
 };
 
 
@@ -1585,6 +1604,54 @@ class Path : public internal::AnyBlock_<Path, &Value::isPath>
 public:
     friend class Value;
     using internal::AnyBlock_<Path, &Value::isPath>::AnyBlock_;
+
+    // This apply convenience overload used to be available to all values,
+    // but it really only makes sense for a few value types.
+public:
+    template <typename... Ts>
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
+    }
+};
+
+
+class SetPath : public internal::AnyBlock_<SetPath, &Value::isSetPath>
+{
+public:
+    friend class Value;
+    using internal::AnyBlock_<SetPath, &Value::isSetPath>::AnyBlock_;
+
+    // This apply convenience overload used to be available to all values,
+    // but it really only makes sense for a few value types.
+public:
+    template <typename... Ts>
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
+    }
+};
+
+
+class GetPath : public internal::AnyBlock_<GetPath, &Value::isGetPath>
+{
+public:
+    friend class Value;
+    using internal::AnyBlock_<GetPath, &Value::isGetPath>::AnyBlock_;
+
+    // As with GetWord, it can be convenient to think of "using" a GetPath
+    // as calling a function with no arguments.
+public:
+    template <typename... Ts>
+    inline Value operator()() const {
+        return apply();
+    }
+};
+
+
+class LitPath : public internal::AnyBlock_<LitPath, &Value::isLitPath>
+{
+public:
+    friend class Value;
+    using internal::AnyBlock_<LitPath, &Value::isLitPath>::AnyBlock_;
 };
 
 

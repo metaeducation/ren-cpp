@@ -55,8 +55,10 @@ class EvaluatorWorker : public QObject
     Q_OBJECT
 
 public slots:
+    // See notes on MainWindow about qRegisterMetaType about why dialect is
+    // a ren::Value instead of ren::Function and needs the ren:: prefix
     void doWork(
-        ren::Value const & dialect, // slot, so ren:: namespace needed!
+        ren::Value const & dialect,
         QString const & input,
         bool meta
     ) {
@@ -84,7 +86,7 @@ public slots:
                 result = runtime(Path {dialect, "meta"}, loaded);
             }
             else {
-                result = dialect(loaded);
+                result = dialect.apply(loaded);
             }
 
             success = true;

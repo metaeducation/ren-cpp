@@ -106,7 +106,7 @@ WatchList::Watcher::Watcher (
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (recalculates and (not frozen)))
-            value = watch(); // apply it
+            value = watch.apply();
         error = none;
     }
     catch (evaluation_error const & e) {
@@ -431,12 +431,10 @@ Value WatchList::watchDialect(
             return watchValue;
         }
 
-        // Experimental trick: apply the error, if it is none it is a no-op
-        // Nifty benefit of Generalized Apply!  But double check that it's
-        // an error or a none, first, here :-)
-
-        Q_ASSERT(watchError.isNone() or watchError.isError());
-        watchError(); // apply the error-or-none
+        if (watchError.isError())
+            throw watchError;
+        else
+            assert(watchError.isNone());
 
         return watchValue;
     }

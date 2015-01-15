@@ -288,6 +288,14 @@ public:
             std::forward<Fun>(fun)
         );
     }
+
+    // This apply convenience overload used to be available to all values,
+    // but it really only makes sense for a few value types.
+public:
+    template <typename... Ts>
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
+    }
 };
 
 

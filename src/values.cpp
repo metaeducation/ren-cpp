@@ -49,7 +49,7 @@ Value::operator bool() const {
     if (isUnset()) {
         // Is there a better way to throw the same "value is unset" error in a
         // way that matches what the runtime offers?
-        (*this)();
+        this->apply();
         UNREACHABLE_CODE();
     }
     return not (isNone() or isFalse());
@@ -350,6 +350,7 @@ AnyString::AnyString (
         nullptr // Don't apply
     );
 }
+
 
 
 ///
