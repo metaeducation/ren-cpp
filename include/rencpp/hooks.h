@@ -266,9 +266,25 @@ CASSERT(REN_SUCCESS == R_RET, hooks_h)
  * in Red winds up being lighter weight and not wanting to put the whole
  * 128 bit cell on then it might be more useful.
  */
-#define REN_STACK_RETURN(stack) DSF_RETURN(stack - DS_Base)
-#define REN_STACK_ARGUMENT(stack, index) DSF_ARGS(stack - DS_Base, (index + 1))
-#define REN_STACK_SHIM(stack) VAL_FUNC_CODE(DSF_FUNC(stack - DS_Base))
+#define REN_STACK_RETURN(stack) \
+    DSF_RETURN(stack - DS_Base)
+
+#define REN_STACK_ARGUMENT(stack, index) \
+    DSF_ARGS(stack - DS_Base, (index + 1))
+
+#define REN_STACK_SHIM(stack) \
+    VAL_FUNC_CODE(DSF_FUNC(stack - DS_Base))
+
+/*
+ * WARNING - Throw_Error uses longjmp to completely undermine the C++
+ * destructor chain; be sure the start and target of the jump cannot
+ * skip a destructor!
+ */
+
+#define REN_SHIM_RESULT(stack, success) \
+    success \
+        ? REN_SUCCESS \
+        : (Throw_Error(VAL_SERIES(REN_STACK_RETURN(stack))), REN_SUCCESS)
 
 #else
 

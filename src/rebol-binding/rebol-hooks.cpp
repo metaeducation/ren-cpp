@@ -132,7 +132,12 @@ public:
                 if (VAL_ERR_NUM(val) == RE_HALT) {
                     throw evaluation_cancelled {};
                 }
-                throw evaluation_error (Value (*val, engine));
+                if (IS_ERROR(val))
+                    throw evaluation_error {
+                        static_cast<Error>(Value {*val, engine})
+                    };
+                else
+                    throw std::runtime_error("!Error thrown in rebol-hooks");
             }
             SET_STATE(state, Halt_State);
 

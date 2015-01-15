@@ -581,10 +581,8 @@ RenShell::RenShell (QObject * parent) :
                 if (arg.isLitWord())
                     return none;
 
-                if (not arg.isBlock()) {
-                    runtime("do make error! {Unknown meta command}");
-                    return unset;
-                }
+                if (not arg.isBlock())
+                    throw Error {"Unknown meta command"};
 
                 auto blk = static_cast<Block>(arg);
 
@@ -593,9 +591,7 @@ RenShell::RenShell (QObject * parent) :
                     return unset;
                 };
 
-                runtime("do make error! {Unknown meta command}");
-
-                return unset;
+                throw Error {"Unknown meta command"};
             }
 
         #ifdef TO_WIN32

@@ -39,30 +39,30 @@
 namespace ren {
 
 
+//
+// Both Ren runtime code that is written in C++ and that is not written in
+// C++ is able to raise evaluation errors.  If C++ code, you do this by
+// throwing the ren::Error directly.  However, if you "bubble up" to C++
+// code which is making a call into the runtime, the exception that emerges
+// should derive from std::exception.
+//
 class evaluation_error : public std::exception {
 private:
-    Value errorValue;
+    Error errorValue;
     std::string whatString;
 
 public:
-    evaluation_error (Value const & error) :
+    evaluation_error (Error const & error) :
         errorValue (error),
         whatString (to_string(errorValue))
     {
-        // REVIEW: catch any cases where this is not true in the future.
-        // Trying to narrow the RenCpp exception set to a vision of which
-        // are going to be not carrying Rebol objects, so more important to
-        // poke a NONE in here for convenience than keeping deprecated
-        // exceptions around.
-
-        /* assert(error.isError()); */
     }
 
     char const * what() const noexcept override {
         return whatString.c_str();
     }
 
-    Value error() const noexcept {
+    Error error() const noexcept {
         return errorValue;
     }
 };

@@ -78,9 +78,7 @@ public slots:
 
             if (meta) {
                 if (not runtime("find words-of quote", dialect, "/meta")) {
-                    throw evaluation_error(runtime(
-                        "make error! {current dialect has no /meta refinement}"
-                    ));
+                    throw Error {"current dialect has no /meta refinement"};
                 }
 
                 result = runtime(Path {dialect, "meta"}, loaded);
@@ -231,10 +229,10 @@ RenConsole::RenConsole (QWidget * parent) :
                         )
                         or ((blk.length() > 1) and not blk[2].isRefinement())
                     ) {
-                        runtime(
-                            "do make error! {Console dialect must be single"
-                            " arity (/meta switch for control)}"
-                        );
+                        throw Error {
+                            "Console dialect must be single arity"
+                            " (/meta switch for control)}"
+                        };
                     }
 
                     if (not arg.isEqualTo(dialect)) {
@@ -259,9 +257,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     return unset;
                 }
 
-                runtime("do make error! {More CONSOLE features soon!}");
-
-                return unset;
+                throw Error {"More CONSOLE features soon!"};
             }
 
             if (arg.isWord()) {
@@ -308,13 +304,10 @@ RenConsole::RenConsole (QWidget * parent) :
                     return unset;
                 }
 
-                runtime("do make error! {Unknown dialect options.}");
-                return unset;
+                throw Error {"Unknown dialect options"};
             }
 
-            runtime("do make error! {Unknown dialect options.}");
-
-            return unset;
+            throw Error {"Unknown dialect options."};
         }
     );
 

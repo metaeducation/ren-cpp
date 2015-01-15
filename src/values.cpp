@@ -399,7 +399,7 @@ void Value::constructOrApplyInitialize(
     Value * constructOutTypeIn,
     Value * applyOut
 ) {
-    Value errorOut {Value::Dont::Initialize};
+    Error errorOut {Value::Dont::Initialize};
 
     auto result = ::RenConstructOrApply(
         engine,
@@ -421,7 +421,6 @@ void Value::constructOrApplyInitialize(
         case REN_APPLY_ERROR:
             errorOut.finishInit(engine);
             throw evaluation_error(errorOut);
-            break;
 
         case REN_EVALUATION_CANCELLED:
             throw evaluation_cancelled();

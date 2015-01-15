@@ -191,48 +191,50 @@ WatchList::WatchList(QWidget * parent) :
     auto watchFunction = Function::construct(
         "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
         ":arg [word! path! block! paren! integer! tag!]"
-        "    {word to watch or other legal parameter, see documentation)}",
+        "    {word to watch or other legal parameter, see documentation)}"
+        "/result {watch the result of the evaluation (not the expression)}",
 
         REN_STD_FUNCTION,
 
-        [this](Value const & arg) -> Value {
+        [this](Value const & arg, Value const & useResult) -> Value {
+
+            if (not arg.isBlock())
+                return watchDialect(arg, not useResult, none);
 
             Value nextLabel = none;
-            if (arg.isBlock()) {
-                Block aggregate {};
-                bool nextRecalculates = true;
 
-                for (auto item : static_cast<Block>(arg)) {
-                    if (item.isTag())
-                        nextLabel = item;
-                    else if (item.isRefinement()) {
-                        auto ref = static_cast<Refinement>(item);
-                        if (ref.spellingOf<QString>().toUpper() == "CELL")
-                            nextRecalculates = false;
-                        else
-                            runtime(
-                                "do make error! {refinements can only"
-                                "be /CELL right now in watch dialect}"
-                            );
-                    }
-                    else {
-                        // REVIEW: exception handling if they watch something
-                        // with no value in the block form?  e.g. watch [x y]
-                        // and x gets added as a watch where both undefined,
-                        // but y doesn't?
+            Block aggregate {};
 
-                        Value result
-                            = watchDialect(item, nextRecalculates, nextLabel);
-                        nextRecalculates = true;
-                        nextLabel = none;
-                        if (not result.isUnset())
-                            runtime("append", aggregate, result);
-                    }
+            bool nextRecalculates = true;
+
+            for (Value item : static_cast<Block>(arg)) {
+                if (item.isTag()) {
+                    nextLabel = item;
                 }
-                return aggregate;
-            }
+                else if (item.isRefinement()) {
+                    if (item.isEqualTo<Refinement>("result")) {
+                        nextRecalculates = false;
+                    }
+                    else
+                        throw Error {
+                            "only /result refinement is supported in blocks"
+                        };
+                }
+                else {
+                    // REVIEW: exception handling if they watch something
+                    // with no value in the block form?  e.g. watch [x y]
+                    // and x gets added as a watch where both undefined,
+                    // but y doesn't?
 
-            return watchDialect(arg, true, none);
+                    Value watchResult
+                        = watchDialect(item, nextRecalculates, nextLabel);
+                    nextRecalculates = true;
+                    nextLabel = none;
+                    if (not watchResult.isUnset())
+                        runtime("append", aggregate, watchResult);
+                }
+            }
+            return aggregate;
         }
     );
 
@@ -409,10 +411,8 @@ Value WatchList::watchDialect(
 ) {
     if (arg.isInteger()) {
         int signedIndex = static_cast<Integer>(arg);
-        if (signedIndex == 0) {
-            runtime("do make error! {Integer arg must be nonzero}");
-            UNREACHABLE_CODE();
-        }
+        if (signedIndex == 0)
+            throw Error {"Integer arg must be nonzero"};
 
         bool removal = signedIndex < 0;
         size_t index = std::abs(signedIndex);
@@ -421,10 +421,8 @@ Value WatchList::watchDialect(
         // watch, which we need to do here and return synchronously.
         // Negative integers affect the GUI and run on GUI thread.
 
-        if (index > this->watchers.size()) {
-            runtime("do make error! {No such watchlist item index}");
-            UNREACHABLE_CODE();
-        }
+        if (index > this->watchers.size())
+            throw Error {"No such watchlist item index"};
 
         Value watchValue = watchers[index - 1]->value;
         Value watchError = watchers[index - 1]->error;
@@ -517,7 +515,7 @@ Value WatchList::watchDialect(
         // quietly give back an unset if the operation failed.
 
         if (w.error)
-            w.error.apply(); // should throw...
+            throw w.error;
 
         return w.value.apply();
     }
@@ -532,13 +530,10 @@ Value WatchList::watchDialect(
                 return w.value;
             }
         }
-        runtime("do make error! {unknown tag name in watch list}");
-        return unset;
+        throw Error {"unknown tag name in watch list"};
     }
 
-    throw std::runtime_error("unexpected type passed to watch dialect");
-
-    return unset;
+    throw Error {"unexpected type passed to watch dialect"};
 }
 
 

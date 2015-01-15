@@ -29,6 +29,7 @@
 
 #include <mutex> // global table must be protected for thread safety
 
+#include "exceptions.hpp"
 #include "values.hpp"
 #include "engine.hpp"
 
@@ -440,23 +441,92 @@ private:
         TableEntry entry = table[id];
         extensionTablesMutex.unlock();
 
-        // Our applyFun helper does the magic to recursively forward
-        // the Value classes that we generate to the function that
-        // interfaces us with the Callable the extension author wrote
-        // (who is blissfully unaware of the stack convention and
-        // writing using high-level types...)
+        // To be idiomatic for C++, we want to be able to throw a ren::Error
+        // using C++ exceptions from within a ren::Function.  Yet since the
+        // ren runtimes cannot catch C++ exceptions, we have to translate it
+        // here...as well as make decisions about any non-ren::Error
+        // exceptions the C++ code has thrown.
 
-        auto && result = applyFun(entry.fun, entry.engine, stack);
+        bool success = true;
 
-        // The return result is written into a location that is known
-        // according to the protocol of the stack
+        try {
+            // Our applyFun helper does the magic to recursively forward
+            // the Value classes that we generate to the function that
+            // interfaces us with the Callable the extension author wrote
+            // (who is blissfully unaware of the stack convention and
+            // writing using high-level types...)
 
-        *REN_STACK_RETURN(stack) = result.cell;
+            auto && result = applyFun(entry.fun, entry.engine, stack);
+
+            // The return result is written into a location that is known
+            // according to the protocol of the stack
+
+            *REN_STACK_RETURN(stack) = result.cell;
+        }
+        catch (Error const & e) {
+
+            success = false;
+            *REN_STACK_RETURN(stack) = e.cell;
+        }
+        catch (Value const & e) {
+
+            if (e.isError()) {
+                success = false;
+                *REN_STACK_RETURN(stack) = e.cell;
+            }
+            else {
+                // Come up with more tolerant behavior, but discourage it as
+                // throwing errors in C++ is not the same as raising
+                // errors is in Rebol and Red
+
+                throw std::runtime_error {
+                    "Non-isError() ren::Value thrown from ren::Function"
+                };
+            }
+        }
+        catch (evaluation_error const & e) {
+            // Ren runtime code throws non-std::exception errors, and so
+            // we tolerate C++ code doing the same if it's running as if it
+            // were the runtime.  But we also allow the evaluation_error that
+            // bubbles up through C++ to be extracted as an error to thread
+            // back into the Ren runtime.  This way you can write a C++
+            // routine that doesn't know if it's being called by other C++
+            // code (hence having std::exception expectations) or just as
+            // the implementation of a ren::Function
+
+            success = false;
+            *REN_STACK_RETURN(stack) = e.error().cell;
+        }
+        catch (std::exception const & e) {
+
+            std::string what = e.what();
+
+            // Theoretically we could catch the C++ exception, poke its
+            // string into a cell, and tell the ren runtime that's what
+            // happened.  For now we just rethrow
+
+            throw e;
+        }
+        catch (...) {
+
+            // Mystery error.  No string available.  Again, we could say
+            // "mystery C++ object thrown" and write it into an error we
+            // pass back to the ren runtime, but for now we rethrow
+
+            throw std::runtime_error {
+                "Exception from ren::Function not std::Exception or Error"
+            };
+        }
+
+        // We now should have all the C++ objects cleared from this stack,
+        // so at least as far as THIS function is concerned, a longjmp
+        // should be safe.  RenShimResult on a failure under the Rebol
+        // runtime will do that longjmp with the error to the Saved_State
 
         // Note: trickery!  R_RET is 0, but all other R_ values are
         // meaningless to Red.  So we only use that one here.
 
-        return REN_SUCCESS;
+        return REN_SHIM_RESULT(stack, success);
     }
 
 public:
