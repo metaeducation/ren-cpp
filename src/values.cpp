@@ -238,7 +238,7 @@ AnyWord::AnyWord (
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable {array.data()};
+    internal::Loadable loadable = array.data();
 
     constructOrApplyInitialize(
         context->getEngine().getHandle(),
@@ -291,7 +291,7 @@ AnyWord::AnyWord (
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable {array.data()};
+    internal::Loadable loadable = array.data();
 
     if (not context)
         context = &Context::runFinder(nullptr);
@@ -338,7 +338,7 @@ AnyString::AnyString (
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable {array.data()};
+    internal::Loadable loadable = array.data();
 
     constructOrApplyInitialize(
         engine->getHandle(),

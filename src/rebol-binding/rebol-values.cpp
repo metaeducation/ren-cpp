@@ -368,7 +368,7 @@ AnyString::AnyString (
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable {array.data()};
+    internal::Loadable loadable = array.data();
 
     if (not engine)
         engine = &Engine::runFinder();
