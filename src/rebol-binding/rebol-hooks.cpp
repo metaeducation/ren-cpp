@@ -410,7 +410,7 @@ public:
                 // get through transcode which returns [foo bar] and
                 // [[foo bar]] that discern the cases
 
-                auto loadText = reinterpret_cast<REBYTE*>(cell->data.integer);
+                auto loadText = reinterpret_cast<REBYTE*>(VAL_HANDLE(cell));
 
                 REBSER * transcoded = Scan_Source(
                     loadText, LEN_BYTES(loadText)

@@ -71,44 +71,6 @@
 
 
 ///
-/// BRIDGES TO FIXED-SIZE CONVERSIONS
-///
-
-//
-// Although 64-bit builds of Rebol do exist, Red is currently focusing on
-// 32-bit architectures for the most part.  Hence there are some places
-// where pointers can't be used and need to be converted to.  Hopefully not
-// too many of these will creep in; but right now there are some by matter
-// of necessity and it's good to point them out.
-//
-
-static_assert(
-    sizeof(void *) == sizeof(int32_t),
-    "building rencpp binding with non 32-bit pointers..."
-    "see evilPointerToInt32Cast in include/rencpp/common.hpp"
-);
-
-static_assert(
-    sizeof(size_t) == sizeof(int32_t),
-    "building rencpp binding with non 32-bit size_t..."
-    "see remarks in include/rencpp/common.hpp"
-);
-
-inline int32_t evilPointerToInt32Cast(void const * somePointer) {
-    return reinterpret_cast<int32_t>(somePointer);
-}
-
-template<class T>
-inline T evilInt32ToPointerCast(int32_t someInt) {
-    static_assert(
-        std::is_pointer<T>::value,
-        "evilInt32ToPointer cast used on non-ptr"
-    );
-    return reinterpret_cast<T>(someInt);
-}
-
-
-///
 /// UNREACHABLE CODE MACRO
 ///
 

@@ -33,7 +33,8 @@ Loadable::Loadable (char const * sourceCstr) :
 {
     // using REB_END as our "alien"
     VAL_SET(&cell, REB_END);
-    cell.data.integer = evilPointerToInt32Cast(sourceCstr);
+    VAL_HANDLE(&cell) =
+        reinterpret_cast<ANYFUNC>(const_cast<char *>(sourceCstr));
 
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
@@ -118,12 +119,12 @@ RebolRuntime::RebolRuntime (bool) :
         bounds = STACK_BOUNDS;
 
 #ifdef OS_STACK_GROWS_UP
-    Stack_Limit = (REBCNT)(&marker) + bounds;
+    Stack_Limit = (uintptr_t)(&marker) + bounds;
 #else
-    if (bounds > (REBCNT)(&marker))
+    if (bounds > (uintptr_t)(&marker))
         Stack_Limit = 100;
     else
-        Stack_Limit = (REBCNT)(&marker) - bounds;
+        Stack_Limit = (uintptr_t)(&marker) - bounds;
 #endif
 
     // Rebytes, version numbers
