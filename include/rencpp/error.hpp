@@ -1,8 +1,8 @@
-#ifndef RENCPP_EXCEPTIONS_HPP
-#define RENCPP_EXCEPTIONS_HPP
+#ifndef RENCPP_ERROR_HPP
+#define RENCPP_ERROR_HPP
 
 //
-// exceptions.hpp
+// error.hpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -24,17 +24,6 @@
 
 #include "values.hpp"
 
-//
-// This is where to place any custom exceptions that are part of the contract
-// between Value-based operations and the user, who may wish to catch these
-// named exceptions and handle them.
-//
-// Exactly how many exceptions will be exposed is up for debate, as opposed
-// to handling the exceptions inside of the code on the other side of the
-// binding and returning a ren::Error.  Also: is it necessary to recreate
-// the entire error! spectrum with a matching exception, or just catch all
-// with one that gives you an error! ?
-//
 
 namespace ren {
 
@@ -44,30 +33,45 @@ namespace ren {
 ///
 
 //
-// If you throw a C++ exception, there is no way for the Ren runtime to
+// Ren has its own competing "exception"-like type called ERROR!.  And
+// if you throw a C++ exception, there is no way for the Ren runtime to
 // catch it.  And in fact, "throw" and "catch" are distinct from Rebol's
-// notion of an error model:
+// notion of "trying" and "raising" an error:
 //
 //     http://stackoverflow.com/questions/24412153/
 //
-// Thus if you create an error and want to "raise it", you should apply it.
+// One way to get the runtime to "raise" an error is to apply it:
 //
-//     Error myerror {"This is my error"};
-//     myerror();
-//
-// If that looks too much like a function call, you could write that as:
-//
-//     Error myerror {"This is my error"};
+//     ren::Error myerror {"Invalid hedgehog found"};
 //     myerror.apply();
+//     throw "Unreachable Code"; // make compiler happy?
 //
-// Whenever a "raised" error bubbles up outside of the Ren evaluator into
-// C++ code, however, it is translated into a ren::evaluation_error object
-// that is derived from std::exception:
+// That should within the guts of apply end up throwing a ren::evaluation_error
+// with the error object inside of it.  Those are derived from std::exception
+// for proper C++ error handling.
+//
+// However, if you know yourself to be writing code that is inside of
+// a ren::Function, a shorthand is provided in the form of:
+//
+//     throw ren::Error {"Invalid hedgehog found"};
+//
+// Because C++ throws cannot be caught by Ren runtime's CATCH, the meaning
+// chosen for throwing an error object is effectively to "raise" an error, as
+// if you had written:
+//
+//     ren::runtime("do make error! {Invalid Hedgehog found}");
+//
+// Yet you should not throw other value types; they will be handled as
+// exceptions if you do.  And when using this convenience, remember that
+// throwing an exception intended to be caught directly by C++ that isn't
+// derived from std::exception is a poor practice:
 //
 //    http://stackoverflow.com/questions/1669514/
 //
-// Because C++ doesn't have a separated mechanism for raising errors besides
-// the exception model, try/catch is used.
+// So if you are writing code that may-or-may-not be inside of a ren::Function,
+// consider throwing a ren::evaluation_error instead of the error directly.
+// That is "universal", and can be processed both by ren::Function as well as
+// in the typical C++ execution stack.
 //
 
 class Error : public Value {
@@ -81,13 +85,6 @@ public:
 };
 
 
-//
-// Both Ren runtime code that is written in C++ and that is not written in
-// C++ is able to raise evaluation errors.  If C++ code, you do this by
-// throwing the ren::Error directly.  However, if you "bubble up" to C++
-// code which is making a call into the runtime, the exception that emerges
-// should derive from std::exception.
-//
 class evaluation_error : public std::exception {
 private:
     Error errorValue;
@@ -109,6 +106,52 @@ public:
     }
 };
 
+
+
+///
+/// CANCELLATION EXCEPTION
+///
+
+//
+// Cancellation of evaluations (such as in the console with ^C) has no
+// user-facing error object in the ren runtime, because it is "meta" and
+// means "stop evaluating".  There is no way to "catch" it.
+//
+// However, when a multithreaded C++ host has an evaluator on one thread
+// and requests a cancellation from another, then this exception will be
+// thrown to the evaluation thread when (and if) the cancellation request
+// is processed.  If running as an interpreted loop, it should (modulo
+// bugs in the interpreter) always be possible to interrupt this way
+// in a timely manner.
+//
+// What should the interface for cancellations of evaluations be?  How might
+// timeouts or quotas of operations be managed?
+//
+// https://github.com/hostilefork/rencpp/issues/19
+
+class evaluation_cancelled : public std::exception {
+public:
+    evaluation_cancelled ()
+    {
+    }
+
+    char const * what() const noexcept override {
+        return "ren::evaluation_cancelled";
+    }
+};
+
+
+
+///
+/// EXIT COMMAND
+///
+
+//
+// This command corresponds to the desire expressed by C's exit(int), however
+// it can be "caught" in Ren runtime by the TRY command when executing nested
+// code.  If your C++ code wraps up a call to the evaluator and you catch
+// this exception, it means the code running either called EXIT or QUIT
+//
 
 class exit_command : public std::exception {
 private:
@@ -133,22 +176,6 @@ public:
     }
 };
 
-
-// What should the interface for cancellations of evaluations be?  How might
-// timeouts or quotas of operations be managed?
-//
-// https://github.com/hostilefork/rencpp/issues/19
-
-class evaluation_cancelled : public std::exception {
-public:
-    evaluation_cancelled ()
-    {
-    }
-
-    char const * what() const noexcept override {
-        return "ren::evaluation_cancelled";
-    }
-};
 
 }
 
