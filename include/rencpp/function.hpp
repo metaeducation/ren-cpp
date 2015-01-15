@@ -448,6 +448,8 @@ private:
         // exceptions the C++ code has thrown.
 
         bool success = true;
+        bool exiting = false;
+        int status;
 
         try {
             // Our applyFun helper does the magic to recursively forward
@@ -497,6 +499,14 @@ private:
             success = false;
             *REN_STACK_RETURN(stack) = e.error().cell;
         }
+        catch (exit_command const & e) {
+
+            // If there was an exit_command received, we have to offer the
+            // ability to upper stacks to do a CATCH/QUIT (CATCH/EXIT?)
+
+            exiting = true;
+            status = e.code();
+        }
         catch (std::exception const & e) {
 
             std::string what = e.what();
@@ -526,7 +536,7 @@ private:
         // Note: trickery!  R_RET is 0, but all other R_ values are
         // meaningless to Red.  So we only use that one here.
 
-        return REN_SHIM_RESULT(stack, success);
+        return REN_SHIM_RESULT(stack, success, exiting, status);
     }
 
 public:

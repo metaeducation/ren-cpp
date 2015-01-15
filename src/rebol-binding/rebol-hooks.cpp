@@ -700,6 +700,12 @@ public:
         return result;
     }
 
+    RenResult RenExit(int status) {
+        REBVAL value;
+        SET_INTEGER(&value, status);
+        Halt_Code(RE_QUIT, &value);
+        UNREACHABLE_CODE();
+    }
 
     ~RebolHooks () {
         assert(nodes.empty());
@@ -793,4 +799,9 @@ RenResult RenFormAsUtf8(
     return ren::internal::hooks.FormAsUtf8(
         engine, value, buffer, bufSize, lengthOut
     );
+}
+
+
+RenResult RenExit(int status) {
+    return ren::internal::hooks.RenExit(status);
 }

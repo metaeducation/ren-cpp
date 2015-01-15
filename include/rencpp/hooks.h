@@ -267,13 +267,13 @@ CASSERT(REN_SUCCESS == R_RET, hooks_h)
  * 128 bit cell on then it might be more useful.
  */
 #define REN_STACK_RETURN(stack) \
-    DSF_RETURN(stack - DS_Base)
+    DSF_RETURN((stack) - DS_Base)
 
 #define REN_STACK_ARGUMENT(stack, index) \
-    DSF_ARGS(stack - DS_Base, (index + 1))
+    DSF_ARGS((stack) - DS_Base, ((index) + 1))
 
 #define REN_STACK_SHIM(stack) \
-    VAL_FUNC_CODE(DSF_FUNC(stack - DS_Base))
+    VAL_FUNC_CODE(DSF_FUNC((stack) - DS_Base))
 
 /*
  * WARNING - Throw_Error uses longjmp to completely undermine the C++
@@ -281,9 +281,9 @@ CASSERT(REN_SUCCESS == R_RET, hooks_h)
  * skip a destructor!
  */
 
-#define REN_SHIM_RESULT(stack, success) \
-    success \
-        ? REN_SUCCESS \
+#define REN_SHIM_RESULT(stack, success, exiting, status) \
+    (success) \
+        ? (exiting) ? RenExit(status) : REN_SUCCESS \
         : (Throw_Error(VAL_SERIES(REN_STACK_RETURN(stack))), REN_SUCCESS)
 
 #else
@@ -295,6 +295,12 @@ CASSERT(0, hooks_h)
 
 typedef RenResult (* RenShimPointer)(RenCell * stack);
 
+
+/*
+ * Unlike the C exit() call, the RenExit call can be "caught" by CATCH/EXIT
+ * Should not return if successful, and shouldn't fail... result is ignored.
+ */
+RenResult RenExit(int status);
 
 /*
  * Cannot use ERROR! as this deals with init and shutdown of the code that

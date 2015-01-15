@@ -23,3 +23,15 @@ exit: func [
 ;-- Can't be a wrapper function because it would return the exit
 end: :system/contexts/lib/exit
 
+
+;-- Rename /QUIT to /EXIT to signify that you're getting the code
+
+catch: func [
+    {Catches a throw from a block and returns its value.}
+    block [block!] "Block to evaluate"
+    /name "Catches a named throw"
+    word [word! block!] "One or more names"
+    /exit "Special catch for EXIT and QUIT natives, returns exit status"
+] [
+    apply :system/contexts/lib/catch [block name word exit]
+]
