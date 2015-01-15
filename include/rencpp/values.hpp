@@ -208,6 +208,8 @@ protected:
     // release the value for GC.
     //
 
+protected:
+    friend class Context;
     RenEngineHandle origin;
 
 
@@ -454,6 +456,8 @@ public:
 public:
     bool isFunction() const;
 
+    bool isContext() const;
+
     bool isError() const;
 
 protected:
@@ -597,13 +601,19 @@ protected:
     Value apply_(
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Context * context
+        Context const * contextPtr = nullptr,
+        Engine * engine = nullptr
     ) const;
 
 public:
     Value apply(
         std::initializer_list<internal::Loadable> loadables,
-        Context * context = nullptr
+        Context const & context
+    ) const;
+
+    Value apply(
+        std::initializer_list<internal::Loadable> loadables,
+        Engine * engine = nullptr
     ) const;
 
     template <typename... Ts>
@@ -684,11 +694,10 @@ protected:
 
     friend class Runtime;
     friend class Engine;
-    friend class Context;
 
     static void constructOrApplyInitialize(
         RenEngineHandle engine,
-        RenContextHandle context,
+        Context const * context,
         Value const * applicand,
         internal::Loadable const loadables[],
         size_t numLoadables,
@@ -954,17 +963,38 @@ protected:
     explicit AnyWord (
         char const * cstr,
         internal::CellFunction cellfun,
-        Context * context = nullptr
+        Context const * context = nullptr,
+        Engine * engine = nullptr
     );
 
+#if REN_CLASSLIB_QT
+    explicit AnyWord (
+        QString const & str,
+        internal::CellFunction cellfun,
+        Context const * context = nullptr,
+        Engine * engine = nullptr
+    );
+#endif
+
+
+protected:
 
 #if REN_CLASSLIB_STD
     explicit AnyWord (
         std::string const & str,
         internal::CellFunction cellfun,
-        Context * context = nullptr
+        Context const & context
     ) :
-        AnyWord (str.c_str(), cellfun, context)
+        AnyWord (str.c_str(), cellfun, &context, nullptr)
+    {
+    }
+
+    explicit AnyWord (
+        std::string const & str,
+        internal::CellFunction cellfun,
+        Engine * engine = nullptr
+    ) :
+        AnyWord (str.c_str(), cellfun, nullptr, engine)
     {
     }
 #endif
@@ -1274,14 +1304,16 @@ protected:
         internal::Loadable const loadables[],
         size_t numLoadables,
         internal::CellFunction cellfun,
-        Context * context
+        Context const * contextPtr,
+        Engine * engine
     );
 
     AnyBlock (
         Value const values[],
         size_t numValues,
         internal::CellFunction cellfun,
-        Context * context
+        Context const * contextPtr,
+        Engine * engine
     );
 };
 
@@ -1310,23 +1342,38 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    explicit AnyWord_ (char const * cstr, Context * context = nullptr) :
-        AnyWord (cstr, F, context)
+    explicit AnyWord_ (char const * cstr, Engine * engine = nullptr) :
+        AnyWord (cstr, F, nullptr, engine)
+    {
+    }
+
+    explicit AnyWord_ (char const * cstr, Context & context) :
+        AnyWord (cstr, F, &context, nullptr)
     {
     }
 
 #if REN_CLASSLIB_STD
-    explicit AnyWord_ (std::string const & str, Context * context = nullptr) :
-        AnyWord (str.c_str(), F, context)
+    explicit AnyWord_ (std::string const & str, Engine * engine = nullptr) :
+        AnyWord (str.c_str(), F, nullptr, engine)
+    {
+    }
+
+    explicit AnyWord_ (std::string const & str, Context & context) :
+        AnyWord (str.c_str(), F, &context, nullptr)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT
-    explicit AnyWord_ (QString const & str, Context * context = nullptr) :
-        AnyWord (str, F, context)
+    explicit AnyWord_ (QString const & str, Engine * engine = nullptr) :
+        AnyWord (str, F, nullptr, engine)
     {
     }
+    explicit AnyWord_ (QString const & str, Context & context) :
+        AnyWord (str, F, &context, nullptr)
+    {
+    }
+
 #endif
 };
 
@@ -1443,22 +1490,56 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyBlock_ (Value const values[], size_t numValues, Context * context) :
-        AnyBlock (values, numValues, F, context)
+    AnyBlock_ (
+        Value const values[],
+        size_t numValues,
+        Context const & context
+    ) :
+        AnyBlock (values, numValues, F, &context, nullptr)
+    {
+    }
+
+    AnyBlock_ (
+        Value const values[],
+        size_t numValues,
+        Engine * engine
+    ) :
+        AnyBlock (values, numValues, F, nullptr, engine)
     {
     }
 
     AnyBlock_ (
         std::initializer_list<Loadable> const & loadables,
-        Context * context = nullptr
+        Context const & context
     ) :
-        AnyBlock (loadables.begin(), loadables.size(), F, context)
+        AnyBlock (loadables.begin(), loadables.size(), F, &context, nullptr)
     {
     }
 
-    AnyBlock_ (Context * context = nullptr) :
-        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, context)
+    AnyBlock_ (Context const & context) :
+        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
     {
+    }
+
+    AnyBlock_ (
+        std::initializer_list<Loadable> const & loadables,
+        Engine * engine = nullptr
+    ) :
+        AnyBlock (loadables.begin(), loadables.size(), F, nullptr, engine)
+    {
+    }
+
+    AnyBlock_ (Engine * engine = nullptr) :
+        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, nullptr, engine)
+    {
+    }
+
+    // A block can be invoked something like a function via DO, so it makes
+    // sense for it to have a way of applying it...but it doesn't take
+    // any "parameters"
+public:
+    inline Value operator()() const {
+        return apply();
     }
 };
 

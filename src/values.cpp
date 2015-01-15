@@ -178,19 +178,19 @@ AnyBlock::AnyBlock (
     internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
-    Context * context
+    Context const * contextPtr,
+    Engine * engine
 ) :
     AnyBlock (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
 
-    if (not context)
-        context = &Context::runFinder(nullptr);
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
 
     constructOrApplyInitialize(
-        context->getEngine().getHandle(),
-        context->getHandle(),
-        nullptr,
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
         loadables,
         numLoadables,
         this, // Do construct
@@ -199,17 +199,44 @@ AnyBlock::AnyBlock (
 }
 
 
+// TBD: Finish version where you can use values directly as an array
+/*
+AnyBlock::AnyBlock (
+    Value const values[],
+    size_t numValues,
+    internal::CellFunction cellfun,
+    Context const * contextPtr,
+    Engine * engine
+) :
+    AnyBlock (Dont::Initialize)
+{
+    (this->*cellfun)(&this->cell);
+
+
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+
+    constructOrApplyInitialize(
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
+        loadables,
+        numLoadables,
+        this, // Do construct
+        nullptr // Don't apply
+    );
+}
+*/
+
+
 AnyWord::AnyWord (
     char const * spelling,
     internal::CellFunction cellfun,
-    Context * context
+    Context const * contextPtr,
+    Engine * engine
 ) :
     Value (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
-
-    if (not context)
-        context = &Context::runFinder(nullptr);
 
     std::string array;
 
@@ -240,16 +267,16 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable = array.data();
 
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+
     constructOrApplyInitialize(
-        context->getEngine().getHandle(),
-        context->getHandle(),
-        nullptr,
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
         &loadable,
         1,
-        // Do construct
-        this,
-        // Don't apply
-        nullptr
+        this, // do construct
+        nullptr // don't apply
     );
 }
 
@@ -259,7 +286,8 @@ AnyWord::AnyWord (
 AnyWord::AnyWord (
     QString const & spelling,
     internal::CellFunction cellfun,
-    Context * context
+    Context const * contextPtr,
+    Engine * engine
 ) :
     Value (Dont::Initialize)
 {
@@ -293,19 +321,16 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable = array.data();
 
-    if (not context)
-        context = &Context::runFinder(nullptr);
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
 
     constructOrApplyInitialize(
-        context->getEngine().getHandle(),
-        context->getHandle(),
-        nullptr,
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
         &loadable,
         1,
-        // Do construct
-        this,
-        // Don't apply
-        nullptr
+        this, // do construct
+        nullptr // don't apply
     );
 }
 #endif
@@ -342,8 +367,8 @@ AnyString::AnyString (
 
     constructOrApplyInitialize(
         engine->getHandle(),
-        REN_CONTEXT_HANDLE_INVALID,
-        nullptr,
+        nullptr, // no context
+        nullptr, // no applicand
         &loadable,
         1,
         this, // Do construct
@@ -360,17 +385,17 @@ AnyString::AnyString (
 Value Value::apply_(
     internal::Loadable const loadables[],
     size_t numLoadables,
-    Context * context
+    Context const * contextPtr,
+    Engine * engine
 ) const {
     Value result {Dont::Initialize};
 
-    if (context == nullptr)
-        context = &Context::runFinder(nullptr);
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
 
     constructOrApplyInitialize(
-        context->getEngine().getHandle(),
-        context->getHandle(),
-        this,
+        context.getEngine(),
+        &context,
+        this, // no applicand
         loadables,
         numLoadables,
         nullptr, // don't construct
@@ -383,17 +408,26 @@ Value Value::apply_(
 
 Value Value::apply(
     std::initializer_list<internal::Loadable> loadables,
-    Context * context
+    Context const & context
 ) const {
     // This one has to be in the implementation file because it appears in
     // Value, using Loadable, which is derived from Value...
-    return apply_(loadables.begin(), loadables.size(), context);
+    return apply_(loadables.begin(), loadables.size(), &context, nullptr);
+}
+
+Value Value::apply(
+    std::initializer_list<internal::Loadable> loadables,
+    Engine * engine
+) const {
+    // This one has to be in the implementation file because it appears in
+    // Value, using Loadable, which is derived from Value...
+    return apply_(loadables.begin(), loadables.size(), nullptr, engine);
 }
 
 
 void Value::constructOrApplyInitialize(
     RenEngineHandle engine,
-    RenContextHandle context,
+    Context const * context,
     Value const * applicand,
     internal::Loadable const loadables[],
     size_t numLoadables,
@@ -404,7 +438,7 @@ void Value::constructOrApplyInitialize(
 
     auto result = ::RenConstructOrApply(
         engine,
-        context,
+        &context->cell,
         &applicand->cell,
         numLoadables != 0 ? &loadables[0].cell : nullptr,
         numLoadables,

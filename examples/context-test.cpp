@@ -10,8 +10,8 @@ int main(int, char **) {
     // returning a local by reference from the setFinder upsets Clang, so we
     // heap allocate
 
-    std::unique_ptr<Context> contextOne {new Context};
-    std::unique_ptr<Context> contextTwo {new Context};
+    Context contextOne {};
+    Context contextTwo {};
 
     // test of making which runtime is used in creates a
     // property of some global factor...
@@ -21,9 +21,9 @@ int main(int, char **) {
     Context::setFinder(
         [&](Engine *) -> Context & {
             if (contextNumber == 1)
-                return *contextOne;
+                return contextOne;
             if (contextNumber == 2)
-                return *contextTwo;
+                return contextTwo;
             throw std::runtime_error("Invalid context number");
         }
     );
@@ -49,11 +49,11 @@ int main(int, char **) {
     // at the moment, let's override it using an additional parameter
     // to the constructor
 
-    auto y = SetWord {"y", contextOne.get()};
+    auto y = SetWord {"y", contextOne};
     y(30);
 
     // Switch active contexts and see that we set y
     contextNumber = 1;
     assert(runtime("integer? get/any 'y"));
-    assert((*contextOne)("integer? get/any 'y"));
+    assert(contextOne("integer? get/any 'y"));
 }

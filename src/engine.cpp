@@ -23,44 +23,21 @@ namespace ren {
 
 Engine::Finder Engine::finder;
 
-Value Runtime::evaluate(
-    internal::Loadable const loadables[],
-    size_t numLoadables,
-    Context * context
-) {
-    Value result {Value::Dont::Initialize};
-
-    if (context == nullptr)
-        context = &Context::runFinder(nullptr);
-
-    Value::constructOrApplyInitialize(
-        context->getEngine().getHandle(),
-        context->getHandle(),
-        nullptr,
-        loadables,
-        numLoadables,
-        nullptr, // don't construct
-        &result // do apply
-    );
-
-    return result;
-}
-
 
 Value Runtime::evaluate(
     internal::Loadable const loadables[],
     size_t numLoadables,
+    Context const * contextPtr,
     Engine * engine
 ) {
     Value result {Value::Dont::Initialize};
 
-    if (engine == nullptr)
-        engine = &Engine::runFinder();
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
 
     Value::constructOrApplyInitialize(
-        engine->getHandle(),
-        REN_CONTEXT_HANDLE_INVALID,
-        nullptr,
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
         loadables,
         numLoadables,
         nullptr, // don't construct

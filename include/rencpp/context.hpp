@@ -28,52 +28,43 @@ namespace ren {
 
 
 ///
-/// CONTEXT OBJECT FOR BINDING
+/// CONTEXT FOR BINDING
 ///
 
 //
-// A Context represents a context for binding.  Words within contexts, once
-// bound, are not isolated from each other--for that you need a separate
-// Engine object.
+// Historically the Rebol language used the terms CONTEXT and OBJECT somewhat
+// interchangeably, although the data type was called OBJECT!  RenCpp embraces
+// the terminology notion that really "object" isn't a very good name for what
+// it does; and standard expectations don't apply.  So there is no ren::Object,
+// only ren::Context.
+//
+// Under Rebol's hood, an object was implemented as a series, but lacking any
+// of the positional properties.
 //
 
 class Engine;
 
-class Context {
+class Context : public Value {
+protected:
+    friend class Value;
+    Context (Dont const &) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isContext(); }
+
 public:
-    using Finder = std::function<Context & (Engine *)>;
+    using Finder = std::function<Context (Engine *)>;
 
 private:
-    friend class Value;
     friend class AnyBlock;
     friend class AnyString;
     friend class AnyWord;
-
-    Engine * enginePtr;
-    RenContextHandle handle;
-    bool needsFree;
+    friend class Runtime;
 
     static Finder finder;
+    RenEngineHandle getEngine() const { return origin; }
 
 public:
-    // Disable copy construction and assignment.
 
-    Context (Context const & other) = delete;
-    Context & operator= (Context const & other) = delete;
-
-
-public:
-    Context (Engine & engine);
-
-    Context (Engine & engine, char const * name);
-
-    Context ();
-
-    Context (char const * name);
-
-    RenContextHandle getHandle() const {
-        return handle;
-    }
+    static Context lookup(char const * name, Engine * engine = nullptr);
 
     static Finder setFinder(
         Finder const & newFinder
@@ -91,31 +82,73 @@ public:
     // Passing as a pointer in order to be able to optimize out the cases
     // where you don't care, but the parameter is there if you want to use it
 
-    static Context & runFinder(Engine * engine);
+    static Context runFinder(Engine * engine);
 
-    Engine & getEngine();
 
-    // Needs to be a static method, as some people who are calling it only
-    // have a handle and no Context object at that point
+    // Patterned after AnyBlock; you can construct a context from the same
+    // data that can be used to make a block.
 protected:
-    friend class Engine;
+    Context (
+        internal::Loadable const loadables[],
+        size_t numLoadables,
+        Context const * contextPtr,
+        Engine * engine
+    );
+
+    Context (
+        Value const values[],
+        size_t numValues,
+        Context const * contextPtr,
+        Engine * engine
+    );
+
 
 public:
-    //
-    // See notes on how close() is used for catching exceptions, while the
-    // destructor should not throw:
-    //
-    //     http://stackoverflow.com/a/130123/211160
-    //
+    Context (
+        Value const values[],
+        size_t numValues,
+        Context const & context
+    ) :
+        Context (values, numValues, &context, nullptr)
+    {
+    }
 
-    void close();
+    Context (
+        Value const values[],
+        size_t numValues,
+        Engine * engine
+    ) :
+        Context (values, numValues, nullptr, engine)
+    {
+    }
 
-    virtual ~Context();
+    Context (
+        std::initializer_list<internal::Loadable> const & loadables,
+        Context const & context // is this contradictory?
+    ) :
+        Context (loadables.begin(), loadables.size(), &context, nullptr)
+    {
+    }
 
+    Context (
+        std::initializer_list<internal::Loadable> const & loadables,
+        Engine * engine = nullptr
+    ) :
+        Context (loadables.begin(), loadables.size(), nullptr, engine)
+    {
+    }
+
+    Context (Engine * engine = nullptr) :
+        Context (static_cast<internal::Loadable *>(nullptr), 0, nullptr, engine)
+    {
+    }
+
+    // If you use the apply operation in a context, then it means "do this
+    // code in this context"
 public:
     template <typename... Ts>
     Value operator()(Ts... args) {
-        return Runtime::evaluate({args...}, this);
+        return Runtime::evaluate({args...}, *this);
     }
 };
 

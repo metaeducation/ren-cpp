@@ -161,13 +161,6 @@ const struct RedEngineHandle RED_ENGINE_HANDLE_INVALID = {-1};
 #define RED_IS_ENGINE_HANDLE_INVALID(handle) \
     ((handle).data == RED_ENGINE_HANDLE_INVALID.data)
 
-struct RedContextHandle {
-    void * pointer;
-};
-const struct RedContextHandle RED_CONTEXT_HANDLE_INVALID = {nullptr};
-#define RED_IS_CONTEXT_HANDLE_INVALID(handle) \
-    ((handle).pointer == RED_CONTEXT_HANDLE_INVALID.pointer)
-
 
 /**
  ** MAP RED TYPES TO REN EQUIVALENTS
@@ -179,9 +172,6 @@ typedef RedEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID RED_ENGINE_HANDLE_INVALID
 #define REN_IS_ENGINE_HANDLE_INVALID RED_IS_ENGINE_HANDLE_INVALID
 
-typedef RedContextHandle RenContextHandle;
-#define REN_CONTEXT_HANDLE_INVALID RED_CONTEXT_HANDLE_INVALID
-#define REN_IS_CONTEXT_HANDLE_INVALID RED_IS_CONTEXT_HANDLE_INVALID
 
 /*
  * The Red runtime is still fake for the moment, so no real convention for the
@@ -225,12 +215,6 @@ const struct RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
 #define REBOL_IS_ENGINE_HANDLE_INVALID(handle) \
     ((handle).data == REBOL_ENGINE_HANDLE_INVALID.data)
 
-struct RebolContextHandle {
-    REBSER * series;
-};
-const struct RebolContextHandle REBOL_CONTEXT_HANDLE_INVALID = {nullptr};
-#define REBOL_IS_CONTEXT_HANDLE_INVALID(handle) \
-    ((handle).series == REBOL_CONTEXT_HANDLE_INVALID.series)
 
 /**
  ** MAP REBOL TYPES TO REN EQUIVALENTS
@@ -242,9 +226,6 @@ typedef RebolEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
-typedef RebolContextHandle RenContextHandle;
-#define REN_CONTEXT_HANDLE_INVALID REBOL_CONTEXT_HANDLE_INVALID
-#define REN_IS_CONTEXT_HANDLE_INVALID REBOL_IS_CONTEXT_HANDLE_INVALID
 
 
 /*
@@ -321,34 +302,11 @@ RenResult RenFreeEngine(RenEngineHandle engine);
  * to bind.  System contexts or otherwise may be looked up by name.
  */
 
-RenResult RenAllocContext(
-    RenEngineHandle engine,
-    RenContextHandle * contextOut
-);
-
-RenResult RenFreeContext(RenEngineHandle engine, RenContextHandle context);
-
 RenResult RenFindContext(
     RenEngineHandle engine,
     char const * name,
-    RenContextHandle * contextOut
+    RenCell * contextOut
 );
-
-#ifdef RUNTIMES_MUST_FETCH_ENGINE_GIVEN_CONTEXT
-
-/*
- * Binding keeps track of engine for every value and can always use the right
- * one, but should the runtime have to be able to reverse map them?
- *
- *     https: *github.com/hostilefork/rencpp/issues/16
- */
-
-RenResult RenGetEngineForContext(
-    RenContextHandle context,
-    RenEngineHandle * engineOut
-);
-
-#endif
 
 
 /*
@@ -367,7 +325,7 @@ RenResult RenGetEngineForContext(
 
 RenResult RenConstructOrApply(
     RenEngineHandle engine,
-    RenContextHandle context,
+    RenCell const * context,
     RenCell const * applicand,
     RenCell const * loadablesCell,
     size_t numLoadables,

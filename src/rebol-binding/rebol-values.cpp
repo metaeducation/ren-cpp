@@ -292,6 +292,10 @@ bool Value::isFunction() const {
         or IS_ACTION(&cell);
 }
 
+bool Value::isContext() const {
+    return IS_OBJECT(&cell);
+}
+
 bool Value::isError() const {
     return IS_ERROR(&cell);
 }
@@ -375,14 +379,12 @@ AnyString::AnyString (
 
     constructOrApplyInitialize(
         engine->getHandle(),
-        REN_CONTEXT_HANDLE_INVALID,
-        nullptr,
+        nullptr, // no context
+        nullptr, // no applicand
         &loadable,
         1,
-        // Do construct
-        this,
-        // Don't apply
-        nullptr
+        this, // do construct
+        nullptr // don't apply
     );
 }
 #endif
@@ -528,8 +530,8 @@ Error::Error (const char * msg, Engine * engine) :
 
     constructOrApplyInitialize(
         engine->getHandle(),
-        REN_CONTEXT_HANDLE_INVALID,
-        nullptr,
+        nullptr, // no context
+        nullptr, // no applicand
         &loadable,
         1,
         this, // Do construct

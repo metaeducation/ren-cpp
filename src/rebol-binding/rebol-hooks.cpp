@@ -196,99 +196,36 @@ public:
 
 
 ///
-/// CONTEXT ALLOCATION AND FREEING
+/// CONTEXT FINDING
 ///
-
-    RenResult AllocContext(
-        RebolEngineHandle engine,
-        RebolContextHandle * contextOut
-    ) {
-        lazyThreadInitializeIfNeeded(engine);
-
-        assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
-        assert(engine.data == theEngine.data);
-
-        if (not allocatedContexts) {
-            allocatedContexts = Make_Block(10);
-
-            // Protect from GC (thus protecting contents)
-            // It's not entirely clear if this is implemented.
-            /* SERIES_SET_FLAG(allocatedContexts, SER_EXT);*/
-            SAVE_SERIES(allocatedContexts);
-        }
-
-        REBVAL block;
-        Set_Block(&block, Make_Block(10));
-        REBVAL * object = Append_Value(allocatedContexts);
-        Set_Object(object, Make_Object(nullptr, &block));
-
-        contextOut->series = VAL_OBJ_FRAME(object);
-
-        return REN_SUCCESS;
-    }
-
-
-    RenResult FreeContext(
-        RebolEngineHandle engine,
-        RebolContextHandle context
-    ) {
-        lazyThreadInitializeIfNeeded(engine);
-
-        assert(allocatedContexts);
-
-        bool removed = false;
-        for (REBCNT index = 0; index < BLK_LEN(allocatedContexts); index++) {
-            assert(IS_OBJECT(BLK_SKIP(allocatedContexts, index)));
-            if (
-                context.series
-                == VAL_OBJ_FRAME(BLK_SKIP(allocatedContexts, index))
-            ) {
-                Remove_Series(allocatedContexts, index, 1);
-                removed = true;
-                break;
-            }
-        }
-
-        if (not removed)
-            throw std::runtime_error("Couldn't find context in FreeContext");
-
-        if (BLK_LEN(allocatedContexts) == 0) {
-            // Allow GC
-            /*SERIES_CLR_FLAG(allocatedContexts, SER_EXT); */
-            UNSAVE_SERIES(allocatedContexts);
-        }
-
-        return REN_SUCCESS;
-    }
 
 
     RenResult FindContext(
         RebolEngineHandle engine,
         char const * name,
-        RebolContextHandle * contextOut
+        RenCell * contextOut
     ) {
         lazyThreadInitializeIfNeeded(engine);
 
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
-        REBSER * ctx = nullptr;
+        REBSER * frame = nullptr;
         if (strcmp(name, "USER") == 0)
-            ctx = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER));
+            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER));
         else if (strcmp(name, "LIB") == 0)
-            ctx = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_LIB));
+            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_LIB));
         if (strcmp(name, "SYS") == 0)
-            ctx = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
+            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
 
         // don't expose CTX_ROOT?
 
-        if (ctx) {
-            contextOut->series = ctx;
+        if (frame) {
+            SET_OBJECT(contextOut, frame);
             return REN_SUCCESS;
-        } else {
-            *contextOut = REBOL_CONTEXT_HANDLE_INVALID;
-            return REN_ERROR_NO_SUCH_CONTEXT;
         }
+
+        return REN_ERROR_NO_SUCH_CONTEXT;
     }
 
 
@@ -368,7 +305,7 @@ public:
 
     RenResult ConstructOrApply(
         RebolEngineHandle engine,
-        RebolContextHandle context,
+        REBVAL const * context,
         REBVAL const * applicand,
         REBVAL const * loadablesPtr,
         size_t numLoadables,
@@ -479,14 +416,14 @@ public:
                     loadText, LEN_BYTES(loadText)
                 );
 
-                if (not REN_IS_CONTEXT_HANDLE_INVALID(context)) {
+                if (context) {
                     // Binding Do_String did by default...except it only
                     // worked with the user context.  Fell through to lib.
 
-                    REBCNT len = context.series->tail;
+                    REBCNT len = VAL_OBJ_FRAME(context)->tail;
 
                     Bind_Block(
-                        context.series,
+                        VAL_OBJ_FRAME(context),
                         BLK_HEAD(transcoded),
                         BIND_ALL | BIND_DEEP
                     );
@@ -495,7 +432,7 @@ public:
                     SET_INTEGER(&vali, len);
 
                     Resolve_Context(
-                        context.series, Lib_Context, &vali, FALSE, 0
+                        VAL_OBJ_FRAME(context), Lib_Context, &vali, FALSE, 0
                     );
                 }
 
@@ -551,6 +488,20 @@ public:
                 // Depending on how much was set in the "datatype in" we may
                 // not have to rewrite the header bits, as Set_Series does.
                 Set_Series(resultType, constructOutDatatypeIn, aggregate);
+            }
+            else if (IS_OBJECT(constructOutDatatypeIn)) {
+                // They want to create a "Context"; so we need to execute
+                // the aggregate as per Make_Object.  First parameter to
+                // Make_Object is the parent object series.  At the moment
+                // we don't have an interface to give a context a parent
+                // from RenCpp
+
+                REBVAL block;
+                Set_Block(&block, aggregate);
+                REBSER * frame = Make_Object(nullptr, &block);
+
+                // This sets REB_OBJECT in the header, possibly redundantly
+                Set_Object(constructOutDatatypeIn, frame);
             }
             else {
                 // If they didn't want a block, then they better want the type
@@ -729,23 +680,10 @@ RenResult RenFreeEngine(RebolEngineHandle engine) {
 }
 
 
-RenResult RenAllocContext(
-    RebolEngineHandle engine,
-    RebolContextHandle * contextOut
-) {
-    return ren::internal::hooks.AllocContext(engine, contextOut);
-}
-
-
-RenResult RenFreeContext(RenEngineHandle engine, RenContextHandle context) {
-    return ren::internal::hooks.FreeContext(engine, context);
-}
-
-
 RenResult RenFindContext(
     RenEngineHandle engine,
     char const * name,
-    RenContextHandle *contextOut
+    REBVAL * contextOut
 ) {
     return ren::internal::hooks.FindContext(engine, name, contextOut);
 }
@@ -753,7 +691,7 @@ RenResult RenFindContext(
 
 RenResult RenConstructOrApply(
     RebolEngineHandle engine,
-    RebolContextHandle context,
+    REBVAL const * context,
     REBVAL const * valuePtr,
     REBVAL const * loadablesPtr,
     size_t numLoadables,

@@ -27,77 +27,92 @@ namespace ren {
 
 Context::Finder Context::finder;
 
-Context::Context (Engine & engine) :
-    enginePtr (&engine),
-    needsFree (true)
-{
-    if (::RenAllocContext(engine.handle, &handle) != REN_SUCCESS)
-        throw std::runtime_error ("Couldn't initialize red runtime");
-}
 
 
-Context::Context (Engine & engine, const char * name) :
-    enginePtr (&engine),
-    needsFree (false)
+Context Context::lookup(const char * name, Engine * engine)
 {
-    if (::RenFindContext(engine.handle, name, &handle) != REN_SUCCESS)
+    Context result (Dont::Initialize);
+
+    if (::RenFindContext(engine->handle, name, &result->cell) != REN_SUCCESS)
         throw std::runtime_error ("Couldn't find named context");
+
+    result->finishInit(engine);
+    return result;
 }
 
 
-Context::Context () :
-    Context (Engine::runFinder())
-{
-}
 
-
-Context::Context (const char * name) :
-    Context (Engine::runFinder(), name)
-{
-}
-
-
-Engine & Context::getEngine() {
-    // Technically we do not need to hold onto the engine handle.
-    // We should be able to use ::RenGetEngineForContext and look up
-    // the engine object instance from that, if we tracked engines
-    // globally somehow.  Just stowing a pointer for now as we don't
-    // expect a lot of contexts being created any time soon.
-
-    return *enginePtr;
-}
-
-
-Context & Context::runFinder(Engine * enginePtr) {
+Context Context::runFinder(Engine * engine) {
     if (not finder) {
-        finder = [] (Engine * enginePtr) -> Context & {
-            if (not enginePtr)
-                enginePtr = &Engine::runFinder();
+        finder = [] (Engine * engine) -> Context & {
+            if (not engine)
+                engine = &Engine::runFinder();
 
-            static Context user (*enginePtr, "USER");
+            static Context user = lookup("USER", engine);
             return user;
         };
     }
-    return finder(enginePtr);
+    return finder(engine);
+}
+
+
+Context::Context (
+    internal::Loadable const loadables[],
+    size_t numLoadables,
+    Context const * contextPtr,
+    Engine * engine
+) :
+    Value (Dont::Initialize)
+{
+    VAL_SET(&cell, REB_OBJECT);
+
+    // Here, a null context pointer means null.  No finder is invoked.
+
+    RenEngineHandle realEngine = contextPtr ? contextPtr->getEngine() :
+        (engine ? engine->getHandle() : Engine::runFinder().getHandle());
+
+    constructOrApplyInitialize(
+        realEngine,
+        contextPtr,
+        nullptr, // no applicand
+        loadables,
+        numLoadables,
+        this, // Do construct
+        nullptr // Don't apply
+    );
 }
 
 
 
-void Context::close() {
-    auto releaseMe = handle;
-    handle = REN_CONTEXT_HANDLE_INVALID;
-    if (needsFree)
-        if (::RenFreeContext(enginePtr->handle, releaseMe) != REN_SUCCESS) {
-            throw std::runtime_error ("Failed to shut down red environment");
-        }
-    enginePtr = nullptr;
+// TBD: Finish version where you can use values directly as an array
+/*
+
+Context::Context (
+    Value const values[],
+    size_t numValues,
+    Context const * contextPtr,
+    Engine * engine
+) :
+    Value (Dont::Initialize)
+{
+    VAL_SET(&cell, REB_OBJECT);
+
+    // Here, a null context pointer means null.  No finder is invoked.
+
+    RenEngineHandle realEngine = contextPtr ? contextPtr->getEngine() :
+        (engine ? engine->getHandle() : Engine::runFinder().getHandle());
+
+    constructOrApplyInitialize(
+        realEngine,
+        nullptr, // no applicand
+        loadables,
+        numLoadables,
+        this, // Do construct
+        nullptr // Don't apply
+    );
 }
 
+*/
 
-Context::~Context() {
-    if (needsFree and not(REN_IS_CONTEXT_HANDLE_INVALID(handle)))
-        ::RenFreeContext(enginePtr->handle, handle);
-    handle = REN_CONTEXT_HANDLE_INVALID;
-}
 
-}
+} // end namespace ren

@@ -60,12 +60,7 @@ protected:
     static Value evaluate(
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Context * context
-    );
-
-    static Value evaluate(
-        internal::Loadable const loadables[],
-        size_t numLoadables,
+        Context const * contextPtr,
         Engine * engine
     );
 
@@ -74,24 +69,27 @@ public:
         std::initializer_list<internal::Loadable> loadables,
         Engine * engine = nullptr
     ) {
-        return evaluate(loadables.begin(), loadables.size(), engine);
+        return evaluate(loadables.begin(), loadables.size(), nullptr, engine);
     }
 
     static Value evaluate(
         std::initializer_list<internal::Loadable> loadables,
-        Context * context = nullptr
+        Context const & context
     ) {
-        return evaluate(loadables.begin(), loadables.size(), context);
+        return evaluate(loadables.begin(), loadables.size(), &context, nullptr);
     }
 
-    template <typename... Ts>
+    // Has ambiguity error from trying to turn the nullptr into a Loadable;
+    // investigate what it is about the static method that has this problem
+
+    /*template <typename... Ts>
     static inline Value evaluate(Ts const &... args) {
-        return evaluate({args...}, static_cast<Context *>(nullptr));
-    }
+        return evaluate({args...}, static_cast<Engine *>(nullptr));
+    }*/
 
     template <typename... Ts>
     inline Value operator()(Ts const &... args) const {
-        return evaluate({args...}, static_cast<Context *>(nullptr));
+        return evaluate({args...}, static_cast<Engine *>(nullptr));
     }
 
 
