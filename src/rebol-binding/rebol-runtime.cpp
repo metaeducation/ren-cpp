@@ -22,6 +22,11 @@ RebolRuntime runtime {true};
 
 namespace internal {
 
+Loadable::Loadable () :
+    Loadable (Block {})
+{
+}
+
 Loadable::Loadable (char const * sourceCstr) :
     Value (Value::Dont::Initialize)
 {
@@ -31,6 +36,11 @@ Loadable::Loadable (char const * sourceCstr) :
 
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
+}
+
+Loadable::Loadable (std::initializer_list<Loadable> loadables) :
+    Value (Block(loadables))
+{
 }
 
 } // end namespace internal

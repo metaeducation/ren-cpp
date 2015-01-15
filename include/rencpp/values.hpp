@@ -1399,11 +1399,15 @@ public:
 
     // Constructor inheritance does not inherit move or copy constructors
 
+    Loadable ();
+
     Loadable (Value const & value) : Value (value) {}
 
     Loadable (Value && value) : Value (value) {}
 
     Loadable (char const * source);
+
+    Loadable (std::initializer_list<Loadable> args);
 
 #if REN_CLASSLIB_STD == 1
     Loadable (std::string const & source) :
