@@ -242,7 +242,7 @@ protected:
 
 protected:
     enum class Dont {Initialize};
-    Value (Dont const &);
+    Value (Dont);
 
     void finishInit(RenEngineHandle engine);
     void finishInit(Engine * engine = nullptr);
@@ -253,7 +253,7 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct_(Dont const &) {
+    static T construct_(Dont) {
         return T {Dont::Initialize};
     }
 
@@ -313,7 +313,7 @@ public:
       constexpr unset_t(init) {}
     };
 
-    Value (unset_t const &, Engine * engine = nullptr);
+    Value (unset_t, Engine * engine = nullptr);
 
     bool isUnset() const;
 
@@ -340,7 +340,7 @@ public:
       constexpr none_t(init) {}
     };
 
-    Value (none_t const &, Engine * engine = nullptr);
+    Value (none_t, Engine * engine = nullptr);
 
 
 public:
@@ -353,7 +353,7 @@ public:
     //
     // http://stackoverflow.com/questions/6242768/
     //
-    Value (bool const & b, Engine * engine = nullptr);
+    Value (bool b, Engine * engine = nullptr);
 
     bool isLogic() const;
 
@@ -376,14 +376,14 @@ public:
 
 
 public:
-    Value (char const & c, Engine * engine = nullptr);
-    Value (wchar_t const & wc, Engine * engine = nullptr);
+    Value (char c, Engine * engine = nullptr);
+    Value (wchar_t wc, Engine * engine = nullptr);
 
     bool isCharacter() const;
 
 
 public:
-    Value (int const & i, Engine * engine = nullptr);
+    Value (int i, Engine * engine = nullptr);
 
     bool isInteger() const;
 
@@ -391,7 +391,7 @@ public:
 public:
     // Literals are double by default unless you suffix with "f"
     //     http://stackoverflow.com/a/4353788/211160
-    Value (double const & d, Engine * engine = nullptr);
+    Value (double d, Engine * engine = nullptr);
 
     bool isFloat() const;
 
@@ -734,7 +734,7 @@ constexpr Value::unset_t unset {Value::unset_t::init{}};
 class Unset : public Value {
 protected:
     friend class Value;
-    Unset (Dont const &) : Value (Dont::Initialize) {}
+    Unset (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
 public:
@@ -745,7 +745,7 @@ public:
 class None : public Value {
 protected:
     friend class Value;
-    None (Dont const &) : Value (Dont::Initialize) {}
+    None (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isNone(); }
 
 public:
@@ -768,7 +768,7 @@ public:
 //
 // protected:
 //    friend class Value;
-//    Foo (Dont const &) : Value (Dont::Initialize) {}
+//    Foo (Dont) : Value (Dont::Initialize) {}
 //    inline bool isValid() const { return ...; }
 //
 // These are needed by the base class casting operator in Value, which has
@@ -781,11 +781,11 @@ public:
 class Logic : public Value {
 protected:
     friend class Value;
-    Logic (Dont const &) : Value (Dont::Initialize) {}
+    Logic (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
 public:
-    explicit Logic (bool const & b, Engine * engine = nullptr) :
+    explicit Logic (bool b, Engine * engine = nullptr) :
         Value (b, engine)
     {
     }
@@ -810,21 +810,21 @@ class Character : public Value {
 protected:
     friend class Value;
     friend class AnyString;
-    Character (Dont const &) : Value (Dont::Initialize) {}
+    Character (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
 
 public:
-    Character (char const & c, Engine * engine = nullptr) :
+    Character (char c, Engine * engine = nullptr) :
         Value (c, engine)
     {
     }
 
-    Character (wchar_t const & wc, Engine * engine = nullptr) :
+    Character (wchar_t wc, Engine * engine = nullptr) :
         Value (wc, engine)
     {
     }
 
-    Character (int const & i, Engine * engine = nullptr);
+    Character (int i, Engine * engine = nullptr);
 
 
     // Characters represent codepoints.  These conversion operators are for
@@ -855,11 +855,11 @@ public:
 class Integer : public Value {
 protected:
     friend class Value;
-    Integer (Dont const &) : Value (Dont::Initialize) {}
+    Integer (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
 public:
-    Integer (int const & i, Engine * engine = nullptr) :
+    Integer (int i, Engine * engine = nullptr) :
         Value (i, engine)
     {
     }
@@ -871,11 +871,11 @@ public:
 class Float : public Value {
 protected:
     friend class Value;
-    Float (Dont const &) : Value (Dont::Initialize) {}
+    Float (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
 public:
-    Float (double const & d, Engine * engine = nullptr) :
+    Float (double d, Engine * engine = nullptr) :
         Value (d, engine)
     {
     }
@@ -887,7 +887,7 @@ public:
 class Date : public Value {
 protected:
     friend class Value;
-    Date (Dont const &) : Value (Dont::Initialize) {}
+    Date (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 
 public:
@@ -928,7 +928,7 @@ using CellFunction = bool (Value::*)(RenCell *) const;
 class Series_ : public Value {
 protected:
     friend class Value;
-    Series_ (Dont const &) : Value (Dont::Initialize) {}
+    Series_ (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
 public:
@@ -958,7 +958,7 @@ public:
 class AnyWord : public Value {
 protected:
     friend class Value;
-    AnyWord (Dont const &) : Value (Dont::Initialize) {}
+    AnyWord (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isAnyWord(); }
 
 protected:
@@ -1059,7 +1059,7 @@ inline QString AnyWord::spellingOf<QString>() const {
 class Series : public ren::internal::Series_ {
 protected:
     friend class Value;
-    Series (Dont const &) : Series_ (Dont::Initialize) {}
+    Series (Dont) : Series_ (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
     //
@@ -1136,7 +1136,7 @@ class AnyString : public Series
 {
 protected:
     friend class Value;
-    AnyString (Dont const &) : Series (Dont::Initialize) {}
+    AnyString (Dont) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyString(); }
 
 protected:
@@ -1286,7 +1286,7 @@ inline QString AnyString::spellingOf<QString>() const {
 class AnyBlock : public Series {
 protected:
     friend class Value;
-    AnyBlock (Dont const &) : Series (Dont::Initialize) {}
+    AnyBlock (Dont) : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyBlock(); }
 
 protected:
@@ -1339,7 +1339,7 @@ template <class C, CellFunction F>
 class AnyWord_ : public AnyWord {
 protected:
     friend class Value;
-    AnyWord_ (Dont const &) : AnyWord (Dont::Initialize) {}
+    AnyWord_ (Dont) : AnyWord (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
@@ -1383,7 +1383,7 @@ template <class C, CellFunction F>
 class AnyString_ : public AnyString {
 protected:
     friend class Value;
-    AnyString_ (Dont const &) : AnyString (Dont::Initialize) {}
+    AnyString_ (Dont) : AnyString (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
@@ -1484,7 +1484,7 @@ template <class C, CellFunction F>
 class AnyBlock_ : public AnyBlock {
 protected:
     friend class Value;
-    AnyBlock_ (Dont const &) : AnyBlock (Dont::Initialize) {}
+    AnyBlock_ (Dont) : AnyBlock (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
@@ -1763,7 +1763,7 @@ public:
 class Error : public Value {
 protected:
     friend class Value;
-    Error (Dont const &) : Value (Dont::Initialize) {}
+    Error (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isError(); }
 
 public:

@@ -91,7 +91,7 @@ namespace internal {
 class Function : public Value {
 protected:
     friend class Value;
-    Function (Dont const &) : Value (Dont::Initialize) {}
+    Function (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFunction(); }
 
 private:

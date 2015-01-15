@@ -38,7 +38,7 @@ bool Value::needsRefcount() const {
 // it cannot be safely freed.  A bad refcount pointer combined with bad data
 // would be a problem.  Review this issue.
 
-Value::Value (Dont const &) :
+Value::Value (Dont) :
     refcountPtr {nullptr}
 {
 }

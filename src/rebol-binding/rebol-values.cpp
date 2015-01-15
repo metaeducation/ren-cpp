@@ -25,49 +25,49 @@ bool Value::isSameAs(Value const & other) const {
 }
 
 
-Value::Value (unset_t const &, Engine * engine) :
+Value::Value (unset_t, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_UNSET(&cell);
     finishInit(engine);
 }
 
-Value::Value (none_t const &, Engine * engine) :
+Value::Value (none_t, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_NONE(&cell);
     finishInit(engine);
 }
 
-Value::Value (bool const & someBool, Engine * engine) :
+Value::Value (bool someBool, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_LOGIC(&cell, someBool);
     finishInit(engine);
 }
 
-Value::Value (char const & c, Engine * engine) :
+Value::Value (char c, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, c);
     finishInit(engine);
 }
 
-Value::Value (wchar_t const & wc, Engine * engine) :
+Value::Value (wchar_t wc, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, wc);
     finishInit(engine);
 }
 
-Value::Value (int const & someInt, Engine * engine) :
+Value::Value (int someInt, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_INTEGER(&cell, someInt);
     finishInit(engine);
 }
 
-Value::Value (double const & someDouble, Engine * engine) :
+Value::Value (double someDouble, Engine * engine) :
     Value (Dont::Initialize)
 {
     SET_DECIMAL(&cell, someDouble);

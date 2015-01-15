@@ -47,7 +47,7 @@ class Engine;
 class Context : public Value {
 protected:
     friend class Value;
-    Context (Dont const &) : Value (Dont::Initialize) {}
+    Context (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isContext(); }
 
 public:

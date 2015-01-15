@@ -84,10 +84,10 @@ public:
     };
 
     inline static RedCell makeCell4(
-        int32_t const & header,
-        int32_t const & data1,
-        int32_t const & data2,
-        int32_t const & data3
+        int32_t header,
+        int32_t data1,
+        int32_t data2,
+        int32_t data3
     ) {
         RedCell result;
         result.header = header;
@@ -98,9 +98,9 @@ public:
     }
 
     inline static RedCell makeCell3(
-        int32_t const & header,
-        int32_t const & data1,
-        double const & dataD
+        int32_t header,
+        int32_t data1,
+        double dataD
     ) {
         // checked only at compile time
         static_assert(
