@@ -6,6 +6,7 @@
 
 #include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
+#include "rencpp/blocks.hpp"
 
 // Implemented in rebol-runtime.cpp - we don't really do anything other than
 // keep the Rebol request states of open/closed happy, it's a stub and we

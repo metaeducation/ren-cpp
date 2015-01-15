@@ -39,6 +39,48 @@
 namespace ren {
 
 
+///
+/// ERROR VALUE
+///
+
+//
+// If you throw a C++ exception, there is no way for the Ren runtime to
+// catch it.  And in fact, "throw" and "catch" are distinct from Rebol's
+// notion of an error model:
+//
+//     http://stackoverflow.com/questions/24412153/
+//
+// Thus if you create an error and want to "raise it", you should apply it.
+//
+//     Error myerror {"This is my error"};
+//     myerror();
+//
+// If that looks too much like a function call, you could write that as:
+//
+//     Error myerror {"This is my error"};
+//     myerror.apply();
+//
+// Whenever a "raised" error bubbles up outside of the Ren evaluator into
+// C++ code, however, it is translated into a ren::evaluation_error object
+// that is derived from std::exception:
+//
+//    http://stackoverflow.com/questions/1669514/
+//
+// Because C++ doesn't have a separated mechanism for raising errors besides
+// the exception model, try/catch is used.
+//
+
+class Error : public Value {
+protected:
+    friend class Value;
+    Error (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isError(); }
+
+public:
+    Error (const char * msg, Engine * engine = nullptr);
+};
+
+
 //
 // Both Ren runtime code that is written in C++ and that is not written in
 // C++ is able to raise evaluation errors.  If C++ code, you do this by

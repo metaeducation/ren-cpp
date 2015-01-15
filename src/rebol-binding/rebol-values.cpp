@@ -1,8 +1,14 @@
 #include <stdexcept>
 
 #include "rencpp/values.hpp"
+#include "rencpp/indivisibles.hpp"
+#include "rencpp/words.hpp"
+#include "rencpp/series.hpp"
+#include "rencpp/strings.hpp"
+#include "rencpp/blocks.hpp"
 #include "rencpp/context.hpp"
 #include "rencpp/engine.hpp"
+#include "rencpp/error.hpp"
 
 #include "rencpp/rebol.hpp"
 

@@ -20,7 +20,10 @@
 #include <vector>
 
 #include "rencpp/values.hpp"
-#include "rencpp/exceptions.hpp"
+#include "rencpp/blocks.hpp"
+#include "rencpp/strings.hpp"
+#include "rencpp/words.hpp"
+#include "rencpp/error.hpp"
 #include "rencpp/runtime.hpp"
 #include "rencpp/engine.hpp"
 #include "rencpp/context.hpp"

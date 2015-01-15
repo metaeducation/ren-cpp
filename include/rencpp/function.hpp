@@ -29,8 +29,11 @@
 
 #include <mutex> // global table must be protected for thread safety
 
-#include "exceptions.hpp"
 #include "values.hpp"
+#include "indivisibles.hpp"
+#include "blocks.hpp"
+#include "error.hpp"
+
 #include "engine.hpp"
 
 namespace ren {

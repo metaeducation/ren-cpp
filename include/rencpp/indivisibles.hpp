@@ -1,0 +1,253 @@
+#ifndef RENCPP_INDIVISIBLES_HPP
+#define RENCPP_INDIVISIBLES_HPP
+
+//
+// indivisibles.hpp
+// This file is part of RenCpp
+// Copyright (C) 2015 HostileFork.com
+//
+// Licensed under the Boost License, Version 1.0 (the "License")
+//
+//      http://www.boost.org/LICENSE_1_0.txt
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied.  See the License for the specific language governing
+// permissions and limitations under the License.
+//
+// See http://rencpp.hostilefork.com for more information on this project
+//
+
+#include "values.hpp"
+
+//
+// These classes inherit from Value, without inheriting Value's constructors.
+// Since they inherited from Value you can pass them places that are
+// expecting a Value.  However, a static_cast<> must be used if you want
+// to go the other way (which may throw an exception on a bad cast).
+//
+// At minimum, each derived class must provide these methods:
+//
+// protected:
+//    friend class Value;
+//    Foo (Dont) : Value (Dont::Initialize) {}
+//    inline bool isValid() const { return ...; }
+//
+// These are needed by the base class casting operator in Value, which has
+// to be able to ask if the result of a cast is a valid instance for the
+// specific or general type.  We're trying not to pay for virtual dispatch
+// here, which is why it's so weird...and we don't want to expose this
+// internal to users--which is why Value needs to be a friend.
+//
+
+//
+// Note: Since series act as values themselves, series/value aren't antonyms.
+// This file could be called "atomics" but that is confusing with std::atomic.
+// It's called the deliberately strange "indivisbles" so that the first person
+// who notices it (and hates it enough to want to change it) can do the
+// legwork of giving it a better name.
+//
+
+namespace ren {
+
+
+///
+/// NONE AND UNSET CONSTRUCTION
+///
+
+//
+// It makes sense to be able to create None and Unset *values*, which you
+// can do with Value construction.  But why would you need a static type
+// for the None and Unset *classes* in C++?  Do you need to statically
+// check to make sure someone actually passed you a None?  :-/
+//
+// For completeness they are included for the moment, but are very unlikely
+// to be useful in practice.  They really only make sense as instances of
+// the Value base class.
+//
+
+constexpr Value::none_t none {Value::none_t::init{}};
+
+constexpr Value::unset_t unset {Value::unset_t::init{}};
+
+class Unset : public Value {
+protected:
+    friend class Value;
+    Unset (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isUnset(); }
+
+public:
+    Unset (Engine * engine = nullptr) : Value (unset, engine) {}
+};
+
+
+class None : public Value {
+protected:
+    friend class Value;
+    None (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isNone(); }
+
+public:
+    explicit None (Engine * engine = nullptr) : Value(none, engine) {}
+};
+
+
+
+///
+/// LOGIC
+///
+
+class Logic : public Value {
+protected:
+    friend class Value;
+    Logic (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isLogic(); }
+
+public:
+    explicit Logic (bool b, Engine * engine = nullptr) :
+        Value (b, engine)
+    {
+    }
+
+    // Trick so that Logic can be implicitly constructed from
+    // bool but not from a type implicitly convertible to bool.
+    //
+    //     https://github.com/hostilefork/rencpp/issues/24
+    //
+
+    template <typename T>
+    Logic (const T & value, Engine * engine = nullptr) :
+        Logic (bool(utility::safe_bool(value)), engine)
+    {
+    }
+
+    operator bool () const;
+};
+
+
+
+///
+/// CHARACTER
+///
+
+class Character : public Value {
+protected:
+    friend class Value;
+    friend class AnyString;
+    Character (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isCharacter(); }
+
+public:
+    Character (char c, Engine * engine = nullptr) :
+        Value (c, engine)
+    {
+    }
+
+    Character (wchar_t wc, Engine * engine = nullptr) :
+        Value (wc, engine)
+    {
+    }
+
+    Character (int i, Engine * engine = nullptr);
+
+
+    // Characters represent codepoints.  These conversion operators are for
+    // convenience, but note that the char and wchar_t may throw if your
+    // codepoint is too high for that; hence codepoint is explicitly long
+    // (minimum range for int would be
+
+    explicit operator char () const;
+    explicit operator wchar_t () const;
+
+    long codepoint() const;
+
+    // How to expose UTF8 encoding?
+
+#if REN_CLASSLIB_QT == 1
+    operator QChar () const;
+#endif
+
+public:
+    // Because Characters have a unique iteration in AnyString types, the
+    // -> override mentioned in Value applies to them too.  See note there.
+
+    Character const * operator->() const { return this; }
+    Character * operator->() { return this; }
+};
+
+
+
+///
+/// INTEGER
+///
+
+class Integer : public Value {
+protected:
+    friend class Value;
+    Integer (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isInteger(); }
+
+public:
+    Integer (int i, Engine * engine = nullptr) :
+        Value (i, engine)
+    {
+    }
+
+    operator int () const;
+};
+
+
+
+///
+/// FLOAT
+///
+
+class Float : public Value {
+protected:
+    friend class Value;
+    Float (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isFloat(); }
+
+public:
+    Float (double d, Engine * engine = nullptr) :
+        Value (d, engine)
+    {
+    }
+
+    operator double () const;
+};
+
+
+
+///
+/// DATE
+///
+
+//
+// The C and C++ date and time routines all seem about counting since
+// epoch or in dealing with time measuring of relative intervals on
+// a CPU clock.  They are not very serviceable for working with arbitrary
+// dates that could reach far back into the past and general calendaring
+// math.  The closest analogue seems to be:
+//
+//     http://stackoverflow.com/questions/6730422/
+//
+// Hesitant to put in a dependency just for that.  If you want to extract
+// information from the date you can do that with calls into the
+// evaluator.
+//
+
+class Date : public Value {
+protected:
+    friend class Value;
+    Date (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isDate(); }
+
+public:
+    explicit Date (std::string const & str, Engine * engine = nullptr);
+};
+
+} // end namespace ren
+
+#endif

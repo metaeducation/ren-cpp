@@ -29,7 +29,12 @@
 //
 
 #include "values.hpp"
-#include "exceptions.hpp"
+#include "indivisibles.hpp"
+#include "words.hpp"
+#include "series.hpp"
+#include "strings.hpp"
+#include "blocks.hpp"
+#include "error.hpp"
 #include "function.hpp"
 #include "runtime.hpp"
 #include "engine.hpp"

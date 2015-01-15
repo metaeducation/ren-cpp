@@ -8,7 +8,7 @@
 #include "rencpp/rebol.hpp"
 
 // REVIEW: hooks should not be throwing exceptions; still some in threadinit
-#include "rencpp/exceptions.hpp"
+#include "rencpp/error.hpp"
 
 #include <utility>
 #include <vector>
