@@ -449,7 +449,7 @@ private:
         // entry out by value... the latter makes more sense.
 
         extensionTablesMutex.lock();
-        TableEntry entry = table[id];
+        TableEntry entry = table[static_cast<size_t>(id)];
         extensionTablesMutex.unlock();
 
         // To be idiomatic for C++, we want to be able to throw a ren::Error
@@ -568,7 +568,7 @@ public:
         assert(::ren::internal::shimIdToCapture == -1);
         assert(not ::ren::internal::shimBouncerToCapture);
 
-        ::ren::internal::shimIdToCapture = table.size();
+        ::ren::internal::shimIdToCapture = static_cast<int>(table.size());
         ::ren::internal::shimBouncerToCapture = &bounceShim;
 
         if (shim(nullptr) != REN_SHIM_INITIALIZED)

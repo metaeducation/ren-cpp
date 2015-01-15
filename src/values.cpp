@@ -171,12 +171,6 @@ AnyString::operator QString () const {
 #endif
 
 
-std::ostream & operator<<(std::ostream & os, ren::Value const & value)
-{
-    return os << to_string(value);
-}
-
-
 AnyBlock::AnyBlock (
     internal::Loadable const loadables[],
     size_t numLoadables,
@@ -463,8 +457,16 @@ void Value::constructOrApplyInitialize(
         case REN_EVALUATION_CANCELLED:
             throw evaluation_cancelled();
 
-        case REN_EVALUATION_EXITED:
-            throw exit_command(VAL_INT32(&errorOut.cell));
+        case REN_EVALUATION_EXITED: {
+            // Special case: the error's cell isn't an error, but rather an
+            // Integer (rare, which is why Error gets the in-place cell write)
+
+            Integer status (Value::Dont::Initialize);
+            status.cell = errorOut.cell;
+            status.finishInit(engine);
+
+            throw exit_command(status);
+        }
 
         default:
             throw std::runtime_error("Unknown error in RenConstructOrApply");
@@ -499,6 +501,11 @@ Value Series::operator[](size_t index) const {
     }
 
     return *it;
+}
+
+
+void Value::finishInit(Engine * engine) {
+    finishInit(engine->getHandle());
 }
 
 

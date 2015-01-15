@@ -108,12 +108,6 @@ void Value::finishInit(RenEngineHandle engine) {
 }
 
 
-void Value::finishInit(Engine * engine) {
-    if (not engine)
-        engine = &Engine::runFinder();
-    finishInit(engine->getHandle());
-}
-
 
 
 ///
@@ -554,6 +548,20 @@ Error::Error (const char * msg, Engine * engine) :
     );
 }
 
+
+///
+/// FUNCTION FINALIZER FOR EXTENSION
+///
+
+void Function::finishInitSpecial(
+    RenEngineHandle engine,
+    Block const & spec,
+    RenShimPointer const & shim
+) {
+    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
+
+    Value::finishInit(engine);
+}
 
 
 } // end namespace ren

@@ -28,7 +28,13 @@
 #include <cassert>
 
 #include "rencpp/red.hpp"
+#include "rencpp/helpers.hpp"
 
+#undef RenCell
+#undef RenEngineHandle
+
+// Very temporary
+#define UNUSED(x) static_cast<void>(x)
 
 namespace ren {
 
@@ -53,49 +59,31 @@ public:
     }
 
 
-    RenResult AllocContext(
-        RedEngineHandle engine,
-        RedContextHandle * contextOut
-    ) {
-        UNUSED(engine);
-        contextOut->pointer = nullptr;
-        return REN_SUCCESS;
-    }
-
-
-    RenResult FreeContext(
-        RedEngineHandle engine,
-        RenContextHandle context
-    ) {
-        UNUSED(engine);
-        UNUSED(context);
-        return REN_SUCCESS;
-    }
-
-
     RenResult FindContext(
         RedEngineHandle engine,
         char const * name,
-        RedContextHandle * contextOut
+        RedCell * contextOut
     ) {
         UNUSED(engine);
         UNUSED(name);
-        contextOut->pointer = nullptr;
+        UNUSED(contextOut);
         return REN_SUCCESS;
     }
 
 
     RenResult ConstructOrApply(
         RedEngineHandle engine,
-        RedContextHandle context,
+        RedCell const * context,
         RedCell const * applicand,
-        RedCell loadables[],
+        RedCell const * loadablesCell,
         size_t numLoadables,
         size_t sizeofLoadable,
         RedCell * constructOutDatatypeIn,
-        RedCell * applyOut
+        RedCell * applyOut,
+        RedCell * errorOut
     ) {
         UNUSED(context);
+        UNUSED(errorOut);
         print("--->[FakeRed::ConstructOrApply]--->");
 
         if (applicand) {
@@ -109,9 +97,9 @@ public:
 
         print("There are", numLoadables, "loadable entries:");
 
-        char * currentPtr = reinterpret_cast<char*>(loadables);
+        auto currentPtr = reinterpret_cast<char const *>(loadablesCell);
         for (size_t index = 0; index < numLoadables; index++) {
-            auto & cell = *reinterpret_cast<RenCell *>(currentPtr);
+            auto & cell = *reinterpret_cast<RenCell const *>(currentPtr);
 
             if (RedRuntime::getDatatypeID(cell) != runtime.TYPE_ALIEN) {
                 char buffer[256];
@@ -163,20 +151,20 @@ public:
 
     RenResult ReleaseCells(
         RedEngineHandle engine,
-        RedCell cells[],
-        size_t numCells,
-        size_t sizeofCellBlock
+        RedCell const * valuesCell,
+        size_t numValues,
+        size_t sizeofValue
     ) {
         UNUSED(engine);
-        UNUSED(cells);
-        UNUSED(numCells);
-        UNUSED(sizeofCellBlock);
+        UNUSED(valuesCell);
+        UNUSED(numValues);
+        UNUSED(sizeofValue);
         return REN_SUCCESS;
     }
 
     RenResult FormAsUtf8(
         RedEngineHandle engine,
-        RedCell const * value,
+        RedCell const * cell,
         char * buffer,
         size_t bufSize,
         size_t * lengthOut
@@ -185,10 +173,10 @@ public:
 
         std::stringstream ss;
     #ifndef NDEBUG
-        ss << "Formed(" << RedRuntime::getDatatypeID(value) << ")";
+        ss << "Formed(" << RedRuntime::datatypeName(RedRuntime::getDatatypeID(*cell)) << ")";
     #else
         ss << "Formed("
-            << static_cast<int>(RedRuntime::getDatatypeID(value))
+            << static_cast<int>(RedRuntime::getDatatypeID(cell))
             << ")";
     #endif
         assert(bufSize > ss.str().length());
@@ -218,24 +206,15 @@ RenResult RenFreeEngine(RenEngineHandle handle) {
     return ren::internal::hooks.FreeEngine(handle);
 }
 
+#define RenCell RedCell
+#define RenEngineHandle RedEngineHandle
 
-RenResult RenAllocContext(
-    RenEngineHandle engine,
-    RenContextHandle * contextOut
-) {
-    return ren::internal::hooks.AllocContext(engine, contextOut);
-}
-
-
-RenResult RenFreeContext(RenEngineHandle engine, RenContextHandle context) {
-    return ren::internal::hooks.FreeContext(engine, context);
-}
 
 
 RenResult RenFindContext(
     RenEngineHandle engine,
     char const * name,
-    RenContextHandle * contextOut
+    RenCell * contextOut
 ) {
     return ren::internal::hooks.FindContext(engine, name, contextOut);
 }
@@ -243,23 +222,25 @@ RenResult RenFindContext(
 
 RenResult RenConstructOrApply(
     RenEngineHandle engine,
-    RenContextHandle context,
+    RenCell const * context,
     RenCell const * applicand,
-    RenCell loadables[],
+    RenCell const * loadablesCell,
     size_t numLoadables,
     size_t sizeofLoadable,
     RenCell * constructOutDatatypeIn,
-    RenCell * applyOut
+    RenCell * applyOut,
+    RenCell * errorOut
 ) {
     return ren::internal::hooks.ConstructOrApply(
         engine,
         context,
         applicand,
-        loadables,
+        loadablesCell,
         numLoadables,
         sizeofLoadable,
         constructOutDatatypeIn,
-        applyOut
+        applyOut,
+        errorOut
     );
 
 }
@@ -267,26 +248,26 @@ RenResult RenConstructOrApply(
 
 RenResult RenReleaseCells(
     RenEngineHandle handle,
-    RenCell cells[],
-    size_t numCells,
-    size_t sizeofCellBlock
+    RenCell const * valuesCell,
+    size_t numValues,
+    size_t sizeofValue
 ) {
     return ren::internal::hooks.ReleaseCells(
-        handle, cells, numCells, sizeofCellBlock
+        handle, valuesCell, numValues, sizeofValue
     );
 }
 
 
 RenResult RenFormAsUtf8(
     RenEngineHandle engine,
-    RenCell const * value,
+    RenCell const * cell,
     char * buffer,
     size_t bufSize,
     size_t * lengthOut
 ) {
     return ren::internal::hooks.FormAsUtf8(
         engine,
-        value,
+        cell,
         buffer,
         bufSize,
         lengthOut

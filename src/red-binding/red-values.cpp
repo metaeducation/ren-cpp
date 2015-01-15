@@ -1,6 +1,11 @@
 #include "rencpp/values.hpp"
+#include "rencpp/indivisibles.hpp"
+#include "rencpp/blocks.hpp"
+#include "rencpp/function.hpp"
 
 #include "rencpp/red.hpp"
+
+#define UNUSED(x) static_cast<void>(x)
 
 namespace ren {
 
@@ -34,39 +39,39 @@ void Value::finishInit(RenEngineHandle engine) {
 //
 
 
-Value::Value (Engine & engine) :
-    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_UNSET, 0, 0, 0))
+Value::Value (unset_t, Engine * engine) :
+    Value (RedRuntime::makeCell4(RedRuntime::TYPE_UNSET, 0, 0, 0), engine)
 {
 }
 
 
-Value::Value (Engine & engine, none_t const &) :
-    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0))
+Value::Value (none_t, Engine * engine) :
+    Value (RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0), engine)
 {
 }
 
 
-Value::Value (Engine & engine, bool const & b) :
-    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_LOGIC, b, 0, 0))
+Value::Value (bool b, Engine * engine) :
+    Value (RedRuntime::makeCell4(RedRuntime::TYPE_LOGIC, b, 0, 0), engine)
 {
 } // not 64-bit aligned, historical accident, TBD before 1.0
 
 
-Value::Value (Engine & engine, int const & i) :
-    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_INTEGER, 0, i, 0))
+Value::Value (int i, Engine * engine) :
+    Value (RedRuntime::makeCell4(RedRuntime::TYPE_INTEGER, 0, i, 0), engine)
 {
 } // 64-bit aligned for the someInt value
 
 
-Value::Value (Engine & engine, double const & d) :
-    Value (engine, RedRuntime::makeCell3(RedRuntime::TYPE_FLOAT, 0, d))
+Value::Value (double d, Engine * engine) :
+    Value (RedRuntime::makeCell3(RedRuntime::TYPE_FLOAT, 0, d), engine)
 {
 }
 
 
 
 ///
-/// VALIDMEMFN INSTANCES
+/// CELLFUNCTION INSTANCES
 ///
 
 //
@@ -79,37 +84,37 @@ Value::Value (Engine & engine, double const & d) :
 //
 
 bool Value::isUnset() const {
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_UNSET;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_UNSET;
 }
 
 
 bool Value::isNone() const {
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_NONE;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_NONE;
 }
 
 
 bool Value::isLogic() const {
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_LOGIC;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LOGIC;
 }
 
 
 bool Value::isTrue() const {
-    return isLogic() && cell.data1;
+    return isLogic() and cell.data1;
 }
 
 
 bool Value::isFalse() const {
-    return isLogic() && !cell.data1;
+    return isLogic() and not cell.data1;
 }
 
 
 bool Value::isInteger() const {
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_INTEGER;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_INTEGER;
 }
 
 
 bool Value::isFloat() const {
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_FLOAT;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FLOAT;
 }
 
 
@@ -118,7 +123,7 @@ bool Value::isWord(RedCell * init) const {
         init->header = RedRuntime::TYPE_WORD;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_WORD;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_WORD;
 }
 
 
@@ -127,7 +132,7 @@ bool Value::isSetWord(RedCell * init) const {
         init->header = RedRuntime::TYPE_SET_WORD;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_SET_WORD;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_SET_WORD;
 }
 
 
@@ -136,7 +141,7 @@ bool Value::isGetWord(RedCell * init) const {
         init->header = RedRuntime::TYPE_GET_WORD;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_GET_WORD;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_GET_WORD;
 }
 
 
@@ -145,7 +150,7 @@ bool Value::isLitWord(RedCell * init) const {
         init->header = RedRuntime::TYPE_LIT_WORD;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_LIT_WORD;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LIT_WORD;
 }
 
 
@@ -154,7 +159,7 @@ bool Value::isRefinement(RedCell * init) const {
         init->header = RedRuntime::TYPE_REFINEMENT;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_REFINEMENT;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_REFINEMENT;
 }
 
 
@@ -163,12 +168,12 @@ bool Value::isIssue(RedCell * init) const {
         init->header = RedRuntime::TYPE_ISSUE;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_ISSUE;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_ISSUE;
 }
 
 
 bool Value::isAnyWord() const {
-    switch (RedRuntime::getDatatypeID(*this)) {
+    switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_WORD:
         case RedRuntime::TYPE_SET_WORD:
         case RedRuntime::TYPE_GET_WORD:
@@ -188,7 +193,7 @@ bool Value::isBlock(RedCell * init) const {
         init->header = RedRuntime::TYPE_BLOCK;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_BLOCK;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_BLOCK;
 }
 
 
@@ -197,7 +202,7 @@ bool Value::isParen(RedCell * init) const {
         init->header = RedRuntime::TYPE_PAREN;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_PAREN;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_PAREN;
 }
 
 
@@ -206,7 +211,7 @@ bool Value::isPath(RedCell * init) const {
         init->header = RedRuntime::TYPE_PATH;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_PATH;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_PATH;
 }
 
 
@@ -215,7 +220,7 @@ bool Value::isGetPath(RedCell * init) const {
         init->header = RedRuntime::TYPE_GET_PATH;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_GET_PATH;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_GET_PATH;
 }
 
 
@@ -224,7 +229,7 @@ bool Value::isSetPath(RedCell * init) const {
         init->header = RedRuntime::TYPE_SET_PATH;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_SET_PATH;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_SET_PATH;
 }
 
 
@@ -233,12 +238,12 @@ bool Value::isLitPath(RedCell * init) const {
         init->header = RedRuntime::TYPE_LIT_PATH;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_LIT_PATH;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LIT_PATH;
 }
 
 
 bool Value::isAnyBlock() const {
-    switch (RedRuntime::getDatatypeID(*this)) {
+    switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_BLOCK:
         case RedRuntime::TYPE_PAREN:
         case RedRuntime::TYPE_PATH:
@@ -253,7 +258,7 @@ bool Value::isAnyBlock() const {
 }
 
 bool Value::isAnyString() const {
-    switch (RedRuntime::getDatatypeID(*this)) {
+    switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_STRING:
         case RedRuntime::TYPE_FILE:
         case RedRuntime::TYPE_URL:
@@ -275,9 +280,25 @@ bool Value::isString(RedCell * init) const {
         init->header = RedRuntime::TYPE_STRING;
         return true;
     }
-    return RedRuntime::getDatatypeID(*this) == RedRuntime::TYPE_STRING;
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_STRING;
 }
 
+
+bool Value::isTag(RenCell *) const {
+    throw std::runtime_error("tag not implemented");
+}
+
+bool Value::isFilename(RenCell *) const {
+    throw std::runtime_error("file not implemented");
+}
+
+bool Value::isContext(RenCell *) const {
+    throw std::runtime_error("context not implemented");
+}
+
+bool Value::isError() const {
+    throw std::runtime_error("errors not implemented");
+}
 
 
 ///
@@ -290,14 +311,27 @@ bool Value::isString(RedCell * init) const {
 // to the ConstructOrApply hook to call into the binding.
 //
 
-None::None (Engine & engine) :
-    Value (engine, RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0))
-{
-}
-
 
 Integer::operator int () const {
     return cell.s.data2;
+}
+
+size_t Series::length() const {
+    throw std::runtime_error("series::length not implemented");
+}
+
+
+namespace internal {
+
+void Series_::operator++() {
+    throw std::runtime_error("Series_ iteration not implemented");
+}
+
+Value Series_::operator*() const {
+    throw std::runtime_error("Series_ iteration not implemented");
+}
+
+
 }
 
 
@@ -312,8 +346,8 @@ Integer::operator int () const {
 // would stow a pointer into a function if it worked.
 //
 
-void Function::finishInit(
-    Engine & engine,
+void Function::finishInitSpecial(
+    RenEngineHandle engine,
     Block const & spec,
     RenShimPointer const & shim
 ) {
@@ -322,7 +356,7 @@ void Function::finishInit(
     UNUSED(spec);
     UNUSED(shim);
 
-    Value::finishInit(engine.getHandle());
+    Value::finishInit(engine);
 }
 
 } // end namespace ren

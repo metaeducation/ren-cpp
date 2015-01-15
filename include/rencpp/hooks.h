@@ -179,6 +179,7 @@ typedef RedEngineHandle RenEngineHandle;
  * to be able to process arguments, if the RenShimPointer function signature is
  * as written.
  */
+
 #define REN_STACK_RETURN(stack) \
     static_cast<RenCell *>((stack), nullptr)
 
@@ -187,6 +188,10 @@ typedef RedEngineHandle RenEngineHandle;
 
 #define REN_STACK_SHIM(stack) \
     static_cast<RenShimPointer>((stack), nullptr)
+
+#define REN_SHIM_RESULT(stack, success, exiting, status) \
+    REN_SUCCESS
+
 
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
 
@@ -349,7 +354,7 @@ RenResult RenConstructOrApply(
 
 RenResult RenReleaseCells(
     RenEngineHandle engine,
-    RenCell const * valuesCells,
+    RenCell const * valuesCell,
     size_t numValues,
     size_t sizeofValue
 );

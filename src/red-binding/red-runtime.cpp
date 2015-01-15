@@ -8,6 +8,7 @@
 
 #include "rencpp/red.hpp"
 
+#define UNUSED(x) static_cast<void>(x)
 
 namespace ren {
 
@@ -107,16 +108,9 @@ void RedRuntime::doMagicOnlyRedCanDo() {
 RedRuntime::~RedRuntime () {
 }
 
-} // end namespace ren
-
-
-
-using ren::Value;
-
-using ren::RedRuntime;
 
 #ifndef NDEBUG
-std::ostream & operator<<(std::ostream & os, ren::RedRuntime::DatatypeID id) {
+std::string RedRuntime::datatypeName(ren::RedRuntime::DatatypeID id) {
     // Implementing this as a map in case the values are to change...
     // of course if the values change, then the DatatypeID values
     // will need to be updated.
@@ -166,16 +160,17 @@ std::ostream & operator<<(std::ostream & os, ren::RedRuntime::DatatypeID id) {
     };
 
     auto it = names.find(id);
-    if (it != end(names)) {
-        os << (*it).second;
-    } else {
+    if (it == end(names)) {
         std::stringstream ss;
         ss << "No match for DatatypeID " << static_cast<int>(id)
             << "in operator<< for Runtime::DatatypeID in debug.cpp";
         throw std::runtime_error(ss.str());
     }
 
-    return os;
+    return (*it).second;
 }
+
+} // end namespace ren
+
 
 #endif

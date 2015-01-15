@@ -277,7 +277,7 @@ protected:
     Value (Dont);
 
     void finishInit(RenEngineHandle engine);
-    void finishInit(Engine * engine = nullptr);
+    void finishInit(Engine * engine);
 
     template<
         class T,
@@ -478,7 +478,7 @@ public:
 public:
     bool isFunction() const;
 
-    bool isContext() const;
+    bool isContext(RenCell * = nullptr) const;
 
     bool isError() const;
 
@@ -728,7 +728,9 @@ protected:
     );
 };
 
-std::ostream & operator<<(std::ostream & os, Value const & value);
+inline std::ostream & operator<<(std::ostream & os, Value const & value) {
+    return os << to_string(value);
+}
 
 
 

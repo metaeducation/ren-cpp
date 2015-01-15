@@ -31,18 +31,4 @@ namespace internal {
 }
 
 
-///
-/// FUNCTION FINALIZER FOR EXTENSION
-///
-
-void Function::finishInitSpecial(
-    RenEngineHandle engine,
-    Block const & spec,
-    RenShimPointer const & shim
-) {
-    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
-
-    Value::finishInit(engine);
-}
-
 }

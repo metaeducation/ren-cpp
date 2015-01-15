@@ -327,10 +327,9 @@ elseif(RUNTIME STREQUAL "red")
     message(STATUS "Configuring Binding for Red")
 
     # Include all the sources specific to the Red Binding
-    # (Exclude the Rebol ones for this build)
 
     aux_source_directory(
-        ${CMAKE_CURRENT_SOURCE_DIR}src/red-binding
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding
         SRC_BINDING_LIST
     )
 
@@ -376,7 +375,6 @@ elseif(RUNTIME STREQUAL "rebol")
     add_cxx_flags(-I${RUNTIME_PATH}/../)
 
     # Include all the sources specific to the Rebol Binding
-    # (Exclude the Red ones for this build)
 
     aux_source_directory(
         ${CMAKE_CURRENT_SOURCE_DIR}/src/rebol-binding

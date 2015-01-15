@@ -36,7 +36,7 @@ Context Context::lookup(const char * name, Engine * engine)
     if (::RenFindContext(engine->handle, name, &result->cell) != REN_SUCCESS)
         throw std::runtime_error ("Couldn't find named context");
 
-    result->finishInit(engine);
+    result->finishInit(engine->handle);
     return result;
 }
 
@@ -64,7 +64,7 @@ Context::Context (
 ) :
     Value (Dont::Initialize)
 {
-    VAL_SET(&cell, REB_OBJECT);
+    isContext(&cell); // CellFunction; writes type signature into cell
 
     // Here, a null context pointer means null.  No finder is invoked.
 

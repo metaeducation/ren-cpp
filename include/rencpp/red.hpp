@@ -94,7 +94,7 @@ public:
         result.data1 = data1;
         result.s.data2 = data2;
         result.s.data3 = data3;
-        return result; // Move semantics, no more cost than {a, b, c, d}
+        return result;
     }
 
     inline static RedCell makeCell3(
@@ -112,17 +112,16 @@ public:
         result.header = header;
         result.data1 = data1;
         result.dataD = dataD;
-        return result; // Again, move semantics
+        return result;
     }
 
 public:
     RedRuntime (bool someExtraInitFlag);
 
-    static DatatypeID getDatatypeID(RedCell const & cell);
-    inline static DatatypeID getDatatypeID(Value const & value) {
-        return getDatatypeID(getCell(value));
-    }
+    static std::string datatypeName(DatatypeID id);
+    static DatatypeID getDatatypeID(RedCell const &);
 
+    void cancel() { throw std::runtime_error {"cancel not implemented"}; }
     void doMagicOnlyRedCanDo();
 
     ~RedRuntime() override;

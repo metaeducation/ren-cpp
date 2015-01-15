@@ -47,4 +47,29 @@ Value Runtime::evaluate(
     return result;
 }
 
+
+std::ostream & Engine::setOutputStream(std::ostream & os) {
+    auto temp = osPtr;
+    osPtr = &os;
+    return *temp;
+}
+
+
+std::istream & Engine::setInputStream(std::istream & is) {
+    auto temp = isPtr;
+    isPtr = &is;
+    return *temp;
+}
+
+
+std::ostream & Engine::getOutputStream() {
+    return *osPtr;
+}
+
+
+std::istream & Engine::getInputStream() {
+    return *isPtr;
+}
+
+
 }
