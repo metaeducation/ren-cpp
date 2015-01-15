@@ -20,7 +20,6 @@
 //
 
 #include "rencpp/ren.hpp"
-#include "rencpp/runtime.hpp"
 
 #include "rensyntaxer.h"
 
