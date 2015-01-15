@@ -72,6 +72,17 @@ extern "C" {
 #include "rebol/src/include/reb-filereq.h"
 #undef REB_DEF
 
+
+//
+// It so happens that the makefiles for Rebol define -fno-common on OS/X.
+// As a consequence, the linker winds up with multiple symbols somehow.
+// So only define the Host_Lib table at this point if not on OS/X.  Sigh.
+//
+
+#ifndef TO_OSXI
+
 #define OS_LIB_TABLE
 #include "rebol/src/include/host-lib.h"
+
+#endif
 }
