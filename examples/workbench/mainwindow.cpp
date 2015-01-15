@@ -241,19 +241,23 @@ void MainWindow::createStatusBar()
 
 void MainWindow::readSettings()
 {
-    QSettings settings("HostileFork", "Ren Garden");
+    QSettings settings("Metaeducation", "Ren Garden");
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
+    int zoom = settings.value("zoom", 0).toInt();
+
     move(pos);
     resize(size);
+    console->setZoom(zoom);
 }
 
 
 void MainWindow::writeSettings()
 {
-    QSettings settings("HostileFork", "Ren Garden");
+    QSettings settings("Metaeducation", "Ren Garden");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue("zoom", console->getZoom());
 }
 
 

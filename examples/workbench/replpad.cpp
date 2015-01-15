@@ -70,6 +70,7 @@ QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
 ReplPad::ReplPad (QWidget * parent) :
     QTextEdit (parent),
     defaultFont (currentFont()),
+    zoomDelta (0),
     shouldFollow (true),
     isFormatPending (false),
     hasUndo (false),
@@ -178,6 +179,31 @@ void ReplPad::onConsoleReset() {
 }
 
 
+int ReplPad::getZoom() {
+    return zoomDelta;
+}
+
+
+void ReplPad::setZoom(int delta) {
+    // We're being asked to set the zoom a certain delta (positive or negative)
+    // indiciating zoom-in and zoom-out calls assuming we are at zero.
+    // But if we already have a zoom state, we have to compensate for that.
+
+    delta += -zoomDelta;
+
+    while (delta != 0) {
+        if (delta > 0) {
+            delta--;
+            zoomIn();
+            zoomDelta++;
+        }
+        else {
+            delta++;
+            zoomOut();
+            zoomDelta--;
+        }
+    }
+}
 
 ///
 /// RICH-TEXT CONSOLE BEHAVIOR
@@ -536,6 +562,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         or (ctrled and ((key == Qt::Key_Equal) or (event->text() == "=")))
     ) {
         zoomIn();
+        zoomDelta += 1;
         return;
     }
 
@@ -544,6 +571,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         or (ctrled and ((key == Qt::Key_Minus) or (event->text() == "-")))
     ) {
         zoomOut();
+        zoomDelta -=1;
         return;
     }
 

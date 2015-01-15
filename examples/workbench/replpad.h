@@ -45,6 +45,16 @@ protected:
 protected:
     QFont defaultFont;
 
+private:
+    // QTextEdit has a ZoomIn and a ZoomOut that we can call, but it doesn't
+    // have a way to query it.  So we keep track of the net number of zoom
+    // in and zoom out calls that hvae been made, so we can save it in the
+    // preferences file to restore for the next session
+    int zoomDelta;
+public:
+    int getZoom();
+    void setZoom(int delta);
+
 protected:
     QMutex modifyMutex;
 signals:
