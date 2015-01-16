@@ -68,7 +68,34 @@ namespace internal {
 /// ANYBLOCK_ SUBTYPE HELPER
 ///
 
-template <class C, CellFunction F>
+//
+// BracesT corresponds to the kind of type which is constructed
+// when curly braces are encountered in the initialization of a
+// block type. Let's consider this example:
+//
+// Foo foo { 1, { true, false }, {} };
+//
+// If BracesT is void, you will get a compile time error. But if
+// BracesT is Foo, the example will be equivalent to:
+//
+// Foo foo { 1, Foo { true, false }, Foo {} };
+//
+// On the other hand, if BracesT is Block, then the example will
+// be equivalent to:
+//
+// Foo foo { 1, Block { true, false }, Block {} };
+//
+// When untyped braces are encountered, they follow the rules of
+// the closest block type. Let's consider another example:
+//
+// Foo foo { {}, Block { {}, {} }, {} };
+//           #1          #2  #3    #4
+//
+// In this example, #1 and #4 will follow the bracing rules of
+// Foo while #2 and #3 will follow the bracing rules of Block.
+//
+
+template <class C, CellFunction F, typename BracesT=void>
 class AnyBlock_ : public AnyBlock {
 protected:
     friend class Value;
@@ -95,7 +122,7 @@ public:
     }
 
     AnyBlock_ (
-        std::initializer_list<Loadable> const & loadables,
+        std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         Context const & context
     ) :
         AnyBlock (loadables.begin(), loadables.size(), F, &context, nullptr)
@@ -108,7 +135,7 @@ public:
     }
 
     AnyBlock_ (
-        std::initializer_list<Loadable> const & loadables,
+        std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         Engine * engine = nullptr
     ) :
         AnyBlock (loadables.begin(), loadables.size(), F, nullptr, engine)
@@ -144,11 +171,11 @@ public:
 //
 
 
-class Block : public internal::AnyBlock_<Block, &Value::isBlock>
+class Block : public internal::AnyBlock_<Block, &Value::isBlock, Block>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<Block, &Value::isBlock>::AnyBlock_;
+    using internal::AnyBlock_<Block, &Value::isBlock, Block>::AnyBlock_;
 };
 
 

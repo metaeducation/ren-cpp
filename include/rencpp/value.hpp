@@ -742,7 +742,7 @@ namespace internal {
 // to decide if the programmer intent was to compose it together to form
 // a single level of block hierarchy.
 //
-// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4} here:
+// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4}; here:
 //
 //     https://github.com/hostilefork/rencpp/issues/1
 //
@@ -750,7 +750,7 @@ namespace internal {
 // here we really do want it.  It's a perfect fit for the problem.
 //
 
-class Loadable : private Value {
+class Loadable : protected Value {
 private:
     friend class Value;
 
@@ -761,15 +761,22 @@ public:
 
     // Constructor inheritance does not inherit move or copy constructors
 
-    Loadable ();
+    Loadable () = delete;
 
-    Loadable (Value const & value) : Value (value) {}
+    Loadable (Value const & value) :
+        Value (value)
+    {
+    }
 
-    Loadable (Value && value) : Value (value) {}
+    Loadable (Value && value) :
+        Value (value)
+    {
+    }
 
     Loadable (char const * source);
 
-    Loadable (std::initializer_list<Loadable> args);
+    template <typename T>
+    Loadable (std::initializer_list<T> loadables) = delete;
 
 #if REN_CLASSLIB_STD == 1
     Loadable (std::string const & source) :
@@ -781,6 +788,46 @@ public:
 #if REN_CLASSLIB_QT == 1
     // TBD
 #endif
+};
+
+//
+// This class is to be used instead of Loadable when one
+// want to give semantics to untyped curly braces where
+// Loadable is generally used. It does allow to write
+// this kind of things:
+//
+// ren::Block {1, {2, 3}, 4};
+//
+// Block is configured so that it can be constructed from
+// a list of BlockLoadable<Block>, which means that every
+// untyped curly braces in a Block constructor will construct
+// new instances of Block.
+//
+
+template <typename BracesT>
+class BlockLoadable : public Loadable {
+private:
+    friend class Value;
+
+public:
+    using Loadable::Loadable;
+
+    BlockLoadable () :
+        Loadable(BracesT{})
+    {
+    }
+
+    //
+    // If you get an error here such as "invalid use of
+    // void expression", it means that you tried to use
+    // a block type which does not support any implicit
+    // construction from curly braces.
+    //
+
+    BlockLoadable (std::initializer_list<BlockLoadable<BracesT>> loadables) :
+        Loadable(BracesT(loadables))
+    {
+    }
 };
 
 } // end namespace internal
