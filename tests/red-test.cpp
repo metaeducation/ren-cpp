@@ -4,10 +4,9 @@
 
 using namespace red;
 
-#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-TEST_CASE("rebol test", "[rebol]")
+TEST_CASE("red test", "[red]")
 {
     runtime.doMagicOnlyRedCanDo();
 }
