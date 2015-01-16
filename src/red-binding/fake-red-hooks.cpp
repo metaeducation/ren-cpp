@@ -109,8 +109,7 @@ public:
             }
             else {
                 print(
-                    "PENDING:",
-                    evilInt32ToPointerCast<char*>(cell.data1)
+                    "PENDING:", reinterpret_cast<char*>(cell.data1)
                 );
             }
 

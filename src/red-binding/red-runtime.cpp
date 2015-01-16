@@ -22,7 +22,7 @@ internal::Loadable::Loadable (char const * sourceCstr) :
 {
     cell = RedRuntime::makeCell4(
         RedRuntime::TYPE_ALIEN,
-        evilPointerToInt32Cast(sourceCstr),
+        reinterpret_cast<int32_t>(sourceCstr),
         0, 0
     );
     refcountPtr = nullptr;
