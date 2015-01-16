@@ -15,32 +15,6 @@ namespace ren {
 RebolRuntime runtime {true};
 
 
-namespace internal {
-
-Loadable::Loadable () :
-    Loadable (Block {})
-{
-}
-
-Loadable::Loadable (char const * sourceCstr) :
-    Value (Value::Dont::Initialize)
-{
-    // using REB_END as our "alien"
-    VAL_SET(&cell, REB_END);
-    VAL_HANDLE(&cell) =
-        reinterpret_cast<ANYFUNC>(const_cast<char *>(sourceCstr));
-
-    refcountPtr = nullptr;
-    origin = REN_ENGINE_HANDLE_INVALID;
-}
-
-Loadable::Loadable (std::initializer_list<Loadable> loadables) :
-    Value (Block(loadables))
-{
-}
-
-} // end namespace internal
-
 
 bool Runtime::needsRefcount(REBVAL const & cell) {
     return ANY_SERIES(&cell);

@@ -147,8 +147,8 @@ public:
     // code in this context"
 public:
     template <typename... Ts>
-    Value operator()(Ts... args) {
-        return Runtime::evaluate({args...}, *this);
+    inline Value operator()(Ts&&... args) const {
+        return apply(std::forward<Ts>(args)...);
     }
 };
 

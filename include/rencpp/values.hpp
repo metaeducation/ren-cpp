@@ -277,7 +277,6 @@ protected:
     Value (Dont);
 
     void finishInit(RenEngineHandle engine);
-    void finishInit(Engine * engine);
 
     template<
         class T,
@@ -304,11 +303,6 @@ protected:
     friend class internal::FunctionGenerator;
 
     explicit Value (RenCell const & cell, RenEngineHandle engine) {
-        this->cell = cell;
-        finishInit(engine);
-    }
-
-    explicit Value (RenCell const & cell, Engine * engine = nullptr) {
         this->cell = cell;
         finishInit(engine);
     }

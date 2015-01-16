@@ -26,7 +26,7 @@ namespace ren {
 ///
 /// ANYWORD
 ///
-///
+
 class AnyWord : public Value {
 protected:
     friend class Value;

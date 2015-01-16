@@ -1,5 +1,5 @@
 //
-// engine.cpp
+// runtime.cpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -16,36 +16,33 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include "rencpp/engine.hpp"
+#include "rencpp/runtime.hpp"
+#include "rencpp/context.hpp"
 
 
 namespace ren {
 
-Engine::Finder Engine::finder;
+Value Runtime::evaluate(
+    internal::Loadable const loadables[],
+    size_t numLoadables,
+    Context const * contextPtr,
+    Engine * engine
+) {
+    Value result {Value::Dont::Initialize};
 
+    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
 
-std::ostream & Engine::setOutputStream(std::ostream & os) {
-    auto temp = osPtr;
-    osPtr = &os;
-    return *temp;
+    Value::constructOrApplyInitialize(
+        context.getEngine(),
+        &context,
+        nullptr, // no applicand
+        loadables,
+        numLoadables,
+        nullptr, // don't construct
+        &result // do apply
+    );
+
+    return result;
 }
-
-
-std::istream & Engine::setInputStream(std::istream & is) {
-    auto temp = isPtr;
-    isPtr = &is;
-    return *temp;
-}
-
-
-std::ostream & Engine::getOutputStream() {
-    return *osPtr;
-}
-
-
-std::istream & Engine::getInputStream() {
-    return *isPtr;
-}
-
 
 }
