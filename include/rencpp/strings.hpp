@@ -43,7 +43,7 @@ protected:
         Engine * engine = nullptr
     );
 
-#if REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD == 1
     AnyString (
         std::string const & str,
         internal::CellFunction cellfun,
@@ -51,7 +51,7 @@ protected:
     );
 #endif
 
-#if REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT == 1
     AnyString (
         QString const & str,
         internal::CellFunction cellfun,
@@ -65,13 +65,11 @@ public:
     //
     //     https://github.com/hostilefork/rencpp/issues/6
 
-#if REN_CLASSLIB_STD
-    operator std::string () const {
-        return to_string(*this);
-    }
+#if REN_CLASSLIB_STD == 1
+    operator std::string () const;
 #endif
 
-#if REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT == 1
     operator QString () const;
 #endif
 
@@ -133,9 +131,9 @@ public:
 public:
     template <
         class T =
-#if REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD == 1
             std::string
-#elif REN_CLASSLIB_QT
+#elif REN_CLASSLIB_QT == 1
             QString
 #else
     static_assert(false, "https://github.com/hostilefork/rencpp/issues/22");
@@ -145,11 +143,11 @@ public:
         throw std::runtime_error("Unspecialized version of spellingOf called");
     }
 
-#if REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD == 1
     std::string spellingOf_STD() const;
 #endif
 
-#if REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT == 1
     QString spellingOf_QT() const;
 #endif
 
@@ -165,14 +163,14 @@ public:
 
 // http://stackoverflow.com/a/3052604/211160
 
-#if REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD == 1
 template<>
 inline std::string AnyString::spellingOf<std::string>() const {
     return spellingOf_STD();
 }
 #endif
 
-#if REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT == 1
 template<>
 inline QString AnyString::spellingOf<QString>() const {
     return spellingOf_QT();
@@ -200,14 +198,14 @@ public:
     {
     }
 
-#if REN_CLASSLIB_STD
+#if REN_CLASSLIB_STD == 1
     AnyString_ (std::string const & str, Engine * engine = nullptr) :
         AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
-#if REN_CLASSLIB_QT
+#if REN_CLASSLIB_QT == 1
     AnyString_ (QString const & str, Engine * engine = nullptr) :
         AnyString (str, F, engine)
     {
