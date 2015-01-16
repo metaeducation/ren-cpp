@@ -5,6 +5,9 @@
 
 using namespace ren;
 
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
+
 class Adder {
 private:
     int amount;
@@ -16,8 +19,9 @@ public:
     }
 };
 
-int main(int, char **) {
 
+TEST_CASE("function test", "[function]")
+{
     auto addFive = Function::construct(
         "{Demonstration of using an operator() overloaded class}"
         "value [integer!]",
@@ -39,5 +43,5 @@ int main(int, char **) {
     //     http://stackoverflow.com/questions/27641809/
     //
 
-    assert(static_cast<Integer>(runtime("10 +", addFive, 100)) == 115);
+    REQUIRE(static_cast<Integer>(runtime("10 +", addFive, 100)) == 115);
 }

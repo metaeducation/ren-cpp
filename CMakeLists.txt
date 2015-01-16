@@ -512,3 +512,14 @@ target_link_libraries(RenCpp ${LIBS_ALL} -lstdc++ -lm)
 #
 
 add_subdirectory(examples)
+
+
+
+# RenCpp includes tests, so please run `make test` before 
+# submitting changes.
+#
+# http://www.vtk.org/Wiki/CMake/Testing_With_CTest
+
+enable_testing()
+
+add_subdirectory(tests)

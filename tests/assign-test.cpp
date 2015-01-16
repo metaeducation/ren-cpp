@@ -4,7 +4,11 @@
 
 using namespace ren;
 
-int main(int, char **) {
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
+
+TEST_CASE("assign test", "[assign]")
+{
     Integer someInt {10};
     Value someValue;
 
