@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "rencpp/values.hpp"
+#include "rencpp/value.hpp"
 #include "rencpp/blocks.hpp"
 
 #include "rencpp/rebol.hpp" // ren::internal::nodes

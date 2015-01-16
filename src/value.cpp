@@ -1,5 +1,5 @@
 //
-// values.cpp
+// value.cpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -19,7 +19,7 @@
 #include <ostream>
 #include <vector>
 
-#include "rencpp/values.hpp"
+#include "rencpp/value.hpp"
 #include "rencpp/indivisibles.hpp"
 #include "rencpp/context.hpp"
 #include "rencpp/runtime.hpp"

@@ -1,8 +1,8 @@
-#ifndef RENCPP_VALUES_HPP
-#define RENCPP_VALUES_HPP
+#ifndef RENCPP_VALUE_HPP
+#define RENCPP_VALUE_HPP
 
 //
-// values.hpp
+// value.hpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //

@@ -29,7 +29,7 @@
 
 #include <mutex> // global table must be protected for thread safety
 
-#include "values.hpp"
+#include "value.hpp"
 #include "indivisibles.hpp"
 #include "blocks.hpp"
 #include "error.hpp"

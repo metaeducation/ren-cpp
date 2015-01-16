@@ -19,7 +19,7 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
-#include "values.hpp"
+#include "value.hpp"
 
 //
 // These classes inherit from Value, without inheriting Value's constructors.
