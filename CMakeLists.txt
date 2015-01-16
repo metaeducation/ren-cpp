@@ -515,10 +515,21 @@ add_subdirectory(examples)
 
 
 
-# RenCpp includes tests, so please run `make test` before 
-# submitting changes.
 #
-# http://www.vtk.org/Wiki/CMake/Testing_With_CTest
+# CMake has a testing framework called CTest, which we don't really do much
+# with:
+#
+#     http://www.vtk.org/Wiki/CMake/Testing_With_CTest
+#
+# It's easier just to run the "test" executable and see what it says.  The
+# framework currently being used is "Catch":
+#
+#     https://github.com/philsquared/Catch/
+#
+# But for what it's worth, you can run `make test` from CMake and it will
+# run the test executable for you, suppress the output, and hide it
+# two levels deep in a directory.  If that's what you want.
+#
 
 enable_testing()
 

@@ -6,7 +6,6 @@
 
 using namespace ren;
 
-#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
 TEST_CASE("context test", "[context]")
@@ -22,7 +21,7 @@ TEST_CASE("context test", "[context]")
    
     int contextNumber = 1;
 
-    Context::setFinder(
+    auto oldFinder = Context::setFinder(
         [&](Engine *) -> Context & {
             if (contextNumber == 1)
                 return contextOne;
@@ -54,7 +53,6 @@ TEST_CASE("context test", "[context]")
     // to the constructor
 
     auto y = SetWord {"y", contextOne};
-    print(runtime("bind? quote", y));
     y(30);
 
     // Switch active contexts and see that we set y
@@ -63,4 +61,6 @@ TEST_CASE("context test", "[context]")
 
     // This test currently not working, more context work needed
     /* REQUIRE(contextOne("integer? get/any 'y")); */
+
+    Context::setFinder(oldFinder);
 }
