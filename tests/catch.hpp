@@ -4,6 +4,8 @@
 // For the official distribution of Catch C++ Testing Framework, refer to:
 //
 //     https://github.com/philsquared/Catch/
+//
+// Which you may diff with this to observe any changes...
 
 /*
  *  CATCH v1.1 build 7 (develop branch)
@@ -7093,7 +7095,8 @@ namespace Catch {
         }
     }
 #elif defined(__MINGW32__)
-    extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
+    // Caused a problem with RenCpp of duplicate declaration
+    // extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
     namespace Catch {
         bool isDebuggerActive() {
             return IsDebuggerPresent() != 0;
@@ -7106,7 +7109,8 @@ namespace Catch {
 #endif // Platform
 
 #ifdef CATCH_PLATFORM_WINDOWS
-    extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA( const char* );
+    // Caused a problem with RenCpp of duplicate declaration
+    // extern "C" __declspec(dllimport) void __stdcall OutputDebugStringA( const char* );
     namespace Catch {
         void writeToDebugConsole( std::string const& text ) {
             ::OutputDebugStringA( text.c_str() );
