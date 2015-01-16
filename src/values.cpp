@@ -505,6 +505,9 @@ Value Series::operator[](size_t index) const {
 
 
 void Value::finishInit(Engine * engine) {
+    if (not engine)
+        engine = &Engine::runFinder();
+
     finishInit(engine->getHandle());
 }
 
