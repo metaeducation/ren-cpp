@@ -8,12 +8,6 @@
 #include "rencpp/rebol.hpp"
 #include "rencpp/blocks.hpp"
 
-// Implemented in rebol-runtime.cpp - we don't really do anything other than
-// keep the Rebol request states of open/closed happy, it's a stub and we
-// feed to the C++ iostreams which take care of opening themselves
-
-extern "C" void Open_StdIO();
-
 
 namespace ren {
 
@@ -50,23 +44,6 @@ Loadable::Loadable (std::initializer_list<Loadable> loadables) :
 
 bool Runtime::needsRefcount(REBVAL const & cell) {
     return ANY_SERIES(&cell);
-}
-
-
-
-///
-/// HOST BARE BONES HOOKS
-///
-
-// This is redundant with the host lib crash hook...except it takes one
-// parameter.  It seems to be called only from those bare-bones I/O
-// functions in order to avoid a dependency on the host lib itself
-
-extern "C" void Host_Crash(REBYTE * message);
-void Host_Crash(REBYTE * message) {
-    throw std::runtime_error(
-        std::string(reinterpret_cast<char *>(message))
-    );
 }
 
 
@@ -236,12 +213,6 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         Trace_Flags = 1;
     }
 
-    // In the old way of thinking, this must be done before a console I/O can
-    // occur.  However now that we are hooking through to C++ iostreams with
-    // a replacement rebol-stdio.cpp (instead of os/posix/dev-stdio.cpp) that
-    // isn't really necessary.
-
-    Open_StdIO();
 
     // Set up the interrupt handler for things like Ctrl-C (which had
     // previously been stuck in with stdio, because that's where the signals
@@ -264,7 +235,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // Initialize the REBOL library (reb-lib):
     if (not CHECK_STRUCT_ALIGN)
         throw std::runtime_error(
-            "RebolHooks: Incompatible struct alignment"
+            "RebolHooks: Incompatible struct alignment..."
+            " Did you build mainline Rebol on 64-bit instead of with -m32?"
+            " (for 64-bit builds, use http://github.com/rebolsource/r3)"
         );
 
 
@@ -331,7 +304,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     // Tweak the bits to put our fake quit function in and save it back...
     // This worked for QUIT but unfortunately couldn't work for Escape/CtrlC
-    // So a one-word modification to Rebol is necessary
+    // Had to extract c-do.c => c-do.cpp
 
 /*    quitNative.data.func.func.code = &internal::Fake_Quit;
     Set_Var(&quitWord, &quitNative); */

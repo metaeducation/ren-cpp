@@ -435,6 +435,8 @@ elseif(RUNTIME STREQUAL "rebol")
 
     file(GLOB EXTRA_OBJS ${RUNTIME_PATH}/make/objs/*.o)
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/host-main.o)
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/host-stdio.o)
+
 
     # Among things that would be nice to omit, the great-wall-of-Rebol-lib
     # is one of them.  It's a fairly anemic interface; the binding
