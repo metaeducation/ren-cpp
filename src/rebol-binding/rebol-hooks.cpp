@@ -272,15 +272,50 @@ public:
         else {
             assert(not reduce); // To be added?
 
-            Insert_Series(args, 0, reinterpret_cast<REBYTE *>(applicand), 1);
+            // If it's an object (context) then "apply" means run the code
+            // but bind it inside the object.  Suggestion by @WiseGenius:
+            //
+            // http://chat.stackoverflow.com/transcript/message/20530463#20530463
 
-            REBCNT index = Do_Next(args, 0, FALSE /* not op! */);
-            if (index != SERIES_TAIL(args)) {
-                VAL_SET(error, REB_NONE); // improve?
-                return REN_APPLY_ERROR;
+            if (IS_OBJECT(applicand)) {
+                REBSER * reboundArgs = Clone_Block(args);
+                REBVAL block;
+                Set_Block(&block, reboundArgs);
+                Bind_Block(VAL_OBJ_FRAME(applicand), &block, BIND_DEEP);
+
+                // result is just TOS
+                DS_PUSH(Do_Blk(reboundArgs, 0));
             }
+            else {
+                // Just put the value at the head of a DO chain...
+                Insert_Series(
+                    args, 0, reinterpret_cast<REBYTE *>(applicand), 1
+                );
 
-            Remove_Series(args, 0, 1);
+                REBCNT index = Do_Next(args, 0, FALSE /* not op! */);
+
+                // If the DO chain didn't end, then consider that an error.  So
+                // generalized apply of FOO: with `1 + 2 3` will do the addition,
+                // satisfy FOO, but have a 3 left over unused.  If FOO: were a
+                // function being APPLY'd, you'd say that was too many arguments
+
+                if (index != SERIES_TAIL(args)) {
+                    // shouldn't throw exceptions from here...we return a
+                    // Rebol error
+
+                    REBSER * ser = Make_Error(
+                        RE_INVALID_ARG,
+                        BLK_SKIP(args, index),
+                        0,
+                        0
+                    );
+                    SET_ERROR(error, RE_INVALID_ARG, ser);
+
+                    return REN_APPLY_ERROR;
+                }
+
+                Remove_Series(args, 0, 1);
+            }
         }
 
         // Result on top of stack

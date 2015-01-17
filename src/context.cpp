@@ -42,7 +42,7 @@ Context Context::lookup(const char * name, Engine * engine)
 
 
 
-Context Context::runFinder(Engine * engine) {
+Context Context::current(Engine * engine) {
     if (not finder) {
         finder = [] (Engine * engine) -> Context & {
             if (not engine)

@@ -82,7 +82,7 @@ public:
     // Passing as a pointer in order to be able to optimize out the cases
     // where you don't care, but the parameter is there if you want to use it
 
-    static Context runFinder(Engine * engine);
+    static Context current(Engine * engine = nullptr);
 
 
     // Patterned after AnyBlock; you can construct a context from the same

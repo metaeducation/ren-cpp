@@ -30,7 +30,7 @@ Value Runtime::evaluate(
 ) {
     Value result {Value::Dont::Initialize};
 
-    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+    Context context = contextPtr ? *contextPtr : Context::current(engine);
 
     Value::constructOrApplyInitialize(
         context.getEngine(),

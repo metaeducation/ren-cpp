@@ -10,14 +10,13 @@ using namespace ren;
 
 TEST_CASE("context test", "[context]")
 {
-    // returning a local by reference from the setFinder upsets Clang, so we
-    // heap allocate
+    Context defaultContext = Context::current();
 
     Context contextOne {};
     Context contextTwo {};
 
-    // test of making which runtime is used in creates a
-    // property of some global factor...
+    // We install a new "context finder" which uses an integer to indicate
+    // which context is currently in effect.
    
     int contextNumber = 1;
 
@@ -31,36 +30,57 @@ TEST_CASE("context test", "[context]")
         }
     );
     
-    // make a set-word for x, then "apply" it to 10
-    // we are creating this in contextOne
-    SetWord {"x"}(10);
+    // Use function apply notation on a SetWord to set x to 10
 
-    // now print using runtime apply notation
-    REQUIRE(runtime("integer? x"));
+    SetWord set_x {"x"};
+    set_x(10);
 
-    // switch the runtime that will be found by the next call now...
+    // now test it using runtime apply notation
+
+    CHECK(runtime("x = 10"));
+
+    // change the global state, so the runtime is operating in contextTwo
+    // if no override provided.
+
     contextNumber = 2;
 
-    // we see x is not in this one; don't use individual pieces
-    REQUIRE(runtime("unset? get/any 'x"));
+    // Here in context 2, the changes to x had no effect; x is unset
 
-    // now using the default let's set x in the second runtime...
+    CHECK(runtime("unset? get/any 'x"));
+
+    // Let's use function apply notation to set x in contextTwo, this time
+    // using a temporary SetWord...
+
     SetWord {"x"}(20);
-    REQUIRE(runtime("integer? x"));
 
-    // even though our default is to run in the second runtime
+    // Require that to have worked...
+
+    CHECK(runtime("x = 20"));
+
+    // even though our default is to run in the second context
     // at the moment, let's override it using an additional parameter
-    // to the constructor
+    // to the constructor...and write a new value into contextOne...this
+    // time using the `auto` keyword to put the type on the right hand side
 
     auto y = SetWord {"y", contextOne};
     y(30);
 
-    // Switch active contexts and see that we set y
-    contextNumber = 1;
-    REQUIRE(runtime("integer? get/any 'y"));
+    // If we apply on a context, it will effectively run a bind/copy on
+    // the argument so that it picks up bindings in that context.  Be aware
+    // it makes a deep copy of the argument to do so.
 
-    // This test currently not working, more context work needed
-    /* REQUIRE(contextOne("integer? get/any 'y")); */
+    CHECK(contextOne("y = 30"));
+
+    // Now switch active contexts
+
+    contextNumber = 1;
+
+    // We notice that an unparameterized call now finds y in contextOne
+
+    CHECK(runtime("y = 30"));
+
+    // Restore the context finder to the previous one (default) so other
+    // tests will work correctly
 
     Context::setFinder(oldFinder);
 }

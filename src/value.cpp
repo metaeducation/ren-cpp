@@ -69,7 +69,7 @@ Value Value::apply_(
 ) const {
     Value result {Dont::Initialize};
 
-    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+    Context context = contextPtr ? *contextPtr : Context::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),

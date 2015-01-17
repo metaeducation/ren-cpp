@@ -150,7 +150,7 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable = array.data();
 
-    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+    Context context = contextPtr ? *contextPtr : Context::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),
@@ -161,6 +161,8 @@ AnyWord::AnyWord (
         this, // do construct
         nullptr // don't apply
     );
+
+    VAL_WORD_FRAME(&this->cell) = VAL_OBJ_FRAME(&context.cell);
 }
 
 
@@ -204,7 +206,7 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable = array.data();
 
-    Context context = contextPtr ? *contextPtr : Context::runFinder(engine);
+    Context context = contextPtr ? *contextPtr : Context::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),
@@ -215,6 +217,8 @@ AnyWord::AnyWord (
         this, // do construct
         nullptr // don't apply
     );
+
+    VAL_WORD_FRAME(&this->cell) = VAL_OBJ_FRAME(&context.cell);
 }
 #endif
 
