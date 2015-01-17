@@ -142,8 +142,8 @@ RenConsole::RenConsole (QWidget * parent) :
     // emit process.
 
     connect(
-        this, &RenConsole::needTextAppend,
-        this, &RenConsole::onAppendText,
+        this, RenConsole::needTextAppend,
+        this, RenConsole::onAppendText,
         Qt::BlockingQueuedConnection
     );
 
@@ -157,18 +157,18 @@ RenConsole::RenConsole (QWidget * parent) :
     EvaluatorWorker * worker = new EvaluatorWorker;
     worker->moveToThread(&workerThread);
     connect(
-        &workerThread, &QThread::finished,
-        worker, &QObject::deleteLater,
+        &workerThread, QThread::finished,
+        worker, QObject::deleteLater,
         Qt::DirectConnection
     );
     connect(
-        this, &RenConsole::operate,
-        worker, &EvaluatorWorker::doWork,
+        this, RenConsole::operate,
+        worker, EvaluatorWorker::doWork,
         Qt::QueuedConnection
     );
     connect(
-        worker, &EvaluatorWorker::resultReady,
-        this, &RenConsole::handleResults,
+        worker, EvaluatorWorker::resultReady,
+        this, RenConsole::handleResults,
         // technically it can't handle more results...but better perhaps
         // to crash than to block if some new invariant is introduced and
         // make it look like it's working.
@@ -189,8 +189,8 @@ RenConsole::RenConsole (QWidget * parent) :
     // handler to avoid infinite recursion
 
     connect(
-        this, &RenConsole::requestConsoleReset,
-        this, &RenConsole::onConsoleReset,
+        this, RenConsole::requestConsoleReset,
+        this, RenConsole::onConsoleReset,
         Qt::QueuedConnection
     );
 

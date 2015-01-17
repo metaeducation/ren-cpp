@@ -80,8 +80,8 @@ ReplPad::ReplPad (QWidget * parent) :
     // QTextDocument only happen when we explicitly asked for them.
 
     connect(
-        this, &ReplPad::textChanged,
-        this, &ReplPad::onTextChanged,
+        this, ReplPad::textChanged,
+        this, ReplPad::onTextChanged,
         Qt::DirectConnection
     );
 
@@ -105,7 +105,7 @@ ReplPad::ReplPad (QWidget * parent) :
     // a key and trying to put input in)
 
     connect(
-        verticalScrollBar(), &QScrollBar::valueChanged,
+        verticalScrollBar(), QScrollBar::valueChanged,
         [this] (int value) {
             if (value == verticalScrollBar()->maximum())
                 followLatestOutput();
@@ -121,14 +121,14 @@ ReplPad::ReplPad (QWidget * parent) :
     // variable.
 
     connect(
-        this, &QTextEdit::undoAvailable,
+        this, QTextEdit::undoAvailable,
         [this] (bool b) {
             hasUndo = b;
         }
     );
 
     connect(
-        this, &QTextEdit::redoAvailable,
+        this, QTextEdit::redoAvailable,
         [this] (bool b) {
             hasRedo = b;
         }

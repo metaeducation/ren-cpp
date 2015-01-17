@@ -67,8 +67,8 @@ void RenPackage::downloadLocally() {
     ));
 
     connect(
-        &network, &QNetworkAccessManager::finished,
-        this, &RenPackage::replyFinished,
+        &network, QNetworkAccessManager::finished,
+        this, RenPackage::replyFinished,
         Qt::DirectConnection
     );
 }
