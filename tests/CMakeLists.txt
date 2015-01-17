@@ -3,6 +3,24 @@
 # See notes in root directory, where this is added via add_subdirectory
 
 
+#
+# We set up tests to run with Catch test framework:
+#
+#   https://github.com/philsquared/Catch
+#
+# Catch itself is set up as an external, CMake-managed dependency in the root
+# ext/catch/ directory. This dependency is included in the main CMake file. A
+# CATCH_INCLUDE_DIR property is inherited, to allow us to include the single
+# Catch header file.
+#
+
+include_directories(${CATCH_INCLUDE_DIR})
+
+# These rigid warnings are too strict for building with Catch.
+remove_cxx_flag("-Wctor-dtor-privacy")
+remove_cxx_flag("-Wredundant-decls")
+remove_cxx_flag("-Wswitch-default")
+
 
 #
 # These tests do not require an evaluator, and simply test Ren values
@@ -67,4 +85,4 @@ add_executable(
 
 target_link_libraries(test-rencpp RenCpp)
 
-add_test(run-test all-tests)
+add_test(run-test-rencpp test-rencpp)
