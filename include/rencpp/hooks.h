@@ -261,15 +261,16 @@ CASSERT(REN_SUCCESS == R_RET, hooks_h)
 #define REN_STACK_SHIM(stack) \
     VAL_FUNC_CODE(DSF_FUNC((stack) - DS_Base))
 
+
 /*
  * WARNING - Throw_Error uses longjmp to completely undermine the C++
  * destructor chain; be sure the start and target of the jump cannot
  * skip a destructor!
  */
 
-#define REN_SHIM_RESULT(stack, success, exiting, status) \
+#define REN_SHIM_RESULT(stack, success) \
     (success) \
-        ? (exiting) ? RenExit(status) : REN_SUCCESS \
+        ? REN_SUCCESS \
         : (Throw_Error(VAL_SERIES(REN_STACK_RETURN(stack))), REN_SUCCESS)
 
 #else

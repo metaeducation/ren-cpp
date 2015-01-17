@@ -460,7 +460,7 @@ private:
 
         bool success = true;
         bool exiting = false;
-        int status;
+        int status; // Only initialized if `success and exiting`
 
         try {
             // Our applyFun helper does the magic to recursively forward
@@ -489,8 +489,8 @@ private:
             }
             else {
                 // Come up with more tolerant behavior, but discourage it as
-                // throwing errors in C++ is not the same as raising
-                // errors is in Rebol and Red
+                // throwing values in C++ is not the same as Rebol/Red THROW
+                // because we are using it to "raise errors".
 
                 throw std::runtime_error {
                     "Non-isError() ren::Value thrown from ren::Function"
@@ -539,6 +539,11 @@ private:
             };
         }
 
+        // If we're exiting use what the API tells us to return
+
+        if (exiting)
+            return RenExit(status);
+
         // We now should have all the C++ objects cleared from this stack,
         // so at least as far as THIS function is concerned, a longjmp
         // should be safe.  RenShimResult on a failure under the Rebol
@@ -547,7 +552,8 @@ private:
         // Note: trickery!  R_RET is 0, but all other R_ values are
         // meaningless to Red.  So we only use that one here.
 
-        return REN_SHIM_RESULT(stack, success, exiting, status);
+
+        return REN_SHIM_RESULT(stack, success);
     }
 
 public:
