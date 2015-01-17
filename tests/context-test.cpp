@@ -21,7 +21,7 @@ TEST_CASE("context test", "[context]")
     int contextNumber = 1;
 
     auto oldFinder = Context::setFinder(
-        [&](Engine *) -> Context & {
+        [&](Engine *) -> Context {
             if (contextNumber == 1)
                 return contextOne;
             if (contextNumber == 2)
