@@ -43,10 +43,22 @@ remove_cxx_flag("-Wmissing-declarations")
 qt5_add_resources(RESOURCE_ADDED workbench.qrc)
 
 
+# GUI Type
+if(WIN32)
+    set(GUI_TYPE WIN32)
+    message(STATUS "win32 guitype")
+endif(WIN32)
+if(APPLE)
+    set(GUI_TYPE MACOSX_BUNDLE)
+endif(APPLE)
+
+
 # Source files included in the executable
 
 add_executable(
     workbench
+
+    ${GUI_TYPE}
 
     # Resource in compiled form
 

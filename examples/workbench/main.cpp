@@ -115,6 +115,62 @@ void noisyFailureMsgHandler(
 #endif
 
 
+
+#ifdef TO_WIN32
+
+int main(int argc, char *argv[]);
+
+#include <memory>
+#include <windows.h>
+
+//
+// http://stackoverflow.com/a/9555595/211160
+//
+
+
+class Win32CommandLineConverter {
+private:
+    std::unique_ptr<char*[]> argv_;
+    std::vector<std::unique_ptr<char[]>> storage_;
+public:
+    Win32CommandLineConverter()
+    {
+        LPWSTR cmd_line = GetCommandLineW();
+        int argc;
+        LPWSTR* w_argv = CommandLineToArgvW(cmd_line, &argc);
+        argv_ = std::unique_ptr<char*[]>(new char*[argc]);
+        storage_.reserve(argc);
+        for(int i=0; i<argc; ++i) {
+            storage_.push_back(ConvertWArg(w_argv[i]));
+            argv_[i] = storage_.back().get();
+        }
+        LocalFree(w_argv);
+    }
+    int argc() const
+    {
+        return static_cast<int>(storage_.size());
+    }
+    char** argv() const
+    {
+        return argv_.get();
+    }
+    static std::unique_ptr<char[]> ConvertWArg(LPWSTR w_arg)
+    {
+        int size = WideCharToMultiByte(CP_UTF8, 0, w_arg, -1, nullptr, 0, nullptr, nullptr);
+        std::unique_ptr<char[]> ret(new char[size]);
+        WideCharToMultiByte(CP_UTF8, 0, w_arg, -1, ret.get(), size, nullptr, nullptr);
+        return ret;
+    }
+};
+
+int CALLBACK WinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, LPSTR /* lpCmdLine */, int /* nCmdShow */)
+{
+    Win32CommandLineConverter cmd_line;
+    return main(cmd_line.argc(), cmd_line.argv());
+}
+
+#endif
+
 int main(int argc, char *argv[])
 {
     // Q_INIT_RESOURCE(ren-garden);
