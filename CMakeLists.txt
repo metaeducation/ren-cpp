@@ -521,16 +521,19 @@ add_subdirectory(examples)
 #
 #     http://www.vtk.org/Wiki/CMake/Testing_With_CTest
 #
-# It's easier just to run the "test" executable and see what it says.  The
-# framework currently being used is "Catch":
-#
-#     https://github.com/philsquared/Catch/
+# It's easier just to run the "test" executable and see what it says.
 #
 # But for what it's worth, you can run `make test` from CMake and it will
 # run the test executable for you, suppress the output, and hide it
 # two levels deep in a directory.  If that's what you want.
 #
+# tests/ has a separate CMakeLists.txt, for structured unit tests. These tests
+# use the Catch framework, which is held as a CMake-managed dependency in
+# external/catch/.
+#
 
 enable_testing()
+
+add_subdirectory(external/catch)
 
 add_subdirectory(tests)
