@@ -12,8 +12,8 @@ TEST_CASE("apply test", "[apply]")
     SECTION("set-word success")
     {
         Value result = SetWord {"w"}(10);
-        REQUIRE(result.isInteger());
-        REQUIRE(static_cast<int>(static_cast<Integer>(result)) == 10);
+        CHECK(result.isInteger());
+        CHECK(static_cast<int>(static_cast<Integer>(result)) == 10);
     }
 
     SECTION("set-word failure")
@@ -26,7 +26,7 @@ TEST_CASE("apply test", "[apply]")
             caught = true;
         }
 
-        REQUIRE(caught);
+        CHECK(caught);
     }
 
     SECTION("none failure")
@@ -41,6 +41,6 @@ TEST_CASE("apply test", "[apply]")
             caught = true;
         }
 
-        REQUIRE(caught);
+        CHECK(caught);
     }
 }

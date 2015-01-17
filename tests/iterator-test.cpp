@@ -12,23 +12,23 @@ TEST_CASE("block iteration", "[block]")
     Block blk {"1 2 3"};
 
     auto it = blk.begin();
-    REQUIRE(it->isEqualTo(1));
-    REQUIRE(it == blk.begin());
-    REQUIRE(it != blk.end());
+    CHECK(it->isEqualTo(1));
+    CHECK(it == blk.begin());
+    CHECK(it != blk.end());
 
     it++;
-    REQUIRE((*it).isEqualTo(2));
-    REQUIRE(it != blk.begin());
-    REQUIRE(it != blk.end());
+    CHECK((*it).isEqualTo(2));
+    CHECK(it != blk.begin());
+    CHECK(it != blk.end());
 
     it++;
-    REQUIRE(it->isEqualTo(3));
-    REQUIRE(it != blk.begin());
-    REQUIRE(it != blk.end());
+    CHECK(it->isEqualTo(3));
+    CHECK(it != blk.begin());
+    CHECK(it != blk.end());
 
     it++;
-    REQUIRE(it != blk.begin());
-    REQUIRE(it == blk.end());
+    CHECK(it != blk.begin());
+    CHECK(it == blk.end());
 }
 
 
@@ -43,7 +43,7 @@ TEST_CASE("ascii string iteration", "[iterator] [string]")
 
     int index = 0;
     for (auto c : s) {
-        REQUIRE(cppCstr[index] == c);
+        CHECK(cppCstr[index] == c);
         index++;
     }
 }

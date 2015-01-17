@@ -18,4 +18,6 @@ TEST_CASE("assign test", "[assign]")
     Block someOtherBlock {20, "bar"};
 
     someBlock = someOtherBlock;
+
+    CHECK(someBlock.isEqualTo(someOtherBlock));
 }

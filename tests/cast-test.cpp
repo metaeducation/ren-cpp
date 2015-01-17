@@ -13,12 +13,12 @@ TEST_CASE("cast test", "[cast]")
     SECTION("integer cast")
     {
         Value someIntAsValue = 10;
-        REQUIRE(someIntAsValue.isInteger());
+        CHECK(someIntAsValue.isInteger());
 
         Integer someInt = static_cast<Integer>(someIntAsValue);
 
-        REQUIRE(someIntAsValue.isEqualTo(someInt));
-        REQUIRE(static_cast<int>(someInt) == 10);
+        CHECK(someIntAsValue.isEqualTo(someInt));
+        CHECK(static_cast<int>(someInt) == 10);
 
         Value someIntConstValue = someIntAsValue;
         Integer anotherInt = static_cast<Integer>(someIntConstValue);
@@ -45,6 +45,6 @@ TEST_CASE("cast test", "[cast]")
             caught = true;
         }
 
-        REQUIRE(caught);
+        CHECK(caught);
     }
 }

@@ -11,7 +11,12 @@ TEST_CASE("block test", "[block]")
     SECTION("empty")
     {
         Block block {};
-        REQUIRE(block.length() == 0);
+        CHECK(block.length() == 0);
+
+        Block explicitEmpties {Block {}, Block {}, Block {}};
+        Block implicitEmpties {{}, {}, {}};
+
+        CHECK(explicitEmpties.isEqualTo(implicitEmpties));
     }
 
     SECTION("singleton") {
@@ -26,8 +31,6 @@ TEST_CASE("block test", "[block]")
     }
 
 
-    Block threeEmpties {Block {}, Block {}, Block {}};
-
     Block randomStuff {"blue", Block {true, 1020}, 3.04};
 
 
@@ -39,15 +42,15 @@ TEST_CASE("block test", "[block]")
 
         Block blk { {1, true}, {false, 2} };
 
-        REQUIRE(blk.isBlock());
-        REQUIRE(blk[1].isBlock());
-        REQUIRE(blk[2].isBlock());
+        CHECK(blk.isBlock());
+        CHECK(blk[1].isBlock());
+        CHECK(blk[2].isBlock());
 
         Block blk1 = static_cast<Block>(blk[1]);
         Block blk2 = static_cast<Block>(blk[2]);
-        REQUIRE(blk1[1].isInteger());
-        REQUIRE(blk1[2].isLogic());
-        REQUIRE(blk2[1].isLogic());
-        REQUIRE(blk2[2].isInteger());
+        CHECK(blk1[1].isInteger());
+        CHECK(blk1[2].isLogic());
+        CHECK(blk2[1].isLogic());
+        CHECK(blk2[2].isInteger());
     }
 }
