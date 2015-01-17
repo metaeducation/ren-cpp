@@ -460,7 +460,12 @@ private:
 
         bool success = true;
         bool exiting = false;
-        int status; // Only initialized if `success and exiting`
+
+        // Only initialized if `success and exiting`, and we don't really need
+        // to initialize it and would rather not; but Clang complains as it
+        // cannot prove it's always initialized when used.  Revisit.
+
+        int status = 0xDECAFBAD;
 
         try {
             // Our applyFun helper does the magic to recursively forward
@@ -551,7 +556,6 @@ private:
 
         // Note: trickery!  R_RET is 0, but all other R_ values are
         // meaningless to Red.  So we only use that one here.
-
 
         return REN_SHIM_RESULT(stack, success);
     }
