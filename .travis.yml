@@ -11,8 +11,7 @@ env:
     matrix:
         - RUNTIME=rebol REBOL=rebol/rebol OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
         - RUNTIME=rebol REBOL=rebolsource/r3 OS_ID=0.4.40
-        ## Red Runtime build dimension disabled until it is ready.
-        #- RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
+        - RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
 
 matrix:
     exclude:
