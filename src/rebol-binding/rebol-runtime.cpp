@@ -124,6 +124,21 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
         return false;
 
+    // A misguided check in Rebol worries about the state of the CPU
+    // stack.  If you've somehow hopped around so that the state
+    // of the CPU stack it saw at its moment of initialization is
+    // such that it is no longer at that same depth, it crashes
+    // mysteriously even though nothing is actually wrong.  We beat
+    // the CHECK_STACK by making up either a really big pointer or a
+    // really small one for it to check against.  :-)
+
+#ifdef OS_STACK_GROWS_UP
+    Stack_Limit = static_cast<void*>(-1);
+#else
+    Stack_Limit = 0;
+#endif
+
+
     // Although you can build and pass a REBARGS structure yourself and
     // set appropriate defaults, the easiest idea is to formulate your
     // request in terms of the argc and argv an executable would have
