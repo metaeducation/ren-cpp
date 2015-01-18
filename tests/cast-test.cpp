@@ -7,7 +7,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("cast test", "[rebol]")
+TEST_CASE("cast test", "[rebol] [cast]")
 {
 
     SECTION("integer cast")

@@ -6,7 +6,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("block test", "[rebol]")
+TEST_CASE("block test", "[rebol] [block]")
 {
     SECTION("empty")
     {

@@ -63,21 +63,6 @@ RebolRuntime::RebolRuntime (bool) :
             );
         };
 
-    int marker;
-    REBCNT bounds = OS_CONFIG(1, 0);
-
-    if (bounds == 0)
-        bounds = STACK_BOUNDS;
-
-#ifdef OS_STACK_GROWS_UP
-    Stack_Limit = (uintptr_t)(&marker) + bounds;
-#else
-    if (bounds > (uintptr_t)(&marker))
-        Stack_Limit = 100;
-    else
-        Stack_Limit = (uintptr_t)(&marker) - bounds;
-#endif
-
     // Rebytes, version numbers
     // REBOL_VER
     // REBOL_REV
@@ -237,7 +222,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         Set_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
-    if (Init_Mezz(0) != 0 /* "zero for success" */)
+    if (Init_Mezz(0) != 0)
         throw std::runtime_error("RebolHooks: Mezzanine startup failure");
 
     // There is an unfortunate property of QUIT which is that it calls

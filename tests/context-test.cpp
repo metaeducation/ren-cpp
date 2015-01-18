@@ -8,7 +8,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("context test", "[rebol]")
+TEST_CASE("context test", "[rebol] [context]")
 {
     Context defaultContext = Context::current();
 

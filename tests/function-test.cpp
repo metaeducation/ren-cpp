@@ -19,7 +19,7 @@ public:
 };
 
 
-TEST_CASE("function test", "[rebol]")
+TEST_CASE("function test", "[rebol] [function]")
 {
     auto addFive = Function::construct(
         "{Demonstration of using an operator() overloaded class}"
