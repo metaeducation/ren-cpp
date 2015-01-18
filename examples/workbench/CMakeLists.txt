@@ -52,6 +52,10 @@ if(APPLE)
     set(GUI_TYPE MACOSX_BUNDLE)
 endif(APPLE)
 
+if(WIN32)
+   set(WINDOWS_RC "workbench.rc")
+endif()
+
 
 # Source files included in the executable
 
@@ -60,9 +64,10 @@ add_executable(
 
     ${GUI_TYPE}
 
-    # Resource in compiled form
+    # Resource in compiled form (and .RES if windows for icon)
 
     ${RESOURCE_ADDED}
+    ${WINDOWS_RC}
 
     # Source files
 
