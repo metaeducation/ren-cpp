@@ -53,7 +53,7 @@ TEST_CASE("iteration tests", "[rebol] [iterator]")
 
     SECTION("unicode string iteration")
     {
-        const char * utf8Cstr = "MetÆducation\n";
+        const char * utf8Cstr = u8"MetÆducation\n";
 
         std::wstring ws;
         for (auto wc : String{utf8Cstr})
