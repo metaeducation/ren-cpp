@@ -121,6 +121,7 @@ void noisyFailureMsgHandler(
 int main(int argc, char *argv[]);
 
 #include <memory>
+#include <vector>
 #include <windows.h>
 
 //
