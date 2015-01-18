@@ -8,7 +8,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("form test", "[form]")
+TEST_CASE("form test", "[rebol]")
 {
     CHECK(to_string(Value {10}) == "10");
     CHECK(to_string(Value {1.5}) == "1.5");

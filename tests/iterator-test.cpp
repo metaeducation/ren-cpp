@@ -7,7 +7,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("block iteration", "[block]")
+TEST_CASE("block iteration", "[rebol]")
 {
     Block blk {"1 2 3"};
 
@@ -32,7 +32,7 @@ TEST_CASE("block iteration", "[block]")
 }
 
 
-TEST_CASE("ascii string iteration", "[iterator] [string]")
+TEST_CASE("ascii string iteration", "[rebol]")
 {
     const char * renCstr = "Hello^/There\nWorld^/";
     const char * cppCstr = "Hello\nThere\nWorld\n";
@@ -49,7 +49,7 @@ TEST_CASE("ascii string iteration", "[iterator] [string]")
 }
 
 
-TEST_CASE("unicode string iteration", "[iterator] [string]")
+TEST_CASE("unicode string iteration", "[rebol]")
 {
     const char * utf8Cstr = "MetÆducation\n";
 

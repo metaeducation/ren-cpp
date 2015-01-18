@@ -7,7 +7,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("apply test", "[apply]")
+TEST_CASE("apply test", "[rebol]")
 {
     SECTION("set-word success")
     {

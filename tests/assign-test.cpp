@@ -6,7 +6,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("assign test", "[assign]")
+TEST_CASE("assign test", "[rebol]")
 {
     Integer someInt {10};
     Value someValue;

@@ -8,7 +8,7 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("literals construction", "[literals]")
+TEST_CASE("literals construction", "[rebol]")
 {
     SECTION("default")
     {
