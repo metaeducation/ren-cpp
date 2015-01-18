@@ -24,6 +24,9 @@
 #include <QThread>
 #include <QMessageBox>
 
+#include <QLibraryInfo>
+#include <QTranslator>
+
 #include "mainwindow.h"
 
 #ifndef NDEBUG
@@ -312,6 +315,17 @@ int main(int argc, char *argv[])
 
     qInstallMessageHandler(noisyFailureMsgHandler);
 #endif
+
+    // Install translator
+
+    QTranslator qtTranslator;
+    qtTranslator.load("qt_" + QLocale::system().name(),
+                      QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+    app.installTranslator(&qtTranslator);
+
+    QTranslator rengardenTranslator;
+    rengardenTranslator.load("rengarden_" + QLocale::system().name());
+    app.installTranslator(&rengardenTranslator);
 
     MainWindow mainWin;
     mainWin.show();
