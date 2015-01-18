@@ -575,9 +575,13 @@ public:
     //     https://github.com/hostilefork/rencpp/issues/25
     //
     // Having implicit constructors for C++ native types is more valuable
-    // than overloading == and != which is especially true given that C++
-    // has a different meaning for == than Rebol/Red.  Trying to make ==
-    // act like "isSameAs" causes ambiguity.
+    // than overloading == and != (you cannot do both, it would cause
+    // ambiguity...see issue).  But it's not a big loss anyway, because
+    // C++ has a different meaning for == than Rebol/Red.
+    //
+    // Naming-wise, we map `equal?` to `isEqual`.  Then because it is
+    // not prefix but "pseudo infix" due to the function call notation,
+    // it reads more literately as `isEqualTo`.
     //
 public:
     bool isEqualTo(Value const & other) const;
