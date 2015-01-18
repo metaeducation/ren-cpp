@@ -171,11 +171,138 @@ int CALLBACK WinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, L
 
 #endif
 
+
+#ifdef REN_GARDEN_BOXED
+
+void ReportStep(TCHAR const * step, TCHAR const * msg = nullptr) {
+    MessageBox(NULL, step, msg ? msg : L"No message", MB_OK);
+}
+
+void PreQApplicationInitForPacking() {
+
+    // If we are distributing Ren Garden as a virtualized executable with
+    // something like MoleBox or BoxedApp, the hack they use to get 32-bit
+    // Windows XP (or similar) to be able to LoadLibrary inside the virtual
+    // file system does not work.  That means qwindows.dll - which is not
+    // part of the natural link specification, but loaded from /platforms
+    // ("as determined 'somehow' where platforms is") - won't load out.
+
+    // So we have to pull it out into the ordinary file system space where
+    // it can be found by the loader.  We choose to ask Windows where it
+    // wants us to put temp files, and go with that.
+
+    TCHAR qwindowsInner[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, qwindowsInner);
+    wcscat(qwindowsInner, L"\\platforms\\qwindows.dll"); // no trailing "\"?
+
+    TCHAR tempPath[MAX_PATH];
+    GetTempPath(MAX_PATH, tempPath);
+
+    // http://stackoverflow.com/a/25266269/211160
+
+    // By running this before the QApplication structure, we override
+    // defaults; it will *only* look in these paths for plugins.
+
+    QApplication::addLibraryPath(".\\");
+    QApplication::addLibraryPath(QString::fromWCharArray(tempPath));
+
+    // Qt always looks for qwindows.dll in a directory called "platforms"
+    // under the library paths.  That's hardcoded.  Crete if it doesn't exist
+
+    TCHAR qwindowsOuter[MAX_PATH];
+    GetTempPath(MAX_PATH, qwindowsOuter);
+    wcscat(qwindowsOuter, L"platforms"); // this one *has* a trailing "\"?
+
+    CreateDirectory(qwindowsOuter, NULL); // false if failure, ignore
+
+    wcscat(qwindowsOuter, L"\\qwindows.dll");
+
+    // CopyFile does not appear to work in Windows 8 with the virtualized
+    // file system used by MoleBox (just as LoadLibrary seems to not work
+    // with it either...)  Great.  Roll our own lame copy routine.
+
+    DWORD bytesRead, bytesWritten;
+    size_t const bufferSize = 4096;
+    char buffer[4096];
+
+    HANDLE inFile = CreateFile (
+        qwindowsInner,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (inFile == INVALID_HANDLE_VALUE)
+    {
+       MessageBox(
+           NULL,
+           L"DLL not found in ren-garden/platforms",
+           qwindowsInner,
+           MB_OK
+       );
+       return;
+    }
+
+    HANDLE outFile = CreateFile (
+        qwindowsOuter,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (outFile == INVALID_HANDLE_VALUE)
+    {
+        // again quietly fail, hope it's because it was there already
+        CloseHandle(inFile);
+        return;
+    }
+
+    while (
+        ReadFile (inFile, buffer, bufferSize, &bytesRead, NULL)
+        and (bytesRead != 0)
+    ) {
+        if (
+            not WriteFile (
+                outFile,
+                buffer,
+                bytesRead,
+                &bytesWritten,
+                NULL
+            )
+        ) {
+            CloseHandle(inFile);
+            CloseHandle(outFile);
+            ReportStep(L"Write failure during copy");
+            return;
+        }
+    }
+
+    // Copy successful...close both files.
+
+    CloseHandle(inFile);
+    CloseHandle(outFile);
+}
+
+#endif
+
 int main(int argc, char *argv[])
 {
+    // Sometimes you use Q_INIT_RESOURCE, don't think it's applicable ATM
     // Q_INIT_RESOURCE(ren-garden);
 
+#ifdef REN_GARDEN_BOXED
+    PreQApplicationInitForPacking();
+#endif
+
     QApplication app(argc, argv);
+
+    // Should we delete the file we unpacked here, or leave it?
 
 #ifndef NDEBUG
     // Because our "noisy" message handler uses the GUI subsystem for

@@ -37,6 +37,25 @@ remove_cxx_flag("-Wswitch-default")
 remove_cxx_flag("-Wmissing-declarations")
 
 
+# These workarounds were added as an experiment for getting Ren Garden to be
+# able to have the EXE and DLLs packed together with MoleBox:
+#
+#    http://molebox.com/
+#
+# Among application virtualizers for Windows, it's relatively lightweight.
+# And with the workarounds, it *seems* to be viable on WinXP through Win8.
+# In any case, even if we don't use MoleBox specifically, the workarounds
+# may be necessary in other virtual solutions.
+
+if(GARDEN_BOXED)
+   if(NOT WIN32)
+       message(FATAL "Can only build Ren Garden for Boxing on Windows")
+   endif()
+   add_cxx_flags("-DREN_GARDEN_BOXED")
+endif()
+
+
+
 # Resource files need to be compiled, and then the compiled resource is set
 # into the ${RESOURCE_ADDED} variable
 
