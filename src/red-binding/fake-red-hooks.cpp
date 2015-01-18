@@ -22,10 +22,10 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include <cstring>
-#include <sstream>
 #endif
 #include <cassert>
+#include <sstream>
+#include <cstring>
 
 #include "rencpp/red.hpp"
 #include "rencpp/helpers.hpp"
@@ -125,8 +125,8 @@ public:
             // Blatantly lie by just setting header bits to match ID,
             // the data will be garbage.
             constructOutDatatypeIn->data1 = 0;
-            constructOutDatatypeIn->s.data2 = 0;
-            constructOutDatatypeIn->s.data3 = 0;
+            constructOutDatatypeIn->dataII.data2 = 0;
+            constructOutDatatypeIn->dataII.data3 = 0;
         }
         else {
             print("No construction requested.");
@@ -140,8 +140,8 @@ public:
 
             applyOut->header = RedRuntime::TYPE_STRING;
             applyOut->data1 = 1;
-            applyOut->s.data2 = 0;
-            applyOut->s.data3 = 0;
+            applyOut->dataII.data2 = 0;
+            applyOut->dataII.data3 = 0;
         }
 
         print("<---[FakeRed::ConstructOrApply]<---");
@@ -169,13 +169,14 @@ public:
         size_t * lengthOut
     ) {
         UNUSED(engine);
+        UNUSED(bufSize);
 
         std::stringstream ss;
     #ifndef NDEBUG
         ss << "Formed(" << RedRuntime::datatypeName(RedRuntime::getDatatypeID(*cell)) << ")";
     #else
         ss << "Formed("
-            << static_cast<int>(RedRuntime::getDatatypeID(cell))
+            << static_cast<int>(RedRuntime::getDatatypeID(*cell))
             << ")";
     #endif
         assert(bufSize > ss.str().length());
@@ -184,6 +185,13 @@ public:
 
         return REN_SUCCESS;
     }
+
+    RenResult Exit(int status) {
+        // Rebol's exit can be caught by CATCH/EXIT (CATCH/QUIT) if you want
+        // to run a script and trap its attempt to stop.
+        exit(status);
+    }
+
 
     ~FakeRedHooks() {
     }
@@ -271,6 +279,10 @@ RenResult RenFormAsUtf8(
         bufSize,
         lengthOut
     );
+}
+
+RenResult RenExit(int status) {
+    return ren::internal::hooks.Exit(status);
 }
 
 #endif

@@ -465,7 +465,7 @@ private:
         // to initialize it and would rather not; but Clang complains as it
         // cannot prove it's always initialized when used.  Revisit.
 
-        int status = 0xDECAFBAD;
+        int status = 0x0BADBAD0;
 
         try {
             // Our applyFun helper does the magic to recursively forward

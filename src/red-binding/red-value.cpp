@@ -67,7 +67,7 @@ std::string to_string(Value const & value) {
         return "#[false!]";
     }
     else if (value.isInteger()) {
-        return std::to_string(value.cell.s.data2);
+        return std::to_string(value.cell.dataII.data2);
     }
     else if (value.isFloat()) {
         return std::to_string(value.cell.dataD);

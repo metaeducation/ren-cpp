@@ -31,7 +31,7 @@
  * int32_t is in #include <stdint.h>, generally you should only use the
  * specific size definitions when doing external interfaces like this.
  *
- * http: *stackoverflow.com/q/6144682/211160
+ * http://stackoverflow.com/q/6144682/211160
  */
 #include <stdint.h>
 
@@ -95,7 +95,7 @@ CASSERT(0, hooks_h)
  * same series for all time.  The content of the series may change, the
  * embedded index may "go stale", but will not crash.  Look at:
  *
- *   https: *github.com/red/red/blob/master/runtime/allocator.reds
+ *   https://github.com/red/red/blob/master/runtime/allocator.reds
  *
  * It tells us the bits are laid out like this:
  *
@@ -118,9 +118,16 @@ CASSERT(0, hooks_h)
  *
  * More specific interpretations of the 128 bits are given in the file:
  *
- *   https: *github.com/red/red/blob/master/runtime/datatypes/structures.reds
+ *   https://github.com/red/red/blob/master/runtime/datatypes/structures.reds
  *
+ * Note that anonymous structs inside anonymous unions are not standard, so
+ * there is RedCellDataII (ii => "two integers")
  */
+
+typedef struct {
+    int32_t data2;
+    int32_t data3;
+} RedCellDataII;
 
 struct RedCell {
     int32_t header;
@@ -130,7 +137,7 @@ struct RedCell {
      * C and C++ compilers actually have something called the "strict aliasing
      * requirement".  There are a lot of common mistakes with it:
      *
-     *     http: *stackoverflow.com/questions/98650/
+     *     http://stackoverflow.com/questions/98650/
      *
      * Long story short: if a type was of one kind, you cannot reliably cast
      * it to another data type and read or write from it (unless the type you
@@ -143,14 +150,11 @@ struct RedCell {
 
     /*
      * For union initializer list syntax, see here:
-     *     http: *stackoverflow.com/questions/18411039/
+     *     http://stackoverflow.com/questions/18411039/
      */
     union {
         double dataD;
-        struct {
-            int32_t data2;
-            int32_t data3;
-        } s;
+        RedCellDataII dataII;
     };
 };
 
@@ -189,7 +193,7 @@ typedef RedEngineHandle RenEngineHandle;
 #define REN_STACK_SHIM(stack) \
     static_cast<RenShimPointer>((stack), nullptr)
 
-#define REN_SHIM_RESULT(stack, success, exiting, status) \
+#define REN_SHIM_RESULT(stack, success) \
     REN_SUCCESS
 
 

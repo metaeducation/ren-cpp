@@ -82,7 +82,7 @@ Value::Value (bool b, Engine * engine) :
 
 
 Logic::operator bool () const {
-    return cell.s.data2;
+    return cell.dataII.data2;
 }
 
 
@@ -126,7 +126,7 @@ Value::Value (int i, Engine * engine) :
 
 
 Integer::operator int () const {
-    return cell.s.data2;
+    return cell.dataII.data2;
 }
 
 

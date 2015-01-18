@@ -170,7 +170,6 @@ std::string RedRuntime::datatypeName(ren::RedRuntime::DatatypeID id) {
     return (*it).second;
 }
 
-} // end namespace ren
-
-
 #endif
+
+} // end namespace ren

@@ -92,8 +92,8 @@ public:
         RedCell result;
         result.header = header;
         result.data1 = data1;
-        result.s.data2 = data2;
-        result.s.data3 = data3;
+        result.dataII.data2 = data2;
+        result.dataII.data3 = data3;
         return result;
     }
 
