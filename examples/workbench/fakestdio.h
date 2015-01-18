@@ -22,9 +22,12 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
-
-#include <iostream>
 #include <cassert>
+#include <cstddef>
+#include <functional>
+#include <ostream>
+#include <streambuf>
+#include <vector>
 
 #include <QMutexLocker>
 

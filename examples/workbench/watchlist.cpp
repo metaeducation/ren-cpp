@@ -19,9 +19,11 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+#include <cstdlib>  // std::abs for integers
+#include <iterator>
+#include <stdexcept>
 
 #include <QtWidgets>
-
 #include <QTableWidget>
 
 #include "watchlist.h"

@@ -19,6 +19,7 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+#include <vector>
 
 #include <QtWidgets>
 
