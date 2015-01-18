@@ -59,13 +59,13 @@ MainWindow::MainWindow() :
     dockWatch->setWidget(watchList);
 
     connect(
-        console, RenConsole::finishedEvaluation,
-        watchList, WatchList::updateAllWatchers,
+        console, &RenConsole::finishedEvaluation,
+        watchList, &WatchList::updateAllWatchers,
         Qt::DirectConnection
     );
 
     connect(
-        console, ReplPad::reportStatus,
+        console, &ReplPad::reportStatus,
         statusBar(), [this](QString const & message) {
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);
@@ -74,8 +74,8 @@ MainWindow::MainWindow() :
     );
 
     connect(
-        console, ReplPad::fadeOutToQuit,
-        this, MainWindow::onFadeOutToQuit,
+        console, &ReplPad::fadeOutToQuit,
+        this, &MainWindow::onFadeOutToQuit,
         Qt::DirectConnection
     );
 
@@ -83,19 +83,19 @@ MainWindow::MainWindow() :
     // hide the dock the watchList is in?
 
     connect(
-        watchList, WatchList::showDockRequested,
-        dockWatch, QDockWidget::show,
+        watchList, &WatchList::showDockRequested,
+        dockWatch, &QDockWidget::show,
         Qt::QueuedConnection
     );
 
     connect(
-        watchList, WatchList::hideDockRequested,
-        dockWatch, QDockWidget::hide,
+        watchList, &WatchList::hideDockRequested,
+        dockWatch, &QDockWidget::hide,
         Qt::QueuedConnection
     );
 
     connect(
-        watchList, WatchList::reportStatus,
+        watchList, &WatchList::reportStatus,
         statusBar(), [this](QString const & message) {
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);
@@ -113,14 +113,14 @@ MainWindow::MainWindow() :
     updateMenus();
 
     connect(
-        console, RenConsole::copyAvailable,
-        cutAct, QAction::setEnabled,
+        console, &RenConsole::copyAvailable,
+        cutAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
     connect(
-        console, RenConsole::copyAvailable,
-        copyAct, QAction::setEnabled,
+        console, &RenConsole::copyAvailable,
+        copyAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
@@ -183,29 +183,29 @@ void MainWindow::createActions()
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
-    connect(exitAct, QAction::triggered, qApp, QApplication::quit, Qt::DirectConnection);
+    connect(exitAct, &QAction::triggered, qApp, &QApplication::quit, Qt::DirectConnection);
 
     cutAct = new QAction(QIcon(":/images/cut.png"), tr("Cu&t"), this);
     cutAct->setShortcuts(QKeySequence::Cut);
     cutAct->setStatusTip(tr("Cut the current selection's contents to the "
                             "clipboard"));
-    connect(cutAct, QAction::triggered, this, MainWindow::cut, Qt::DirectConnection);
+    connect(cutAct, &QAction::triggered, this, &MainWindow::cut, Qt::DirectConnection);
 
     copyAct = new QAction(QIcon(":/images/copy.png"), tr("&Copy"), this);
     copyAct->setShortcuts(QKeySequence::Copy);
     copyAct->setStatusTip(tr("Copy the current selection's contents to the "
                              "clipboard"));
-    connect(copyAct, QAction::triggered, this, MainWindow::copy, Qt::DirectConnection);
+    connect(copyAct, &QAction::triggered, this, &MainWindow::copy, Qt::DirectConnection);
 
     pasteAct = new QAction(QIcon(":/images/paste.png"), tr("&Paste"), this);
     pasteAct->setShortcuts(QKeySequence::Paste);
     pasteAct->setStatusTip(tr("Paste the clipboard's contents into the current "
                               "selection"));
-    connect(pasteAct, QAction::triggered, this, MainWindow::paste, Qt::DirectConnection);
+    connect(pasteAct, &QAction::triggered, this, &MainWindow::paste, Qt::DirectConnection);
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
-    connect(aboutAct, QAction::triggered, this, MainWindow::about, Qt::DirectConnection);
+    connect(aboutAct, &QAction::triggered, this, &MainWindow::about, Qt::DirectConnection);
 
     aboutQtAct = new QAction(tr("About &Qt"), this);
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
@@ -217,7 +217,7 @@ void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
     QAction *action = fileMenu->addAction(tr("Switch layout direction"));
-    connect(action, QAction::triggered, this, MainWindow::switchLayoutDirection, Qt::DirectConnection);
+    connect(action, &QAction::triggered, this, &MainWindow::switchLayoutDirection, Qt::DirectConnection);
     fileMenu->addAction(exitAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));

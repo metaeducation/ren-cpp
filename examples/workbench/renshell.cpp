@@ -188,32 +188,32 @@ void ShellWorker::initProcess() {
     using P = QProcess;
 
     connect(
-        process, static_cast<void (P::*)(P::ProcessError)>(P::error),
-        this, ShellWorker::onError,
+        process, static_cast<void (P::*)(P::ProcessError)>(&P::error),
+        this, &ShellWorker::onError,
         Qt::DirectConnection
     );
 
     connect(
-        process, static_cast<void (P::*)(int, P::ExitStatus)>(P::finished),
-        this, ShellWorker::onFinished,
+        process, static_cast<void (P::*)(int, P::ExitStatus)>(&P::finished),
+        this, &ShellWorker::onFinished,
         Qt::DirectConnection
     );
 
     connect(
-        process, QProcess::readyReadStandardError,
-        this, ShellWorker::onReadyReadStandardError,
+        process, &QProcess::readyReadStandardError,
+        this, &ShellWorker::onReadyReadStandardError,
         Qt::DirectConnection
     );
 
     connect(
-        process, QProcess::readyReadStandardOutput,
-        this, ShellWorker::onReadyReadStandardOutput,
+        process, &QProcess::readyReadStandardOutput,
+        this, &ShellWorker::onReadyReadStandardOutput,
         Qt::DirectConnection
     );
 
     connect(
-        process, QProcess::stateChanged,
-        this, ShellWorker::onStateChanged,
+        process, &QProcess::stateChanged,
+        this, &ShellWorker::onStateChanged,
         Qt::DirectConnection
     );
 
@@ -497,18 +497,18 @@ RenShell::RenShell (QObject * parent) :
     ShellWorker * worker = new ShellWorker;
     worker->moveToThread(&workerThread);
     connect(
-        &workerThread, QThread::finished,
-        worker, QObject::deleteLater,
+        &workerThread, &QThread::finished,
+        worker, &QObject::deleteLater,
         Qt::DirectConnection
     );
     connect(
-        this, RenShell::operate,
-        worker, ShellWorker::doWork,
+        this, &RenShell::operate,
+        worker, &ShellWorker::doWork,
         Qt::QueuedConnection
     );
     connect(
-        worker, ShellWorker::resultReady,
-        this, RenShell::handleResults,
+        worker, &ShellWorker::resultReady,
+        this, &RenShell::handleResults,
         // technically it can't handle more results...but better perhaps
         // to crash than to block if some new invariant is introduced and
         // make it look like it's working.

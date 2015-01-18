@@ -165,8 +165,8 @@ WatchList::WatchList(QWidget * parent) :
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(
-        this, WatchList::customContextMenuRequested,
-        this, WatchList::customMenuRequested,
+        this, &WatchList::customContextMenuRequested,
+        this, &WatchList::customMenuRequested,
         Qt::DirectConnection
     );
 
@@ -246,26 +246,26 @@ WatchList::WatchList(QWidget * parent) :
     // have to hold up the running evaluator when watch is called
 
     connect(
-        this, WatchList::pushWatcherRequested,
-        this, WatchList::pushWatcher,
+        this, &WatchList::pushWatcherRequested,
+        this, &WatchList::pushWatcher,
         Qt::BlockingQueuedConnection
     );
 
     connect(
-        this, WatchList::removeWatcherRequested,
-        this, WatchList::removeWatcher,
+        this, &WatchList::removeWatcherRequested,
+        this, &WatchList::removeWatcher,
         Qt::BlockingQueuedConnection
     );
 
     connect(
-        this, WatchList::freezeItemRequested,
-        this, WatchList::setFreezeState,
+        this, &WatchList::freezeItemRequested,
+        this, &WatchList::setFreezeState,
         Qt::BlockingQueuedConnection
     );
 
     connect(
-        this, WatchList::itemChanged,
-        this, WatchList::onItemChanged,
+        this, &WatchList::itemChanged,
+        this, &WatchList::onItemChanged,
         Qt::AutoConnection
     );
 }
@@ -611,21 +611,21 @@ void WatchList::customMenuRequested(QPoint pos){
     //
 
     connect(
-        frozenAction, QAction::triggered,
+        frozenAction, &QAction::triggered,
         [this, index](bool frozen) {
             setFreezeState(index, frozen);
         }
     );
 
     connect(
-        recalculatesAction, QAction::triggered,
+        recalculatesAction, &QAction::triggered,
         [this, index](bool recalculates) {
             setRecalculatesState(index, recalculates);
         }
     );
 
     connect(
-        duplicateAction, QAction::triggered,
+        duplicateAction, &QAction::triggered,
         [this, index](bool) {
             duplicateWatcher(index);
         }
@@ -633,7 +633,7 @@ void WatchList::customMenuRequested(QPoint pos){
 
 
     connect(
-        unwatchAction, QAction::triggered,
+        unwatchAction, &QAction::triggered,
         [this, index](bool) {
             removeWatcher(index);
         }
@@ -648,8 +648,8 @@ void WatchList::customMenuRequested(QPoint pos){
     menu->popup(viewport()->mapToGlobal(pos));
 
     connect(
-        menu, QMenu::aboutToHide,
-        menu, QObject::deleteLater,
+        menu, &QMenu::aboutToHide,
+        menu, &QObject::deleteLater,
         Qt::DirectConnection // it's "deleteLater", already queued...
     );
 
