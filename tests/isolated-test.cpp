@@ -3,6 +3,9 @@
 //
 // If there are any tests in this file with this tag, then 
 // Travis will run it in isolation from the other tests.
+//
+// Put the test with the appropriate runtime to prevent it from
+// causing unnecessary failures in the runtime you're not testing
 
 #include "rencpp/ren.hpp"
 
@@ -10,8 +13,11 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("isolated test", "[isolated]")
+TEST_CASE("isolated test", "[isolated] [rebol]")
 {
-    SetWord sw ("foo");
-    runtime(sw, "{Hello}");
+}
+
+
+TEST_CASE("isolated test", "[isolated] [red]")
+{
 }

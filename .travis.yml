@@ -92,6 +92,6 @@ script:
     # will return that number instead of what the child process returned
     # if there are errors found.
 
-    - valgrind --leak-check=full build/tests/test-rencpp "[isolated]"
+    - valgrind --leak-check=full build/tests/test-rencpp "[${RUNTIME}]" "[isolated]"
 
     - valgrind --error-exitcode=222 --leak-check=full build/tests/test-rencpp "[${RUNTIME}]" "~[isolated]"
