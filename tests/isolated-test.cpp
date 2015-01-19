@@ -13,11 +13,11 @@ using namespace ren;
 
 #include "catch.hpp"
 
-TEST_CASE("isolated test", "[isolated] [rebol]")
+TEST_CASE("isolated rebol test", "[isolated] [rebol]")
 {
 }
 
 
-TEST_CASE("isolated test", "[isolated] [red]")
+TEST_CASE("isolated red test", "[isolated] [red]")
 {
 }
