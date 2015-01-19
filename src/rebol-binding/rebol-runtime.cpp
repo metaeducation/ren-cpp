@@ -8,6 +8,10 @@
 #include "rencpp/rebol.hpp"
 #include "rencpp/blocks.hpp"
 
+extern "C" {
+#include "rebol/src/include/reb-ext.h"
+#include "rebol/src/include/reb-lib.h"
+}
 
 namespace ren {
 
