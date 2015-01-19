@@ -193,9 +193,6 @@ typedef RedEngineHandle RenEngineHandle;
 #define REN_STACK_SHIM(stack) \
     static_cast<RenShimPointer>((stack), nullptr)
 
-#define REN_SHIM_RESULT(stack, success) \
-    REN_SUCCESS
-
 
 #elif REN_RUNTIME == REN_RUNTIME_REBOL
 
@@ -204,8 +201,6 @@ typedef RedEngineHandle RenEngineHandle;
  * Red/System), Rebol does.
  */
 #include "rebol/src/include/sys-core.h"
-#include "rebol/src/include/reb-ext.h"
-#include "rebol/src/include/reb-lib.h"
 
 
 /*
@@ -236,18 +231,6 @@ typedef RebolEngineHandle RenEngineHandle;
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
 
-
-/*
- * Although the abstraction is that the RenShimPointer returns a RenResult,
- * the native function pointers in Rebol do not do this.  It just happens
- * that 0 maps to R_RET, which is what we want.  The return conventions of
- * Red are unlikely to match that...and maybe never give back an integer
- * at all.  For the moment though we'll assume it does but the interpretation
- * as some kind of error code for the hook seems more sensible.
- */
-CASSERT(REN_SUCCESS == R_RET, hooks_h)
-
-
 /*
  * Here we have our definitions for how to find the relevant values on the
  * stack.  Because Rebol uses 1 based calculations, we have to add 1.  The
@@ -265,18 +248,6 @@ CASSERT(REN_SUCCESS == R_RET, hooks_h)
 #define REN_STACK_SHIM(stack) \
     VAL_FUNC_CODE(DSF_FUNC((stack) - DS_Base))
 
-
-/*
- * WARNING - Throw_Error uses longjmp to completely undermine the C++
- * destructor chain; be sure the start and target of the jump cannot
- * skip a destructor!
- */
-
-#define REN_SHIM_RESULT(stack, success) \
-    (success) \
-        ? REN_SUCCESS \
-        : (Throw_Error(VAL_SERIES(REN_STACK_RETURN(stack))), REN_SUCCESS)
-
 #else
 
 CASSERT(0, hooks_h)
@@ -288,10 +259,18 @@ typedef RenResult (* RenShimPointer)(RenCell * stack);
 
 
 /*
- * Unlike the C exit() call, the RenExit call can be "caught" by CATCH/EXIT
+ * Unlike the C exit() call, RenShimExit call can be "caught" by CATCH/EXIT
  * Should not return if successful, and shouldn't fail... result is ignored.
  */
-RenResult RenExit(int status);
+RenResult RenShimExit(int status);
+
+
+/*
+ * Like RenShimExit but when an error happens.  In Rebol, at least, the return
+ * value will be ignored because the routine longjmps as an "exception"
+ */
+RenResult RenShimRaiseError(RenCell const * error);
+
 
 /*
  * Cannot use ERROR! as this deals with init and shutdown of the code that

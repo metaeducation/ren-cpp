@@ -6,6 +6,17 @@
 
 namespace ren {
 
+//
+// Although the abstraction is that the RenShimPointer returns a RenResult,
+// the native function pointers in Rebol do not do this.  It just happens
+// that 0 maps to R_RET, which is what we want.  The return conventions of
+// Red are unlikely to match that...and maybe never give back an integer
+// at all.  For the moment though we'll assume it does but the interpretation
+// as some kind of error code for the hook seems more sensible.
+//
+static_assert(R_RET == 0, "R_RET must be 0 for RenShimPointer to work");
+
+
 ///
 /// TYPE DETECTION
 ///

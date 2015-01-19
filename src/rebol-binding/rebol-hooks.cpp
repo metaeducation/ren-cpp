@@ -686,11 +686,16 @@ public:
         return result;
     }
 
-    RenResult RenExit(int status) {
+    RenResult ShimExit(int status) {
         REBVAL value;
         SET_INTEGER(&value, status);
         Halt_Code(RE_QUIT, &value);
         UNREACHABLE_CODE();
+    }
+
+    RenResult ShimRaiseError(REBVAL const * error) {
+        Throw_Error(VAL_SERIES(const_cast<REBVAL *>(error)));
+        return REN_SUCCESS; // never happens...
     }
 
     ~RebolHooks () {
@@ -775,6 +780,10 @@ RenResult RenFormAsUtf8(
 }
 
 
-RenResult RenExit(int status) {
-    return ren::internal::hooks.RenExit(status);
+RenResult RenShimExit(int status) {
+    return ren::internal::hooks.ShimExit(status);
+}
+
+RenResult RenShimRaiseError(RenCell const * error) {
+    return ren::internal::hooks.ShimRaiseError(error);
 }

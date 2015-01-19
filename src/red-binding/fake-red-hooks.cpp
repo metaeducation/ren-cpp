@@ -186,10 +186,14 @@ public:
         return REN_SUCCESS;
     }
 
-    RenResult Exit(int status) {
+    RenResult ShimExit(int status) {
         // Rebol's exit can be caught by CATCH/EXIT (CATCH/QUIT) if you want
         // to run a script and trap its attempt to stop.
         exit(status);
+    }
+
+    RenResult ShimRaiseError(RedCell const * error) {
+        throw std::runtime_error("ShimRaiseError...coming soon...");
     }
 
 
@@ -281,8 +285,12 @@ RenResult RenFormAsUtf8(
     );
 }
 
-RenResult RenExit(int status) {
-    return ren::internal::hooks.Exit(status);
+RenResult RenShimExit(int status) {
+    return ren::internal::hooks.ShimExit(status);
+}
+
+RenResult RenShimRaiseError(RenCell const * error) {
+    return ren::internal::hooks.ShimRaiseError(error);
 }
 
 #endif

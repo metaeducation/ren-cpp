@@ -544,20 +544,21 @@ private:
             };
         }
 
-        // If we're exiting use what the API tells us to return
-
-        if (exiting)
-            return RenExit(status);
-
         // We now should have all the C++ objects cleared from this stack,
         // so at least as far as THIS function is concerned, a longjmp
-        // should be safe.  RenShimResult on a failure under the Rebol
-        // runtime will do that longjmp with the error to the Saved_State
+        // should be safe (which is what Rebol will do if we call RenShimError
+        // or RenShimExit).
 
-        // Note: trickery!  R_RET is 0, but all other R_ values are
-        // meaningless to Red.  So we only use that one here.
+        if (exiting)
+            return RenShimExit(status);
 
-        return REN_SHIM_RESULT(stack, success);
+        if (not success)
+            return RenShimRaiseError(REN_STACK_RETURN(stack));
+
+        // Note: trickery!  R_RET is 0 and so is REN_SUCCESS.  Rebol pays
+        // attention to it, but we don't know what Red will do.
+
+        return REN_SUCCESS;
     }
 
 public:
