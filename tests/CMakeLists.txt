@@ -29,6 +29,8 @@ remove_cxx_flag("-Wswitch-default")
 set(
     VALUE_TESTS
 
+    isolated-test.cpp
+
     literals-test.cpp
     cast-test.cpp
     block-test.cpp
