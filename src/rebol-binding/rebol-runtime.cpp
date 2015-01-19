@@ -147,19 +147,22 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
         return false;
 
-    // A misguided check in Rebol worries about the state of the CPU
-    // stack.  If you've somehow hopped around so that the state
-    // of the CPU stack it saw at its moment of initialization is
-    // such that it is no longer at that same depth, it crashes
-    // mysteriously even though nothing is actually wrong.  We beat
-    // the CHECK_STACK by making up either a really big pointer or a
-    // really small one for it to check against.  :-)
+    int marker;
+    REBCNT bounds = OS_CONFIG(1, 0);
+
+    if (bounds == 0)
+        bounds = STACK_BOUNDS;
 
 #ifdef OS_STACK_GROWS_UP
-    Stack_Limit = static_cast<void*>(-1);
+    Stack_Limit = (uintptr_t)(&marker) + bounds;
 #else
-    Stack_Limit = 0;
+    if (bounds > (uintptr_t)(&marker))
+        Stack_Limit = 100;
+    else
+        Stack_Limit = (uintptr_t)(&marker) - bounds;
 #endif
+
+
 
 
     // Parse_Args has a memory leak; it uses OS_Get_Current_Dir which

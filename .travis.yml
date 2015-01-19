@@ -65,6 +65,9 @@ install:
         make -C runtimes/rebol/make/ make OS_ID=${OS_ID} &&
         make -C runtimes/rebol/make/ clean prep r3;
       fi
+    # Make sure valgrind is installed
+    - sudo apt-get install valgrind
+
 
 before_script:
     # Have CMake generate the makefiles
@@ -82,5 +85,9 @@ script:
     # runtime in effect.  For list of Catch command-line parameters, see:
     #
     # https://github.com/philsquared/Catch/blob/master/docs/command-line.md
+    #
+    # Also, run it under valgrind.  With --error-exitcode option, valgrind
+    # will return that number instead of what the child process returned
+    # if there are errors found.
 
-    - build/tests/test-rencpp "[${RUNTIME}]"
+    - valgrind --error-exitcode=222 --leak-check=full build/tests/test-rencpp "[${RUNTIME}]"
