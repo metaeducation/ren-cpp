@@ -279,9 +279,14 @@ public:
 
             if (IS_OBJECT(applicand)) {
                 REBSER * reboundArgs = Clone_Block(args);
-                REBVAL block;
-                Set_Block(&block, reboundArgs);
-                Bind_Block(VAL_OBJ_FRAME(applicand), &block, BIND_DEEP);
+
+                // This says it takes a "REBVAL" for block, but doesn't mean
+                // it wants a value that is a block.  It wants the value
+                // pointer at the head of the block!!  :-/
+
+                Bind_Block(
+                    VAL_OBJ_FRAME(applicand), BLK_HEAD(reboundArgs), BIND_DEEP
+                );
 
                 // result is just TOS
                 DS_PUSH(Do_Blk(reboundArgs, 0));
@@ -366,40 +371,7 @@ public:
 
         bool applying = false;
 
-        PUSH_STATE(state, Halt_State);
-        if (SET_JUMP(state)) {
-            POP_STATE(state, Halt_State);
-            Saved_State = Halt_State;
-            Catch_Error(DS_NEXT); // Stores error value here
-            REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
-            *val = *DS_NEXT;
 
-            if (VAL_ERR_NUM(val) == RE_QUIT) {
-                // Cancellation to exit to the OS with an error code number,
-                // purposefully requested by the programmer
-                *errorOut = *VAL_ERR_VALUE(DS_NEXT);
-                return REN_EVALUATION_EXITED;
-            }
-
-            if (VAL_ERR_NUM(val) == RE_HALT) {
-                // cancellation in middle of interpretation from outside
-                // the evaluation loop (e.g. Escape)
-                return REN_EVALUATION_CANCELLED;
-            }
-
-            // Some other generic error; it may have occurred during the
-            // construct phase or the apply phase
-            *errorOut = *val;
-            if (not applying)
-                return REN_CONSTRUCT_ERROR;
-            return REN_APPLY_ERROR;
-        }
-        SET_STATE(state, Halt_State);
-
-        // Use this handler for both, halt conditions (QUIT, HALT) and error
-        // conditions. As this is a top-level handler, simply overwriting
-        // Saved_State is safe.
-        Saved_State = Halt_State;
 
         int result = REN_SUCCESS;
 
@@ -489,6 +461,40 @@ public:
         }
 
         if (applyOut) {
+            PUSH_STATE(state, Halt_State);
+            if (SET_JUMP(state)) {
+                POP_STATE(state, Halt_State);
+                Saved_State = Halt_State;
+                Catch_Error(DS_NEXT); // Stores error value here
+                REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
+                *val = *DS_NEXT;
+
+                if (VAL_ERR_NUM(val) == RE_QUIT) {
+                    // Cancellation to exit to the OS with an error code number,
+                    // purposefully requested by the programmer
+                    *errorOut = *VAL_ERR_VALUE(DS_NEXT);
+                    return REN_EVALUATION_EXITED;
+                }
+
+                if (VAL_ERR_NUM(val) == RE_HALT) {
+                    // cancellation in middle of interpretation from outside
+                    // the evaluation loop (e.g. Escape)
+                    return REN_EVALUATION_CANCELLED;
+                }
+
+                // Some other generic error; it may have occurred during the
+                // construct phase or the apply phase
+                *errorOut = *val;
+
+                return REN_APPLY_ERROR;
+            }
+            SET_STATE(state, Halt_State);
+
+            // Use this handler for both, halt conditions (QUIT, HALT) and error
+            // conditions. As this is a top-level handler, simply overwriting
+            // Saved_State is safe.
+            Saved_State = Halt_State;
+
             applying = true;
             if (applicand) {
                 result = Generalized_Apply(
@@ -510,6 +516,11 @@ public:
 
                 *applyOut = *Do_Blk(aggregate, 0); // result is volatile
             }
+
+            // Pop our error trapping state
+
+            POP_STATE(state, Halt_State);
+            Saved_State = Halt_State;
         }
 
         if (constructOutDatatypeIn) {
@@ -572,11 +583,6 @@ public:
         // be written taking the binding refs into account
 
         UNSAVE_SERIES(aggregate);
-
-        // Pop our error trapping state
-
-        POP_STATE(state, Halt_State);
-        Saved_State = Halt_State;
 
         return result;
     }
