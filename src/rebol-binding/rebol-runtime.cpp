@@ -147,22 +147,11 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
         return false;
 
-    int marker;
-    REBCNT bounds = OS_CONFIG(1, 0);
-
-    if (bounds == 0)
-        bounds = STACK_BOUNDS;
-
-#ifdef OS_STACK_GROWS_UP
-    Stack_Limit = (uintptr_t)(&marker) + bounds;
-#else
-    if (bounds > (uintptr_t)(&marker))
-        Stack_Limit = 100;
-    else
-        Stack_Limit = (uintptr_t)(&marker) - bounds;
-#endif
-
-
+    #ifdef OS_STACK_GROWS_UP
+        Stack_Limit = static_cast<void*>(-1);
+    #else
+        Stack_Limit = 0;
+    #endif
 
 
     // Parse_Args has a memory leak; it uses OS_Get_Current_Dir which
