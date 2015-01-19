@@ -4,9 +4,6 @@
 #include <csignal>
 #include <unistd.h>
 
-#include <QDir>
-#include <QFile>
-
 #include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
 #include "rencpp/blocks.hpp"
