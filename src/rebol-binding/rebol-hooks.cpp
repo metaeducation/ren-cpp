@@ -542,9 +542,11 @@ public:
                 // we don't have an interface to give a context a parent
                 // from RenCpp
 
-                REBVAL block;
-                Set_Block(&block, aggregate);
-                REBSER * frame = Make_Object(nullptr, &block);
+                // Once again, the REBVAL that is taken as "block" isn't a
+                // block value, but the value pointer at the *head* of
+                // the block.  :-/
+
+                REBSER * frame = Make_Object(nullptr, BLK_HEAD(aggregate));
 
                 // This sets REB_OBJECT in the header, possibly redundantly
                 Set_Object(constructOutDatatypeIn, frame);
