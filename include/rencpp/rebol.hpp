@@ -40,6 +40,8 @@ private:
     Context * defaultContext;
     bool initialized;
 
+    REBARGS rebargs;
+
 private:
     static REBVAL loadAndBindWord(
         REBSER * context, // may be null, Lib_Context, SysContext, or Get_System(...CTX_USER...)

@@ -4,6 +4,9 @@
 #include <csignal>
 #include <unistd.h>
 
+#include <QDir>
+#include <QFile>
+
 #include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
 #include "rencpp/blocks.hpp"
@@ -12,6 +15,10 @@ extern "C" {
 #include "rebol/src/include/reb-ext.h"
 #include "rebol/src/include/reb-lib.h"
 }
+
+#ifndef MAX_PATH
+#define MAX_PATH 4096  // from host-lib.c, generally lacking in Posix
+#endif
 
 namespace ren {
 
@@ -66,6 +73,21 @@ RebolRuntime::RebolRuntime (bool) :
                 + " : " + reinterpret_cast<char const *>(content)
             );
         };
+
+    // = {0} on construct should zero fill, but gives warnings in older gcc
+    // http://stackoverflow.com/questions/13238635/#comment37115390_13238635
+
+    rebargs.options = 0;
+    rebargs.script = nullptr;
+    rebargs.args = nullptr;
+    rebargs.do_arg = nullptr;
+    rebargs.version = nullptr;
+    rebargs.debug = nullptr;
+    rebargs.import = nullptr;
+    rebargs.secure = nullptr;
+    rebargs.boot = nullptr;
+    rebargs.exe_path = nullptr;
+    rebargs.home_dir = nullptr;
 
     // Rebytes, version numbers
     // REBOL_VER
@@ -143,50 +165,41 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 #endif
 
 
-    // Although you can build and pass a REBARGS structure yourself and
-    // set appropriate defaults, the easiest idea is to formulate your
-    // request in terms of the argc and argv an executable would have
-    // gotten and use the Parse_Args API.
-    //
-    // Right now we take all defaults, but put in an informative "we
-    // don't have a way to give you the executable's path if we are
-    // a binding"
+    // Parse_Args has a memory leak; it uses OS_Get_Current_Dir which
+    // mallocs a string which is never freed.  We hold onto the REBARGS
+    // we use and control the initialization so we don't leak strings
 
-    #ifdef TO_WIN32
-        REBCHR * fakeArgv0
-            = (REBCHR*) L"/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
+    // There are (R)ebol (O)ption flags telling it various things,
+    // in rebargs.options, we just don't want it to display the banner
 
-        REBCHR * argvQuiet
-            = (REBCHR*) L"--quiet";
-    #else
-        REBCHR fakeArgv0 []
-            = "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp";
-
-        REBCHR argvQuiet []
-            = "--quiet";
-    #endif
+    rebargs.options = RO_QUIET;
 
     // Theoretically we could offer hooks for this deferred initialization
     // to pass something here, or even change it while running.  Right
-    // now we offer an informative fake path that is (hopefully) harmless.
-    //
-    // Of course, we all know what the long term security impacts are of
-    // putting "informative garbage" in slots is...
+    // now for exe_path we offer an informative fake path that is (hopefully)
+    // harmless.
 
-    REBCHR * argv[] {fakeArgv0, argvQuiet};
+    rebargs.home_dir = new REBCHR[MAX_PATH];
 
-    // There are (R)ebol (O)ption (F)lags telling it various things,
-    // in Main_Args.options, but there seems be better luck with
-    // just letting it parse the ordinary command line args than try to
-    // set those directly.
+#ifdef TO_WIN32
+    rebargs.exe_path = reinterpret_cast<REBCHR *>(const_cast<wchar_t *>(
+        L"/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
+    ));
 
-    REBARGS Main_Args;
-    Parse_Args(2, argv, &Main_Args);
+    GetCurrentDirectory(MAX_PATH, reinterpret_cast<TCHAR *>(rebargs.home_dir));
+#else
+    rebargs.exe_path = reinterpret_cast<REBCHR *>(const_cast<char*>(
+        "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
+    ));
 
-    Init_Core(&Main_Args);
+    getcwd(reinterpret_cast<char *>(rebargs.home_dir), MAX_PATH);
+#endif
+
+    Init_Core(&rebargs);
 
     GC_Active = TRUE; // Turn on GC
-    if (Main_Args.options & RO_TRACE) {
+
+    if (rebargs.options & RO_TRACE) {
         Trace_Level = 9999;
         Trace_Flags = 1;
     }
@@ -305,6 +318,8 @@ void RebolRuntime::cancel() {
 
 RebolRuntime::~RebolRuntime () {
     OS_QUIT_DEVICES(0);
+
+    delete [] rebargs.home_dir; // needs to last during Rebol run
 }
 
 } // end namespace ren
