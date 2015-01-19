@@ -192,7 +192,7 @@ public:
         exit(status);
     }
 
-    RenResult ShimRaiseError(RedCell const * error) {
+    RenResult ShimRaiseError(RedCell const *) {
         throw std::runtime_error("ShimRaiseError...coming soon...");
     }
 

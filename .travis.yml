@@ -67,6 +67,8 @@ install:
       fi
     # Make sure valgrind is installed
     - sudo apt-get install valgrind
+    # On the 32-bit runs, valgrind insists on this to work:
+    - sudo apt-get install libc6-dbg
 
 
 before_script:
