@@ -134,6 +134,7 @@ RenConsole::RenConsole (QWidget * parent) :
     ReplPad (parent),
     bannerPrinted (false),
     fakeOut (new FakeStdout (*this)),
+    fakeIn (new FakeStdin (*this)),
     evaluating (false),
     dialect (none),
     target (none)
@@ -183,7 +184,13 @@ RenConsole::RenConsole (QWidget * parent) :
     // the GUI app, not a window inside that app).
 
     Engine::runFinder().setOutputStream(*fakeOut);
+    Engine::runFinder().setInputStream(*fakeIn);
 
+    connect(
+        fakeIn.get(), &FakeStdin::requestInput,
+        this, &RenConsole::onRequestInput,
+        Qt::QueuedConnection
+    );
 
     // We call reset synchronously here, but we want to be able to call it
     // asynchronously if we're doing something like an onDocumentChanged
@@ -531,6 +538,19 @@ void RenConsole::appendText(QString const & text) {
     }
 }
 
+
+void RenConsole::onRequestInput()
+{
+    assert(evaluating); // only the evaluator can request input
+
+    document()->clearUndoRedoStacks();
+
+    // temporary...let's just try returning something to show the method
+    input = QString("Sample Input Response\n").toUtf8();
+
+    QMutexLocker lock (&inputMutex);
+    inputAvailable.wakeOne();
+}
 
 
 

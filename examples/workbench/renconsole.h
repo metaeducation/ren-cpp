@@ -26,15 +26,16 @@
 #include <QMutex>
 #include <QThread>
 
+#include <memory>
+
 #include "rencpp/ren.hpp"
 
 #include "replpad.h"
 #include "rensyntaxer.h"
 #include "renshell.h"
 #include "renpackage.h"
+#include "fakestdio.h"
 
-class FakeStdout;
-class FakeStdoutBuffer;
 class MainWindow;
 
 class RenConsole : public ReplPad
@@ -58,11 +59,20 @@ protected:
 
 protected:
     friend class FakeStdoutBuffer;
-    QSharedPointer<FakeStdout> fakeOut;
+    std::unique_ptr<FakeStdout> fakeOut;
+
+    friend class FakeStdinBuffer;
+    std::unique_ptr<FakeStdin> fakeIn;
+
+    QMutex inputMutex;
+    QWaitCondition inputAvailable;
+    QByteArray input; // as utf-8
+
 signals:
     void needTextAppend(QString text);
 private slots:
     void onAppendText(QString const & text);
+    void onRequestInput();
 protected:
     void appendText(QString const & text) override;
 

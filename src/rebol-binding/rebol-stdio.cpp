@@ -155,6 +155,8 @@ extern REBDEV *Devices[];
 **
 ***********************************************************************/
 {
+    u32 length = req->length;
+
     if (GET_FLAG(req->modes, RDM_NULL)) {
 		req->data[0] = 0;
 		return DR_DONE;
@@ -164,14 +166,19 @@ extern REBDEV *Devices[];
 
     std::istream & is = ren::Engine::runFinder().getInputStream();
 
-    is.read(reinterpret_cast<char*>(req->data), req->length);
+    // There is a std::string equivalent for getline that doesn't require
+    // a buffer length, but we go with the version that takes a buffer
+    // length for now.  The only way to get the length of that is with
+    // strlen, however.
+
+    is.getline(reinterpret_cast<char*>(req->data), req->length);
 
     if (is.fail()) {
         req->error = 1020;
         return DR_ERROR;
     }
 
-    req->actual = is.gcount();
+    req->actual = strlen(reinterpret_cast<char*>(req->data));
 
 	return DR_DONE;
 }

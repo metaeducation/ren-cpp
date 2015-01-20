@@ -93,6 +93,7 @@ add_executable(
     main.cpp
     mainwindow.cpp
     replpad.cpp
+    fakestdio.cpp
     renconsole.cpp
     watchlist.cpp
     rensyntaxer.cpp

@@ -22,6 +22,7 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <functional>
@@ -29,6 +30,7 @@
 #include <streambuf>
 #include <vector>
 
+#include <QObject>
 #include <QMutexLocker>
 
 // This wound up seeming a lot more complicated than it needed to be.  See
@@ -36,6 +38,13 @@
 // review here:
 //
 //     https://github.com/metaeducation/ren-garden/issues/2
+
+
+class RenConsole;
+
+///
+/// FAKE STANDARD OUTPUT
+///
 
 class FakeStdoutResources {
 public:
@@ -60,71 +69,15 @@ private:
     RenConsole & console;
 
 public:
-    explicit FakeStdoutBuffer(RenConsole & console, std::size_t buff_sz = 256) :
-        FakeStdoutResources (buff_sz),
-        console (console)
-    {
-        // -1 makes authoring of overflow() easier, so it can put the character
-        // into the buffer when it happens.
-        setp(buffer_.data(), buffer_.data() + buff_sz - 1);
-    }
+    explicit FakeStdoutBuffer(RenConsole & console, std::size_t buff_sz = 256);
 
 protected:
-    bool processAndFlush() {
-        std::ptrdiff_t n = pptr() - pbase();
-        pbump(-n);
+    bool processAndFlush();
 
-        if (n == 0)
-            return true;
+    int_type overflow(int_type ch) override;
 
-        *(pbase() + n) = '\0';
-
-        // BUG: If this is UTF8 encoded we might end up on half a character...
-        // https://github.com/metaeducation/ren-garden/issues/1
-
-        QMutexLocker locker {&console.modifyMutex};
-
-        if (not console.target) {
-            console.appendText(QString(pbase()));
-            return true;
-        }
-
-        if (console.target.isString()) {
-            // dangerous call here, if append has any sort of output!
-            // need versions of basic series routines that do not call out
-
-            ren::runtime("append", console.target, pbase());
-            return true;
-        }
-
-        assert(false);
-        return false;
-    }
-
-    int_type overflow(int_type ch) {
-        if (ch != traits_type::eof())
-        {
-            assert(std::less_equal<char *>()(pptr(), epptr()));
-            *pptr() = ch;
-            pbump(1);
-
-            if (processAndFlush())
-                return ch;
-        }
-
-        return traits_type::eof();
-    }
-
-    int sync() {
-        return processAndFlush() ? 0 : -1;
-    }
-
-    // copy ctor and assignment not implemented;
-    // copying not allowed
-    FakeStdoutBuffer(const FakeStdoutBuffer &) = delete;
-    FakeStdoutBuffer & operator= (const FakeStdoutBuffer &) = delete;
+    int sync() override;
 };
-
 
 
 class FakeStdout : protected FakeStdoutBuffer, public std::ostream {
@@ -137,8 +90,53 @@ public:
 
     ~FakeStdout () override
     {
-        sync();
+        FakeStdoutBuffer::sync();
     }
 };
+
+
+
+///
+/// FAKE STANDARD INPUT
+///
+
+class FakeStdinBuffer : public QObject, public std::streambuf
+{
+    Q_OBJECT
+
+    RenConsole & console;
+    const std::size_t put_back_;
+    std::vector<char> buffer_;
+
+public:
+    explicit FakeStdinBuffer (
+        RenConsole & console,
+        std::size_t buff_sz = 256,
+        std::size_t put_back = 8
+    );
+
+signals:
+    void requestInput();
+
+private:
+    int_type underflow() override;
+};
+
+
+class FakeStdin : public FakeStdinBuffer, public std::istream {
+
+public:
+    FakeStdin (RenConsole & console) :
+        FakeStdinBuffer (console),
+        std::istream (static_cast<FakeStdinBuffer *>(this))
+    {
+    }
+
+    ~FakeStdin () override
+    {
+        FakeStdinBuffer::sync();
+    }
+};
+
 
 #endif
