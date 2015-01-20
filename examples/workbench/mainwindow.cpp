@@ -49,6 +49,7 @@ MainWindow::MainWindow() :
 
     console = new RenConsole;
     setCentralWidget(console);
+    console->show();
 
     dockWatch = new QDockWidget(tr("watch"), this);
     dockWatch->setAllowedAreas(
@@ -65,7 +66,7 @@ MainWindow::MainWindow() :
     );
 
     connect(
-        console, &ReplPad::reportStatus,
+        console, &RenConsole::reportStatus,
         statusBar(), [this](QString const & message) {
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);
@@ -74,7 +75,7 @@ MainWindow::MainWindow() :
     );
 
     connect(
-        console, &ReplPad::fadeOutToQuit,
+        &console->getRepl(), &ReplPad::fadeOutToQuit,
         this, &MainWindow::onFadeOutToQuit,
         Qt::DirectConnection
     );
@@ -113,13 +114,13 @@ MainWindow::MainWindow() :
     updateMenus();
 
     connect(
-        console, &RenConsole::copyAvailable,
+        &console->getRepl(), &ReplPad::copyAvailable,
         cutAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
     connect(
-        console, &RenConsole::copyAvailable,
+        &console->getRepl(), &ReplPad::copyAvailable,
         copyAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
@@ -140,17 +141,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::cut()
 {
-    console->cutSafely();
+    console->getRepl().cutSafely();
 }
 
 void MainWindow::copy()
 {
-    console->copy();
+    console->getRepl().copy();
 }
 
 void MainWindow::paste()
 {
-    console->pasteSafely();
+    console->getRepl().pasteSafely();
 }
 
 
@@ -172,7 +173,7 @@ void MainWindow::about()
 
 void MainWindow::updateMenus()
 {
-    bool hasSelection = console->textCursor().hasSelection();
+    bool hasSelection = console->getRepl().textCursor().hasSelection();
     cutAct->setEnabled(hasSelection);
     copyAct->setEnabled(hasSelection);
 }
@@ -248,7 +249,7 @@ void MainWindow::readSettings()
 
     move(pos);
     resize(size);
-    console->setZoom(zoom);
+    console->getRepl().setZoom(zoom);
 }
 
 
@@ -257,7 +258,7 @@ void MainWindow::writeSettings()
     QSettings settings("Metaeducation", "Ren Garden");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
-    settings.setValue("zoom", console->getZoom());
+    settings.setValue("zoom", console->getRepl().getZoom());
 }
 
 

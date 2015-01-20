@@ -40,7 +40,7 @@
 //     https://github.com/metaeducation/ren-garden/issues/2
 
 
-class RenConsole;
+class ReplPad;
 
 ///
 /// FAKE STANDARD OUTPUT
@@ -66,10 +66,10 @@ protected:
 class FakeStdoutBuffer : protected FakeStdoutResources, public std::streambuf
 {
 private:
-    RenConsole & console;
+    ReplPad & repl;
 
 public:
-    explicit FakeStdoutBuffer(RenConsole & console, std::size_t buff_sz = 256);
+    explicit FakeStdoutBuffer(ReplPad & repl, std::size_t buff_sz = 256);
 
 protected:
     bool processAndFlush();
@@ -82,8 +82,8 @@ protected:
 
 class FakeStdout : protected FakeStdoutBuffer, public std::ostream {
 public:
-    FakeStdout (RenConsole & console) :
-        FakeStdoutBuffer (console),
+    FakeStdout (ReplPad & repl) :
+        FakeStdoutBuffer (repl),
         std::ostream (static_cast<FakeStdoutBuffer *>(this))
     {
     }
@@ -104,13 +104,13 @@ class FakeStdinBuffer : public QObject, public std::streambuf
 {
     Q_OBJECT
 
-    RenConsole & console;
+    ReplPad & repl;
     const std::size_t put_back_;
     std::vector<char> buffer_;
 
 public:
     explicit FakeStdinBuffer (
-        RenConsole & console,
+        ReplPad & repl,
         std::size_t buff_sz = 256,
         std::size_t put_back = 8
     );
@@ -126,8 +126,8 @@ private:
 class FakeStdin : public FakeStdinBuffer, public std::istream {
 
 public:
-    FakeStdin (RenConsole & console) :
-        FakeStdinBuffer (console),
+    FakeStdin (ReplPad & repl) :
+        FakeStdinBuffer (repl),
         std::istream (static_cast<FakeStdinBuffer *>(this))
     {
     }

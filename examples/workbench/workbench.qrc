@@ -21,5 +21,6 @@
         <file>scripts/rebol-proposals/ls-cd-dt-short-names.reb</file>
         <file>scripts/rebol-proposals/for-range-dialect.reb</file>
         <file>scripts/rebol-proposals/object-context.reb</file>
+        <file>images/banner-logo.png</file>
     </qresource>
 </RCC>

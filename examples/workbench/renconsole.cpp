@@ -122,31 +122,32 @@ signals:
 ///
 
 //
-// The console subclasses the ReplPad, adding in the constraint that you
-// can't interact with the console in a modifying way if an evaluation is
-// underway.  It provides the virtual evaluate function...which doesn't
-// run synchronously but posts a work item to an evaluation thread (this
-// keeps the GUI thread responsive and allows a way of reading requests
-// to cancel from the user)
+// The console doesn't inherit from ReplPad, it *contains* it.  This
+// is part of decoupling the dependency, so that QTextEdit features do not
+// "creep in" implicitly...making it easier to substitute another control
+// (such as a QWebView) for the UI.
 //
 
 RenConsole::RenConsole (QWidget * parent) :
-    ReplPad (parent),
+    QWidget (parent),
+    repl (*this, this),
     bannerPrinted (false),
-    fakeOut (new FakeStdout (*this)),
-    fakeIn (new FakeStdin (*this)),
     evaluating (false),
     dialect (none),
     target (none)
 {
-    // We want to be able to append text from threads besides the GUI thread.
-    // It is a synchronous operation for a worker, but still goes through the
-    // emit process.
+    // Console inherits from widget and can have several component parts if
+    // it wants.  But for now, make the ReplPad take up the full space.
+    // Wire any signals it offers to trigger a signal off of the console
+
+    QVBoxLayout * layout = new QVBoxLayout;
+    layout->addWidget(&repl);
+    setLayout(layout);
 
     connect(
-        this, &RenConsole::needTextAppend,
-        this, &RenConsole::onAppendText,
-        Qt::BlockingQueuedConnection
+        &repl, &ReplPad::reportStatus,
+        this, &RenConsole::reportStatus,
+        Qt::DirectConnection
     );
 
 
@@ -183,24 +184,8 @@ RenConsole::RenConsole (QWidget * parent) :
     // (otherwise the output would be going to the terminal that launched
     // the GUI app, not a window inside that app).
 
-    Engine::runFinder().setOutputStream(*fakeOut);
-    Engine::runFinder().setInputStream(*fakeIn);
-
-    connect(
-        fakeIn.get(), &FakeStdin::requestInput,
-        this, &RenConsole::onRequestInput,
-        Qt::QueuedConnection
-    );
-
-    // We call reset synchronously here, but we want to be able to call it
-    // asynchronously if we're doing something like an onDocumentChanged
-    // handler to avoid infinite recursion
-
-    connect(
-        this, &RenConsole::requestConsoleReset,
-        this, &RenConsole::onConsoleReset,
-        Qt::QueuedConnection
-    );
+    Engine::runFinder().setOutputStream(getRepl().fakeOut);
+    Engine::runFinder().setInputStream(getRepl().fakeIn);
 
     consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
@@ -383,12 +368,10 @@ RenConsole::RenConsole (QWidget * parent) :
     // Do it this way instead of with raw assignment just to keep the special
     // case tested (users can type CONSOLE :CONSOLE as well...)  Switching
     // dialects offers the ability to run (dialect)/meta 'banner, which may
-    // print.  Any time we're going to do a write to the console, we need to
-    // do so while the modifyMutex is locked.
+    // print.
 
-    QMutexLocker locker {&modifyMutex};
     runtime(consoleFunction, "quote", consoleFunction);
-    appendNewPrompt();
+    repl.appendNewPrompt();
 }
 
 
@@ -410,29 +393,12 @@ RenConsole::RenConsole (QWidget * parent) :
 
 void RenConsole::printBanner() {
 
-    QTextCursor cursor {document()};
-
-    cursor.insertImage(QImage (":/images/red-logo.png"));
-
-    cursor.insertImage(QImage (":/images/rebol-logo.png"));
+    repl.appendImage(QImage (":/images/banner-logo.png"), true);
 
     QTextCharFormat headerFormat;
     headerFormat.setFont(
-        QFont("Helvetica", defaultFont.pointSize() * 1.5)
+        QFont("Helvetica", repl.defaultFont.pointSize() * 1.5)
     );
-
-    cursor.insertText("\n", headerFormat);
-
-    // Show off/test RenCpp by picking off the letters of the title one at a
-    // time, (w/proper Unicode) via C++ iterator interface underneath a
-    // range-based for, then use the coercion of Character to QChar
-    // to build a new string for the opening title
-
-    QString heading;
-    for (Character ch : String{"<h1>Ren [人] Garden</h1>"})
-        heading += ch;
-
-    cursor.insertHtml(heading);
 
     // Use a font we set the size explicitly for so this text intentionally
     // does not participate in zoom in and zoom out
@@ -443,12 +409,13 @@ void RenConsole::printBanner() {
     subheadingFormat.setFont(
         QFont(
             "Helvetica",
-            defaultFont.pointSize()
+            repl.defaultFont.pointSize()
         )
     );
     subheadingFormat.setForeground(Qt::darkGray);
 
-    cursor.insertText("\n", subheadingFormat);
+    repl.pushFormat(subheadingFormat);
+    repl.appendText("\n", true);
 
     std::vector<char const *> components = {
         "<i><b>Red</b> is © 2015 Nenad Rakocevic, BSD License</i>",
@@ -464,37 +431,90 @@ void RenConsole::printBanner() {
     };
 
     for (auto & credit : components) {
-        cursor.insertHtml(credit);
-        cursor.insertText("\n");
+        repl.appendHtml(credit, true);
+        repl.appendText("\n", true);
     }
 
-    cursor.insertText("\n");
+    repl.appendText("\n", true);
 
     // For the sake of demonstration, get the Ren Garden copyright value
     // out of a context set up in the resource file in ren-garden.reb
 
-    cursor.insertHtml(
-        static_cast<String>(runtime("ren-garden/copyright"))
+    repl.appendHtml(
+        static_cast<String>(runtime("ren-garden/copyright")),
+        true
     );
 
-    cursor.insertText("\n");
+    repl.appendText("\n", true);
 
-    // Center all that stuff
-
-    int endHeaderPos = cursor.position();
-
-    cursor.setPosition(0, QTextCursor::KeepAnchor);
-    QTextBlockFormat leftFormat = cursor.blockFormat();
-    QTextBlockFormat centeredFormat = leftFormat;
-    centeredFormat.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    cursor.setBlockFormat(centeredFormat);
-
-    cursor.setPosition(endHeaderPos);
-    cursor.setBlockFormat(leftFormat);
-
-    appendText("\n");
+    repl.appendText("\n");
 }
 
+
+
+///
+/// REPLPAD HOOKS
+///
+
+//
+// The ReplPad is language-and-evaluator agnostic.  It offers an interface
+// that we implement, giving the console the specific behaviors for evaluation
+// from RenCpp.
+//
+
+bool RenConsole::isReadyToModify(QKeyEvent * event) {
+
+    // No modifying operations while you are running in the console.  You
+    // can only request to cancel.  For issues tied to canceling semantics
+    // in RenCpp, see:
+    //
+    //     https://github.com/hostilefork/rencpp/issues/19
+
+    if (evaluating) {
+        if (event->key() == Qt::Key_Escape) {
+            runtime.cancel();
+
+            // Message of successful cancellation is given in the console
+            // by the handler when the evaluation thread finishes.
+            return false;
+        }
+
+        emit reportStatus("Evaluation in progress, can't edit");
+        return false;
+    }
+
+    return true;
+}
+
+
+void RenConsole::evaluate(QString const & input, bool meta) {
+    static int count = 0;
+
+    evaluating = true;
+
+    emit operate(dialect, input, meta);
+
+    count++;
+}
+
+
+void RenConsole::escape() {
+    if (evaluating) {
+        runtime.cancel();
+        return;
+    }
+
+    if (not dialect.isEqualTo(consoleFunction)) {
+
+        // give banner opportunity or other dialect switch code, which would
+        // not be able to run if we just said dialect = consoleFunction
+
+        runtime(consoleFunction, "quote", consoleFunction);
+
+        repl.appendText("\n\n");
+        repl.appendNewPrompt();
+    }
+}
 
 
 QString RenConsole::getPromptString() {
@@ -518,101 +538,6 @@ QString RenConsole::getPromptString() {
 
 
 ///
-/// RICH-TEXT CONSOLE BEHAVIOR
-///
-
-
-void RenConsole::onAppendText(QString const & text) {
-    ReplPad::appendText(text);
-}
-
-void RenConsole::appendText(QString const & text) {
-    if (RenConsole::thread() == QThread::currentThread()) {
-        // blocking connection would cause deadlock.
-        ReplPad::appendText(text);
-    }
-    else {
-        // we need to block in order to properly check for write mutex
-        // authority (otherwise we could just queue and run...)
-        emit needTextAppend(text);
-    }
-}
-
-
-void RenConsole::onRequestInput()
-{
-    assert(evaluating); // only the evaluator can request input
-
-    document()->clearUndoRedoStacks();
-
-    // temporary...let's just try returning something to show the method
-    input = QString("Sample Input Response\n").toUtf8();
-
-    QMutexLocker lock (&inputMutex);
-    inputAvailable.wakeOne();
-}
-
-
-
-bool RenConsole::isReadyToModify(QKeyEvent * event) {
-
-    // No modifying operations while you are running in the console.  You
-    // can only request to cancel.  For issues tied to canceling semantics
-    // in RenCpp, see:
-    //
-    //     https://github.com/hostilefork/rencpp/issues/19
-
-    if (evaluating) {
-        if (event->key() == Qt::Key_Escape) {
-            runtime.cancel();
-
-            // Message of successful cancellation is given in the console
-            // by the handler when the evaluation thread finishes.
-            return false;
-        }
-
-        emit reportStatus("Evaluation in progress, can't edit");
-        followLatestOutput();
-        return false;
-    }
-
-    return true;
-}
-
-
-void RenConsole::evaluate(QString const & input, bool meta) {
-    static int count = 0;
-
-    evaluating = true;
-
-    pushFormat(outputFormat);
-
-    emit operate(dialect, input, meta);
-
-    count++;
-}
-
-
-void RenConsole::escape() {
-    if (evaluating) {
-        runtime.cancel();
-        return;
-    }
-
-    if (not dialect.isEqualTo(consoleFunction)) {
-
-        // give banner opportunity or other dialect switch code, which would
-        // not be able to run if we just said dialect = consoleFunction
-
-        runtime(consoleFunction, "quote", consoleFunction);
-
-        appendText("\n\n");
-        appendNewPrompt();
-    }
-}
-
-
-///
 /// EVALUATION RESULT HANDLER
 ///
 
@@ -633,12 +558,10 @@ void RenConsole::handleResults(
 
     Engine::runFinder().getOutputStream().flush();
 
-    QMutexLocker locker {&modifyMutex};
-
     if (not success) {
         pendingBuffer.clear();
 
-        pushFormat(errorFormat);
+        repl.pushFormat(repl.errorFormat);
 
         // The value does not represent the result of the operation; it
         // represents the error that was raised while running it (or if
@@ -646,54 +569,47 @@ void RenConsole::handleResults(
         // have an implicit newline on the end implicitly
 
         if (result)
-            appendText(to_QString(result));
+            repl.appendText(to_QString(result));
         else
-            appendText("[Escape]\n");
+            repl.appendText("[Escape]\n");
     }
     else if (not result.isUnset()) {
         // If we evaluated and it wasn't unset, print an eval result ==
 
-        pushFormat(promptFormatNormal);
-        appendText("==");
+        repl.pushFormat(repl.promptFormatNormal);
+        repl.appendText("==");
 
-        pushFormat(inputFormatNormal);
-        appendText(" ");
+        repl.pushFormat(repl.inputFormatNormal);
+        repl.appendText(" ");
 
         // Technically this should run through a hook that is "guaranteed"
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
         if (result.isFunction()) {
-            appendText("#[function! (");
-            appendText(to_QString(runtime("words-of quote", result)));
-            appendText(") [...]]");
+            repl.appendText("#[function! (");
+            repl.appendText(to_QString(runtime("words-of quote", result)));
+            repl.appendText(") [...]]");
         }
         else {
-            appendText(to_QString(runtime("mold/all quote", result)));
+            repl.appendText(to_QString(runtime("mold/all quote", result)));
         }
 
-        appendText("\n");
+        repl.appendText("\n");
     }
 
     // Rebol's console only puts in the newline if you get a non-unset
     // evaluation... but here we put one in all cases to space out the prompts
 
-    appendText("\n");
+    repl.appendText("\n");
 
-    appendNewPrompt();
+    repl.appendNewPrompt();
 
     if (not pendingBuffer.isEmpty()) {
-        QTextCursor cursor = textCursor();
-
-        int pos = cursor.position();
-
-        appendText(pendingBuffer);
+        repl.setBuffer(pendingBuffer, pendingPosition, pendingAnchor);
         pendingBuffer.clear();
-
-        cursor.setPosition(pos + pendingAnchor);
-        cursor.setPosition(pos + pendingPosition, QTextCursor::KeepAnchor);
-        setTextCursor(cursor);
     }
+
 
     // TBD: divide status bar into "command succeeded" and "error" as well
     // as parts controllable by the console automator

@@ -30,7 +30,7 @@
 #include <QMutexLocker>
 
 #include "fakestdio.h"
-#include "renconsole.h"
+#include "replpad.h"
 
 
 // This wound up seeming a lot more complicated than it needed to be.  See
@@ -46,9 +46,9 @@
 
 
 
-FakeStdoutBuffer::FakeStdoutBuffer(RenConsole & console, std::size_t buff_sz) :
+FakeStdoutBuffer::FakeStdoutBuffer(ReplPad & repl, std::size_t buff_sz) :
     FakeStdoutResources (buff_sz),
-    console (console)
+    repl (repl)
 {
     // -1 makes authoring of overflow() easier, so it can put the character
     // into the buffer when it happens.
@@ -67,23 +67,9 @@ bool FakeStdoutBuffer::processAndFlush() {
     // BUG: If this is UTF8 encoded we might end up on half a character...
     // https://github.com/metaeducation/ren-garden/issues/1
 
-    QMutexLocker locker {&console.modifyMutex};
+    repl.appendText(QString(pbase()));
 
-    if (not console.target) {
-        console.appendText(QString(pbase()));
-        return true;
-    }
-
-    if (console.target.isString()) {
-        // dangerous call here, if append has any sort of output!
-        // need versions of basic series routines that do not call out
-
-        ren::runtime("append", console.target, pbase());
-        return true;
-    }
-
-    assert(false);
-    return false;
+    return true;
 }
 
 std::streambuf::int_type FakeStdoutBuffer::overflow(int_type ch) {
@@ -114,11 +100,11 @@ int FakeStdoutBuffer::sync() {
 ///
 
 FakeStdinBuffer::FakeStdinBuffer (
-    RenConsole & console,
+    ReplPad & repl,
     std::size_t buff_sz,
     std::size_t put_back
 ) :
-    console (console),
+    repl (repl),
     put_back_ (std::max(put_back, size_t(1))),
     buffer_ (std::max(buff_sz, put_back_) + put_back_)
 {
@@ -146,16 +132,16 @@ std::streambuf::int_type FakeStdinBuffer::underflow() {
 
     int readCapacity = buffer_.size() - (start - base);
 
-    // We need to lock the caller up until the console signals us
+    // We need to lock the caller up until the repl signals us
     // that it has read data.  We'll go by line for now.
 
-    QMutexLocker lock {&console.inputMutex};
+    QMutexLocker lock {&repl.inputMutex};
     emit requestInput();
-    console.inputAvailable.wait(lock.mutex());
+    repl.inputAvailable.wait(lock.mutex());
 
-    std::size_t n = std::min(readCapacity, console.input.size());
-    std::copy(console.input.data(), console.input.data() + n, start);
-    console.input.right(console.input.size() - n);
+    std::size_t n = std::min(readCapacity, repl.input.size());
+    std::copy(repl.input.data(), repl.input.data() + n, start);
+    repl.input.right(repl.input.size() - n);
 
     if (n == 0)
         return traits_type::eof();

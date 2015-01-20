@@ -26,19 +26,16 @@
 #include <QMutex>
 #include <QThread>
 
-#include <memory>
-
 #include "rencpp/ren.hpp"
 
 #include "replpad.h"
 #include "rensyntaxer.h"
 #include "renshell.h"
 #include "renpackage.h"
-#include "fakestdio.h"
 
 class MainWindow;
 
-class RenConsole : public ReplPad
+class RenConsole : public QWidget, public IReplPadHooks
 {
     Q_OBJECT
 
@@ -47,34 +44,20 @@ public:
     ~RenConsole () override;
 
 private:
+    ReplPad repl;
+
     RenSyntaxer syntaxer;
     RenSyntaxer & getSyntaxer() override { return syntaxer; }
 
     RenShell shell;
 
+public:
+    ReplPad & getRepl() { return repl; }
+
 protected:
     bool bannerPrinted;
     void printBanner();
     QString getPromptString() override;
-
-protected:
-    friend class FakeStdoutBuffer;
-    std::unique_ptr<FakeStdout> fakeOut;
-
-    friend class FakeStdinBuffer;
-    std::unique_ptr<FakeStdin> fakeIn;
-
-    QMutex inputMutex;
-    QWaitCondition inputAvailable;
-    QByteArray input; // as utf-8
-
-signals:
-    void needTextAppend(QString text);
-private slots:
-    void onAppendText(QString const & text);
-    void onRequestInput();
-protected:
-    void appendText(QString const & text) override;
 
 protected:
     bool isReadyToModify(QKeyEvent * event) override;
@@ -127,6 +110,9 @@ protected:
 private:
     QSharedPointer<RenPackage> proposals;
     QSharedPointer<RenPackage> helpers;
+
+signals:
+    void reportStatus(QString const & str);
 };
 
 #endif

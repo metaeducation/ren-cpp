@@ -70,8 +70,11 @@ QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
 // Right now the console constructor is really mostly about setting up a
 // long graphical banner.
 
-ReplPad::ReplPad (QWidget * parent) :
+ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
     QTextEdit (parent),
+    hooks (hooks),
+    fakeOut (*this),
+    fakeIn (*this),
     defaultFont (currentFont()),
     zoomDelta (0),
     shouldFollow (true),
@@ -79,13 +82,36 @@ ReplPad::ReplPad (QWidget * parent) :
     hasUndo (false),
     hasRedo (false)
 {
-    // Set up our safety hook to make sure modifications to the underlying
-    // QTextDocument only happen when we explicitly asked for them.
+    // QTextEdit is a view into a QTextDocument; and it was not really in any
+    // way designed to be used for what Ren Garden is doing with it.  One
+    // example of how it was not designed to do this is that there are no
+    // notifications for cut/copy/paste until *after* they have happened.
+    // Such operations can destroy the known structure of the console (deleting
+    // known points in the history).  We have to find ways to prevent these
+    // unexpected changes--or undo them.  This safety hook catches any cases
+    // where modifications were made without ReplPad making them.
 
     connect(
         this, &ReplPad::textChanged,
-        this, &ReplPad::onTextChanged,
-        Qt::DirectConnection
+        [this]() {
+            if (not documentMutex.tryLock())
+                return;
+
+            documentMutex.unlock();
+
+            QMessageBox::information(
+                this,
+                "Unexpected Modification",
+                "Though we give the appearance of the QTextEdit being"
+                " editable, it actually can only be edited under the precise"
+                " moments we allow.  But putting it in 'read only' mode drops"
+                " the insertion cursor.  We try to trap every way of inserting"
+                " content to control it, but you found a way around it.  If"
+                " you remember what you just did, report to the bug tracker!"
+            );
+
+            emit requestConsoleReset();
+        }
     );
 
 
@@ -99,6 +125,48 @@ ReplPad::ReplPad (QWidget * parent) :
     // rich text information on user pasted text.
 
     setAcceptRichText(false);
+
+
+    // Being a C++ program, our interface for abstracted I/O is based on
+    // iostreams, hence we have objects that are "fake" streams you can
+    // read from and write to to interact with the console.  One signal
+    // we need to process is when the fake input stream wants us to acquire
+    // a line of input from the user.  The stream will synchronously block
+    // until we notify it that the GUI has the line ready (hence the input
+    // stream cannot be read from the GUI thread).
+
+    connect(
+        &fakeIn, &FakeStdin::requestInput,
+        this, &ReplPad::onRequestInput,
+        Qt::QueuedConnection
+    );
+
+    // We want to be able to append text from threads besides the GUI thread.
+    // It is a synchronous operation for a worker, but still goes through the
+    // emit process.
+
+    connect(
+        this, &ReplPad::needGuiThreadTextAppend,
+        this, &ReplPad::appendText,
+        Qt::BlockingQueuedConnection
+    );
+
+    connect(
+        this, &ReplPad::needGuiThreadHtmlAppend,
+        this, &ReplPad::appendHtml,
+        Qt::BlockingQueuedConnection
+    );
+
+
+    // We call reset synchronously here, but we want to be able to call it
+    // asynchronously if we're doing something like an onDocumentChanged
+    // handler to avoid infinite recursion
+
+    connect(
+        this, &ReplPad::requestConsoleReset,
+        this, &ReplPad::onConsoleReset,
+        Qt::QueuedConnection
+    );
 
 
     // A pet peeve of mine is when you're trying to do something with a scroll
@@ -137,6 +205,7 @@ ReplPad::ReplPad (QWidget * parent) :
         }
     );
 
+
     // Initialize text formats used.  What makes this difficult is "zoom in"
     // and "zoom out", so if you get too creative with the font settings then
     // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
@@ -166,20 +235,119 @@ ReplPad::ReplPad (QWidget * parent) :
 
     outputFormat.setFontFamily("Courier");
     outputFormat.setFontWeight(QFont::Bold);
+
+    leftFormat = textCursor().blockFormat();
+    centeredFormat = leftFormat;
+    centeredFormat.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 }
 
 
-//
-// ReplPad::onConsoleReset()
-//
 
 void ReplPad::onConsoleReset() {
-    QMutexLocker locker {&modifyMutex};
+    QMutexLocker lock {&documentMutex};
 
     clear();
     appendNewPrompt();
     dontFollowLatestOutput();
 }
+
+
+void ReplPad::appendImage(QImage const & image, bool centered) {
+    QMutexLocker lock {&documentMutex};
+
+    QTextCursor cursor = endCursor();
+
+    if (centered)
+        cursor.setBlockFormat(centeredFormat);
+    else
+        cursor.setBlockFormat(leftFormat);
+
+    cursor.insertImage(image);
+}
+
+
+void ReplPad::appendText(QString const & text, bool centered) {
+    if (thread() != QThread::currentThread()) {
+        // we need to block in order to properly check for write mutex
+        // authority (otherwise we could just queue it and split...)
+        // just calls this function again but from the Gui Thread
+
+        emit needGuiThreadTextAppend(text, centered);
+        return;
+    }
+
+    QMutexLocker lock {&documentMutex};
+
+    QTextCursor cursor = endCursor();
+
+    if (centered)
+        cursor.setBlockFormat(centeredFormat);
+    else
+        cursor.setBlockFormat(leftFormat);
+
+    if (isFormatPending) {
+        cursor.insertText(text, pendingFormat);
+        pendingFormat = QTextCharFormat {};
+        isFormatPending = false;
+    }
+    else
+        cursor.insertText(text);
+
+    if (shouldFollow) {
+        setTextCursor(cursor);
+
+        // For reasons not quite understood, you don't always wind up at the
+        // bottom of the document when a scroll happens.  :-/
+
+        verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+    }
+}
+
+
+void ReplPad::appendHtml(QString const & html, bool centered) {
+    if (thread() != QThread::currentThread()) {
+        // we need to block in order to properly check for write mutex
+        // authority (otherwise we could just queue it and split...)
+        // just calls this function again but from the Gui Thread
+
+        emit needGuiThreadHtmlAppend(html, centered);
+        return;
+    }
+
+    QMutexLocker lock {&documentMutex};
+
+    QTextCursor cursor = endCursor();
+
+    if (centered)
+        cursor.setBlockFormat(centeredFormat);
+    else
+        cursor.setBlockFormat(leftFormat);
+
+    cursor.insertHtml(html);
+
+    if (shouldFollow) {
+        setTextCursor(cursor);
+
+        // For reasons not quite understood, you don't always wind up at the
+        // bottom of the document when a scroll happens.  :-/
+
+        verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+    }
+}
+
+
+void ReplPad::onRequestInput()
+{
+    document()->clearUndoRedoStacks();
+
+    // temporary...let's just try returning something to show the method
+    input = QString("Sample Input Response\n").toUtf8();
+
+    QMutexLocker lock (&inputMutex);
+    inputAvailable.wakeOne();
+}
+
+
 
 
 int ReplPad::getZoom() {
@@ -213,31 +381,6 @@ void ReplPad::setZoom(int delta) {
 ///
 
 
-//
-// ReplPad::onTextChanged()
-//
-// Because it's important to know what people did to cause this likely to
-// be annoying problem, display an explanatory message before resetting.
-//
-
-void ReplPad::onTextChanged() {
-    if (modifyMutex.tryLock()) {
-        modifyMutex.unlock();
-
-        QMessageBox::information(
-            this,
-            "Unexpected Modification",
-            "Though we give the appearance of the QTextEdit being editable,"
-            " it actually can only be edited under the precise moments we"
-            " allow.  But putting it in 'read only' mode drops the insertion"
-            " cursor.  We try to trap every way of inserting content to"
-            " control it, but you found a way around it.  If you remember"
-            " what you just did, report it to the bug tracker!"
-        );
-
-        emit requestConsoleReset();
-    }
-}
 
 
 //
@@ -314,7 +457,7 @@ void ReplPad::mouseDoubleClickEvent(QMouseEvent * event) {
     }
 
     if (entryInside) {
-        std::pair<int, int> range = getSyntaxer().rangeForWholeToken(
+        std::pair<int, int> range = hooks.getSyntaxer().rangeForWholeToken(
             entryInside->getInput(*this),
             textCursor().position() - entryInside->inputPos
         );
@@ -337,27 +480,6 @@ void ReplPad::pushFormat(QTextCharFormat const & format) {
     pendingFormat = format;
 }
 
-void ReplPad::appendText(QString const & text) {
-    QTextCursor cursor = endCursor();
-
-    if (isFormatPending) {
-        cursor.insertText(text, pendingFormat);
-        pendingFormat = QTextCharFormat {};
-        isFormatPending = false;
-    }
-    else
-        cursor.insertText(text);
-
-    if (shouldFollow) {
-        setTextCursor(cursor);
-
-        // For reasons not quite understood, you don't always wind up at the
-        // bottom of the document when a scroll happens.  :-/
-
-        verticalScrollBar()->setValue(verticalScrollBar()->maximum());
-    }
-}
-
 
 
 //
@@ -370,7 +492,7 @@ void ReplPad::appendText(QString const & text) {
 void ReplPad::appendNewPrompt() {
 
     int startPos = endCursor().position();
-    QString prompt = getPromptString();
+    QString prompt = hooks.getPromptString();
 
     // You always have to ask for multi-line mode with shift-enter.  Maybe
     // someone will prefer the opposite?  Not likely.
@@ -394,6 +516,8 @@ void ReplPad::rewritePrompt() {
     // something is wrong with an interaction of doing setTextCursor()
     // during an edit block. :-/  Seems to crash, sporadically (on linux)
 
+    QMutexLocker lock {&documentMutex};
+
     bool saveShouldFollow = shouldFollow;
     shouldFollow = false;
 
@@ -406,14 +530,16 @@ void ReplPad::rewritePrompt() {
     cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 
     cursor.removeSelectedText();
-    setTextCursor(endCursor());
+    cursor = endCursor();
 
     QTextCharFormat promptFormat = history.back().meta
         ? promptFormatMeta
         : promptFormatNormal;
 
-    pushFormat(promptFormat);
-    appendText(history.back().prompt + ">>");
+    cursor.insertText(
+        history.back().prompt + ">>",
+        promptFormat
+    );
 
     QTextCharFormat inputFormat = history.back().meta
         ? inputFormatMeta
@@ -424,21 +550,19 @@ void ReplPad::rewritePrompt() {
         hintFormat.setFontItalic(true);
         hintFormat.setFontWeight(QFont::Normal);
 
-        pushFormat(hintFormat);
-        appendText(" [ctrl-enter to evaluate]");
+        cursor.insertText(
+            " [ctrl-enter to evaluate]",
+            hintFormat
+        );
 
-        pushFormat(inputFormat);
-        appendText("\n");
+        cursor.insertText("\n", inputFormat);
     }
-    else {
-        pushFormat(inputFormat);
-        appendText(" ");
-    }
+    else
+        cursor.insertText(" ", inputFormat);
 
-    history.back().inputPos = endCursor().position();
+    history.back().inputPos = cursor.position();
 
-    appendText(buffer);
-
+    cursor.insertText(buffer);
 
     // With the edit block closed, it's safe to set the text cursor, so update
     // the follow status and add an empty text string.
@@ -447,11 +571,20 @@ void ReplPad::rewritePrompt() {
 
     shouldFollow = saveShouldFollow;
 
-    appendText("");
+    if (shouldFollow) {
+        setTextCursor(cursor);
+
+        // For reasons not quite understood, you don't always wind up at the
+        // bottom of the document when a scroll happens.  :-/
+
+        verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+    }
 }
 
 
 void ReplPad::clearCurrentInput() {
+    QMutexLocker lock {&documentMutex};
+
     QTextCursor cursor {document()};
 
     cursor.setPosition(history.back().inputPos, QTextCursor::MoveAnchor);
@@ -648,7 +781,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             or event->matches(QKeySequence::DeleteStartOfWord)
         ) {
             containInputSelection();
-            QMutexLocker lock {&modifyMutex};
+            QMutexLocker lock {&documentMutex};
             QTextEdit::keyPressEvent(event);
             return;
         }
@@ -666,8 +799,10 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // asking to do some kind of modification when there may be an evaluation
     // running on another thread.
 
-    if (not isReadyToModify(event))
+    if (not hooks.isReadyToModify(event)) {
+        followLatestOutput();
         return;
+    }
 
 
     // Whatever we do from here should update the status bar, even to clear
@@ -675,13 +810,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // formal to ensure all paths have some kind of success or failure report
 
     emit reportStatus("");
-
-
-    // Temporarily allow writing to the console during the rest of this
-    // routine.  Any return or throw will result in the release of the lock
-    // by the QMutexLocker's destructor.
-
-    QMutexLocker locker {&modifyMutex};
 
 
     // What ctrl means on the platforms is different:
@@ -724,7 +852,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         if (not escapeTimer.hasExpired(
             qApp->styleHints()->mouseDoubleClickInterval()
         )) {
-            escape();
+            hooks.escape();
             return;
         }
 
@@ -753,11 +881,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (event->matches(QKeySequence::Undo)) {
         if (hasUndo) {
+            QMutexLocker lock {&documentMutex};
             undo();
             return;
         }
 
         if (history.size() > 1) {
+            QMutexLocker lock {&documentMutex};
+
             history.pop_back();
 
             // Clear from the previous record's endPos to the current end
@@ -904,9 +1035,11 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 followLatestOutput();
             }
             else {
+                pushFormat(outputFormat);
+
                 followLatestOutput();
                 // implementation may (does) queue...
-                evaluate(input, history.back().meta);
+                hooks.evaluate(input, history.back().meta);
             }
 
             return;
@@ -932,6 +1065,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                     endSpacesPos = textCursor().position();
             }
 
+            QMutexLocker lock {&documentMutex};
             cursor.insertText("\n");
             cursor.insertText(
                 QString(endSpacesPos - startLinePos - 1, QChar::Space)
@@ -987,6 +1121,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // Selection is collapsed, so just an insertion point.
 
     if (key == Qt::Key_Tab) {
+        QMutexLocker lock {&documentMutex};
         textCursor().insertText(tabString);
         return;
     }
@@ -1005,6 +1140,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         cursor.setPosition(cursor.position() - 4, QTextCursor::KeepAnchor);
 
         if (cursor.selection().toPlainText() == tabString) {
+            QMutexLocker lock {&documentMutex};
             cursor.removeSelectedText();
             setTextCursor(cursor);
             return;
@@ -1012,7 +1148,10 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         cursor = textCursor();
         cursor.setPosition(cursor.position() - 1, QTextCursor::KeepAnchor);
+
+        QMutexLocker lock {&documentMutex};
         cursor.removeSelectedText();
+
         setTextCursor(cursor);
         return;
     }
@@ -1030,6 +1169,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
+    QMutexLocker lock {&documentMutex};
     textCursor().insertText(event->text());
 }
 
@@ -1059,13 +1199,29 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
 void ReplPad::cutSafely() {
     containInputSelection();
 
-    QMutexLocker lock {&modifyMutex};
+    QMutexLocker lock {&documentMutex};
     QTextEdit::cut();
 }
 
 void ReplPad::pasteSafely() {
     containInputSelection();
 
-    QMutexLocker lock {&modifyMutex};
+    QMutexLocker lock {&documentMutex};
     QTextEdit::paste();
+}
+
+void ReplPad::setBuffer(QString const & text, int position, int anchor) {
+    clearCurrentInput();
+
+    QTextCursor cursor {document()};
+
+    cursor.setPosition(history.back().inputPos);
+
+    int pos = cursor.position();
+
+    appendText(text);
+
+    cursor.setPosition(pos + anchor);
+    cursor.setPosition(pos + position, QTextCursor::KeepAnchor);
+    setTextCursor(cursor);
 }

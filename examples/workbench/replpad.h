@@ -22,21 +22,77 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
+//
+// The REPL-Pad (Read-Eval-Print-Loop) is a kind of "command prompt workspace"
+// used by Ren Garden.  It is currently built on top of QTextEdit, although
+// the goal is to isolate the dependency on QTextEdit to just this unit, such
+// that it could be switched out for other implementations (web views, etc).
+//
+
 #include <vector>
 
 #include <QTextEdit>
 #include <QElapsedTimer>
+#include <QWaitCondition>
+#include <QMutex>
 
 #include "syntaxer.h"
+#include "fakestdio.h"
+
+
+// Virtual interface class implementing the hooks offered by ReplPad (but
+// keeping you from having to derive directly from ReplPad, and hence not
+// needing to derive indirectly from QTextEdit...
+
+class ReplPad;
+
+class IReplPadHooks {
+    friend class ReplPad;
+private:
+    virtual Syntaxer & getSyntaxer() = 0;
+    virtual bool isReadyToModify(QKeyEvent * event) = 0;
+    virtual QString getPromptString() = 0;
+    virtual void evaluate(QString const & input, bool meta) = 0;
+    virtual void escape() = 0;
+};
+
 
 class ReplPad : public QTextEdit
 {
     Q_OBJECT
 
-public:
-    ReplPad (QWidget * parent);
+private:
+    IReplPadHooks & hooks;
 
-protected:
+public:
+    ReplPad (IReplPadHooks & hooks, QWidget * parent);
+
+public:
+    friend class FakeStdoutBuffer;
+    FakeStdout fakeOut;
+
+    friend class FakeStdinBuffer;
+    FakeStdin fakeIn;
+
+private:
+    QMutex inputMutex;
+    QWaitCondition inputAvailable;
+    QByteArray input; // as utf-8
+
+signals:
+    void needGuiThreadTextAppend(QString text, bool centered);
+    void needGuiThreadHtmlAppend(QString html, bool centered);
+    void needGuiThreadImageAppend(QImage image, bool centered);
+public:
+    void appendImage(QImage const & image, bool centered = false);
+    void appendText(QString const & text, bool centered = false);
+    void appendHtml(QString const & html, bool centered = false);
+
+private slots:
+    void onRequestInput();
+
+
+public:
     QTextCharFormat promptFormatNormal;
     QTextCharFormat promptFormatMeta;
     QTextCharFormat inputFormatNormal;
@@ -44,7 +100,10 @@ protected:
     QTextCharFormat outputFormat;
     QTextCharFormat errorFormat;
 
-protected:
+    QTextBlockFormat leftFormat;
+    QTextBlockFormat centeredFormat;
+
+public:
     QFont defaultFont;
 
 private:
@@ -58,12 +117,11 @@ public:
     void setZoom(int delta);
 
 protected:
-    QMutex modifyMutex;
+    QMutex documentMutex;
 signals:
     void requestConsoleReset();
     void fadeOutToQuit(bool escaping);
 protected slots:
-    void onTextChanged();
     void onConsoleReset();
 
 private:
@@ -71,10 +129,9 @@ private:
     bool isFormatPending;
     QTextCursor endCursor() const;
     QTextCharFormat pendingFormat;
-protected:
-    virtual void appendText(QString const & text);
+public:
     void pushFormat(QTextCharFormat const & format);
-public slots:
+protected slots:
     void followLatestOutput();
     void dontFollowLatestOutput();
 
@@ -82,12 +139,8 @@ protected:
     void clearCurrentInput();
     void containInputSelection();
 
-protected:
-    virtual Syntaxer & getSyntaxer() = 0;
 
 protected:
-    virtual bool isReadyToModify(QKeyEvent * event) = 0;
-
     void keyPressEvent(QKeyEvent * event) override;
     void keyReleaseEvent(QKeyEvent * event) override;
     void mousePressEvent(QMouseEvent * event) override;
@@ -101,10 +154,6 @@ public slots:
 signals:
     void reportStatus(QString const & str);
 
-protected:
-    virtual void evaluate(QString const & input, bool meta) = 0;
-    virtual QString getPromptString() = 0;
-
 private:
     void rewritePrompt();
 
@@ -115,7 +164,6 @@ private:
     // that the virtual method is to implement.
 
     QElapsedTimer escapeTimer;
-    virtual void escape() = 0;
 
 private:
     bool hasUndo;
@@ -144,9 +192,11 @@ private:
         QString getInput(ReplPad & pad) const;
     };
     std::vector<HistoryEntry> history;
-protected:
+
+public:
     void appendNewPrompt();
 
+    void setBuffer(QString const & text, int position, int anchor);
 };
 
 #endif
