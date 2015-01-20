@@ -50,10 +50,10 @@ QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
     QTextCursor cursor {pad.document()};
 
     cursor.setPosition(inputPos, QTextCursor::MoveAnchor);
-    if (endPos == -1)
-        cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+    if (endPos)
+        cursor.setPosition(*endPos, QTextCursor::KeepAnchor);
     else
-        cursor.setPosition(endPos, QTextCursor::KeepAnchor);
+        cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 
     // The misleadingly named QTextCursor::​selectedText() gives you back
     // text with Unicode U+2029 paragraph separator characters instead of a
@@ -80,7 +80,8 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
     shouldFollow (true),
     isFormatPending (false),
     hasUndo (false),
-    hasRedo (false)
+    hasRedo (false),
+    historyIndex ()
 {
     // QTextEdit is a view into a QTextDocument; and it was not really in any
     // way designed to be used for what Ren Garden is doing with it.  One
@@ -110,7 +111,28 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
                 " you remember what you just did, report to the bug tracker!"
             );
 
-            emit requestConsoleReset();
+            // Can't edit the document from within the document edit handler
+            emit salvageDocument();
+        }
+    );
+
+    connect(
+        this, &ReplPad::salvageDocument,
+        [this]() {
+            QMutexLocker lock {&documentMutex};
+
+            if (hasUndo) {
+                // trick to undo the last document modification, if we can!
+                undo();
+                return;
+            }
+
+            // No undo, we have to clear to avoid crashes based on possibly
+            // now-invalid positions in the history buffer due to random edit
+
+            clear();
+            appendNewPrompt();
+            dontFollowLatestOutput();
         }
     );
 
@@ -158,18 +180,7 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
     );
 
 
-    // We call reset synchronously here, but we want to be able to call it
-    // asynchronously if we're doing something like an onDocumentChanged
-    // handler to avoid infinite recursion
-
-    connect(
-        this, &ReplPad::requestConsoleReset,
-        this, &ReplPad::onConsoleReset,
-        Qt::QueuedConnection
-    );
-
-
-    // A pet peeve of mine is when you're trying to do something with a scroll
+    // It's very annoying when you're trying to do something with a scroll
     // bar and select, and the view jumps out from under you.  If you touch
     // the scroll bars or do any navigation of your own after an evaluation
     // starts...then if you want to go to the end you'll ask for it (by hitting
@@ -243,14 +254,16 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
 
 
 
-void ReplPad::onConsoleReset() {
-    QMutexLocker lock {&documentMutex};
+///
+/// BASIC CLIENT INTERFACE FOR ADDING MATERIAL TO THE CONSOLE
+///
 
-    clear();
-    appendNewPrompt();
-    dontFollowLatestOutput();
-}
-
+//
+// This API is here to try and be a narrowing of the requirements the
+// RenConsole has of the ReplPad.  By keeping abstractions like QTextCursor
+// out of RenConsole, it makes it more feasible to swap out something that
+// is not a QTextEdit as the widget.
+//
 
 void ReplPad::appendImage(QImage const & image, bool centered) {
     QMutexLocker lock {&documentMutex};
@@ -380,9 +393,6 @@ void ReplPad::setZoom(int delta) {
 /// RICH-TEXT CONSOLE BEHAVIOR
 ///
 
-
-
-
 //
 // ReplPad::endCursor()
 //
@@ -396,7 +406,6 @@ QTextCursor ReplPad::endCursor() const {
     result.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
     return result;
 }
-
 
 
 void ReplPad::dontFollowLatestOutput() {
@@ -446,9 +455,7 @@ void ReplPad::mouseDoubleClickEvent(QMouseEvent * event) {
 
     for (auto it = history.rbegin(); it != history.rend(); it++) {
         if (textCursor().position() > it->inputPos) {
-            int last = (it->endPos == -1)
-                ? endCursor().position()
-                : it->endPos;
+            int last = it->endPos ? *(it->endPos) : endCursor().position();
 
             if (textCursor().position() <= last)
                 entryInside = &(*it);
@@ -491,13 +498,10 @@ void ReplPad::pushFormat(QTextCharFormat const & format) {
 
 void ReplPad::appendNewPrompt() {
 
-    int startPos = endCursor().position();
-    QString prompt = hooks.getPromptString();
-
     // You always have to ask for multi-line mode with shift-enter.  Maybe
     // someone will prefer the opposite?  Not likely.
 
-    history.emplace_back(startPos, prompt);
+    history.emplace_back(endCursor().position());
     rewritePrompt();
 
     // We can't allow people to undo their edits past the last prompts,
@@ -524,7 +528,9 @@ void ReplPad::rewritePrompt() {
     QTextCursor cursor {document()};
     cursor.beginEditBlock();
 
-    QString buffer = history.back().getInput(*this);
+    HistoryEntry & entry = history.back();
+
+    QString buffer = entry.getInput(*this);
 
     cursor.setPosition(history.back().startPos, QTextCursor::MoveAnchor);
     cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
@@ -532,20 +538,17 @@ void ReplPad::rewritePrompt() {
     cursor.removeSelectedText();
     cursor = endCursor();
 
-    QTextCharFormat promptFormat = history.back().meta
+    QTextCharFormat promptFormat = entry.meta
         ? promptFormatMeta
         : promptFormatNormal;
 
-    cursor.insertText(
-        history.back().prompt + ">>",
-        promptFormat
-    );
+    cursor.insertText(hooks.getPromptString() + ">>", promptFormat);
 
-    QTextCharFormat inputFormat = history.back().meta
+    QTextCharFormat inputFormat = entry.meta
         ? inputFormatMeta
         : inputFormatNormal;
 
-    if (history.back().multiLineMode) {
+    if (entry.multiline) {
         QTextCharFormat hintFormat = promptFormat;
         hintFormat.setFontItalic(true);
         hintFormat.setFontWeight(QFont::Normal);
@@ -560,7 +563,7 @@ void ReplPad::rewritePrompt() {
     else
         cursor.insertText(" ", inputFormat);
 
-    history.back().inputPos = cursor.position();
+    entry.inputPos = cursor.position();
 
     cursor.insertText(buffer);
 
@@ -593,7 +596,27 @@ void ReplPad::clearCurrentInput() {
     cursor.removeSelectedText();
     setTextCursor(endCursor());
 
-    history.back().endPos = -1;
+    history.back().endPos = std::experimental::nullopt;
+}
+
+
+void ReplPad::setBuffer(QString const & text, int position, int anchor) {
+    // Note: position and anchor are relative positions to the buffer string,
+    // that range from 0 to text.length()
+
+    clearCurrentInput();
+
+    QTextCursor cursor {document()};
+
+    cursor.setPosition(history.back().inputPos);
+
+    int pos = cursor.position();
+
+    appendText(text);
+
+    cursor.setPosition(pos + anchor);
+    cursor.setPosition(pos + position, QTextCursor::KeepAnchor);
+    setTextCursor(cursor);
 }
 
 
@@ -721,6 +744,18 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // easier to style with breaks.
 
     while (not hasRealText) {
+        if ((key == Qt::Key_Up) or (key == Qt::Key_Down))
+            if ((not history.back().multiline) or historyIndex) {
+                // Multi-line mode usually has ordinary cursor navigation.
+                // But single line mode up and down are ingrained in people
+                // as being used to "page through commands".  Because paging
+                // through commands might pass through a multi-line mode
+                // entry, we allow it to do so until historyIndex is cleared
+                // by pressing something besides up/down
+                break;
+            }
+
+        historyIndex = std::experimental::nullopt;
 
         if (
             (key == Qt::Key_Return)
@@ -754,18 +789,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
             break;
         }
-
-
-        if ((key == Qt::Key_Up) or (key == Qt::Key_Down))
-            if (not history.back().multiLineMode) {
-                // Multi-line mode uses ordinary cursor navigation in the
-                // console.  But single line mode up and down are most
-                // probably going to be used to implement a "paging through
-                // commands history", as traditional in consoles and shells.
-                // That would modify the content of the console, hence
-                // fall through.
-                break;
-            }
 
 
         // Cut, Paste, and Delete variants obviously modify, and we can just
@@ -812,31 +835,184 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     emit reportStatus("");
 
 
-    // What ctrl means on the platforms is different:
-    //
-    // http://stackoverflow.com/questions/16809139/
-
-    if ((key == Qt::Key_Space) and ctrled) {
-        history.back().meta = not history.back().meta;
-        rewritePrompt();
-        return;
-    }
-
-
     // If they have made a selection and have intent to modify, we must
     // contain that selection within the boundaries of the editable area.
 
     containInputSelection();
 
 
-    // Command history browsing via up and down arrows currently unwritten.
-    // Will need some refactoring to flip the input between single and multi
-    // line modes.  Might present some visual oddity swapping really long
-    // program segments with really short ones.
+    // Command history browsing via up and down arrows.  Presents some
+    // visual oddity swapping really long program segments short ones
 
     if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
-        assert(not history.back().multiLineMode);
-        emit reportStatus("UP/DOWN history nav not finished.");
+        // We should have checked this earlier
+        assert((not history.back().multiline) or historyIndex);
+
+        assert(history.size() != 0);
+
+        if (history.size() == 1) {
+            emit reportStatus("No history.");
+            return;
+        }
+
+        if (
+            (key == Qt::Key_Down)
+            and ((not historyIndex) or (historyIndex == history.size() - 1))
+        ) {
+            emit reportStatus("Already at bottom of history.");
+            return;
+        }
+
+        if ((historyIndex == static_cast<size_t>(0)) and (key == Qt::Key_Up)) {
+            emit reportStatus("Already at top of history.");
+            return;
+        }
+
+        if ((not historyIndex) and (key == Qt::Key_Up)) {
+            historyIndex = history.size() - 2;
+        }
+        else if (key == Qt::Key_Up) {
+            historyIndex = *historyIndex - 1;
+        }
+        else if (key == Qt::Key_Down) {
+            historyIndex = *historyIndex + 1;
+        }
+
+        clearCurrentInput();
+
+        if (historyIndex == history.size() - 1) {
+            history.back().multiline = false;
+            history.back().meta = false;
+            rewritePrompt();
+            historyIndex = std::experimental::nullopt;
+        }
+        else {
+            HistoryEntry & oldEntry = history[*historyIndex];
+            history.back().multiline = oldEntry.multiline;
+            rewritePrompt();
+
+            // We don't try and restore the prompt or meta state, because
+            // that opens a can of worms about whether the execution state
+            // can be rewound.  We just page through the text for now.
+
+            setBuffer(
+                oldEntry.getInput(*this),
+                *(oldEntry.position),
+                *(oldEntry.anchor)
+            );
+        }
+
+        document()->clearUndoRedoStacks();
+        return;
+    }
+
+
+    // Now that we know we're not doing paging, then all other operations will
+    // forget where you were while cursoring through the history.
+
+    historyIndex = std::experimental::nullopt;
+
+
+    // Testing of an initial magicUndo concept, which will backtrack the work
+    // log and take you to where you were from previous evaluations.
+
+    if (event->matches(QKeySequence::Undo)) {
+        if (hasUndo) {
+            QMutexLocker lock {&documentMutex};
+            undo();
+            return;
+        }
+
+        if (history.size() > 1) {
+            QMutexLocker lock {&documentMutex};
+
+            history.pop_back();
+
+            HistoryEntry & entry = history.back();
+
+            // Clear from the previous record's endPos to the current end
+            // of the document
+
+            QTextCursor cursor = endCursor();
+            cursor.setPosition(*(entry.endPos), QTextCursor::KeepAnchor);
+            cursor.removeSelectedText();
+
+            // Restore the selection to what it was at the time the user had
+            // performed an evaluation
+
+            cursor.setPosition(*(entry.anchor) + entry.inputPos);
+            cursor.setPosition(
+                *(entry.position) + entry.inputPos,
+                QTextCursor::KeepAnchor
+            );
+            setTextCursor(cursor);
+
+            // The user can now edit and move positions around, so we need
+            // to indicate that by clearing the endPos and position
+
+            entry.endPos = std::experimental::nullopt;
+            entry.position = std::experimental::nullopt;
+
+            // Keep it from trying to record that "edit to undo" as an
+            // undoable action, which causes madness.
+
+            document()->clearUndoRedoStacks();
+            return;
+        }
+
+        HistoryEntry & entry = history.back();
+
+        // It's sort of pleasing to be able to go all the way back to zero,
+        // so clear the input even though it's a bit of a forgery...
+
+        if (not entry.getInput(*this).isEmpty()) {
+            clearCurrentInput();
+            document()->clearUndoRedoStacks();
+            return;
+        }
+
+        // Allow an undo to clear multiline and meta mode if that's all that's
+        // left to undo
+
+        if (entry.multiline or entry.meta) {
+            entry.multiline = false;
+            entry.meta = false;
+            rewritePrompt();
+            document()->clearUndoRedoStacks();
+            return;
+        }
+
+        emit reportStatus("Nothing available for undo.");
+        return;
+    }
+
+
+    // No magical redo as of yet...
+
+    if (event->matches(QKeySequence::Redo)) {
+        if (hasRedo) {
+            QMutexLocker lock {&documentMutex};
+            redo();
+            return;
+        }
+        emit reportStatus("Nothing available for redo.");
+        return;
+    }
+
+
+    // All other commands will assume we are only working with the current
+    // history item, which lives at the tail of the history buffer
+
+    HistoryEntry & entry = history.back();
+
+
+    // What ctrl means on the platforms is different:
+    //
+    // http://stackoverflow.com/questions/16809139/
+
+    if ((key == Qt::Key_Space) and ctrled) {
+        entry.meta = not entry.meta;
+        rewritePrompt();
         return;
     }
 
@@ -860,80 +1036,17 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         // If there's any text, clear it and take us back.
 
-        if (not history.back().getInput(*this).isEmpty()) {
+        if (not entry.getInput(*this).isEmpty()) {
             clearCurrentInput();
-            history.back().multiLineMode = false;
+            entry.multiline = false;
             rewritePrompt();
         }
 
         // If there's no text but we're in meta mode, get rid of it.
 
-        if (history.back().meta) {
-            history.back().meta = false;
+        if (entry.meta) {
+            entry.meta = false;
             rewritePrompt();
-        }
-        return;
-    }
-
-
-    // Testing of an initial magicUndo concept, which will backtrack the work
-    // log and take you to where you were from previous evaluations.
-
-    if (event->matches(QKeySequence::Undo)) {
-        if (hasUndo) {
-            QMutexLocker lock {&documentMutex};
-            undo();
-            return;
-        }
-
-        if (history.size() > 1) {
-            QMutexLocker lock {&documentMutex};
-
-            history.pop_back();
-
-            // Clear from the previous record's endPos to the current end
-            // of the document, then position the cursor at the eval pos
-
-            QTextCursor cursor = endCursor();
-            cursor.setPosition(history.back().endPos, QTextCursor::KeepAnchor);
-            cursor.removeSelectedText();
-            cursor.setPosition(history.back().evalCursorPos);
-            setTextCursor(cursor);
-
-            // Keep it from trying to record that "edit to undo" as an
-            // undoable action, which causes madness.
-
-            document()->clearUndoRedoStacks();
-            return;
-        }
-
-        // It's sort of pleasing to be able to go all the way back to zero,
-        // so clear the input even though it's a bit of a forgery...
-
-        if (not history.back().getInput(*this).isEmpty()) {
-            clearCurrentInput();
-            document()->clearUndoRedoStacks();
-            return;
-        }
-
-        if (history.back().multiLineMode or history.back().meta) {
-            history.back().multiLineMode = false;
-            history.back().meta = false;
-            rewritePrompt();
-            document()->clearUndoRedoStacks();
-        }
-
-        emit reportStatus("Nothing available for undo.");
-        return;
-    }
-
-
-    // No magical redo as of yet...
-
-    if (event->matches(QKeySequence::Redo)) {
-        if (hasRedo) {
-            redo();
-            return;
         }
         return;
     }
@@ -951,16 +1064,25 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if ((key == Qt::Key_Enter) or (key == Qt::Key_Return)) {
 
-        if (
-            (not history.back().multiLineMode) and (shifted and (not ctrled))
-        ) {
+        if ((not entry.multiline) and (shifted and (not ctrled))) {
             // Switch from single to multi-line mode
 
-            QString input = history.back().getInput(*this);
-            clearCurrentInput();
+            // Save the string and current offsets for the selection start
+            // and end points
 
-            history.back().multiLineMode = true;
+            QString input = entry.getInput(*this);
+            int position = textCursor().position() - entry.inputPos;
+            int anchor = textCursor().anchor() - entry.inputPos;
+
+            // Clear the input area and then rewrite as a multi-line prompt
+
+            clearCurrentInput();
+            entry.multiline = true;
             rewritePrompt();
+
+            // Put the buffer and selection back, now on its own line
+
+            setBuffer(input, position, anchor);
 
             // It may be possible to detect when we undo backwards across
             // a multi-line switch and reset the history item, but until
@@ -993,7 +1115,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             if (textCursor().position() <= lastGoodPosition)
                 return 0;
 
-            if (not history.back().multiLineMode)
+            if (not entry.multiline)
                 return 0;
 
             QTextCursor cursor {document()};
@@ -1005,15 +1127,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return cursor.selection().toPlainText().count("\n");
         }();
 
-        if (
-            ctrled or (not history.back().multiLineMode)
-            or (extraneousNewlines > 1)
-        ) {
+        if (ctrled or (not entry.multiline) or (extraneousNewlines > 1)) {
             // Perform an evaluation.  But first, clean up all the whitespace
             // at the tail of the input (if it happens after our cursor
-            // position.)
+            // position.) 
 
-            history.back().evalCursorPos = textCursor().position();
+            entry.position = textCursor().position() - entry.inputPos;
+
+            entry.anchor = textCursor().anchor() - entry.inputPos;
 
             QTextCursor cursor = endCursor();
             cursor.setPosition(
@@ -1023,13 +1144,17 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 ),
                 QTextCursor::KeepAnchor
             );
-            cursor.removeSelectedText();
 
-            history.back().endPos = cursor.position();
+            if (true) {
+                QMutexLocker lock {&documentMutex};
+                cursor.removeSelectedText();
+            }
+
+            entry.endPos = cursor.position();
 
             appendText("\n");
 
-            QString input = history.back().getInput(*this);
+            QString input = entry.getInput(*this);
             if (input.isEmpty()) {
                 appendNewPrompt();
                 followLatestOutput();
@@ -1039,7 +1164,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
                 followLatestOutput();
                 // implementation may (does) queue...
-                hooks.evaluate(input, history.back().meta);
+                hooks.evaluate(input, entry.meta);
             }
 
             return;
@@ -1085,6 +1210,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         // Range selections, we replace them with the event text unless it
         // is a tab, where we entab or detab the content based on shift.
 
+        QMutexLocker lock {&documentMutex};
+
         if (key == Qt::Key_Tab) {
             // "You selected a large range of text and pressed tab?  And you
             // didn't want me to erase it all?  Hmmm...what this entabbing
@@ -1128,19 +1255,20 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
 
     if (key == Qt::Key_Backspace) {
-        if (textCursor().position() <= history.back().inputPos) {
+        if (textCursor().position() <= entry.inputPos) {
             emit reportStatus(
                 "Can't backspace beginning of input."
             );
             return;
         }
 
+        QMutexLocker lock {&documentMutex};
+
         // Note: we'd like to outdent tabs
         QTextCursor cursor = textCursor();
         cursor.setPosition(cursor.position() - 4, QTextCursor::KeepAnchor);
 
         if (cursor.selection().toPlainText() == tabString) {
-            QMutexLocker lock {&documentMutex};
             cursor.removeSelectedText();
             setTextCursor(cursor);
             return;
@@ -1149,7 +1277,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         cursor = textCursor();
         cursor.setPosition(cursor.position() - 1, QTextCursor::KeepAnchor);
 
-        QMutexLocker lock {&documentMutex};
         cursor.removeSelectedText();
 
         setTextCursor(cursor);
@@ -1208,20 +1335,4 @@ void ReplPad::pasteSafely() {
 
     QMutexLocker lock {&documentMutex};
     QTextEdit::paste();
-}
-
-void ReplPad::setBuffer(QString const & text, int position, int anchor) {
-    clearCurrentInput();
-
-    QTextCursor cursor {document()};
-
-    cursor.setPosition(history.back().inputPos);
-
-    int pos = cursor.position();
-
-    appendText(text);
-
-    cursor.setPosition(pos + anchor);
-    cursor.setPosition(pos + position, QTextCursor::KeepAnchor);
-    setTextCursor(cursor);
 }

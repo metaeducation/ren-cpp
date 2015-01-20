@@ -18,6 +18,11 @@ cmake_minimum_required(VERSION 2.8.11)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 
+# Add includes for libraries such as optional in the "include" directory
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
 # Instruct CMake to run moc automatically when needed.
 
 set(CMAKE_AUTOMOC ON)

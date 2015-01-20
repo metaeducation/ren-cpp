@@ -30,6 +30,7 @@
 //
 
 #include <vector>
+#include "optional/optional.hpp"
 
 #include <QTextEdit>
 #include <QElapsedTimer>
@@ -119,10 +120,12 @@ public:
 protected:
     QMutex documentMutex;
 signals:
-    void requestConsoleReset();
+    void salvageDocument();
+
+    // Fade out signaling sent to main window for terminating GUI when you
+    // hit or release the escape key.
+signals:
     void fadeOutToQuit(bool escaping);
-protected slots:
-    void onConsoleReset();
 
 private:
     bool shouldFollow;
@@ -168,24 +171,26 @@ private:
 private:
     bool hasUndo;
     bool hasRedo;
+    // if using up/down navigation, which index you're on ATM
+    std::experimental::optional<size_t> historyIndex;
     class HistoryEntry {
     public:
         int startPos;
-        QString prompt;
         int inputPos;
-        bool multiLineMode;
+        bool multiline;
         bool meta;
-        int evalCursorPos;
-        int endPos;
+        std::experimental::optional<int> position; // offset from inputPos
+        std::experimental::optional<int> anchor; // offset from inputPos
+        std::experimental::optional<int> endPos;
     public:
-        HistoryEntry (int startPos, QString prompt) :
+        HistoryEntry (int startPos) :
             startPos (startPos),
-            prompt (prompt),
             inputPos (startPos),
-            multiLineMode (false),
+            multiline (false),
             meta (false),
-            evalCursorPos (-1),
-            endPos (-1)
+            position (),
+            anchor (),
+            endPos ()
         {
         }
     public:
