@@ -745,13 +745,24 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     while (not hasRealText) {
         if ((key == Qt::Key_Up) or (key == Qt::Key_Down))
-            if ((not history.back().multiline) or historyIndex) {
-                // Multi-line mode usually has ordinary cursor navigation.
-                // But single line mode up and down are ingrained in people
-                // as being used to "page through commands".  Because paging
-                // through commands might pass through a multi-line mode
-                // entry, we allow it to do so until historyIndex is cleared
-                // by pressing something besides up/down
+            if (
+                ctrled or (
+                    ((not history.back().multiline) or historyIndex)
+                    and (textCursor().position() >= history.back().inputPos)
+                    and (not shifted)
+                )
+            ) {
+                // Ctrl-Up and Ctrl-Down always do history navigation.  But
+                // if you don't use Ctrl then cursor navigation will act
+                // normally *unless* you are either positioned in the edit
+                // buffer in single line mode, or if you're in mid-paging
+                // and are passing through a multi line mode entry.
+
+                // Shift-Up can be used as a trick to get the cursor "unstuck"
+                // from paging; it will make a selection to the previous line
+                // but you can abandon that by pressing any other navigation
+                // keys.  The cursor will "stick" again if you cursor into
+                // the single line buffer.
                 break;
             }
 
@@ -845,9 +856,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // visual oddity swapping really long program segments short ones
 
     if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
-        // We should have checked this earlier
-        assert((not history.back().multiline) or historyIndex);
-
         assert(history.size() != 0);
 
         if (history.size() == 1) {
@@ -923,6 +931,22 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
+        // If there's input but no undo queue, clear the input first before
+        // moving on to magic undo...
+
+        if (not history.back().getInput(*this).isEmpty()) {
+            clearCurrentInput();
+
+            HistoryEntry & entry = history.back();
+
+            entry.multiline = false;
+            entry.meta = false;
+            rewritePrompt();
+
+            document()->clearUndoRedoStacks();
+            return;
+        }
+
         if (history.size() > 1) {
             QMutexLocker lock {&documentMutex};
 
@@ -956,28 +980,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             // Keep it from trying to record that "edit to undo" as an
             // undoable action, which causes madness.
 
-            document()->clearUndoRedoStacks();
-            return;
-        }
-
-        HistoryEntry & entry = history.back();
-
-        // It's sort of pleasing to be able to go all the way back to zero,
-        // so clear the input even though it's a bit of a forgery...
-
-        if (not entry.getInput(*this).isEmpty()) {
-            clearCurrentInput();
-            document()->clearUndoRedoStacks();
-            return;
-        }
-
-        // Allow an undo to clear multiline and meta mode if that's all that's
-        // left to undo
-
-        if (entry.multiline or entry.meta) {
-            entry.multiline = false;
-            entry.meta = false;
-            rewritePrompt();
             document()->clearUndoRedoStacks();
             return;
         }
