@@ -33,7 +33,7 @@ The simplest way to build RenCpp is to use CMake. These instructions will
 assume you are doing so and using MinGW, so you will need:
 
 * [A recent version of MinGW][1]
-(e.g. GCC 4.9+ with POSIX threads works)
+(e.g. GCC 4.8.2+ with POSIX threads works.  GCC 4.7.2 is too old.)
 
 * [A fairly recent version of CMake][2]
 (2.8+)
@@ -88,8 +88,9 @@ default assumption of the build process. If you put rebol somewhere else, you
 will need to specify `-DRUNTIME_PATH=/wherever/you/put/rebol-source`.
 
 Make sure that you have `cmake`, `make` and the other MinGW executables in your
-PATH, then open a console in RenCpp's main directory and type the following
-instructions:
+PATH.  (MinGW may have named its make `mingw32-make` if `make` alone is not
+working for you.)  Then open a console in RenCpp's main directory and type the
+following instructions:
 
     cmake -G"MinGW Makefiles" -DRUNTIME=rebol
     make
@@ -145,6 +146,12 @@ up a virtual machine with a recent installation:
 * [Kubuntu](http://www.kubuntu.org/)
 
 * [Qt](http://www.qt.io/download-open-source/)
+
+Note that you'll need something newer than Debian "wheezy" stable to build it,
+as that only comes with GCC 4.7.2.  You can--however--upgrade an older
+installation using the .deb package management (e.g. for "jessie")
+
+* [Upgrading GCC on Debian](http://stackoverflow.com/a/26167100/211160)
 
 To get CMake, all you should need to run is:
 
