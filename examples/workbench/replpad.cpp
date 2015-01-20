@@ -1074,6 +1074,22 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             int position = textCursor().position() - entry.inputPos;
             int anchor = textCursor().anchor() - entry.inputPos;
 
+
+            // Add a newline to the buffer and bump the position in special
+            // case where you had an insertion point at the end of input
+            //
+            // https://github.com/metaeducation/ren-garden/issues/11
+
+            if (
+                (position == anchor) and (position == input.length())
+                and (not input.isEmpty())
+            ) {
+                input += "\n";
+                position++;
+                anchor++;
+            }
+
+
             // Clear the input area and then rewrite as a multi-line prompt
 
             clearCurrentInput();
