@@ -86,20 +86,24 @@ public:
     WatchList * watchList;
 
 private:
-    QMenu *fileMenu;
-    QMenu *editMenu;
-    QMenu *helpMenu;
+    QMenu * fileMenu;
+    QMenu * editMenu;
+    QMenu * windowMenu;
+    QMenu * helpMenu;
 
-    QAction *exitAct;
+    QAction * exitAct;
 
-    QAction *cutAct;
-    QAction *copyAct;
-    QAction *pasteAct;
+    QAction * cutAct;
+    QAction * copyAct;
+    QAction * pasteAct;
 
-    QAction *separatorAct;
+    QAction * newTabAct;
+    QAction * nextTabAct;
+    QAction * previousTabAct;
 
-    QAction *aboutAct;
-    QAction *aboutQtAct;
+    QAction * separatorAct;
+
+    QAction * aboutAct;
 };
 
 #endif

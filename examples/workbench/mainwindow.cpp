@@ -75,7 +75,7 @@ MainWindow::MainWindow() :
     );
 
     connect(
-        &console->getRepl(), &ReplPad::fadeOutToQuit,
+        &console->currentRepl(), &ReplPad::fadeOutToQuit,
         this, &MainWindow::onFadeOutToQuit,
         Qt::DirectConnection
     );
@@ -114,20 +114,20 @@ MainWindow::MainWindow() :
     updateMenus();
 
     connect(
-        &console->getRepl(), &ReplPad::copyAvailable,
+        &console->currentRepl(), &ReplPad::copyAvailable,
         cutAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
     connect(
-        &console->getRepl(), &ReplPad::copyAvailable,
+        &console->currentRepl(), &ReplPad::copyAvailable,
         copyAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
     readSettings();
 
-    setWindowTitle(tr("Ren [人] Garden"));
+    setWindowTitle(tr(u8"Ren [人] Garden"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -141,17 +141,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::cut()
 {
-    console->getRepl().cutSafely();
+    console->currentRepl().cutSafely();
 }
 
 void MainWindow::copy()
 {
-    console->getRepl().copy();
+    console->currentRepl().copy();
 }
 
 void MainWindow::paste()
 {
-    console->getRepl().pasteSafely();
+    console->currentRepl().pasteSafely();
 }
 
 
@@ -173,7 +173,7 @@ void MainWindow::about()
 
 void MainWindow::updateMenus()
 {
-    bool hasSelection = console->getRepl().textCursor().hasSelection();
+    bool hasSelection = console->currentRepl().textCursor().hasSelection();
     cutAct->setEnabled(hasSelection);
     copyAct->setEnabled(hasSelection);
 }
@@ -184,33 +184,88 @@ void MainWindow::createActions()
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcuts(QKeySequence::Quit);
     exitAct->setStatusTip(tr("Exit the application"));
-    connect(exitAct, &QAction::triggered, qApp, &QApplication::quit, Qt::DirectConnection);
+    connect(
+        exitAct, &QAction::triggered,
+        qApp, &QApplication::quit,
+        Qt::DirectConnection
+    );
 
     cutAct = new QAction(QIcon(":/images/cut.png"), tr("Cu&t"), this);
     cutAct->setShortcuts(QKeySequence::Cut);
     cutAct->setStatusTip(tr("Cut the current selection's contents to the "
                             "clipboard"));
-    connect(cutAct, &QAction::triggered, this, &MainWindow::cut, Qt::DirectConnection);
+    connect(
+        cutAct, &QAction::triggered,
+        this, &MainWindow::cut,
+        Qt::DirectConnection
+    );
 
     copyAct = new QAction(QIcon(":/images/copy.png"), tr("&Copy"), this);
     copyAct->setShortcuts(QKeySequence::Copy);
     copyAct->setStatusTip(tr("Copy the current selection's contents to the "
                              "clipboard"));
-    connect(copyAct, &QAction::triggered, this, &MainWindow::copy, Qt::DirectConnection);
+    connect(
+        copyAct, &QAction::triggered,
+        this, &MainWindow::copy,
+        Qt::DirectConnection);
 
     pasteAct = new QAction(QIcon(":/images/paste.png"), tr("&Paste"), this);
     pasteAct->setShortcuts(QKeySequence::Paste);
     pasteAct->setStatusTip(tr("Paste the clipboard's contents into the current "
                               "selection"));
-    connect(pasteAct, &QAction::triggered, this, &MainWindow::paste, Qt::DirectConnection);
+    connect(
+        pasteAct, &QAction::triggered,
+        this, &MainWindow::paste,
+        Qt::DirectConnection
+    );
+
+    newTabAct = new QAction(tr("New &Tab"), this);
+    newTabAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_T));
+    newTabAct->setStatusTip(tr("Create a new tab (not multithreaded!)"));
+    connect(
+        newTabAct, &QAction::triggered,
+        [this]() { console->createNewTab(); }
+    );
+
+    nextTabAct = new QAction(tr("&Next Tab"), this);
+    nextTabAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab));
+    nextTabAct->setStatusTip(tr("Select the next tab"));
+    connect(
+        nextTabAct, &QAction::triggered,
+        [this]() {
+            if (console->currentIndex() == console->count() - 1) {
+                // message about no next tab?
+                return;
+            }
+
+            console->setCurrentIndex(console->currentIndex() + 1);
+        }
+    );
+
+    previousTabAct = new QAction(tr("&Previous Tab"), this);
+    previousTabAct->setShortcut(
+        QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab)
+    );
+    previousTabAct->setStatusTip(tr("Select the previous tab"));
+    connect(
+        previousTabAct, &QAction::triggered,
+        [this]() {
+            if (console->currentIndex() == 0) {
+                // message about no previous tab?
+                return;
+            }
+
+            console->setCurrentIndex(console->currentIndex() - 1);
+        }
+    );
 
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
-    connect(aboutAct, &QAction::triggered, this, &MainWindow::about, Qt::DirectConnection);
-
-    aboutQtAct = new QAction(tr("About &Qt"), this);
-    aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
-    connect(aboutQtAct, &QAction::triggered, qApp, &QApplication::aboutQt, Qt::DirectConnection);
+    connect(
+        aboutAct, &QAction::triggered,
+        this, &MainWindow::about,
+        Qt::DirectConnection
+    );
 }
 
 
@@ -226,11 +281,15 @@ void MainWindow::createMenus()
     editMenu->addAction(copyAct);
     editMenu->addAction(pasteAct);
 
+    windowMenu = menuBar()->addMenu(tr("&Window"));
+    windowMenu->addAction(newTabAct);
+    windowMenu->addAction(nextTabAct);
+    windowMenu->addAction(previousTabAct);
+
     menuBar()->addSeparator();
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);
-    helpMenu->addAction(aboutQtAct);
 }
 
 
@@ -249,7 +308,7 @@ void MainWindow::readSettings()
 
     move(pos);
     resize(size);
-    console->getRepl().setZoom(zoom);
+    console->currentRepl().setZoom(zoom);
 }
 
 
@@ -258,7 +317,7 @@ void MainWindow::writeSettings()
     QSettings settings("Metaeducation", "Ren Garden");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
-    settings.setValue("zoom", console->getRepl().getZoom());
+    settings.setValue("zoom", console->currentRepl().getZoom());
 }
 
 

@@ -179,6 +179,12 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
         Qt::BlockingQueuedConnection
     );
 
+    connect(
+        this, &ReplPad::needGuiThreadImageAppend,
+        this, &ReplPad::appendImage,
+        Qt::BlockingQueuedConnection
+    );
+
 
     // It's very annoying when you're trying to do something with a scroll
     // bar and select, and the view jumps out from under you.  If you touch
@@ -266,6 +272,15 @@ ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
 //
 
 void ReplPad::appendImage(QImage const & image, bool centered) {
+    if (thread() != QThread::currentThread()) {
+        // we need to block in order to properly check for write mutex
+        // authority (otherwise we could just queue it and split...)
+        // just calls this function again but from the Gui Thread
+
+        emit needGuiThreadImageAppend(image, centered);
+        return;
+    }
+
     QMutexLocker lock {&documentMutex};
 
     QTextCursor cursor = endCursor();
@@ -880,15 +895,21 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             historyIndex = history.size() - 2;
         }
         else if (key == Qt::Key_Up) {
-            historyIndex = *historyIndex - 1;
+            (*historyIndex)--;
         }
         else if (key == Qt::Key_Down) {
-            historyIndex = *historyIndex + 1;
+            (*historyIndex)++;
         }
 
         clearCurrentInput();
 
         if (historyIndex == history.size() - 1) {
+            // Because the edit history content is currently only reflected
+            // in the document itself, we've lost what you were editing
+            // when you started the cursor navigation.  Theoretically we
+            // could save it and restore it, but for now we just leave an
+            // empty non-multiline non-meta prompt.
+
             history.back().multiline = false;
             history.back().meta = false;
             rewritePrompt();
@@ -1335,6 +1356,12 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
         emit fadeOutToQuit(false);
 
     QTextEdit::keyReleaseEvent(event);
+}
+
+
+void ReplPad::focusInEvent(QFocusEvent * event)
+{
+    QTextEdit::focusInEvent(event);
 }
 
 

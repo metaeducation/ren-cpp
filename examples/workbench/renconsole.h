@@ -22,7 +22,9 @@
 #ifndef RENCONSOLE_H
 #define RENCONSOLE_H
 
-#include <QTextEdit>
+#include <memory>
+
+#include <QTabWidget>
 #include <QMutex>
 #include <QThread>
 
@@ -35,7 +37,7 @@
 
 class MainWindow;
 
-class RenConsole : public QWidget, public IReplPadHooks
+class RenConsole : public QTabWidget, public IReplPadHooks
 {
     Q_OBJECT
 
@@ -44,15 +46,18 @@ public:
     ~RenConsole () override;
 
 private:
-    ReplPad repl;
-
     RenSyntaxer syntaxer;
     RenSyntaxer & getSyntaxer() override { return syntaxer; }
 
     RenShell shell;
 
 public:
-    ReplPad & getRepl() { return repl; }
+    ReplPad & currentRepl() {
+        return *qobject_cast<ReplPad *>(currentWidget());
+    }
+    ReplPad & replFromIndex(int index) {
+        return *qobject_cast<ReplPad *>(widget(index));
+    }
 
 protected:
     bool bannerPrinted;
@@ -63,7 +68,7 @@ protected:
     bool isReadyToModify(QKeyEvent * event) override;
 
 private:
-    bool evaluating;
+    ReplPad * evaluatingRepl;
     QThread workerThread;
     NulOStream nulOstream;
 
@@ -114,6 +119,14 @@ private:
 
 signals:
     void reportStatus(QString const & str);
+
+private:
+    // For reasons unknown, the tab widget greedily grabs the focus and won't
+    // give it to the inner widget.
+    void focusInEvent(QFocusEvent * event) override;
+
+public:
+    void createNewTab();
 };
 
 #endif

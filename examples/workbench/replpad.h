@@ -66,7 +66,7 @@ private:
     IReplPadHooks & hooks;
 
 public:
-    ReplPad (IReplPadHooks & hooks, QWidget * parent);
+    ReplPad (IReplPadHooks & hooks, QWidget * parent = nullptr);
 
 public:
     friend class FakeStdoutBuffer;
@@ -148,6 +148,7 @@ protected:
     void keyReleaseEvent(QKeyEvent * event) override;
     void mousePressEvent(QMouseEvent * event) override;
     void mouseDoubleClickEvent(QMouseEvent * event) override;
+    void focusInEvent(QFocusEvent * event) override;
 
     // Trap cut, paste, del so we can limit the selection to the edit buffer
 public slots:

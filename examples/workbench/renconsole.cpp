@@ -129,28 +129,12 @@ signals:
 //
 
 RenConsole::RenConsole (QWidget * parent) :
-    QWidget (parent),
-    repl (*this, this),
+    QTabWidget (parent),
     bannerPrinted (false),
-    evaluating (false),
+    evaluatingRepl (nullptr),
     dialect (none),
     target (none)
 {
-    // Console inherits from widget and can have several component parts if
-    // it wants.  But for now, make the ReplPad take up the full space.
-    // Wire any signals it offers to trigger a signal off of the console
-
-    QVBoxLayout * layout = new QVBoxLayout;
-    layout->addWidget(&repl);
-    setLayout(layout);
-
-    connect(
-        &repl, &ReplPad::reportStatus,
-        this, &RenConsole::reportStatus,
-        Qt::DirectConnection
-    );
-
-
     // Set up the Evaluator so it's wired up for signals and slots
     // and on another thread from the GUI.  This technique is taken directly
     // from the Qt5 example, and even uses the same naming:
@@ -180,12 +164,9 @@ RenConsole::RenConsole (QWidget * parent) :
     workerThread.start();
 
 
-    // Tell the runtime to use the fake stdout instead of the ordinary one
-    // (otherwise the output would be going to the terminal that launched
-    // the GUI app, not a window inside that app).
-
-    Engine::runFinder().setOutputStream(getRepl().fakeOut);
-    Engine::runFinder().setInputStream(getRepl().fakeIn);
+    // Define the console dialect.  Debugging in lambdas is not so good in
+    // GDB right now, as it won't show locals if the lambda is in a
+    // constructor like this.  Research better debug methods.
 
     consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
@@ -226,20 +207,17 @@ RenConsole::RenConsole (QWidget * parent) :
                         or ((blk.length() > 1) and not blk[2].isRefinement())
                     ) {
                         throw Error {
-                            "Console dialect must be single arity"
+                            "Console dialects must be single arity"
                             " (/meta switch for control)}"
                         };
                     }
 
-                    if (not arg.isEqualTo(dialect)) {
-                        dialect = arg;
-                        if (runtime("find words-of quote", dialect, "/meta"))
-                            runtime(Path {dialect, "meta"}, LitWord {"banner"});
-                    }
-                    else {
-                        // setting to already-used dialect... should this
-                        // just be ignored?
-                    }
+                    // should we check if arg.isEqualTo(dialect) and do
+                    // something special in that case?
+
+                    dialect = arg;
+                    if (runtime("find words-of quote", dialect, "/meta"))
+                        runtime(Path {dialect, "meta"}, LitWord {"banner"});
 
                     return unset;
                 }
@@ -364,16 +342,74 @@ RenConsole::RenConsole (QWidget * parent) :
     /* proposals->downloadLocally(); */
 
 
-    // Now make console the default dialect we use to interpret commands
-    // Do it this way instead of with raw assignment just to keep the special
-    // case tested (users can type CONSOLE :CONSOLE as well...)  Switching
-    // dialects offers the ability to run (dialect)/meta 'banner, which may
-    // print.
+    // With everything set up, it's time to add our Repl(s)
 
-    runtime(consoleFunction, "quote", consoleFunction);
-    repl.appendNewPrompt();
+    setTabsClosable(true); // close button per tab
+    setTabBarAutoHide(true); // hide if < 2 tabs
+
+    // http://stackoverflow.com/q/15585793/211160
+    setStyleSheet("QTabWidget::pane { border: 0; }");
+
+    connect(
+        this, &QTabWidget::currentChanged,
+        [this]() {
+            // Anything to do when the tab changes?
+        }
+    );
+
+
+    connect(
+        this, &QTabWidget::tabCloseRequested,
+        [this](int index) {
+            if (&replFromIndex(index) == evaluatingRepl) {
+                // REVIEW: try canceling here with a posted close, and then
+                // handle unresponsive cancellations etc.
+
+                emit reportStatus("Can't close evaluator, cancel first.");
+                return;
+            }
+
+            removeTab(index);
+        }
+    );
+
+    auto repl = new ReplPad {*this, this};
+    addTab(repl, "Main");
+
+    connect(
+        repl, &ReplPad::reportStatus,
+        this, &RenConsole::reportStatus,
+        Qt::AutoConnection // worker thread may report status also
+    );
+
+
+    // Now make console the default dialect we use to interpret commands
+    // Switching dialects offers the ability to run (dialect)/meta 'banner,
+    // which may print.
+
+    dialect = consoleFunction;
+    evaluate("console :console", false);
 }
 
+
+
+void RenConsole::createNewTab() {
+
+    auto repl = new ReplPad {*this, this};
+    addTab(repl, "New Tab");
+
+    connect(
+        repl, &ReplPad::reportStatus,
+        this, &RenConsole::reportStatus,
+        Qt::DirectConnection
+    );
+
+    // Give repl a prompt, but we will let replOne get one through the
+    // natural ending of the banner execution
+
+    repl->appendNewPrompt();
+    setCurrentWidget(repl);
+}
 
 
 //
@@ -393,11 +429,11 @@ RenConsole::RenConsole (QWidget * parent) :
 
 void RenConsole::printBanner() {
 
-    repl.appendImage(QImage (":/images/banner-logo.png"), true);
+    currentRepl().appendImage(QImage (":/images/banner-logo.png"), true);
 
     QTextCharFormat headerFormat;
     headerFormat.setFont(
-        QFont("Helvetica", repl.defaultFont.pointSize() * 1.5)
+        QFont("Helvetica", currentRepl().defaultFont.pointSize() * 1.5)
     );
 
     // Use a font we set the size explicitly for so this text intentionally
@@ -409,13 +445,13 @@ void RenConsole::printBanner() {
     subheadingFormat.setFont(
         QFont(
             "Helvetica",
-            repl.defaultFont.pointSize()
+            currentRepl().defaultFont.pointSize()
         )
     );
     subheadingFormat.setForeground(Qt::darkGray);
 
-    repl.pushFormat(subheadingFormat);
-    repl.appendText("\n", true);
+    currentRepl().pushFormat(subheadingFormat);
+    currentRepl().appendText("\n", true);
 
     std::vector<char const *> components = {
         "<i><b>Red</b> is © 2015 Nenad Rakocevic, BSD License</i>",
@@ -431,23 +467,23 @@ void RenConsole::printBanner() {
     };
 
     for (auto & credit : components) {
-        repl.appendHtml(credit, true);
-        repl.appendText("\n", true);
+        currentRepl().appendHtml(credit, true);
+        currentRepl().appendText("\n", true);
     }
 
-    repl.appendText("\n", true);
+    currentRepl().appendText("\n", true);
 
     // For the sake of demonstration, get the Ren Garden copyright value
     // out of a context set up in the resource file in ren-garden.reb
 
-    repl.appendHtml(
+    currentRepl().appendHtml(
         static_cast<String>(runtime("ren-garden/copyright")),
         true
     );
 
-    repl.appendText("\n", true);
+    currentRepl().appendText("\n", true);
 
-    repl.appendText("\n");
+    currentRepl().appendText("\n");
 }
 
 
@@ -458,7 +494,7 @@ void RenConsole::printBanner() {
 
 //
 // The ReplPad is language-and-evaluator agnostic.  It offers an interface
-// that we implement, giving the console the specific behaviors for evaluation
+// that we implement, giving RenConsole the specific behaviors for evaluation
 // from RenCpp.
 //
 
@@ -470,9 +506,14 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
     //
     //     https://github.com/hostilefork/rencpp/issues/19
 
-    if (evaluating) {
+    if (evaluatingRepl) {
         if (event->key() == Qt::Key_Escape) {
-            runtime.cancel();
+            if (evaluatingRepl == &currentRepl())
+                runtime.cancel();
+            else
+                emit reportStatus(
+                    "Current tab is not running an evaluation to cancel."
+                );
 
             // Message of successful cancellation is given in the console
             // by the handler when the evaluation thread finishes.
@@ -490,7 +531,10 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
 void RenConsole::evaluate(QString const & input, bool meta) {
     static int count = 0;
 
-    evaluating = true;
+    evaluatingRepl = &currentRepl();
+
+    Engine::runFinder().setOutputStream(evaluatingRepl->fakeOut);
+    Engine::runFinder().setInputStream(evaluatingRepl->fakeIn);
 
     emit operate(dialect, input, meta);
 
@@ -499,8 +543,16 @@ void RenConsole::evaluate(QString const & input, bool meta) {
 
 
 void RenConsole::escape() {
-    if (evaluating) {
-        runtime.cancel();
+    if (evaluatingRepl) {
+
+        // For issues tied to canceling semantics in RenCpp, see:
+        //
+        //     https://github.com/hostilefork/rencpp/issues/19
+
+        if (evaluatingRepl == &currentRepl())
+            runtime.cancel();
+        else
+            emit reportStatus("Current tab is not evaluating to be canceled.");
         return;
     }
 
@@ -511,8 +563,8 @@ void RenConsole::escape() {
 
         runtime(consoleFunction, "quote", consoleFunction);
 
-        repl.appendText("\n\n");
-        repl.appendNewPrompt();
+        currentRepl().appendText("\n\n");
+        currentRepl().appendNewPrompt();
     }
 }
 
@@ -550,7 +602,7 @@ void RenConsole::handleResults(
     bool success,
     Value const & result
 ) {
-    assert(evaluating);
+    assert(evaluatingRepl);
 
     // At the moment, RenCpp actually flushes on every write.  This isn't
     // such a bad idea for stdout, and works well for the console, but may
@@ -561,7 +613,7 @@ void RenConsole::handleResults(
     if (not success) {
         pendingBuffer.clear();
 
-        repl.pushFormat(repl.errorFormat);
+        currentRepl().pushFormat(currentRepl().errorFormat);
 
         // The value does not represent the result of the operation; it
         // represents the error that was raised while running it (or if
@@ -569,44 +621,44 @@ void RenConsole::handleResults(
         // have an implicit newline on the end implicitly
 
         if (result)
-            repl.appendText(to_QString(result));
+            currentRepl().appendText(to_QString(result));
         else
-            repl.appendText("[Escape]\n");
+            currentRepl().appendText("[Escape]\n");
     }
     else if (not result.isUnset()) {
         // If we evaluated and it wasn't unset, print an eval result ==
 
-        repl.pushFormat(repl.promptFormatNormal);
-        repl.appendText("==");
+        currentRepl().pushFormat(currentRepl().promptFormatNormal);
+        currentRepl().appendText("==");
 
-        repl.pushFormat(repl.inputFormatNormal);
-        repl.appendText(" ");
+        currentRepl().pushFormat(currentRepl().inputFormatNormal);
+        currentRepl().appendText(" ");
 
         // Technically this should run through a hook that is "guaranteed"
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
         if (result.isFunction()) {
-            repl.appendText("#[function! (");
-            repl.appendText(to_QString(runtime("words-of quote", result)));
-            repl.appendText(") [...]]");
+            currentRepl().appendText("#[function! (");
+            currentRepl().appendText(to_QString(runtime("words-of quote", result)));
+            currentRepl().appendText(") [...]]");
         }
         else {
-            repl.appendText(to_QString(runtime("mold/all quote", result)));
+            currentRepl().appendText(to_QString(runtime("mold/all quote", result)));
         }
 
-        repl.appendText("\n");
+        currentRepl().appendText("\n");
     }
 
     // Rebol's console only puts in the newline if you get a non-unset
     // evaluation... but here we put one in all cases to space out the prompts
 
-    repl.appendText("\n");
+    currentRepl().appendText("\n");
 
-    repl.appendNewPrompt();
+    currentRepl().appendNewPrompt();
 
     if (not pendingBuffer.isEmpty()) {
-        repl.setBuffer(pendingBuffer, pendingPosition, pendingAnchor);
+        currentRepl().setBuffer(pendingBuffer, pendingPosition, pendingAnchor);
         pendingBuffer.clear();
     }
 
@@ -618,9 +670,14 @@ void RenConsole::handleResults(
 
     emit finishedEvaluation();
 
-    evaluating = false;
+    evaluatingRepl = nullptr;
 }
 
+
+void RenConsole::focusInEvent(QFocusEvent *)
+{
+    currentWidget()->setFocus();
+}
 
 
 ///
@@ -648,6 +705,7 @@ RenConsole::~RenConsole() {
         exit(1337); // REVIEW: What exit codes will Ren Garden use?
     }
 }
+
 
 
 // This bit is necessary because we're defining a Q_OBJECT class in a .cpp
