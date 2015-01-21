@@ -22,16 +22,6 @@ extern "C" {
 
 extern jmp_buf * Halt_State;
 void Init_Task_Context();	// Special REBOL values per task
-
-#ifdef TO_WIN32
-    #include <windows.h>
-    // The objects file from Rebol linked into RenCpp need a
-    // variable named App_Instance for the linkage to work when
-    // built for Windows. Therefore, we provided this variable
-    // here. It does not serve any other purpose.
-    HINSTANCE App_Instance = 0;
-#endif
-
 }
 
 
