@@ -42,6 +42,33 @@
 
 class ReplPad;
 
+
+///
+/// NULL OUTPUT
+///
+
+// http://stackoverflow.com/a/8244052/211160
+
+class NulStreambuf : public std::streambuf
+{
+    char dummyBuffer[64];
+protected:
+    virtual int overflow(int c)
+    {
+        setp(dummyBuffer, dummyBuffer + sizeof(dummyBuffer));
+        return (c == traits_type::eof()) ? '\0' : c;
+    }
+};
+
+class NulOStream : private NulStreambuf, public std::ostream
+{
+public:
+    NulOStream () : std::ostream (this) {}
+    NulStreambuf const * rdbuf() const { return this; }
+};
+
+
+
 ///
 /// FAKE STANDARD OUTPUT
 ///

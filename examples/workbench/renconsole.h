@@ -65,6 +65,7 @@ protected:
 private:
     bool evaluating;
     QThread workerThread;
+    NulOStream nulOstream;
 
 private:
     ren::Value consoleFunction;
