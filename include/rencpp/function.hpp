@@ -535,7 +535,7 @@ private:
             // string into a cell, and tell the ren runtime that's what
             // happened.  For now we just rethrow
 
-            throw e;
+            throw;
         }
         catch (...) {
 
