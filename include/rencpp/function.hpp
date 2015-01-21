@@ -459,6 +459,7 @@ private:
         // exceptions the C++ code has thrown.
 
         bool success = true;
+        bool cancelling = false;
         bool exiting = false;
 
         // Only initialized if `success and exiting`, and we don't really need
@@ -523,6 +524,9 @@ private:
             exiting = true;
             status = e.code();
         }
+        catch (evaluation_cancelled const & e) {
+            cancelling = true;
+        }
         catch (std::exception const & e) {
 
             std::string what = e.what();
@@ -548,6 +552,9 @@ private:
         // so at least as far as THIS function is concerned, a longjmp
         // should be safe (which is what Rebol will do if we call RenShimError
         // or RenShimExit).
+
+        if (cancelling)
+            return RenShimCancel();
 
         if (exiting)
             return RenShimExit(status);

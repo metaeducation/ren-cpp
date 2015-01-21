@@ -259,6 +259,13 @@ typedef RenResult (* RenShimPointer)(RenCell * stack);
 
 
 /*
+ * If the evaluator is cancelled by a signal from outside, and the exception
+ * makes it to the shim, it will be processed by this function in the shim
+ */
+RenResult RenShimCancel();
+
+
+/*
  * Unlike the C exit() call, RenShimExit call can be "caught" by CATCH/EXIT
  * Should not return if successful, and shouldn't fail... result is ignored.
  */

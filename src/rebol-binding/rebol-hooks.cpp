@@ -694,6 +694,11 @@ public:
         return result;
     }
 
+    RenResult ShimCancel() {
+        Halt_Code(RE_HALT, 0);
+        UNREACHABLE_CODE();
+    }
+
     RenResult ShimExit(int status) {
         REBVAL value;
         SET_INTEGER(&value, status);
@@ -785,6 +790,11 @@ RenResult RenFormAsUtf8(
     return ren::internal::hooks.FormAsUtf8(
         engine, value, buffer, bufSize, lengthOut
     );
+}
+
+
+RenResult RenShimCancel() {
+    return ren::internal::hooks.ShimCancel();
 }
 
 
