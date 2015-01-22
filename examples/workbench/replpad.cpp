@@ -1295,7 +1295,9 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
 
     if (key == Qt::Key_Backspace) {
-        if (textCursor().position() <= entry.inputPos) {
+        QTextCursor cursor = textCursor();
+
+        if (cursor.position() <= entry.inputPos) {
             emit reportStatus(
                 "Can't backspace beginning of input."
             );
@@ -1305,7 +1307,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         QMutexLocker lock {&documentMutex};
 
         // Note: we'd like to outdent tabs
-        QTextCursor cursor = textCursor();
         cursor.setPosition(cursor.position() - 4, QTextCursor::KeepAnchor);
 
         if (cursor.selection().toPlainText() == tabString) {
@@ -1317,6 +1318,30 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         cursor = textCursor();
         cursor.setPosition(cursor.position() - 1, QTextCursor::KeepAnchor);
 
+        cursor.removeSelectedText();
+
+        setTextCursor(cursor);
+        return;
+    }
+
+    if (key == Qt::Key_Delete) {
+        QTextCursor cursor = textCursor();
+
+        if (cursor.position() == endCursor().position()) {
+            emit reportStatus(
+                "Can't delete end of input."
+            );
+            return;
+        }
+
+        QMutexLocker lock {&documentMutex};
+
+        if (cursor.anchor() != cursor.position()) {
+            cursor.removeSelectedText();
+            return;
+        }
+
+        cursor.setPosition(cursor.position() + 1, QTextCursor::KeepAnchor);
         cursor.removeSelectedText();
 
         setTextCursor(cursor);
