@@ -20,7 +20,6 @@
 //
 
 #include <exception>
-#include <sstream>
 
 #include "value.hpp"
 
@@ -160,11 +159,11 @@ private:
 
 public:
     exit_command (int code) :
-        codeValue (code)
+        codeValue (code),
+        whatString ("ren::exit_command("
+                    + std::to_string(code)
+                    + ")")
     {
-        std::ostringstream ss;
-        ss << "ren::exit_command(" << code << ")";
-        whatString = ss.str();
     }
 
     char const * what() const noexcept override {
