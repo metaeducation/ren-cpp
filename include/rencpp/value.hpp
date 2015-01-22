@@ -94,6 +94,14 @@ namespace internal {
 
     template <class R, class... Ts>
     class FunctionGenerator;
+
+    // We want to be able to pass a Context to the constructors.  However, the
+    // Context itself is a legal Ren type!  This "ContextWrapper" is used to
+    // carry a context without itself being a candidate to be a Loadable.
+
+    struct ContextWrapper {
+        Context const & context;
+    };
 }
 
 
@@ -560,6 +568,13 @@ public:
     }
 
 
+    // Although C++ assignment and moving of values around is really just
+    // effectively references, there is a copy method which corresponds to
+    // the COPY command.
+public:
+    Value copy(bool deep = true) const;
+
+
 public:
 #if REN_CLASSLIB_STD == 1
     friend std::string to_string (Value const & value);
@@ -632,7 +647,7 @@ protected:
 public:
     Value apply(
         std::initializer_list<internal::Loadable> loadables,
-        Context const & context
+        internal::ContextWrapper const & wrapper
     ) const;
 
     Value apply(

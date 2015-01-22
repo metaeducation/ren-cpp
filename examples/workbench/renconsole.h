@@ -61,8 +61,9 @@ public:
 
 private:
     struct TabInfo {
-        ren::Value dialect; // what dialect processor tab is running
+        ren::Function dialect; // what dialect processor tab is running
         std::experimental::optional<ren::Tag> label; // label of the tab
+        ren::Context context;
     };
 
     std::unordered_map<ReplPad *, TabInfo> tabinfo;
@@ -107,7 +108,8 @@ public slots:
 signals:
     // keep terminology from Qt sample
     void operate(
-        ren::Value const & dialect,
+        ren::Value const & dialectValue,
+        ren::Value const & contextValue,
         QString const & input,
         bool meta
     );

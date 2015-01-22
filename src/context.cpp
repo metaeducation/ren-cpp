@@ -31,6 +31,9 @@ Context::Finder Context::finder;
 
 Context Context::lookup(const char * name, Engine * engine)
 {
+    if (not engine)
+        engine = &Engine::runFinder();
+
     Context result (Dont::Initialize);
 
     if (::RenFindContext(engine->handle, name, &result->cell) != REN_SUCCESS)

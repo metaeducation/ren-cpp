@@ -3,6 +3,7 @@
 
 #include "rencpp/value.hpp"
 #include "rencpp/blocks.hpp"
+#include "rencpp/context.hpp"
 
 #include "rencpp/rebol.hpp" // ren::internal::nodes
 
@@ -56,6 +57,63 @@ void Value::finishInit(RenEngineHandle engine) {
     }
 
     origin = engine;
+}
+
+
+Value Value::copy(bool deep) const {
+
+    std::array<internal::Loadable, 2> loadables = {
+        deep ? "copy/deep" : "copy",
+        *this
+    };
+
+    Value result (Dont::Initialize);
+
+    Context userContext = Context::lookup("USER");
+    constructOrApplyInitialize(
+        origin,
+        &userContext, // hope that COPY hasn't been overwritten...
+        nullptr, // no applicand
+        loadables.data(),
+        loadables.size(),
+        nullptr, // Don't construct
+        &result // Do apply
+    );
+
+    return result;
+
+    // It seems the only way to call an action is to put the arguments it
+    // expects onto the stack :-/  For instance in the dispatch of A_COPY
+    // we see it uses D_REF(ARG_COPY_DEEP) in the block handler to determine
+    // whether to copy deeply.  So there is no deep flag to Copy_Value.  :-/
+    // Exactly what the incantation would be can be figured out another
+    // day but it would look something(?) like the below
+
+  /*
+    auto saved_DS_TOP = DS_TOP;
+
+    Value result (Dont::Initialize);
+
+    DS_PUSH(&cell); // value
+    DS_PUSH_NONE; // /part
+    DS_PUSH_NONE; // length
+    // /deep
+    if (deep)
+        DS_PUSH_TRUE;
+    else
+        DS_PUSH_NONE;
+    DS_PUSH_NONE; // /types
+    DS_PUSH_NONE; // kinds
+
+    // for actions, the result is written to the same location as the input
+    result.cell = cell;
+    Do_Act(DS_TOP, VAL_TYPE(&cell), A_COPY);
+    result.finishInit(origin);
+
+    DS_TOP = saved_DS_TOP;
+
+    return result;
+*/
 }
 
 

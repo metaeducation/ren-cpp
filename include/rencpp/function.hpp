@@ -296,7 +296,7 @@ public:
     // but it really only makes sense for a few value types.
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };

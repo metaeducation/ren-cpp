@@ -1200,8 +1200,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
                 followLatestOutput();
             }
             else {
-                pushFormat(outputFormat);
-
                 followLatestOutput();
                 // implementation may (does) queue...
                 hooks.evaluate(input, entry.meta);

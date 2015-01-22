@@ -49,6 +49,10 @@ protected:
     friend class Value;
     Context (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isContext(); }
+public:
+    Context copy(bool deep = true) {
+        return static_cast<Context>(Value::copy(deep));
+    }
 
 public:
     using Finder = std::function<Context (Engine *)>;
@@ -147,8 +151,13 @@ public:
     // code in this context"
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
+    }
+
+    template <typename R, typename... Ts>
+    inline R create(Ts &&... args) const {
+        return R {{std::forward<Ts>(args)...}, internal::ContextWrapper {*this}};
     }
 };
 

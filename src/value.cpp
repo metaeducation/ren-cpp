@@ -87,11 +87,16 @@ Value Value::apply_(
 
 Value Value::apply(
     std::initializer_list<internal::Loadable> loadables,
-    Context const & context
+    internal::ContextWrapper const & wrapper
 ) const {
     // This one has to be in the implementation file because it appears in
     // Value, using Loadable, which is derived from Value...
-    return apply_(loadables.begin(), loadables.size(), &context, nullptr);
+    return apply_(
+        loadables.begin(),
+        loadables.size(),
+        &wrapper.context,
+        nullptr
+    );
 }
 
 

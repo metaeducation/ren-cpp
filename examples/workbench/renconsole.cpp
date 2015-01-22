@@ -57,13 +57,19 @@ class EvaluatorWorker : public QObject
     Q_OBJECT
 
 public slots:
-    // See notes on MainWindow about qRegisterMetaType about why dialect is
-    // a ren::Value instead of ren::Function and needs the ren:: prefix
     void doWork(
-        ren::Value const & dialect,
+        ren::Value const & dialectValue,
+        ren::Value const & contextValue,
         QString const & input,
         bool meta
     ) {
+        // See notes on MainWindow about qRegisterMetaType about why dialect
+        // and context are passed as ren::Value instead of ren::Function and
+        // ren::Context (also why it needs the ren:: prefix for slots)
+
+        Function dialect = static_cast<Function>(dialectValue);
+        Context context = static_cast<Context>(contextValue);
+
         Value result;
         bool success = false;
 
@@ -73,23 +79,17 @@ public slots:
             // pass an arbitrary string you must type it in as {49+3hfa} in
             // a properly loadable string.
 
-            QString buffer {"{["};
-            buffer += input;
-            buffer += "]}";
-
-            Value loaded
-                = runtime("load", buffer.toUtf8().constData());
+            auto loaded = context.create<Block>(input.toUtf8().constData());
 
             if (meta) {
                 if (not runtime("find words-of quote", dialect, "/meta")) {
                     throw Error {"current dialect has no /meta refinement"};
                 }
 
-                result = runtime(Path {dialect, "meta"}, loaded);
+                result = context(Path {dialect, "meta"}, loaded);
             }
-            else {
-                result = dialect.apply(loaded);
-            }
+            else
+                result = context(dialect, loaded);
 
             success = true;
         }
@@ -217,7 +217,8 @@ RenConsole::RenConsole (QWidget * parent) :
                     if (runtime("find words-of quote", arg, "/meta"))
                         runtime(Path {arg, "meta"}, LitWord {"banner"});
 
-                    tabinfo[&repl()].dialect = arg;
+                    auto it = tabinfo.find(&repl());
+                    it->second.dialect = static_cast<Function>(arg);
 
                     return unset;
                 }
@@ -289,7 +290,8 @@ RenConsole::RenConsole (QWidget * parent) :
 
                 if (blk[1].isEqualTo<Word>("tab")) {
                     if (blk[2].isTag()) {
-                        tabinfo[&repl()].label = static_cast<Tag>(blk[2]);
+                        auto it = tabinfo.find(&repl());
+                        it->second.label = static_cast<Tag>(blk[2]);
                     }
                 }
 
@@ -401,7 +403,15 @@ void RenConsole::createNewTab() {
         Qt::DirectConnection
     );
 
-    tabinfo[pad].dialect = consoleFunction;
+    tabinfo.emplace(std::make_pair(pad,
+        TabInfo {
+            static_cast<Function>(consoleFunction),
+            (count() > 1)
+                ? std::experimental::nullopt
+                : std::experimental::optional<Tag>{Tag {"&Main"}},
+            Context::lookup("USER") // should be able to .copy(), not working
+        }
+    ));
 
     setCurrentWidget(pad);
 
@@ -431,11 +441,17 @@ void RenConsole::tryCloseTab(int index) {
 
 void RenConsole::updateTabLabels() {
     for (int index = 0; index < count(); index++) {
-        auto label = tabinfo[&replFromIndex(index)].label;
-        setTabText(
-            index,
-            label ? (*label).spellingOf<QString>() : "(unnamed)"
-        );
+        auto it = tabinfo.find(&replFromIndex(index));
+        auto label = it->second.label;
+
+        // Use a number (starting at 1) followed by the label (if there is one)
+
+        QString text {to_string(index + 1).c_str()};
+        text += ". ";
+        if (label)
+            text += (*label).spellingOf<QString>();
+
+        setTabText(index, text);
     }
 }
 
@@ -510,6 +526,7 @@ void RenConsole::printBanner() {
 
     repl().appendText("\n", true);
 
+    repl().pushFormat(repl().outputFormat);
     repl().appendText("\n");
 }
 
@@ -555,7 +572,10 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
 }
 
 
-void RenConsole::evaluate(QString const & input, bool meta) {
+void RenConsole::evaluate(
+    QString const & input,
+    bool meta
+) {
     static int count = 0;
 
     evaluatingRepl = &repl();
@@ -563,7 +583,18 @@ void RenConsole::evaluate(QString const & input, bool meta) {
     Engine::runFinder().setOutputStream(evaluatingRepl->fakeOut);
     Engine::runFinder().setInputStream(evaluatingRepl->fakeIn);
 
-    emit operate(tabinfo[evaluatingRepl].dialect, input, meta);
+    auto it = tabinfo.find(evaluatingRepl);
+
+    // Allow the output text to be a different format
+
+    evaluatingRepl->pushFormat(evaluatingRepl->outputFormat);
+
+    emit operate(
+        it->second.dialect,
+        it->second.context,
+        input,
+        meta
+    );
 
     count++;
 }
@@ -583,7 +614,8 @@ void RenConsole::escape() {
         return;
     }
 
-    if (not tabinfo[&repl()].dialect.isEqualTo(consoleFunction)) {
+    auto it = tabinfo.find(&repl());
+    if (not it->second.dialect.isEqualTo(consoleFunction)) {
 
         // give banner opportunity or other dialect switch code, which would
         // not be able to run if we just said dialect = consoleFunction
@@ -602,9 +634,10 @@ QString RenConsole::getPromptString() {
 
     QString customPrompt;
 
-    if (runtime("find words-of quote", tabinfo[&repl()].dialect, "/meta"))
+    auto it = tabinfo.find(&repl());
+    if (runtime("find words-of quote", it->second.dialect, "/meta"))
         customPrompt = to_QString(runtime(
-            Path {tabinfo[&repl()].dialect, "meta"}, LitWord {"prompt"}
+            Path {it->second.dialect, "meta"}, LitWord {"prompt"}
         ));
     else
         customPrompt = "?";
@@ -635,10 +668,16 @@ void RenConsole::handleResults(
 
     Engine::runFinder().getOutputStream().flush();
 
+    // For help with debugging context issues (temporary)
+
+/*    auto it = tabinfo.find(evaluatingRepl);
+    evaluatingRepl->appendText(to_QString(it->second.context));
+    evaluatingRepl->appendText("\n"); */
+
     if (not success) {
         pendingBuffer.clear();
 
-        repl().pushFormat(repl().errorFormat);
+        evaluatingRepl->pushFormat(repl().errorFormat);
 
         // The value does not represent the result of the operation; it
         // represents the error that was raised while running it (or if
@@ -646,44 +685,50 @@ void RenConsole::handleResults(
         // have an implicit newline on the end implicitly
 
         if (result)
-            repl().appendText(to_QString(result));
+            evaluatingRepl->appendText(to_QString(result));
         else
-            repl().appendText("[Escape]\n");
+            evaluatingRepl->appendText("[Escape]\n");
     }
     else if (not result.isUnset()) {
         // If we evaluated and it wasn't unset, print an eval result ==
 
-        repl().pushFormat(repl().promptFormatNormal);
-        repl().appendText("==");
+        evaluatingRepl->pushFormat(repl().promptFormatNormal);
+        evaluatingRepl->appendText("==");
 
-        repl().pushFormat(repl().inputFormatNormal);
-        repl().appendText(" ");
+        evaluatingRepl->pushFormat(repl().inputFormatNormal);
+        evaluatingRepl->appendText(" ");
 
         // Technically this should run through a hook that is "guaranteed"
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
         if (result.isFunction()) {
-            repl().appendText("#[function! (");
-            repl().appendText(to_QString(runtime("words-of quote", result)));
-            repl().appendText(") [...]]");
+            evaluatingRepl->appendText("#[function! (");
+            evaluatingRepl->appendText(
+                to_QString(runtime("words-of quote", result))
+            );
+            evaluatingRepl->appendText(") [...]]");
         }
         else {
-            repl().appendText(to_QString(runtime("mold/all quote", result)));
+            evaluatingRepl->appendText(
+                to_QString(runtime("mold/all quote", result))
+            );
         }
 
-        repl().appendText("\n");
+        evaluatingRepl->appendText("\n");
     }
 
     // Rebol's console only puts in the newline if you get a non-unset
     // evaluation... but here we put one in all cases to space out the prompts
 
-    repl().appendText("\n");
+    evaluatingRepl->appendText("\n");
 
-    repl().appendNewPrompt();
+    evaluatingRepl->appendNewPrompt();
 
     if (not pendingBuffer.isEmpty()) {
-        repl().setBuffer(pendingBuffer, pendingPosition, pendingAnchor);
+        evaluatingRepl->setBuffer(
+            pendingBuffer, pendingPosition, pendingAnchor
+        );
         pendingBuffer.clear();
     }
 

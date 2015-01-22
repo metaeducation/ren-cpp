@@ -74,9 +74,14 @@ public:
 
     static Value evaluate(
         std::initializer_list<internal::Loadable> loadables,
-        Context const & context
+        internal::ContextWrapper const & wrapper
     ) {
-        return evaluate(loadables.begin(), loadables.size(), &context, nullptr);
+        return evaluate(
+            loadables.begin(),
+            loadables.size(),
+            &wrapper.context,
+            nullptr
+        );
     }
 
     // Has ambiguity error from trying to turn the nullptr into a Loadable;

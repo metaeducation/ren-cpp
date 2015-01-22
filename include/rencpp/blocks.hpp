@@ -106,9 +106,9 @@ public:
     AnyBlock_ (
         Value const values[],
         size_t numValues,
-        Context const & context
+        internal::ContextWrapper const & wrapper
     ) noexcept :
-        AnyBlock (values, numValues, F, &context, nullptr)
+        AnyBlock (values, numValues, F, &wrapper.context, nullptr)
     {
     }
 
@@ -123,9 +123,15 @@ public:
 
     AnyBlock_ (
         std::initializer_list<BlockLoadable<BracesT>> const & loadables,
-        Context const & context
+        internal::ContextWrapper const & wrapper
     ) noexcept :
-        AnyBlock (loadables.begin(), loadables.size(), F, &context, nullptr)
+        AnyBlock (
+            loadables.begin(),
+            loadables.size(),
+            F,
+            &wrapper.context,
+            nullptr
+        )
     {
     }
 
@@ -195,7 +201,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
@@ -209,7 +215,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };

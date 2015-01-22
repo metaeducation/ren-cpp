@@ -200,7 +200,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
@@ -214,7 +214,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts&&... args) const {
+    inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
