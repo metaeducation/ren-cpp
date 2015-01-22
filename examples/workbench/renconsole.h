@@ -59,7 +59,13 @@ public:
         return *qobject_cast<ReplPad *>(widget(index));
     }
 
-    std::unordered_map<ReplPad *, ren::Function> tabDialects;
+private:
+    struct TabInfo {
+        ren::Value dialect; // what dialect processor tab is running
+        std::experimental::optional<ren::Tag> label; // label of the tab
+    };
+
+    std::unordered_map<ReplPad *, TabInfo> tabinfo;
 
 protected:
     bool bannerPrinted;
@@ -76,9 +82,6 @@ private:
 
 private:
     ren::Value consoleFunction;
-
-    // Function representing the current dialect (registered with CONSOLE)
-    ren::Value dialect;
 
     void escape() override;
 
@@ -129,7 +132,8 @@ private:
 
 public:
     void createNewTab();
-    void tryCloseTab();
+    void tryCloseTab(int index);
+    void updateTabLabels();
 };
 
 #endif

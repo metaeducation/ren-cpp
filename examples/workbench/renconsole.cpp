@@ -132,7 +132,6 @@ RenConsole::RenConsole (QWidget * parent) :
     QTabWidget (parent),
     bannerPrinted (false),
     evaluatingRepl (nullptr),
-    dialect (none),
     target (none)
 {
     // Set up the Evaluator so it's wired up for signals and slots
@@ -215,9 +214,10 @@ RenConsole::RenConsole (QWidget * parent) :
                     // should we check if arg.isEqualTo(dialect) and do
                     // something special in that case?
 
-                    dialect = arg;
-                    if (runtime("find words-of quote", dialect, "/meta"))
-                        runtime(Path {dialect, "meta"}, LitWord {"banner"});
+                    if (runtime("find words-of quote", arg, "/meta"))
+                        runtime(Path {arg, "meta"}, LitWord {"banner"});
+
+                    tabinfo[&repl()].dialect = arg;
 
                     return unset;
                 }
@@ -285,6 +285,12 @@ RenConsole::RenConsole (QWidget * parent) :
                     pendingAnchor = static_cast<Integer>(triple[3]);
 
                     return unset;
+                }
+
+                if (blk[1].isEqualTo<Word>("tab")) {
+                    if (blk[2].isTag()) {
+                        tabinfo[&repl()].label = static_cast<Tag>(blk[2]);
+                    }
                 }
 
                 throw Error {"Unknown dialect options"};
@@ -370,42 +376,24 @@ RenConsole::RenConsole (QWidget * parent) :
     connect(
         this, &QTabWidget::tabCloseRequested,
         [this](int index) {
-            if (&replFromIndex(index) == evaluatingRepl) {
-                // REVIEW: try canceling here with a posted close, and then
-                // handle unresponsive cancellations etc.
-
-                emit reportStatus("Can't close evaluator, cancel first.");
-                return;
-            }
-
-            removeTab(index);
+            tryCloseTab(index);
         }
     );
 
-    auto pad = new ReplPad {*this, this};
-    addTab(pad, "Main");
-
-    connect(
-        pad, &ReplPad::reportStatus,
-        this, &RenConsole::reportStatus,
-        Qt::AutoConnection // worker thread may report status also
-    );
-
-
-    // Now make console the default dialect we use to interpret commands
-    // Switching dialects offers the ability to run (dialect)/meta 'banner,
-    // which may print.
-
-    dialect = consoleFunction;
-    evaluate("console :console", false);
+    createNewTab();
 }
 
 
 
 void RenConsole::createNewTab() {
 
+    if (evaluatingRepl) {
+        emit reportStatus(tr("Can't spawn tab during evaluation."));
+        return;
+    }
+
     auto pad = new ReplPad {*this, this};
-    addTab(pad, "New Tab");
+    addTab(pad, "(unnamed)");
 
     connect(
         pad, &ReplPad::reportStatus,
@@ -413,30 +401,42 @@ void RenConsole::createNewTab() {
         Qt::DirectConnection
     );
 
-    // Give repl a prompt, but we will let replOne get one through the
-    // natural ending of the banner execution
+    tabinfo[pad].dialect = consoleFunction;
 
-    pad->appendNewPrompt();
     setCurrentWidget(pad);
+
+    evaluate("console :console", false);
 }
 
 
-void RenConsole::tryCloseTab() {
+void RenConsole::tryCloseTab(int index) {
     if (count() == 1) {
         emit reportStatus(tr("Can't close last tab"));
         return;
     }
 
-    if (evaluatingRepl == &repl()) {
+    ReplPad * pad = &replFromIndex(index);
+
+    if (evaluatingRepl == pad) {
         emit reportStatus(tr("Evaluation in progress, can't close tab"));
         return;
     }
 
-    ReplPad * pad = &repl();
-    removeTab(currentIndex());
+    removeTab(index);
     delete pad;
 
     repl().setFocus();
+}
+
+
+void RenConsole::updateTabLabels() {
+    for (int index = 0; index < count(); index++) {
+        auto label = tabinfo[&replFromIndex(index)].label;
+        setTabText(
+            index,
+            label ? (*label).spellingOf<QString>() : "(unnamed)"
+        );
+    }
 }
 
 
@@ -563,7 +563,7 @@ void RenConsole::evaluate(QString const & input, bool meta) {
     Engine::runFinder().setOutputStream(evaluatingRepl->fakeOut);
     Engine::runFinder().setInputStream(evaluatingRepl->fakeIn);
 
-    emit operate(dialect, input, meta);
+    emit operate(tabinfo[evaluatingRepl].dialect, input, meta);
 
     count++;
 }
@@ -583,7 +583,7 @@ void RenConsole::escape() {
         return;
     }
 
-    if (not dialect.isEqualTo(consoleFunction)) {
+    if (not tabinfo[&repl()].dialect.isEqualTo(consoleFunction)) {
 
         // give banner opportunity or other dialect switch code, which would
         // not be able to run if we just said dialect = consoleFunction
@@ -602,14 +602,12 @@ QString RenConsole::getPromptString() {
 
     QString customPrompt;
 
-    if (dialect) {
-        if (runtime("find words-of quote", dialect, "/meta"))
-            customPrompt = to_QString(runtime(
-                Path {dialect, "meta"}, LitWord {"prompt"}
-            ));
-        else
-            customPrompt = "?";
-    }
+    if (runtime("find words-of quote", tabinfo[&repl()].dialect, "/meta"))
+        customPrompt = to_QString(runtime(
+            Path {tabinfo[&repl()].dialect, "meta"}, LitWord {"prompt"}
+        ));
+    else
+        customPrompt = "?";
 
     return customPrompt;
 }
@@ -694,6 +692,8 @@ void RenConsole::handleResults(
     // as parts controllable by the console automator
 
     /*emit reportStatus(QString("..."));*/
+
+    updateTabLabels();
 
     emit finishedEvaluation();
 

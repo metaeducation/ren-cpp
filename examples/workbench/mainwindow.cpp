@@ -127,7 +127,7 @@ MainWindow::MainWindow() :
 
     readSettings();
 
-    setWindowTitle(tr(u8"Ren [人] Garden"));
+    setWindowTitle(tr("Ren Garden"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -159,12 +159,12 @@ void MainWindow::about()
 {
     QMessageBox::about(
         this,
-        tr("About Ren [人] Garden"),
+        tr("About Ren Garden"),
         tr(
-            "The <b>Ren [人] Garden</b> workbench integrates Rebol or Red"
-            " evaluators into a Qt-based environment, by utilizing the Rencpp"
-            " binding.\n\n"
-            "Copyright © 2015 MetÆducation, GPL License\n\n"
+            "The <b>Ren Garden</b> workbench integrates Rebol or Red"
+            " evaluators into a Qt-based environment, by utilizing the RenCpp"
+            " binding.<br><br>"
+            "Copyright © 2015 MetÆducation, GPL License<br><br>"
             "Rebol, Red, and Qt are governed by the terms of their licenses."
         )
     );
@@ -269,7 +269,7 @@ void MainWindow::createActions()
     connect(
         closeTabAct, &QAction::triggered,
         [this]() {
-            console->tryCloseTab();
+            console->tryCloseTab(console->currentIndex());
         }
     );
 

@@ -65,7 +65,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // delete everything, consider it to be "unlabeling"
 
             if (contents.isEmpty())
-                w.label = none;
+                w.label = std::experimental::nullopt;
             else
                 w.label = Tag {contents};
 
@@ -94,7 +94,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 WatchList::Watcher::Watcher (
     Value const & watch,
     bool recalculates,
-    Value const & label
+    std::experimental::optional<Tag> const & label
 ) :
     watch (watch),
     recalculates (recalculates),
@@ -127,7 +127,7 @@ void WatchList::Watcher::evaluate(bool firstTime) {
 
 QString WatchList::Watcher::getWatchString() const {
     if (label) {
-        Tag tag = static_cast<Tag>(label);
+        Tag tag = static_cast<Tag>(*label);
         return tag.spellingOf<QString>();
     }
 
@@ -301,7 +301,6 @@ void WatchList::duplicateWatcher(int index) {
         std::unique_ptr<Watcher> {new Watcher {*watchers[index - 1]}}
     );
 
-    assert(watchers[0]->label.isEqualTo(watchers[1]->label));
     blockSignals(true);
     insertRow(index - 1);
     blockSignals(false);
@@ -499,7 +498,13 @@ Value WatchList::watchDialect(
 
     if (arg.isWord() or arg.isPath() or arg.isParen()) {
 
-        Watcher * watcherUnique = new Watcher {arg, recalculates, label};
+        Watcher * watcherUnique = new Watcher {
+            arg,
+            recalculates,
+            label
+                ? std::experimental::optional<Tag>(static_cast<Tag>(label))
+                : std::experimental::nullopt
+        };
 
         // we append to end instead of inserting at the top because
         // it keeps the numbering more consistent.  But some people might

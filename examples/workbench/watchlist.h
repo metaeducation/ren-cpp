@@ -25,6 +25,8 @@
 #include <memory>
 #include <vector>
 
+#include "optional/optional.hpp"
+
 #include <QTableWidget>
 
 #include "rencpp/ren.hpp"
@@ -43,7 +45,7 @@ public:
         bool recalculates;
         ren::Value value;
         ren::Value error;
-        ren::Value label;
+        std::experimental::optional<ren::Tag> label;
         bool frozen;
 
     public:
@@ -52,7 +54,7 @@ public:
         Watcher (
             ren::Value const & watch,
             bool recalculates,
-            ren::Value const & label
+            std::experimental::optional<ren::Tag> const & label
         );
 
         // Evaluates and returns error if there was one, or none

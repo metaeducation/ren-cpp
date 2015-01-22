@@ -159,10 +159,6 @@ AnyString::AnyString (
 
 #if REN_CLASSLIB_STD
 
-AnyString::operator std::string () const {
-    return to_string(*this);
-}
-
 std::string AnyString::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
     if (isString() /* or isUrl() or isEmail() or isFile() */)
@@ -179,22 +175,6 @@ std::string AnyString::spellingOf_STD() const {
 
 
 #if REN_CLASSLIB_QT
-
-AnyString::operator QString () const {
-    QString result = to_QString(*this);
-
-    // Double check the unicode processing...
-#ifndef DEBUG
-    int index = 0;
-    for (ren::Character ch : *this) {
-        assert(result[index] == ch);
-        index++;
-    }
-    assert(index == result.length());
-#endif
-
-    return result;
-}
 
 QString AnyString::spellingOf_QT() const {
     QString result = static_cast<QString>(*this);

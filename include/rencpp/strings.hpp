@@ -66,11 +66,11 @@ public:
     //     https://github.com/hostilefork/rencpp/issues/6
 
 #if REN_CLASSLIB_STD == 1
-    operator std::string () const;
+    operator std::string () const { return to_string(*this); }
 #endif
 
 #if REN_CLASSLIB_QT == 1
-    operator QString () const;
+    operator QString () const { return to_QString(*this); }
 #endif
 
 
