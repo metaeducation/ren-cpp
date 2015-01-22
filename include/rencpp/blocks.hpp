@@ -27,7 +27,7 @@ namespace ren {
 class AnyBlock : public Series {
 protected:
     friend class Value;
-    AnyBlock (Dont) : Series (Dont::Initialize) {}
+    AnyBlock (Dont) noexcept : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyBlock(); }
 
 protected:
@@ -48,7 +48,7 @@ protected:
         internal::CellFunction cellfun,
         Context const * contextPtr,
         Engine * engine
-    );
+    ) noexcept;
 
     AnyBlock (
         Value const values[],
@@ -56,7 +56,7 @@ protected:
         internal::CellFunction cellfun,
         Context const * contextPtr,
         Engine * engine
-    );
+    ) noexcept;
 };
 
 
@@ -107,7 +107,7 @@ public:
         Value const values[],
         size_t numValues,
         Context const & context
-    ) :
+    ) noexcept :
         AnyBlock (values, numValues, F, &context, nullptr)
     {
     }
@@ -116,7 +116,7 @@ public:
         Value const values[],
         size_t numValues,
         Engine * engine
-    ) :
+    ) noexcept :
         AnyBlock (values, numValues, F, nullptr, engine)
     {
     }
@@ -124,12 +124,12 @@ public:
     AnyBlock_ (
         std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         Context const & context
-    ) :
+    ) noexcept :
         AnyBlock (loadables.begin(), loadables.size(), F, &context, nullptr)
     {
     }
 
-    AnyBlock_ (Context const & context) :
+    AnyBlock_ (Context const & context) noexcept :
         AnyBlock (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
     {
     }
@@ -137,12 +137,12 @@ public:
     AnyBlock_ (
         std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         Engine * engine = nullptr
-    ) :
+    ) noexcept :
         AnyBlock (loadables.begin(), loadables.size(), F, nullptr, engine)
     {
     }
 
-    AnyBlock_ (Engine * engine = nullptr) :
+    AnyBlock_ (Engine * engine = nullptr) noexcept :
         AnyBlock (static_cast<Loadable *>(nullptr), 0, F, nullptr, engine)
     {
     }

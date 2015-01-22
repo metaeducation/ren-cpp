@@ -29,7 +29,7 @@ Context::Context (
     size_t numLoadables,
     Context const * contextPtr,
     Engine * engine
-) :
+) noexcept :
     Value (Dont::Initialize)
 {
     isContext(&cell); // CellFunction; writes type signature into cell

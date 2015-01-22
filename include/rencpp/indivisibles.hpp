@@ -74,7 +74,7 @@ constexpr Value::unset_t unset {Value::unset_t::init{}};
 class Unset : public Value {
 protected:
     friend class Value;
-    Unset (Dont) : Value (Dont::Initialize) {}
+    Unset (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
 public:
@@ -85,7 +85,7 @@ public:
 class None : public Value {
 protected:
     friend class Value;
-    None (Dont) : Value (Dont::Initialize) {}
+    None (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isNone(); }
 
 public:
@@ -101,11 +101,11 @@ public:
 class Logic : public Value {
 protected:
     friend class Value;
-    Logic (Dont) : Value (Dont::Initialize) {}
+    Logic (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
 public:
-    explicit Logic (bool b, Engine * engine = nullptr) :
+    explicit Logic (bool b, Engine * engine = nullptr) noexcept :
         Value (b, engine)
     {
     }
@@ -117,7 +117,7 @@ public:
     //
 
     template <typename T>
-    Logic (const T & value, Engine * engine = nullptr) :
+    Logic (const T & value, Engine * engine = nullptr) noexcept :
         Logic (bool(utility::safe_bool(value)), engine)
     {
     }
@@ -135,21 +135,21 @@ class Character : public Value {
 protected:
     friend class Value;
     friend class AnyString;
-    Character (Dont) : Value (Dont::Initialize) {}
+    Character (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
 
 public:
-    Character (char c, Engine * engine = nullptr) :
+    Character (char c, Engine * engine = nullptr) noexcept :
         Value (c, engine)
     {
     }
 
-    Character (wchar_t wc, Engine * engine = nullptr) :
+    Character (wchar_t wc, Engine * engine = nullptr) noexcept :
         Value (wc, engine)
     {
     }
 
-    Character (int i, Engine * engine = nullptr);
+    Character (int i, Engine * engine = nullptr) noexcept;
 
 
     // Characters represent codepoints.  These conversion operators are for
@@ -185,11 +185,11 @@ public:
 class Integer : public Value {
 protected:
     friend class Value;
-    Integer (Dont) : Value (Dont::Initialize) {}
+    Integer (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
 public:
-    Integer (int i, Engine * engine = nullptr) :
+    Integer (int i, Engine * engine = nullptr) noexcept :
         Value (i, engine)
     {
     }
@@ -206,11 +206,11 @@ public:
 class Float : public Value {
 protected:
     friend class Value;
-    Float (Dont) : Value (Dont::Initialize) {}
+    Float (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
 public:
-    Float (double d, Engine * engine = nullptr) :
+    Float (double d, Engine * engine = nullptr) noexcept :
         Value (d, engine)
     {
     }
@@ -241,11 +241,14 @@ public:
 class Date : public Value {
 protected:
     friend class Value;
-    Date (Dont) : Value (Dont::Initialize) {}
+    Date (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 
 public:
-    explicit Date (std::string const & str, Engine * engine = nullptr);
+    explicit Date (
+        std::string const & str,
+        Engine * engine = nullptr
+    ) noexcept;
 };
 
 
@@ -267,12 +270,12 @@ public:
 class Image : public Value {
 protected:
     friend class Value;
-    Image (Dont) : Value (Dont::Initialize) {}
+    Image (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isImage(); }
 
 public:
 #if REN_CLASSLIB_QT == 1
-    explicit Image (QImage const & image, Engine * engine = nullptr);
+    explicit Image (QImage const & image, Engine * engine = nullptr) noexcept;
     operator QImage () const;
 #endif
 };

@@ -31,7 +31,7 @@ namespace internal {
 class Series_ : public Value {
 protected:
     friend class Value;
-    Series_ (Dont) : Value (Dont::Initialize) {}
+    Series_ (Dont) noexcept : Value (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
 public:
@@ -61,7 +61,7 @@ public:
 class Series : public ren::internal::Series_ {
 protected:
     friend class Value;
-    Series (Dont) : Series_ (Dont::Initialize) {}
+    Series (Dont) noexcept : Series_ (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
     //

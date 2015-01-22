@@ -51,7 +51,7 @@ AnyString::AnyString (
     char const * spelling,
     internal::CellFunction cellfun,
     Engine * engine
-) :
+) noexcept :
     Series (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
@@ -94,7 +94,7 @@ AnyString::AnyString (
     std::string const & spelling,
     internal::CellFunction cellfun,
     Engine * engine
-) :
+) noexcept :
     AnyString (spelling.c_str(), cellfun, engine)
 {
 }
@@ -109,7 +109,7 @@ AnyString::AnyString (
     QString const & spelling,
     internal::CellFunction cellfun,
     Engine * engine
-)
+) noexcept
     : Series(Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);

@@ -78,7 +78,7 @@ AnyBlock::AnyBlock (
     internal::CellFunction cellfun,
     Context const * contextPtr,
     Engine * engine
-) :
+) noexcept :
     AnyBlock (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);

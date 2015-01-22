@@ -15,7 +15,7 @@ bool Value::isUnset() const {
     return IS_UNSET(&cell);
 }
 
-Value::Value (unset_t, Engine * engine) :
+Value::Value (unset_t, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_UNSET(&cell);
@@ -37,7 +37,7 @@ bool Value::isNone() const {
     return IS_NONE(&cell);
 }
 
-Value::Value (none_t, Engine * engine) :
+Value::Value (none_t, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_NONE(&cell);
@@ -93,7 +93,7 @@ bool Value::isCharacter() const {
     return IS_CHAR(&cell);
 }
 
-Value::Value (char c, Engine * engine) :
+Value::Value (char c, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, c);
@@ -105,7 +105,7 @@ Value::Value (char c, Engine * engine) :
     finishInit(engine->getHandle());
 }
 
-Value::Value (wchar_t wc, Engine * engine) :
+Value::Value (wchar_t wc, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_CHAR(&cell, wc);
@@ -156,7 +156,7 @@ bool Value::isInteger() const {
     return IS_INTEGER(&cell);
 }
 
-Value::Value (int someInt, Engine * engine) :
+Value::Value (int someInt, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_INTEGER(&cell, someInt);
@@ -182,7 +182,7 @@ bool Value::isFloat() const {
     return IS_DECIMAL(&cell);
 }
 
-Value::Value (double someDouble, Engine * engine) :
+Value::Value (double someDouble, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_DECIMAL(&cell, someDouble);
@@ -220,7 +220,7 @@ bool Value::isImage() const {
 
 #if REN_CLASSLIB_QT == 1
 
-Image::Image (QImage const & image, Engine * engine) {
+Image::Image (QImage const & image, Engine * engine) noexcept {
     // need to convert if this isn't true
     assert(image.format() == QImage::Format_ARGB32);
 

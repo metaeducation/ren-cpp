@@ -302,7 +302,7 @@ protected:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    explicit Value (RenCell const & cell, RenEngineHandle engine) {
+    explicit Value (RenCell const & cell, RenEngineHandle engine) noexcept {
         this->cell = cell;
         finishInit(engine);
     }
@@ -313,7 +313,7 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct_(RenCell const & cell, RenEngineHandle engine) {
+    static T construct_(RenCell const & cell, RenEngineHandle engine) noexcept {
         T result {Dont::Initialize};
         result.cell = cell;
         result.finishInit(engine);
@@ -339,13 +339,15 @@ public:
       constexpr unset_t(init) {}
     };
 
-    Value (unset_t, Engine * engine = nullptr);
+    Value (unset_t, Engine * engine = nullptr) noexcept;
 
     bool isUnset() const;
 
     // Default constructor; same as unset.
 
-    Value (Engine * engine = nullptr) : Value(unset_t::init{}, engine) {}
+    Value (Engine * engine = nullptr) noexcept :
+        Value(unset_t::init{}, engine)
+    {}
 
 
 public:
@@ -366,7 +368,7 @@ public:
       constexpr none_t(init) {}
     };
 
-    Value (none_t, Engine * engine = nullptr);
+    Value (none_t, Engine * engine = nullptr) noexcept;
 
 
 public:
@@ -402,14 +404,14 @@ public:
 
 
 public:
-    Value (char c, Engine * engine = nullptr);
-    Value (wchar_t wc, Engine * engine = nullptr);
+    Value (char c, Engine * engine = nullptr) noexcept;
+    Value (wchar_t wc, Engine * engine = nullptr) noexcept;
 
     bool isCharacter() const;
 
 
 public:
-    Value (int i, Engine * engine = nullptr);
+    Value (int i, Engine * engine = nullptr) noexcept;
 
     bool isInteger() const;
 
@@ -417,7 +419,7 @@ public:
 public:
     // Literals are double by default unless you suffix with "f"
     //     http://stackoverflow.com/a/4353788/211160
-    Value (double d, Engine * engine = nullptr);
+    Value (double d, Engine * engine = nullptr) noexcept;
 
     bool isFloat() const;
 
@@ -508,7 +510,7 @@ public:
     // finish?  Don't worry - you know at least one reference on this thread
     // will be keeping it alive (the one that you are copying!)
     //
-    Value (Value const & other) :
+    Value (Value const & other) noexcept :
         cell (other.cell),
         refcountPtr (other.refcountPtr),
         origin (other.origin)
@@ -525,7 +527,7 @@ public:
     // trust the C++ type system here.  You can move a String into an
     // AnySeries but not vice-versa.
     //
-    Value (Value && other) :
+    Value (Value && other) noexcept :
         cell (other.cell),
         refcountPtr (other.refcountPtr),
         origin (other.origin)
@@ -539,7 +541,7 @@ public:
         other.origin = REN_ENGINE_HANDLE_INVALID;
     }
 
-    Value & operator=(Value const & other) {
+    Value & operator=(Value const & other) noexcept {
         // we're about to overwrite the content, so release the reference
         // on the content we had
         releaseRefIfNecessary();

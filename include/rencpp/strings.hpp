@@ -33,7 +33,7 @@ class AnyString : public Series
 {
 protected:
     friend class Value;
-    AnyString (Dont) : Series (Dont::Initialize) {}
+    AnyString (Dont) noexcept : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyString(); }
 
 protected:
@@ -41,14 +41,14 @@ protected:
         char const * cstr,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    );
+    ) noexcept;
 
 #if REN_CLASSLIB_STD == 1
     AnyString (
         std::string const & str,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    );
+    ) noexcept;
 #endif
 
 #if REN_CLASSLIB_QT == 1
@@ -56,7 +56,7 @@ protected:
         QString const & str,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    );
+    ) noexcept;
 #endif
 
 public:
@@ -189,24 +189,24 @@ template <class C, CellFunction F>
 class AnyString_ : public AnyString {
 protected:
     friend class Value;
-    AnyString_ (Dont) : AnyString (Dont::Initialize) {}
+    AnyString_ (Dont) noexcept : AnyString (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyString_ (char const * cstr, Engine * engine = nullptr) :
+    AnyString_ (char const * cstr, Engine * engine = nullptr) noexcept :
         AnyString (cstr, F, engine)
     {
     }
 
 #if REN_CLASSLIB_STD == 1
-    AnyString_ (std::string const & str, Engine * engine = nullptr) :
+    AnyString_ (std::string const & str, Engine * engine = nullptr) noexcept :
         AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT == 1
-    AnyString_ (QString const & str, Engine * engine = nullptr) :
+    AnyString_ (QString const & str, Engine * engine = nullptr) noexcept :
         AnyString (str, F, engine)
     {
     }
