@@ -412,6 +412,23 @@ void RenConsole::createNewTab() {
 }
 
 
+void RenConsole::tryCloseTab() {
+    if (count() == 1) {
+        emit reportStatus(tr("Can't close last tab"));
+        return;
+    }
+
+    if (evaluatingRepl == &currentRepl()) {
+        emit reportStatus(tr("Evaluation in progress, can't close tab"));
+        return;
+    }
+
+    ReplPad * repl = &currentRepl();
+    removeTab(currentIndex());
+    delete repl;
+}
+
+
 //
 // This prints out a banner message to identify the Ren Workbench and the
 // technologies used.  Does one need to fritter away time on splashy

@@ -100,6 +100,7 @@ private:
     QAction * newTabAct;
     QAction * nextTabAct;
     QAction * previousTabAct;
+    QAction * closeTabAct;
 
     QAction * separatorAct;
 

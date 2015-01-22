@@ -228,13 +228,16 @@ void MainWindow::createActions()
     );
 
     nextTabAct = new QAction(tr("&Next Tab"), this);
-    nextTabAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab));
+    nextTabAct->setShortcuts(QList<QKeySequence> {
+        QKeySequence(Qt::CTRL + Qt::Key_Tab),
+        QKeySequence(Qt::CTRL + Qt::Key_PageDown)
+    });
     nextTabAct->setStatusTip(tr("Select the next tab"));
     connect(
         nextTabAct, &QAction::triggered,
         [this]() {
             if (console->currentIndex() == console->count() - 1) {
-                // message about no next tab?
+                console->setCurrentIndex(0);
                 return;
             }
 
@@ -243,19 +246,30 @@ void MainWindow::createActions()
     );
 
     previousTabAct = new QAction(tr("&Previous Tab"), this);
-    previousTabAct->setShortcut(
-        QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab)
-    );
+    previousTabAct->setShortcuts(QList<QKeySequence> {
+        QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab),
+        QKeySequence(Qt::CTRL + Qt::Key_PageUp)
+    });
     previousTabAct->setStatusTip(tr("Select the previous tab"));
     connect(
         previousTabAct, &QAction::triggered,
         [this]() {
             if (console->currentIndex() == 0) {
-                // message about no previous tab?
+                console->setCurrentIndex(console->count() - 1);
                 return;
             }
 
             console->setCurrentIndex(console->currentIndex() - 1);
+        }
+    );
+
+    closeTabAct = new QAction(tr("&Close Tab"), this);
+    closeTabAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_W));
+    closeTabAct->setStatusTip(tr("Close current tab"));
+    connect(
+        closeTabAct, &QAction::triggered,
+        [this]() {
+            console->tryCloseTab();
         }
     );
 
@@ -285,6 +299,7 @@ void MainWindow::createMenus()
     windowMenu->addAction(newTabAct);
     windowMenu->addAction(nextTabAct);
     windowMenu->addAction(previousTabAct);
+    windowMenu->addAction(closeTabAct);
 
     menuBar()->addSeparator();
 

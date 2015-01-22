@@ -127,6 +127,7 @@ private:
 
 public:
     void createNewTab();
+    void tryCloseTab();
 };
 
 #endif
