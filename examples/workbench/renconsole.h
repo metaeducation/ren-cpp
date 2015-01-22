@@ -52,7 +52,7 @@ private:
     RenShell shell;
 
 public:
-    ReplPad & currentRepl() {
+    ReplPad & repl() {
         return *qobject_cast<ReplPad *>(currentWidget());
     }
     ReplPad & replFromIndex(int index) {

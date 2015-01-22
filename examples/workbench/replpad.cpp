@@ -874,32 +874,32 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
         assert(history.size() != 0);
 
-        if (history.size() == 1) {
-            emit reportStatus("No history.");
-            return;
-        }
+        if (not historyIndex)
+            historyIndex = history.size() - 1;
 
-        if (
-            (key == Qt::Key_Down)
-            and ((not historyIndex) or (historyIndex == history.size() - 1))
-        ) {
-            emit reportStatus("Already at bottom of history.");
-            return;
-        }
+        while (true) {
+            if (
+                (key == Qt::Key_Down)
+                and (historyIndex == history.size() - 1)
+            ) {
+                emit reportStatus("Already at bottom of history.");
+                return;
+            }
 
-        if ((historyIndex == static_cast<size_t>(0)) and (key == Qt::Key_Up)) {
-            emit reportStatus("Already at top of history.");
-            return;
-        }
+            if (
+                (key == Qt::Key_Up)
+                and (historyIndex == static_cast<size_t>(0))
+            ) {
+                emit reportStatus("Already at top of history.");
+                return;
+            }
 
-        if ((not historyIndex) and (key == Qt::Key_Up)) {
-            historyIndex = history.size() - 2;
-        }
-        else if (key == Qt::Key_Up) {
-            (*historyIndex)--;
-        }
-        else if (key == Qt::Key_Down) {
-            (*historyIndex)++;
+            historyIndex = *historyIndex + ((key == Qt::Key_Down) ? 1 : -1);
+
+            // skip over empty lines
+
+            if (not history[*historyIndex].getInput(*this).isEmpty())
+                break;
         }
 
         clearCurrentInput();

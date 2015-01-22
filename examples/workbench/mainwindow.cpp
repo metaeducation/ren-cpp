@@ -75,7 +75,7 @@ MainWindow::MainWindow() :
     );
 
     connect(
-        &console->currentRepl(), &ReplPad::fadeOutToQuit,
+        &console->repl(), &ReplPad::fadeOutToQuit,
         this, &MainWindow::onFadeOutToQuit,
         Qt::DirectConnection
     );
@@ -114,13 +114,13 @@ MainWindow::MainWindow() :
     updateMenus();
 
     connect(
-        &console->currentRepl(), &ReplPad::copyAvailable,
+        &console->repl(), &ReplPad::copyAvailable,
         cutAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
 
     connect(
-        &console->currentRepl(), &ReplPad::copyAvailable,
+        &console->repl(), &ReplPad::copyAvailable,
         copyAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
@@ -141,17 +141,17 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::cut()
 {
-    console->currentRepl().cutSafely();
+    console->repl().cutSafely();
 }
 
 void MainWindow::copy()
 {
-    console->currentRepl().copy();
+    console->repl().copy();
 }
 
 void MainWindow::paste()
 {
-    console->currentRepl().pasteSafely();
+    console->repl().pasteSafely();
 }
 
 
@@ -173,7 +173,7 @@ void MainWindow::about()
 
 void MainWindow::updateMenus()
 {
-    bool hasSelection = console->currentRepl().textCursor().hasSelection();
+    bool hasSelection = console->repl().textCursor().hasSelection();
     cutAct->setEnabled(hasSelection);
     copyAct->setEnabled(hasSelection);
 }
@@ -323,7 +323,7 @@ void MainWindow::readSettings()
 
     move(pos);
     resize(size);
-    console->currentRepl().setZoom(zoom);
+    console->repl().setZoom(zoom);
 }
 
 
@@ -332,7 +332,7 @@ void MainWindow::writeSettings()
     QSettings settings("Metaeducation", "Ren Garden");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
-    settings.setValue("zoom", console->currentRepl().getZoom());
+    settings.setValue("zoom", console->repl().getZoom());
 }
 
 
