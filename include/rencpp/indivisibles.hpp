@@ -248,6 +248,36 @@ public:
     explicit Date (std::string const & str, Engine * engine = nullptr);
 };
 
+
+///
+/// IMAGE
+///
+
+//
+// Rebol has a native IMAGE! type, which a few codecs have been written for
+// to save and load.  We don't do much with it in RenCpp at this point
+// unless you are building with the Qt classlib, in which case we need to
+// go back and forth with a QImage.
+//
+// It's not clear if this should be in the standard RenCpp or if it belongs
+// in some kind of extensions module.  In Rebol at least, the IMAGE! was
+// available even in non-GUI builds.
+//
+
+class Image : public Value {
+protected:
+    friend class Value;
+    Image (Dont) : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isImage(); }
+
+public:
+#if REN_CLASSLIB_QT == 1
+    explicit Image (QImage const & image, Engine * engine = nullptr);
+    operator QImage () const;
+#endif
+};
+
+
 } // end namespace ren
 
 #endif

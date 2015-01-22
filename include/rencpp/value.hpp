@@ -427,6 +427,8 @@ public:
 
     bool isTime() const;
 
+    bool isImage() const;
+
 public:
     bool isWord(RenCell * = nullptr) const;
 

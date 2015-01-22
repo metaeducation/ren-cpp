@@ -291,6 +291,7 @@ void ReplPad::appendImage(QImage const & image, bool centered) {
         cursor.setBlockFormat(leftFormat);
 
     cursor.insertImage(image);
+    cursor.insertText("\n");
 }
 
 

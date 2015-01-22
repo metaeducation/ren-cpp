@@ -38,6 +38,8 @@
     #include <QString>
     #include <QByteArray> // For const char * of QString (later BINARY!...)
 
+    #include <QImage> // For ren::Image
+
 #elif REN_CLASSLIB_QT != 0
 
     static_assert(false, "Invalid value for REN_CLASSLIB_QT, not 0 or 1.");

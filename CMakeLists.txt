@@ -299,10 +299,14 @@ elseif(CLASSLIB_QT EQUAL 1)
     #     http://www.kdab.com/using-cmake-with-qt-5/
 
     find_package(Qt5Core REQUIRED)
+    find_package(Qt5Gui REQUIRED) # for QImage
     add_definitions(-DREN_CLASSLIB_QT=1)
-    include_directories(${Qt5Core_INCLUDE_DIRS})
-    add_cxx_flags("${Qt5Core_EXECUTABLE_COMPILE_FLAGS}")
-    set(LIBS_ALL ${LIBS_ALL} Qt5::Core)
+    include_directories(${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+    add_cxx_flags(
+        "${Qt5Core_EXECUTABLE_COMPILE_FLAGS}"
+        "${Qt5Gui_EXECUTABLE_COMPILE_FLAGS}"
+    )
+    set(LIBS_ALL ${LIBS_ALL} Qt5::Core Qt5::Gui)
 
 else()
 

@@ -170,7 +170,7 @@ RenConsole::RenConsole (QWidget * parent) :
 
     consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
-        "arg [block! any-function! string! word!]"
+        "arg [block! any-function! string! word! image!]"
         "    {block to execute or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
@@ -228,6 +228,15 @@ RenConsole::RenConsole (QWidget * parent) :
 
                 if (arg.isString()) {
                     emit reportStatus(to_QString(arg));
+                    return unset;
+                }
+
+                // Displaying images is not something stdin/stdout is suited
+                // for, so at the moment if you want an image displayed on
+                // the console you have to use CONSOLE
+
+                if (arg.isImage()) {
+                    currentRepl().appendImage(static_cast<Image>(arg), true);
                     return unset;
                 }
 
@@ -426,6 +435,8 @@ void RenConsole::tryCloseTab() {
     ReplPad * repl = &currentRepl();
     removeTab(currentIndex());
     delete repl;
+
+    currentRepl().setFocus();
 }
 
 
@@ -468,7 +479,6 @@ void RenConsole::printBanner() {
     subheadingFormat.setForeground(Qt::darkGray);
 
     currentRepl().pushFormat(subheadingFormat);
-    currentRepl().appendText("\n", true);
 
     std::vector<char const *> components = {
         "<i><b>Red</b> is © 2015 Nenad Rakocevic, BSD License</i>",

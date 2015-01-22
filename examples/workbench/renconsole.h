@@ -59,6 +59,8 @@ public:
         return *qobject_cast<ReplPad *>(widget(index));
     }
 
+    std::unordered_map<ReplPad *, ren::Function> tabDialects;
+
 protected:
     bool bannerPrinted;
     void printBanner();
