@@ -375,10 +375,6 @@ public:
 
         auto current = reinterpret_cast<volatile char const *>(loadablesPtr);
 
-        // Vector is bad to use with setjmp/longjmp, fix this
-
-        std::vector<std::pair<REBSER *, REBVAL *>> tempSeriesOrValues;
-
         // For the initial state of the binding we'll focus on correctness
         // instead of optimization.  That means we'll take the "loadables"
         // and form a block out of them--even when we weren't asked to,
