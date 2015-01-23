@@ -930,7 +930,8 @@ std::pair<QString, int> RenConsole::autoComplete(
 ) const {
     // TBD: Reverse iterators to run this process backwards
     // http://stackoverflow.com/questions/8542591/
-    assert(not backwards);
+    if (backwards)
+        throw std::runtime_error("Backwards autoComplete traversal not written yet.");
 
     // Currently we use the knowledge that all contexts are inheriting from
     // LIB, so we search this tab's context and then fall back upon LIB

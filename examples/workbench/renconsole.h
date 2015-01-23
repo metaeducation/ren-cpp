@@ -23,6 +23,7 @@
 #define RENCONSOLE_H
 
 #include <memory>
+#include <unordered_map>
 
 #include <QTabWidget>
 #include <QMutex>

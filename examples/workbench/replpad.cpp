@@ -666,7 +666,7 @@ void ReplPad::containInputSelection() {
 
 void ReplPad::keyPressEvent(QKeyEvent * event) {
 
-    int const key = event->key();
+    int key = event->key();
 
     // Debugging alted or ctrled or shifted keys is made difficult if you set
     // a breakpoint and it tells you about hitting those keys themselves, so
@@ -681,6 +681,9 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
+    // The "hold down escape to make window fade and quit" trick looks cool
+    // but depends on a working implementation of SetWindowOpacity.  This
+    // starts the timer that makes it fade (the timer is stopped on key up)
 
     if ((key == Qt::Key_Escape) and (not event->isAutoRepeat()))
         emit fadeOutToQuit(true);
@@ -709,24 +712,41 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     bool groupswitched = event->modifiers() & Qt::GroupSwitchModifier;
 
+
+    // Some systems use Key_Backtab instead of a shifted Tab.  We could
+    // canonize to either, but to call attention to the anomaly we canonize
+    // shifted tabs to Key_Backtab
+    //
+    //     http://www.qtcentre.org/threads/32646-shift-key
+
+    if ((key == Qt::Key_Tab) and shifted) {
+        key = Qt::Key_Backtab;
+        shifted = false;
+    }
+
+
+    // Qt says some key events "have text" and hence correspond to an
+    // intent to insert that QString, but it says that about lots of odd
+    // control characters.  So we double check it for "hasRealText"
+    //
+    // Note that isPrint() includes whitespace, but not \r
+    // we try to be sure by handling Enter and Return as if they
+    // were not printable.  Apple keyboards have a key labeled both
+    // "enter" and "return" that seem to produce "\r".  So it's
+    // important to handle it by keycode vs. just by the whitespace
+    // text produced produced.
+    //
+    // As Rebol and Red are somewhat "religiously" driven languages,
+    // tabs being invisible complexity in source is against that
+    // religion.  So the console treats tabs as non-printables, and
+    // will trap any attempt to insert the literal character (while
+    // substituting with 4 spaces)
+
     QString temp = event->text();
 
     bool hasRealText = not event->text().isEmpty();
     for (QChar ch : event->text()) {
         if (not ch.isPrint() or (ch == '\t')) {
-            // Note that isPrint() includes whitespace, but not \r
-            // we try to be sure by handling Enter and Return as if they
-            // were not printable.  Apple keyboards have a key labeled both
-            // "enter" and "return" that seem to produce "\r".  So it's
-            // important to handle it by keycode vs. just by the whitespace
-            // text produced produced.
-
-            // As Rebol and Red are somewhat "religiously" driven languages,
-            // tabs being invisible complexity in source is against that
-            // religion.  So the console treats tabs as non-printables, and
-            // will trap any attempt to insert the literal character (while
-            // substituting with 4 spaces)
-
             hasRealText = false;
             break;
         }
@@ -800,6 +820,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             or (key == Qt::Key_Backspace)
             or (key == Qt::Key_Delete)
             or (key == Qt::Key_Tab)
+            or (key == Qt::Key_Backtab)
             or (key == Qt::Key_Escape)
         ) {
             // Though not true for all programs at all times, in the
@@ -854,6 +875,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         QTextEdit::keyPressEvent(event);
         return;
     }
+
 
     // Give a hook opportunity to do something about this key, which is
     // asking to do some kind of modification when there may be an evaluation
@@ -1274,14 +1296,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         QMutexLocker lock {&documentMutex};
 
-        if (key == Qt::Key_Tab) {
+        if ((key == Qt::Key_Tab) or (key == Qt::Key_Backtab)) {
             QString contents = textCursor().selection().toPlainText();
 
             if (contents.indexOf(QRegExp("[\\n]")) != -1) {
                 // Tab with a multi-line selection should entab and detab,
                 // but with spaces.
 
-                if (shifted) {
+                if (key == Qt::Key_Backtab) {
                     QString regex {"^"};
                     regex += tabString;
                     contents.replace(QRegExp(regex), "");
@@ -1317,9 +1339,11 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     assert(textCursor().anchor() == textCursor().position());
 
-    if (key == Qt::Key_Tab) {
+    if ((key == Qt::Key_Tab) or (key == Qt::Key_Backtab)) {
         // A tab will autocomplete unless it's in the beginning whitespace of
-        // a line, in which case it inserts spaces
+        // a line, in which case it inserts spaces.  For now we don't
+        // distinguish tab from backtab, but backtab (a.k.a. shift-Tab)
+        // should cycle backwards through the candidates for completion
 
         QTextCursor cursor = textCursor();
 
