@@ -39,9 +39,9 @@ void noisyFailureMsgHandler(
     QMessageLogContext const &,
     QString const & msg
 ) {
-    QByteArray array = msg.toLocal8Bit();
+    QByteArray bytes = msg.toLocal8Bit();
 
-    std::cerr << array.data();
+    std::cerr << bytes.data();
     std::cerr.flush();
 
     // Why didn't Qt want to make failed signal/slot connections qWarning?!

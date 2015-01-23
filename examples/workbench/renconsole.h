@@ -31,13 +31,13 @@
 #include "rencpp/ren.hpp"
 
 #include "replpad.h"
-#include "rensyntaxer.h"
 #include "renshell.h"
 #include "renpackage.h"
 
 class MainWindow;
 
-class RenConsole : public QTabWidget, public IReplPadHooks
+class RenConsole :
+    public QTabWidget, public IReplPadHooks, public IReplPadSyntaxer
 {
     Q_OBJECT
 
@@ -46,12 +46,26 @@ public:
     ~RenConsole () override;
 
 private:
-    RenSyntaxer syntaxer;
-    RenSyntaxer & getSyntaxer() override { return syntaxer; }
+    // Syntax highlighting hooks
+    std::pair<int, int> rangeForWholeToken(
+        QString buffer, int offset
+    ) const override;
 
+    std::pair<QString, int> autoComplete(
+        QString const & text, int index, bool backwards
+    ) const override;
+
+private:
     RenShell shell;
 
 public:
+    ReplPad const & repl() const {
+        return *qobject_cast<ReplPad *>(currentWidget());
+    }
+    ReplPad const & replFromIndex(int index) const {
+        return *qobject_cast<ReplPad *>(widget(index));
+    }
+
     ReplPad & repl() {
         return *qobject_cast<ReplPad *>(currentWidget());
     }
@@ -66,7 +80,7 @@ private:
         ren::Context context;
     };
 
-    std::unordered_map<ReplPad *, TabInfo> tabinfo;
+    std::unordered_map<ReplPad const *, TabInfo> tabinfo;
 
 protected:
     bool bannerPrinted;

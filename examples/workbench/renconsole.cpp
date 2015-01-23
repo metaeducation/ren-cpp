@@ -31,7 +31,6 @@ using namespace ren;
 #include "mainwindow.h"
 #include "fakestdio.h"
 #include "watchlist.h"
-#include "rensyntaxer.h"
 #include "renpackage.h"
 
 extern bool forcingQuit;
@@ -82,9 +81,8 @@ public slots:
             auto loaded = context.create<Block>(input.toUtf8().constData());
 
             if (meta) {
-                if (not runtime("find words-of quote", dialect, "/meta")) {
+                if (not runtime("find words-of quote", dialect, "/meta"))
                     throw Error {"current dialect has no /meta refinement"};
-                }
 
                 result = context(Path {dialect, "meta"}, loaded);
             }
@@ -351,7 +349,8 @@ RenConsole::RenConsole (QWidget * parent) :
             "%to-string-spelling.reb",
             "%find-min-max.reb",
             "%ls-cd-dt-short-names.reb",
-            "%for-range-dialect.reb"
+            "%for-range-dialect.reb",
+            "%object-context.reb"
         }
     );
 
@@ -394,7 +393,7 @@ void RenConsole::createNewTab() {
         return;
     }
 
-    auto pad = new ReplPad {*this, this};
+    auto pad = new ReplPad {*this, *this, this};
     addTab(pad, "(unnamed)");
 
     connect(
@@ -750,6 +749,168 @@ void RenConsole::focusInEvent(QFocusEvent *)
 {
     currentWidget()->setFocus();
 }
+
+
+
+///
+/// SYNTAX-SENSITIVE HOOKS
+///
+
+//
+// Ideally this would be done with separately sandboxed "Engines", a feature
+// supported by RenCpp's scaffolding but not currently by the Rebol or Red
+// runtimes.  But without sandboxed engines it can still be possible; Rebol
+// TASK! has some thread local storage that can do transcode on multiple
+// threads independently.
+//
+
+std::pair<int, int> RenConsole::rangeForWholeToken(
+    QString buffer, int offset
+) const {
+    if (buffer.isEmpty())
+        return std::make_pair(0, 0);
+
+
+    // Took a shot at using PARSE instead of the RegEx.  This code snippet
+    // does not currently work, however.  Two reasons:
+    //
+    //     >> parse "abb" [copy x thru ["a" any "b"] (print x)]
+    //     "a"
+    //     == false
+    //
+    // That should return "abb".  (In Red it does.)  Also, it complains
+    // about the `negate ws` charset being used in the position it is
+    // as a "parse error"
+
+#ifdef REBOL_PARSE_FOR_AUTOCOMPLETE
+    auto blk = static_cast<Block>(runtime(
+        "wrap", Block {
+            "ws: whitespace/ascii "
+            "sym: negate ws " // why not negate ws?
+            "do", Block {
+                "parse", String {leading}, "[ "
+                    "(pos: 0) "
+                    "any [ws (++ pos)] "
+                    "some [ "
+                        "copy stem thru [ "
+                            "sym (start: pos) "
+                            "any [sym (++ pos)] "
+                        "] "
+                    "] "
+                    "(finish: pos) "
+                "] "
+             },
+            "probe reduce [start finish] "
+        }
+    ));
+
+    assert(blk[1].isInteger());
+    assert(blk[2].isInteger());
+
+    int start = static_cast<Integer>(blk[1]);
+    int finish = static_cast<Integer>(blk[2]);
+#else
+    int start = buffer.lastIndexOf("[^\\s][\\s]", offset);
+    if (start == -1)
+        start = 0;
+    int finish = buffer.indexOf("[^\\s][\\s]", offset);
+    if (finish == -1)
+        finish = buffer.length();
+#endif
+
+    return std::make_pair(start, finish);
+}
+
+
+std::pair<QString, int> RenConsole::autoComplete(
+    QString const & text, int index, bool backwards
+) const {
+    // TBD: Reverse iterators to run this process backwards
+    // http://stackoverflow.com/questions/8542591/
+    assert(not backwards);
+
+    // Currently we use the knowledge that all contexts are inheriting from
+    // LIB, so we search this tab's context and then fall back upon LIB
+    // for other finding.  But we need better lookup than that (e.g.
+    // contextual, noticing if it's a path and doing some sort of eval
+    // to see if we're picking outside of an object).  Really this should
+    // be calling through the runtime for the whole thing, but starting
+    // it as C++ to define the interface.
+
+    auto it = tabinfo.find(&repl());
+
+    std::array<Context, 2> contexts = {
+        it->second.context,
+        Context::lookup("LIB")
+    };
+
+    QString stem = text.left(index);
+    QString firstCandidate;
+    QString candidate;
+    bool takeNext = false;
+
+
+
+    for (
+        auto itContext = contexts.begin();
+        itContext != contexts.end();
+        itContext++
+    ) {
+        Context & context = *itContext;
+
+        Block words = static_cast<Block>(runtime("words-of", context));
+        for (auto value : words) {
+            Word word = static_cast<Word>(value);
+            QString spelling = word.spellingOf<QString>();
+            if (
+                (spelling.indexOf(stem) == 0)
+                and (not runtime("unset?", LitPath {context, word}))
+            ) {
+                if (takeNext) {
+                    // If we saw the exact word we were looking for, only
+                    // take it if it doesn't exist in a prior ('higher
+                    // priority') context
+
+                    bool outranked = false;
+                    for (
+                        auto itPriority = contexts.begin();
+                        itPriority != itContext;
+                        it++
+                    ) {
+                        auto path = (*itPriority).create<LitPath>(
+                            *itPriority, spelling
+                        );
+
+                        if (runtime("not unset?", path)) {
+                            outranked = true;
+                            break;
+                        }
+                    }
+
+                    if (not outranked)
+                        return std::make_pair(spelling, index);
+                }
+
+                if (firstCandidate.isEmpty())
+                    firstCandidate = spelling;
+
+                if (spelling == text)
+                    takeNext = true;
+                else
+                    candidate = spelling;
+            }
+        }
+    }
+
+    if (takeNext and (not firstCandidate.isEmpty()))
+        return std::make_pair(firstCandidate, index);
+
+    if (not candidate.isEmpty())
+        return std::make_pair(candidate, index);
+
+    return std::make_pair(text, index);
+}
+
 
 
 ///

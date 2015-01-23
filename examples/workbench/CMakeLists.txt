@@ -101,7 +101,6 @@ add_executable(
     fakestdio.cpp
     renconsole.cpp
     watchlist.cpp
-    rensyntaxer.cpp
     renshell.cpp
     renpackage.cpp
 
@@ -114,8 +113,6 @@ add_executable(
     replpad.h
     fakestdio.h
     watchlist.h    
-    syntaxer.h
-    rensyntaxer.h
     renshell.h
     renpackage.h
 )

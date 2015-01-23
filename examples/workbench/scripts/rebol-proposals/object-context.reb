@@ -13,26 +13,26 @@ Rebol [
     }
 ]
 
-context?: :object?
-object?: does [make error! "use CONTEXT? instead of OBJECT?"]
+;context?: :object?
+;object?: does [make error! "use CONTEXT? instead of OBJECT?"]
 
 
-has: :context
+;has: :context
 
 
-object: does [make error! "use HAS or CONTEXT instead of OBJECT"]
+;object: does [make error! "use HAS or CONTEXT instead of OBJECT"]
 
 
-context: func [
-    spec [block!] {Meta information configuring the context}
-    body [block!] {Contents of the context}
-] [
-    ; study module system design to borrow features for context
-    has body
-]
+;context: func [
+;    spec [block!] {Meta information configuring the context}
+;    body [block!] {Contents of the context}
+;] [
+;    ; study module system design to borrow features for context
+;    has body
+;]
 
 
-module: does [make error! "Use CONTEXT instead of MODULE"]
+;module: does [make error! "Use CONTEXT instead of MODULE"]
 
 
 wrap: func [

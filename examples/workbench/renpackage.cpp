@@ -43,8 +43,8 @@ RenPackage::RenPackage (
     for (auto filename : scripts) {
         QFile file {rcPrefix + static_cast<Filename>(filename)};
         file.open(QIODevice::ReadOnly);
-        QByteArray dump = file.readAll();
-        runtime(dump.data());
+        QByteArray bytes = file.readAll();
+        runtime(bytes.data());
     }
 }
 

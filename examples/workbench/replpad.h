@@ -22,13 +22,8 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
-//
-// The REPL-Pad (Read-Eval-Print-Loop) is a kind of "command prompt workspace"
-// used by Ren Garden.  It is currently built on top of QTextEdit, although
-// the goal is to isolate the dependency on QTextEdit to just this unit, such
-// that it could be switched out for other implementations (web views, etc).
-//
 
+#include <utility>
 #include <vector>
 #include "optional/optional.hpp"
 
@@ -37,26 +32,88 @@
 #include <QWaitCondition>
 #include <QMutex>
 
-#include "syntaxer.h"
 #include "fakestdio.h"
 
 
-// Virtual interface class implementing the hooks offered by ReplPad (but
-// keeping you from having to derive directly from ReplPad, and hence not
-// needing to derive indirectly from QTextEdit...
-
 class ReplPad;
 
+
+
+///
+/// SYNTAX-AWARE INTERFACE
+///
+
+//
+// The journey of 1,000 miles begins with a single step.  Rather than tackle
+// syntax highlighting immediately, these syntax-aware hooks are called by
+// the ReplPad.  Due to the fact that RenConsole has sensitivity to things
+// like "which Tab are you on", it actually implements these hooks with
+// multiple inheritance--but they're broken off into a separate interface
+// in case there is more modularization needed at some point.
+//
+
+class IReplPadSyntaxer {
+public:
+    // rangeForWholeToken() means that if | represents your cursor and you had:
+    //
+    //     print {Hello| World}
+    //
+    // Then the offset would realize you wanted to select from opening curly
+    // brace to the closing curly brace, vs merely selecting hello (as a
+    // default text edit might.)
+
+    virtual std::pair<int, int> rangeForWholeToken(
+        QString buffer, int offset
+    ) const = 0;
+
+    // Beginnings of a basic auto completion (e.g. with tab) interface.  It
+    // is similar to rangeForWholeToken, but assumes you are asking for a
+    // completion of token where the cursor is sitting at the index position
+    // (there may be text after the token, such as from a previous completion)
+
+    virtual std::pair<QString, int> autoComplete(
+        QString const & token, int index, bool backwards
+    ) const = 0;
+
+    virtual ~IReplPadSyntaxer () {}
+};
+
+
+
+///
+/// HOOKS FOR CUSTOMIZING READ-EVAL-PRINT-LOOP "WORKPAD"
+///
+
+//
+// Virtual interface class implementing the hooks offered by ReplPad (but
+// keeping you from having to derive directly from ReplPad, and hence not
+// needing to derive indirectly from QTextEdit.  Again, this is implemented
+// by the RenConsole via multiple inheritance.
+//
+
 class IReplPadHooks {
-    friend class ReplPad;
-private:
-    virtual Syntaxer & getSyntaxer() = 0;
+public:
     virtual bool isReadyToModify(QKeyEvent * event) = 0;
     virtual QString getPromptString() = 0;
     virtual void evaluate(QString const & input, bool meta) = 0;
     virtual void escape() = 0;
+
+    virtual ~IReplPadHooks () {}
 };
 
+
+
+///
+/// READ-EVAL-PRINT-LOOP "WORKPAD"
+///
+
+//
+// The REPL-Pad (Read-Eval-Print-Loop) is a kind of "command prompt workspace"
+// used by Ren Garden.  It is currently built on top of QTextEdit, although
+// the goal is to isolate the dependency on QTextEdit to just this unit, such
+// that it could be switched out for other implementations (web views, etc).
+// Additionally, the RenConsole has multiple ReplPad instances as tabs.
+//
 
 class ReplPad : public QTextEdit
 {
@@ -64,9 +121,14 @@ class ReplPad : public QTextEdit
 
 private:
     IReplPadHooks & hooks;
+    IReplPadSyntaxer & syntaxer;
 
 public:
-    ReplPad (IReplPadHooks & hooks, QWidget * parent = nullptr);
+    ReplPad (
+        IReplPadHooks & hooks,
+        IReplPadSyntaxer & syntaxer,
+        QWidget * parent = nullptr
+    );
 
 public:
     friend class FakeStdoutBuffer;

@@ -29,6 +29,10 @@
 
 #include "replpad.h"
 
+#include "rencpp/ren.hpp"
+
+using namespace ren;
+
 
 
 ///
@@ -70,9 +74,14 @@ QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
 // Right now the console constructor is really mostly about setting up a
 // long graphical banner.
 
-ReplPad::ReplPad (IReplPadHooks & hooks, QWidget * parent) :
+ReplPad::ReplPad (
+    IReplPadHooks & hooks,
+    IReplPadSyntaxer & syntaxer,
+    QWidget * parent
+) :
     QTextEdit (parent),
     hooks (hooks),
+    syntaxer (syntaxer),
     fakeOut (*this),
     fakeIn (*this),
     defaultFont (currentFont()),
@@ -480,7 +489,7 @@ void ReplPad::mouseDoubleClickEvent(QMouseEvent * event) {
     }
 
     if (entryInside) {
-        std::pair<int, int> range = hooks.getSyntaxer().rangeForWholeToken(
+        std::pair<int, int> range = syntaxer.rangeForWholeToken(
             entryInside->getInput(*this),
             textCursor().position() - entryInside->inputPos
         );
@@ -686,6 +695,11 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // row of the keyboard....
 
     bool shifted = event->modifiers() & Qt::ShiftModifier;
+
+    // What ctrl means on the platforms is different:
+    //
+    //     http://stackoverflow.com/questions/16809139/
+
     bool ctrled = event->modifiers() & Qt::ControlModifier;
     bool alted = event->modifiers() & Qt::AltModifier;
     bool metaed = event->modifiers() & Qt::MetaModifier;
@@ -1030,14 +1044,26 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     HistoryEntry & entry = history.back();
 
 
-    // What ctrl means on the platforms is different:
-    //
-    // http://stackoverflow.com/questions/16809139/
+    if (key == Qt::Key_Space) {
+        if (ctrled) {
+            entry.meta = not entry.meta;
+            rewritePrompt();
+            return;
+        }
 
-    if ((key == Qt::Key_Space) and ctrled) {
-        entry.meta = not entry.meta;
-        rewritePrompt();
-        return;
+        // Because using tab for autocomplete leaves the completed text
+        // selected (in order to maintain state for paging through more
+        // completions) we want to override space to not clear the selection
+        // in that case.  (Use delete and then space if that's what you want.)
+        // We collapse the selection to a point and insert a space normally.
+
+        if (textCursor().position() != textCursor().anchor()) {
+            QTextCursor cursor = textCursor();
+            cursor.setPosition(cursor.position());
+            setTextCursor(cursor);
+
+            // fall through to normal insertion.
+        }
     }
 
 
@@ -1246,48 +1272,123 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (textCursor().anchor() != textCursor().position()) {
         // Range selections, we replace them with the event text unless it
-        // is a tab, where we entab or detab the content based on shift.
+        // is a tab, where we entab or detab the content based on shift
+        // IF it spans multiple lines (otherwise we handle it as an
+        // autocomplete)
 
         QMutexLocker lock {&documentMutex};
 
         if (key == Qt::Key_Tab) {
-            // "You selected a large range of text and pressed tab?  And you
-            // didn't want me to erase it all?  Hmmm...what this entabbing
-            // and detabbing is you mention?  With that, I'd have
-            // to hit BACKSPACE and tab.  Twice as many keystrokes for an
-            // *extremely* common operation..." :-P
-            //
-            // Tab with a selection should entab and detab, but with spaces.
-
             QString contents = textCursor().selection().toPlainText();
-            if (shifted) {
-                QString regex {"^"};
-                regex += tabString;
-                contents.replace(QRegExp(regex), "");
-            } else
-                contents.replace(QRegExp("^"), tabString);
+
+            if (contents.indexOf(QRegExp("[\\n]")) != -1) {
+                // Tab with a multi-line selection should entab and detab,
+                // but with spaces.
+
+                if (shifted) {
+                    QString regex {"^"};
+                    regex += tabString;
+                    contents.replace(QRegExp(regex), "");
+                } else
+                    contents.replace(QRegExp("^"), tabString);
+                textCursor().removeSelectedText();
+                textCursor().insertText(contents);
+                return;
+            }
+
+            // If single-line contents selected, then collapse the selection
+            // down to a point to use in autocomplete.
+
+            QTextCursor cursor = textCursor();
+            cursor.setPosition(
+                std::min(cursor.position(), cursor.anchor())
+            );
+            setTextCursor(cursor);
+        }
+        else {
+            // Just insert the text.
+
             textCursor().removeSelectedText();
-            textCursor().insertText(contents);
+
+            if ((key != Qt::Key_Backspace) && (key != Qt::Key_Delete))
+                textCursor().insertText(event->text());
+
+            return;
+        }
+    }
+
+    // From here, selection is collapsed, so just an insertion point.
+
+    assert(textCursor().anchor() == textCursor().position());
+
+    if (key == Qt::Key_Tab) {
+        // A tab will autocomplete unless it's in the beginning whitespace of
+        // a line, in which case it inserts spaces
+
+        QTextCursor cursor = textCursor();
+
+        if (not find(QRegExp("^"), QTextDocument::FindBackward))
+            assert(false); // we should be able to find a start of line!
+
+        bool isPromptLine;
+        int basis;
+
+        if (textCursor().position() == entry.startPos) {
+            // We are on the prompt line (hence we have something besides
+            // spaces to beginning of line, even if we haven't typed
+            // anything).  This can be given a different behavior for the
+            // whitespace case.
+            basis = entry.inputPos;
+            isPromptLine = true;
+        }
+        else {
+            basis = textCursor().position();
+            isPromptLine = false;
+        }
+
+        cursor.setPosition(basis, QTextCursor::KeepAnchor);
+
+        QString leading = cursor.selection().toPlainText();
+        cursor.setPosition(cursor.anchor());
+        setTextCursor(cursor);
+
+        // If just whitespace or nothing, handle it as inserting some
+        // spaces for now.  (Could have special behavior if isPromptLine)
+
+        if (leading.trimmed().isEmpty()) {
+            QMutexLocker lock {&documentMutex};
+            textCursor().insertText(tabString);
             return;
         }
 
-        // Trust the default method to do the right editing, and not do
-        // anything outside the boundaries of the selection
-
-        textCursor().removeSelectedText();
-
-        if ((key != Qt::Key_Backspace) && (key != Qt::Key_Delete))
-            textCursor().insertText(event->text());
-
-        return;
-    }
+        // Ask the syntaxer to find the range of the current token.
 
 
-    // Selection is collapsed, so just an insertion point.
+        QString input = entry.getInput(*this);
+        auto tokenRange = syntaxer.rangeForWholeToken(
+            input, cursor.position() - entry.startPos
+        );
 
-    if (key == Qt::Key_Tab) {
+        QString incomplete = input.mid(
+            tokenRange.first, tokenRange.second - tokenRange.first
+        );
+
+        auto completed = syntaxer.autoComplete(
+            incomplete, cursor.position() - basis, false
+        );
+
+        cursor.setPosition(basis + tokenRange.first);
+        cursor.setPosition(basis + tokenRange.second, QTextCursor::KeepAnchor);
+
         QMutexLocker lock {&documentMutex};
-        textCursor().insertText(tabString);
+        cursor.insertText(completed.first);
+        cursor.setPosition(basis + tokenRange.first + completed.second);
+        cursor.setPosition(
+            basis + tokenRange.first + completed.first.length(),
+            QTextCursor::KeepAnchor
+        );
+        setTextCursor(cursor);
+
         return;
     }
 
