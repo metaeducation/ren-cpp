@@ -765,17 +765,28 @@ namespace internal {
 // to decide if the programmer intent was to compose it together to form
 // a single level of block hierarchy.
 //
-// See why Loadable doesn't let you say ren::Block {1, {2, 3}, 4}; here:
+// There are subclasses of Loadable which are used to handle behavior of
+// nested initializer lists, e.g. `ren::Block {1, {2, 3}, 4};`.  See the
+// discussion and controversy about that feature here:
 //
 //     https://github.com/hostilefork/rencpp/issues/1
 //
-// While private inheritance is one of those "frowned upon" institutions,
-// here we really do want it.  It's a perfect fit for the problem.
+// Loadable does not publicly inherit from Value, and is not currently
+// intended to be a user-facing type (hence internal:: namespace).  They
+// are implicitly constructed only.
 //
 
 class Loadable : protected Value {
 private:
     friend class Value;
+#if REN_CLASSLIB_STD == 1
+    // if we are constructing this Loadable from a QString, we need its
+    // utf8 representation...unfortunately there is no QString::data()
+    // equivalent.  We must use QString::toUtf8() and hold onto the byte
+    // array to keep the destructor from running before we get a chance
+    // to use its data pointer.  :-/
+    QByteArray bytes;
+#endif
 
     // These constructors *must* be public, although we really don't want
     // users of the binding instantiating loadables explicitly.
@@ -809,7 +820,7 @@ public:
 #endif
 
 #if REN_CLASSLIB_QT == 1
-    // TBD
+    Loadable (QString const & source);
 #endif
 };
 

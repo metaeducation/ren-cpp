@@ -59,22 +59,22 @@ AnyString::AnyString (
     if (not engine)
         engine = &Engine::runFinder();
 
-    std::string array;
+    std::string source;
 
     if (isString()) {
-        array += '{';
-        array += spelling;
-        array += '}';
+        source += '{';
+        source += spelling;
+        source += '}';
     }
     else if (isTag()) {
-        array += '<';
-        array += spelling;
-        array += '>';
+        source += '<';
+        source += spelling;
+        source += '>';
     }
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable = array.data();
+    internal::Loadable loadable (source.data());
 
     constructOrApplyInitialize(
         engine->getHandle(),
@@ -114,25 +114,25 @@ AnyString::AnyString (
 {
     (this->*cellfun)(&this->cell);
 
-    QByteArray array;
+    QString source;
 
     // Note: wouldn't be able to return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
 
     if (isString()) {
-        array += '{';
-        array += spelling.toLocal8Bit();
-        array += '}';
+        source += '{';
+        source += spelling;
+        source += '}';
     }
     else if (isTag()) {
-        array += '<';
-        array += spelling.toLocal8Bit();
-        array += '>';
+        source += '<';
+        source += spelling;
+        source += '>';
     }
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable = array.data();
+    internal::Loadable loadable (source);
 
     if (not engine)
         engine = &Engine::runFinder();

@@ -246,6 +246,26 @@ Loadable::Loadable (char const * sourceCstr) :
 }
 
 
+#if REN_CLASSLIB_QT == 1
+Loadable::Loadable (QString const & source) :
+    Loadable (Dont::Initialize)
+{
+    // unfortunately, you can't get a durable char * from a QString without
+    // having a QByteArray held onto.
+    //
+    //    http://stackoverflow.com/questions/17936160/
+
+    bytes = source.toUtf8();
+    VAL_SET(&cell, REB_END);
+    VAL_HANDLE(&cell) =
+        reinterpret_cast<ANYFUNC>(const_cast<char *>(bytes.data()));
+
+    refcountPtr = nullptr;
+    origin = REN_ENGINE_HANDLE_INVALID;
+}
+#endif
+
+
 } // end namespace internal
 
 } // end namespace ren

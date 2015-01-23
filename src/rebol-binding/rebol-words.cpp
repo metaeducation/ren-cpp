@@ -178,33 +178,31 @@ AnyWord::AnyWord (
 {
     (this->*cellfun)(&this->cell);
 
-    // Note: can't extract char * from a QString without intermediate
-    // http://stackoverflow.com/questions/17936160/
-    QByteArray array;
+    QString source;
 
     if (isWord()) {
-        array += spelling.toLocal8Bit();
+        source += spelling;
     }
     else if (isSetWord()) {
-        array += spelling.toLocal8Bit();
-        array += ':';
+        source += spelling;
+        source += ':';
     }
     else if (isGetWord()) {
-        array += ':';
-        array += spelling.toLocal8Bit();
+        source += ':';
+        source += spelling;
     }
     else if (isLitWord()) {
-        array += '\'';
-        array += spelling.toLocal8Bit();
+        source += '\'';
+        source += spelling;
     }
     else if (isRefinement()) {
-        array += '/';
-        array += spelling.toLocal8Bit();
+        source += '/';
+        source += spelling;
     }
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable = array.data();
+    internal::Loadable loadable (source);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
