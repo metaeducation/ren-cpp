@@ -230,6 +230,36 @@ private:
 
     QElapsedTimer escapeTimer;
 
+    //
+    // SIMPLE HISTORY MECHANISM
+    //
+    // Every user input to the REPL is tracked by a record, which contains
+    // position pointers into the document.  The positions tracked are the
+    // point where the prompt starts (promptPos), which precedes the prompt
+    // text.  The next position is where the user can start typing (inputPos),
+    // which in a single line prompt is generally just a space after the prompt
+    // text (the multi-line prompt has a hint, and also puts you on the next
+    // line).
+    //
+    // Prior to an entry being "committed", those are the only two positions
+    // that are set.  But Once a record is committed for evaluation, the end
+    // of buffer position is determined (endPos).  Any whitespace after the
+    // cursor's point of commitment has been trimmed.  Typically after that
+    // is a newline and the beginning of the command's output (assumed to be
+    // up until the next history record).
+    //
+    // Additionally saved is the selection position and selection anchor at
+    // the time the user committed the buffer.  (If these are the same, it
+    // was a point selection and not a range selection).  Thse are stored as
+    // offsets relative to `inputPos`, so (0,0) would mean a collapsed
+    // cursor at the very beginning of the input.
+    //
+    // Whether the prompt was multiline or meta is saved as well.  As a
+    // simplification, these properties (as well as inputPos and promptPos)
+    // are not stored outside of the history for the current input buffer...
+    // they are merely read out of the last entry at history.back().
+    // ("The present is just the tail of history...")
+    //
 private:
     bool hasUndo;
     bool hasRedo;
