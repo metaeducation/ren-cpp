@@ -33,6 +33,7 @@
 #include "replpad.h"
 #include "renshell.h"
 #include "renpackage.h"
+#include "watchlist.h"
 
 class MainWindow;
 
@@ -78,9 +79,23 @@ private:
         ren::Function dialect; // what dialect processor tab is running
         std::experimental::optional<ren::Tag> label; // label of the tab
         ren::Context context;
+        WatchList * watchList;
     };
 
     std::unordered_map<ReplPad const *, TabInfo> tabinfo;
+
+public:
+    WatchList & watchList() {
+        auto it = tabinfo.find(&repl());
+        return *(it->second.watchList);
+    }
+
+signals:
+    void switchWatchList(WatchList * watchList);
+
+    void showDockRequested(WatchList * watchList);
+
+    void hideDockRequested(WatchList * watchList);
 
 protected:
     bool bannerPrinted;
@@ -140,11 +155,6 @@ private:
 
 signals:
     void reportStatus(QString const & str);
-
-private:
-    // For reasons unknown, the tab widget greedily grabs the focus and won't
-    // give it to the inner widget.
-    void focusInEvent(QFocusEvent * event) override;
 
 public:
     void createNewTab();

@@ -210,7 +210,6 @@ protected:
     void keyReleaseEvent(QKeyEvent * event) override;
     void mousePressEvent(QMouseEvent * event) override;
     void mouseDoubleClickEvent(QMouseEvent * event) override;
-    void focusInEvent(QFocusEvent * event) override;
 
     // Trap cut, paste, del so we can limit the selection to the edit buffer
 public slots:
@@ -238,7 +237,7 @@ private:
     std::experimental::optional<size_t> historyIndex;
     class HistoryEntry {
     public:
-        int startPos;
+        int promptPos;
         int inputPos;
         bool multiline;
         bool meta;
@@ -246,9 +245,9 @@ private:
         std::experimental::optional<int> anchor; // offset from inputPos
         std::experimental::optional<int> endPos;
     public:
-        HistoryEntry (int startPos) :
-            startPos (startPos),
-            inputPos (startPos),
+        HistoryEntry (int promptPos) :
+            promptPos (promptPos),
+            inputPos (promptPos), // temporary; quickly overwritten
             multiline (false),
             meta (false),
             position (),

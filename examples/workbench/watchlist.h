@@ -80,9 +80,9 @@ signals:
         ren::Value label
     );
 
-    void showDockRequested();
+    void showDockRequested(WatchList * watchList);
 
-    void hideDockRequested();
+    void hideDockRequested(WatchList * watchList);
 
     void pushWatcherRequested(Watcher * watcherUnique);
 
@@ -115,12 +115,12 @@ private slots:
 protected:
     void mousePressEvent(QMouseEvent * event) override;
 
-private:
+public:
     // aaaand... magic! :-)
     ren::Value watchDialect(
         ren::Value const & arg,
         bool recalculates,
-        ren::Value const & tag
+        std::experimental::optional<ren::Tag> const & label
     );
 };
 

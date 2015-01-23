@@ -300,9 +300,85 @@ RenConsole::RenConsole (QWidget * parent) :
         }
     );
 
+    // Create the function that will be added to the environment to be bound
+    // to the word WATCH.  If you give it a word or path it will be quoted,
+    // but if you give it a paren it will be an expression to evaluate.  If
+    // you give it a block it will be interpreted in the "watch dialect".
+    // Feature under development.  :-)
+
+    // We face a problem here that Ren is not running on the GUI thread.
+    // That's because we want to be able to keep the GUI responsive while
+    // running.  But we have to manage our changes on the data structures
+    // by posting messages.
+
+    // Because we're quoting it's hard to get a logic, so the reserved
+    // words for on, off, true, false, yes, and no are recognized explicitly
+    // Any logic value could be used with parens however, and if those words
+    // have been reassigned to something else the parens could work for that
+    // as well.
+
+    auto watchFunction = Function::construct(
+        "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
+        ":arg [word! path! block! paren! integer! tag!]"
+        "    {word to watch or other legal parameter, see documentation)}"
+        "/result {watch the result of the evaluation (not the expression)}",
+
+        REN_STD_FUNCTION,
+
+        [this](Value const & arg, Value const & useResult) -> Value {
+
+            auto it = tabinfo.find(&repl());
+            WatchList * watchList = it->second.watchList;
+
+            if (not arg.isBlock())
+                return watchList->watchDialect(
+                    arg, not useResult, std::experimental::nullopt
+                );
+
+            std::experimental::optional<Tag> nextLabel;
+
+            Block aggregate {};
+
+            bool nextRecalculates = true;
+
+            for (Value item : static_cast<Block>(arg)) {
+                if (item.isTag()) {
+                    nextLabel = static_cast<Tag>(item);
+                }
+                else if (item.isRefinement()) {
+                    if (item.isEqualTo<Refinement>("result")) {
+                        nextRecalculates = false;
+                    }
+                    else
+                        throw Error {
+                            "only /result refinement is supported in blocks"
+                        };
+                }
+                else {
+                    // REVIEW: exception handling if they watch something
+                    // with no value in the block form?  e.g. watch [x y]
+                    // and x gets added as a watch where both undefined,
+                    // but y doesn't?
+
+                    Value watchResult
+                        = watchList->watchDialect(
+                            item, nextRecalculates, nextLabel
+                        );
+                    nextRecalculates = true;
+                    nextLabel = std::experimental::nullopt;
+                    if (not watchResult.isUnset())
+                        runtime("append", aggregate, watchResult);
+                }
+            }
+            return aggregate;
+        }
+    );
+
+
     runtime(
         "console: quote", consoleFunction,
         "shell: quote", shell.getShellDialectFunction(),
+        "watch: quote", watchFunction,
 
         // A bit too easy to overwrite them, e.g. `console: :shell`
         "protect 'console protect 'shell"
@@ -368,8 +444,9 @@ RenConsole::RenConsole (QWidget * parent) :
 
     connect(
         this, &QTabWidget::currentChanged,
-        [this]() {
-            // Anything to do when the tab changes?
+        [this](int) {
+            auto it = tabinfo.find(&repl());
+            emit switchWatchList(it->second.watchList);
         }
     );
 
@@ -394,6 +471,18 @@ void RenConsole::createNewTab() {
     }
 
     auto pad = new ReplPad {*this, *this, this};
+
+    auto emplacement = tabinfo.emplace(std::make_pair(pad,
+        TabInfo {
+            static_cast<Function>(consoleFunction),
+            (count() > 0)
+                ? std::experimental::nullopt
+                : std::experimental::optional<Tag>{Tag {"&Main"}},
+            Context::lookup("USER"), // should be able to .copy(), not working
+            new WatchList (nullptr)
+        }
+    ));
+
     addTab(pad, "(unnamed)");
 
     connect(
@@ -402,15 +491,29 @@ void RenConsole::createNewTab() {
         Qt::DirectConnection
     );
 
-    tabinfo.emplace(std::make_pair(pad,
-        TabInfo {
-            static_cast<Function>(consoleFunction),
-            (count() > 1)
-                ? std::experimental::nullopt
-                : std::experimental::optional<Tag>{Tag {"&Main"}},
-            Context::lookup("USER") // should be able to .copy(), not working
-        }
-    ));
+    connect(
+        this, &RenConsole::finishedEvaluation,
+        (emplacement.first)->second.watchList, &WatchList::updateAllWatchers,
+        Qt::DirectConnection
+    );
+
+    connect(
+        (emplacement.first)->second.watchList, &WatchList::showDockRequested,
+        this, &RenConsole::showDockRequested,
+        Qt::DirectConnection
+    );
+
+    connect(
+        (emplacement.first)->second.watchList, &WatchList::hideDockRequested,
+        this, &RenConsole::hideDockRequested,
+        Qt::DirectConnection
+    );
+
+    connect(
+        (emplacement.first)->second.watchList, &WatchList::reportStatus,
+        this, &RenConsole::reportStatus,
+        Qt::DirectConnection
+    );
 
     setCurrentWidget(pad);
 
@@ -431,8 +534,12 @@ void RenConsole::tryCloseTab(int index) {
         return;
     }
 
+    auto it = tabinfo.find(pad);
+
     removeTab(index);
     delete pad;
+    delete it->second.watchList;
+    tabinfo.erase(it);
 
     repl().setFocus();
 }
@@ -745,12 +852,6 @@ void RenConsole::handleResults(
 }
 
 
-void RenConsole::focusInEvent(QFocusEvent *)
-{
-    currentWidget()->setFocus();
-}
-
-
 
 ///
 /// SYNTAX-SENSITIVE HOOKS
@@ -810,10 +911,12 @@ std::pair<int, int> RenConsole::rangeForWholeToken(
     int start = static_cast<Integer>(blk[1]);
     int finish = static_cast<Integer>(blk[2]);
 #else
-    int start = buffer.lastIndexOf("[^\\s][\\s]", offset);
+    int start = buffer.lastIndexOf(QRegExp {"[\\s][^\\s]"}, offset);
     if (start == -1)
         start = 0;
-    int finish = buffer.indexOf("[^\\s][\\s]", offset);
+    else
+        start++;
+    int finish = buffer.indexOf(QRegExp {"[^\\s][\\s]"}, offset);
     if (finish == -1)
         finish = buffer.length();
 #endif
@@ -848,8 +951,6 @@ std::pair<QString, int> RenConsole::autoComplete(
     QString firstCandidate;
     QString candidate;
     bool takeNext = false;
-
-
 
     for (
         auto itContext = contexts.begin();

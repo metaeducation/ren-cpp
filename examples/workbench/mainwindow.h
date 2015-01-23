@@ -83,7 +83,6 @@ private:
 public:
     RenConsole * console;
     QDockWidget * dockWatch;
-    WatchList * watchList;
 
 private:
     QMenu * fileMenu;
@@ -105,6 +104,10 @@ private:
     QAction * separatorAct;
 
     QAction * aboutAct;
+
+private slots:
+    void onShowDockRequested(WatchList * watchList);
+    void onHideDockRequested(WatchList * watchList);
 };
 
 #endif

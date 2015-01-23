@@ -173,75 +173,6 @@ WatchList::WatchList(QWidget * parent) :
     );
 
 
-    // Create the function that will be added to the environment to be bound
-    // to the word WATCH.  If you give it a word or path it will be quoted,
-    // but if you give it a paren it will be an expression to evaluate.  If
-    // you give it a block it will be interpreted in the "watch dialect".
-    // Feature under development.  :-)
-
-    // We face a problem here that Ren is not running on the GUI thread.
-    // That's because we want to be able to keep the GUI responsive while
-    // running.  But we have to manage our changes on the data structures
-    // by posting messages.
-
-    // Because we're quoting it's hard to get a logic, so the reserved
-    // words for on, off, true, false, yes, and no are recognized explicitly
-    // Any logic value could be used with parens however, and if those words
-    // have been reassigned to something else the parens could work for that
-    // as well.
-
-    auto watchFunction = Function::construct(
-        "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
-        ":arg [word! path! block! paren! integer! tag!]"
-        "    {word to watch or other legal parameter, see documentation)}"
-        "/result {watch the result of the evaluation (not the expression)}",
-
-        REN_STD_FUNCTION,
-
-        [this](Value const & arg, Value const & useResult) -> Value {
-
-            if (not arg.isBlock())
-                return watchDialect(arg, not useResult, none);
-
-            Value nextLabel = none;
-
-            Block aggregate {};
-
-            bool nextRecalculates = true;
-
-            for (Value item : static_cast<Block>(arg)) {
-                if (item.isTag()) {
-                    nextLabel = item;
-                }
-                else if (item.isRefinement()) {
-                    if (item.isEqualTo<Refinement>("result")) {
-                        nextRecalculates = false;
-                    }
-                    else
-                        throw Error {
-                            "only /result refinement is supported in blocks"
-                        };
-                }
-                else {
-                    // REVIEW: exception handling if they watch something
-                    // with no value in the block form?  e.g. watch [x y]
-                    // and x gets added as a watch where both undefined,
-                    // but y doesn't?
-
-                    Value watchResult
-                        = watchDialect(item, nextRecalculates, nextLabel);
-                    nextRecalculates = true;
-                    nextLabel = none;
-                    if (not watchResult.isUnset())
-                        runtime("append", aggregate, watchResult);
-                }
-            }
-            return aggregate;
-        }
-    );
-
-    runtime("watch: quote", watchFunction);
-
     // We also have to hook up the watchCalled and handleWatch signals and
     // slots.  This could be asynchronous, however we actually are
     // looking at some of the values and running the evaluator.  So we
@@ -285,7 +216,7 @@ void WatchList::pushWatcher(Watcher * watcherUnique) {
 
     updateWatcher(count + 1);
 
-    emit showDockRequested();
+    emit showDockRequested(this);
 }
 
 
@@ -408,7 +339,7 @@ void WatchList::updateAllWatchers() {
 Value WatchList::watchDialect(
     Value const & arg,
     bool recalculates,
-    Value const & label
+    std::experimental::optional<Tag> const & label
 ) {
     if (arg.isInteger()) {
         int signedIndex = static_cast<Integer>(arg);
@@ -484,9 +415,9 @@ Value WatchList::watchDialect(
 
     if (logicIndex != -1) {
         if (logicIndex)
-            emit showDockRequested();
+            emit showDockRequested(this);
         else
-            emit hideDockRequested();
+            emit hideDockRequested(this);
         return unset;
     }
 
@@ -498,13 +429,7 @@ Value WatchList::watchDialect(
 
     if (arg.isWord() or arg.isPath() or arg.isParen()) {
 
-        Watcher * watcherUnique = new Watcher {
-            arg,
-            recalculates,
-            label
-                ? std::experimental::optional<Tag>(static_cast<Tag>(label))
-                : std::experimental::nullopt
-        };
+        Watcher * watcherUnique = new Watcher {arg, recalculates, label};
 
         // we append to end instead of inserting at the top because
         // it keeps the numbering more consistent.  But some people might

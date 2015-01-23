@@ -29,10 +29,6 @@
 
 #include "replpad.h"
 
-#include "rencpp/ren.hpp"
-
-using namespace ren;
-
 
 
 ///
@@ -523,10 +519,10 @@ void ReplPad::pushFormat(QTextCharFormat const & format) {
 
 void ReplPad::appendNewPrompt() {
 
-    // You always have to ask for multi-line mode with shift-enter.  Maybe
-    // someone will prefer the opposite?  Not likely.
+    // This initializes a new history entry, which also rewrites the
+    // prompt -- capturing the position before and after the prompt text
 
-    history.emplace_back(endCursor().position());
+    history.emplace_back(textCursor().position());
     rewritePrompt();
 
     // We can't allow people to undo their edits past the last prompts,
@@ -557,7 +553,7 @@ void ReplPad::rewritePrompt() {
 
     QString buffer = entry.getInput(*this);
 
-    cursor.setPosition(history.back().startPos, QTextCursor::MoveAnchor);
+    cursor.setPosition(history.back().promptPos, QTextCursor::MoveAnchor);
     cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
 
     cursor.removeSelectedText();
@@ -1333,7 +1329,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         bool isPromptLine;
         int basis;
 
-        if (textCursor().position() == entry.startPos) {
+        if (textCursor().position() == entry.promptPos) {
             // We are on the prompt line (hence we have something besides
             // spaces to beginning of line, even if we haven't typed
             // anything).  This can be given a different behavior for the
@@ -1366,7 +1362,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         QString input = entry.getInput(*this);
         auto tokenRange = syntaxer.rangeForWholeToken(
-            input, cursor.position() - entry.startPos
+            input, cursor.position() - entry.inputPos
         );
 
         QString incomplete = input.mid(
@@ -1374,17 +1370,29 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         );
 
         auto completed = syntaxer.autoComplete(
-            incomplete, cursor.position() - basis, false
+            incomplete,
+            cursor.position() - entry.inputPos - tokenRange.first,
+            false
         );
 
-        cursor.setPosition(basis + tokenRange.first);
-        cursor.setPosition(basis + tokenRange.second, QTextCursor::KeepAnchor);
+        // Replace the token with the new token text from the completer
 
         QMutexLocker lock {&documentMutex};
-        cursor.insertText(completed.first);
-        cursor.setPosition(basis + tokenRange.first + completed.second);
+        cursor.setPosition(entry.inputPos + tokenRange.first);
         cursor.setPosition(
-            basis + tokenRange.first + completed.first.length(),
+            entry.inputPos + tokenRange.second,
+            QTextCursor::KeepAnchor
+        );
+        cursor.insertText(completed.first);
+
+        // Make a selection of the completed portion, as told to us by the
+        // index reported back from the comletion
+
+        cursor.setPosition(
+            entry.inputPos + tokenRange.first + completed.second
+        );
+        cursor.setPosition(
+            entry.inputPos + tokenRange.first + completed.first.length(),
             QTextCursor::KeepAnchor
         );
         setTextCursor(cursor);
@@ -1481,12 +1489,6 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
         emit fadeOutToQuit(false);
 
     QTextEdit::keyReleaseEvent(event);
-}
-
-
-void ReplPad::focusInEvent(QFocusEvent * event)
-{
-    QTextEdit::focusInEvent(event);
 }
 
 

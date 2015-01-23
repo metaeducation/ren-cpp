@@ -42,7 +42,8 @@ MainWindow::MainWindow() :
     //     http://stackoverflow.com/questions/22044737/
     //
     // Note that only values that are *default constructible* may be registered
-    // in this way, which rules out all the other RenCpp types.  If you want
+    // in this way, which rules out all the other RenCpp types, unless they
+    // are embedded in a container of some kind (like optional<>)
 
     qRegisterMetaType<ren::Value>("ren::Value");
 
@@ -56,13 +57,23 @@ MainWindow::MainWindow() :
         Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea
     );
 
-    watchList = new WatchList;
-    dockWatch->setWidget(watchList);
+    connect(
+        console, &RenConsole::switchWatchList,
+        [this](WatchList * watchList) {
+            dockWatch->setWidget(watchList);
+        }
+    );
 
     connect(
-        console, &RenConsole::finishedEvaluation,
-        watchList, &WatchList::updateAllWatchers,
-        Qt::DirectConnection
+        console, &RenConsole::showDockRequested,
+        this, &MainWindow::onShowDockRequested,
+        Qt::QueuedConnection
+    );
+
+    connect(
+        console, &RenConsole::hideDockRequested,
+        this, &MainWindow::onHideDockRequested,
+        Qt::QueuedConnection
     );
 
     connect(
@@ -77,30 +88,6 @@ MainWindow::MainWindow() :
     connect(
         &console->repl(), &ReplPad::fadeOutToQuit,
         this, &MainWindow::onFadeOutToQuit,
-        Qt::DirectConnection
-    );
-
-    // REVIEW: is there a better way of having a command say it wants to
-    // hide the dock the watchList is in?
-
-    connect(
-        watchList, &WatchList::showDockRequested,
-        dockWatch, &QDockWidget::show,
-        Qt::QueuedConnection
-    );
-
-    connect(
-        watchList, &WatchList::hideDockRequested,
-        dockWatch, &QDockWidget::hide,
-        Qt::QueuedConnection
-    );
-
-    connect(
-        watchList, &WatchList::reportStatus,
-        statusBar(), [this](QString const & message) {
-            // Slot wants a "timeout" (0 for "until next message")
-            statusBar()->showMessage(message, 0);
-        },
         Qt::DirectConnection
     );
 
@@ -413,4 +400,15 @@ void MainWindow::onFadeOutToQuit(bool escaping)
         fadeTimer->setInterval(msecInterval);
         fadeTimer->start();
     }
+}
+
+
+void MainWindow::onShowDockRequested(WatchList * watchList) {
+    dockWatch->setWidget(watchList);
+    dockWatch->show();
+}
+
+void MainWindow::onHideDockRequested(WatchList * watchList) {
+    dockWatch->setWidget(watchList);
+    dockWatch->hide();
 }
