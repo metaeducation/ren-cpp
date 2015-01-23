@@ -59,13 +59,21 @@ namespace internal {
 // unique pointer for each lambda.  It's really probably the only way this
 // can be done without changing the runtime to pass something more to us.
 //
+// It should be noted that if you try to re-use a lambda to make a function
+// value twice this way, you will be getting another spec block.  It is
+// technically possible to get multiple function values for the same lambda
+// with different specs (though this is probably not what you want; you
+// should probably find a way to create functions only once).
+//
 
 #define REN_STD_FUNCTION \
     [](RenCell * stack) -> int {\
         static ren::internal::RenShimId id = -1; \
         static ren::internal::RenShimBouncer bouncer = nullptr; \
-        if (id != -1) \
+        if (stack) \
             return bouncer(id, stack); \
+        if (id != -1) \
+            return REN_SHIM_INITIALIZED; \
         id = ren::internal::shimIdToCapture; \
         bouncer = ren::internal::shimBouncerToCapture; \
         return REN_SHIM_INITIALIZED; \
@@ -535,7 +543,7 @@ private:
             // string into a cell, and tell the ren runtime that's what
             // happened.  For now we just rethrow
 
-            throw;
+            throw e;
         }
         catch (...) {
 
