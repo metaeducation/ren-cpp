@@ -140,10 +140,11 @@ void Value::constructOrApplyInitialize(
         case REN_CONSTRUCT_ERROR:
         case REN_APPLY_ERROR:
             errorOut.finishInit(engine);
-            throw evaluation_error(errorOut);
+            throw evaluation_error {errorOut};
+
 
         case REN_EVALUATION_CANCELLED:
-            throw evaluation_cancelled();
+            throw evaluation_cancelled {};
 
         case REN_EVALUATION_EXITED: {
             // Special case: the error's cell isn't an error, but rather an
@@ -153,7 +154,7 @@ void Value::constructOrApplyInitialize(
             status.cell = errorOut.cell;
             status.finishInit(engine);
 
-            throw exit_command(status);
+            throw exit_command {status};
         }
 
         default:

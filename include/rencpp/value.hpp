@@ -389,7 +389,7 @@ public:
     //
     // http://stackoverflow.com/questions/6242768/
     //
-    Value (bool b, Engine * engine = nullptr);
+    Value (bool b, Engine * engine = nullptr) noexcept;
 
     bool isLogic() const;
 

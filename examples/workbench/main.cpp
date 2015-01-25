@@ -69,8 +69,7 @@ void noisyFailureMsgHandler(
     // popping up a dialog.
 
     if (
-        QString(msg).contains("QClipboard::event")
-        and QString(msg).contains("Cowardly refusing")
+        QString(msg).contains("Cowardly refusing to send clipboard message")
     ) {
         type = QtDebugMsg;
     }

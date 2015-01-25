@@ -41,14 +41,14 @@ protected:
         char const * cstr,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    ) noexcept;
+    );
 
 #if REN_CLASSLIB_STD == 1
     AnyString (
         std::string const & str,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    ) noexcept;
+    );
 #endif
 
 #if REN_CLASSLIB_QT == 1
@@ -56,7 +56,7 @@ protected:
         QString const & str,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
-    ) noexcept;
+    );
 #endif
 
 public:
@@ -193,20 +193,20 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyString_ (char const * cstr, Engine * engine = nullptr) noexcept :
+    AnyString_ (char const * cstr, Engine * engine = nullptr) :
         AnyString (cstr, F, engine)
     {
     }
 
 #if REN_CLASSLIB_STD == 1
-    AnyString_ (std::string const & str, Engine * engine = nullptr) noexcept :
+    AnyString_ (std::string const & str, Engine * engine = nullptr) :
         AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT == 1
-    AnyString_ (QString const & str, Engine * engine = nullptr) noexcept :
+    AnyString_ (QString const & str, Engine * engine = nullptr) :
         AnyString (str, F, engine)
     {
     }

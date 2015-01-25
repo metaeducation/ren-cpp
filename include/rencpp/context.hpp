@@ -97,14 +97,14 @@ protected:
         size_t numLoadables,
         Context const * contextPtr,
         Engine * engine
-    ) noexcept;
+    );
 
     Context (
         Value const values[],
         size_t numValues,
         Context const * contextPtr,
         Engine * engine
-    ) noexcept;
+    );
 
 
 public:
@@ -112,7 +112,7 @@ public:
         Value const values[],
         size_t numValues,
         Context const & context
-    ) noexcept :
+    ) :
         Context (values, numValues, &context, nullptr)
     {
     }
@@ -121,7 +121,7 @@ public:
         Value const values[],
         size_t numValues,
         Engine * engine
-    ) noexcept :
+    ) :
         Context (values, numValues, nullptr, engine)
     {
     }
@@ -129,7 +129,7 @@ public:
     Context (
         std::initializer_list<internal::Loadable> const & loadables,
         Context const & context // is this contradictory?
-    ) noexcept :
+    ) :
         Context (loadables.begin(), loadables.size(), &context, nullptr)
     {
     }
@@ -137,12 +137,12 @@ public:
     Context (
         std::initializer_list<internal::Loadable> const & loadables,
         Engine * engine = nullptr
-    ) noexcept :
+    ) :
         Context (loadables.begin(), loadables.size(), nullptr, engine)
     {
     }
 
-    Context (Engine * engine = nullptr) noexcept :
+    Context (Engine * engine = nullptr) :
         Context (static_cast<internal::Loadable *>(nullptr), 0, nullptr, engine)
     {
     }

@@ -170,7 +170,7 @@ public:
         return whatString.c_str();
     }
 
-    int code() const {
+    int code() const noexcept {
         return codeValue;
     }
 };

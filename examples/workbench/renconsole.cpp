@@ -93,7 +93,6 @@ public slots:
         }
         catch (evaluation_error const & e) {
             result = e.error();
-            assert(result);
         }
         catch (exit_command const & e) {
             qApp->exit(e.code());
@@ -101,6 +100,11 @@ public slots:
         catch (evaluation_cancelled const & e) {
             // Let returning none for the error mean cancellation
             result = none;
+        }
+        catch (...) {
+            // some other C++ error was thrown (shouldn't be possible)
+            assert(false);
+            throw;
         }
 
         emit resultReady(success, result);

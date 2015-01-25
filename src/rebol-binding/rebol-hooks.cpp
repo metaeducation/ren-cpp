@@ -360,8 +360,46 @@ public:
         // with a new function, but evaluation interrupts can't.)
 
         bool applying = false;
+        REBSER * aggregate = Make_Block(static_cast<REBCNT>(numLoadables * 2));
 
+        SAVE_SERIES(aggregate);
 
+        PUSH_STATE(state, Halt_State);
+        if (SET_JUMP(state)) {
+            POP_STATE(state, Halt_State);
+            Saved_State = Halt_State;
+
+            UNSAVE_SERIES(aggregate);
+
+            Catch_Error(DS_NEXT); // Stores error value here
+            REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
+            *val = *DS_NEXT;
+
+            if (VAL_ERR_NUM(val) == RE_QUIT) {
+                // Cancellation to exit to the OS with an error code number,
+                // purposefully requested by the programmer
+                *errorOut = *VAL_ERR_VALUE(DS_NEXT);
+                return REN_EVALUATION_EXITED;
+            }
+
+            if (VAL_ERR_NUM(val) == RE_HALT) {
+                // cancellation in middle of interpretation from outside
+                // the evaluation loop (e.g. Escape)
+                return REN_EVALUATION_CANCELLED;
+            }
+
+            // Some other generic error; it may have occurred during the
+            // construct phase or the apply phase
+            *errorOut = *val;
+
+            return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
+        }
+        SET_STATE(state, Halt_State);
+
+        // Use this handler for both, halt conditions (QUIT, HALT) and error
+        // conditions. As this is a top-level handler, simply overwriting
+        // Saved_State is safe.
+        Saved_State = Halt_State;
 
         int result = REN_SUCCESS;
 
@@ -385,9 +423,6 @@ public:
         // initial string.  If we were asking to construct a non-block type,
         // then it should be the first element in this block.
 
-        REBSER * aggregate = Make_Block(static_cast<REBCNT>(numLoadables * 2));
-        SAVE_SERIES(aggregate);
-
         for (size_t index = 0; index < numLoadables; index++) {
 
             auto cell = const_cast<REBVAL *>(
@@ -404,6 +439,9 @@ public:
                 // [[foo bar]] that discern the cases
 
                 auto loadText = reinterpret_cast<REBYTE*>(VAL_HANDLE(cell));
+
+                // CAN Throw_Error! if the input is bad (unmatched parens,
+                // etc...
 
                 REBSER * transcoded = Scan_Source(
                     loadText, LEN_BYTES(loadText)
@@ -438,7 +476,8 @@ public:
                     reinterpret_cast<REBYTE*>(BLK_HEAD(transcoded)),
                     transcoded->tail
                 );
-            } else {
+            }
+            else {
                 // Just an ordinary value cell
                 Append_Val(aggregate, cell);
             }
@@ -447,40 +486,6 @@ public:
         }
 
         if (applyOut) {
-            PUSH_STATE(state, Halt_State);
-            if (SET_JUMP(state)) {
-                POP_STATE(state, Halt_State);
-                Saved_State = Halt_State;
-                Catch_Error(DS_NEXT); // Stores error value here
-                REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
-                *val = *DS_NEXT;
-
-                if (VAL_ERR_NUM(val) == RE_QUIT) {
-                    // Cancellation to exit to the OS with an error code number,
-                    // purposefully requested by the programmer
-                    *errorOut = *VAL_ERR_VALUE(DS_NEXT);
-                    return REN_EVALUATION_EXITED;
-                }
-
-                if (VAL_ERR_NUM(val) == RE_HALT) {
-                    // cancellation in middle of interpretation from outside
-                    // the evaluation loop (e.g. Escape)
-                    return REN_EVALUATION_CANCELLED;
-                }
-
-                // Some other generic error; it may have occurred during the
-                // construct phase or the apply phase
-                *errorOut = *val;
-
-                return REN_APPLY_ERROR;
-            }
-            SET_STATE(state, Halt_State);
-
-            // Use this handler for both, halt conditions (QUIT, HALT) and error
-            // conditions. As this is a top-level handler, simply overwriting
-            // Saved_State is safe.
-            Saved_State = Halt_State;
-
             applying = true;
             if (applicand) {
                 result = Generalized_Apply(
@@ -503,11 +508,6 @@ public:
 
                 *applyOut = *Do_Blk(aggregate, 0); // result is volatile
             }
-
-            // Pop our error trapping state
-
-            POP_STATE(state, Halt_State);
-            Saved_State = Halt_State;
         }
 
         if (constructOutDatatypeIn) {
@@ -567,9 +567,11 @@ public:
             }
         }
 
-        // Same for our aggregate, though we may have returned it.  If it's
-        // going to be defended from the garbage collector, we need hooks to
-        // be written taking the binding refs into account
+        // Pop our error trapping state, then unsave the aggregate (must be
+        // done in this order)
+
+        POP_STATE(state, Halt_State);
+        Saved_State = Halt_State;
 
         UNSAVE_SERIES(aggregate);
 

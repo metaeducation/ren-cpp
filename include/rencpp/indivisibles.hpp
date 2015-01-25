@@ -105,7 +105,7 @@ protected:
     inline bool isValid() const { return isLogic(); }
 
 public:
-    explicit Logic (bool b, Engine * engine = nullptr) noexcept :
+    explicit Logic (bool b, Engine * engine = nullptr) :
         Value (b, engine)
     {
     }
@@ -117,7 +117,7 @@ public:
     //
 
     template <typename T>
-    Logic (const T & value, Engine * engine = nullptr) noexcept :
+    Logic (const T & value, Engine * engine = nullptr) :
         Logic (bool(utility::safe_bool(value)), engine)
     {
     }
@@ -139,17 +139,17 @@ protected:
     inline bool isValid() const { return isCharacter(); }
 
 public:
-    Character (char c, Engine * engine = nullptr) noexcept :
+    Character (char c, Engine * engine = nullptr) :
         Value (c, engine)
     {
     }
 
-    Character (wchar_t wc, Engine * engine = nullptr) noexcept :
+    Character (wchar_t wc, Engine * engine = nullptr) :
         Value (wc, engine)
     {
     }
 
-    Character (int i, Engine * engine = nullptr) noexcept;
+    Character (int i, Engine * engine = nullptr);
 
 
     // Characters represent codepoints.  These conversion operators are for
@@ -189,7 +189,7 @@ protected:
     inline bool isValid() const { return isInteger(); }
 
 public:
-    Integer (int i, Engine * engine = nullptr) noexcept :
+    Integer (int i, Engine * engine = nullptr) :
         Value (i, engine)
     {
     }
@@ -210,7 +210,7 @@ protected:
     inline bool isValid() const { return isFloat(); }
 
 public:
-    Float (double d, Engine * engine = nullptr) noexcept :
+    Float (double d, Engine * engine = nullptr) :
         Value (d, engine)
     {
     }
@@ -248,7 +248,7 @@ public:
     explicit Date (
         std::string const & str,
         Engine * engine = nullptr
-    ) noexcept;
+    );
 };
 
 
@@ -275,7 +275,7 @@ protected:
 
 public:
 #if REN_CLASSLIB_QT == 1
-    explicit Image (QImage const & image, Engine * engine = nullptr) noexcept;
+    explicit Image (QImage const & image, Engine * engine = nullptr);
     operator QImage () const;
 #endif
 };

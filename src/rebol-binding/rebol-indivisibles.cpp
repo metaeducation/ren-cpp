@@ -67,7 +67,7 @@ bool Value::isFalse() const {
     return isLogic() && !VAL_LOGIC(&cell);
 }
 
-Value::Value (bool someBool, Engine * engine) :
+Value::Value (bool someBool, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
     SET_LOGIC(&cell, someBool);
@@ -220,7 +220,7 @@ bool Value::isImage() const {
 
 #if REN_CLASSLIB_QT == 1
 
-Image::Image (QImage const & image, Engine * engine) noexcept {
+Image::Image (QImage const & image, Engine * engine) {
     // need to convert if this isn't true
     assert(image.format() == QImage::Format_ARGB32);
 
