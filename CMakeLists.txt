@@ -472,6 +472,18 @@ elseif(RUNTIME STREQUAL "rebol")
 
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-do.o)
 
+    # There is a nasty issue in Bind_Block_Words, for which a pull request
+    # that may (or may not) fix it has been sent:
+    #
+    #     https://github.com/rebol/rebol/pull/234
+    #
+    # The idea of that being "the fix" is tenuous, but it at least allows one
+    # to COPY an object that has been used for binding...a critical feature
+    # for RenCpp.  We use the forked c-frame here until such time as the
+    # solution is integrated.
+
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-frame.o)
+
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
     # http://en.wikipedia.org/wiki/Dynamic_loading

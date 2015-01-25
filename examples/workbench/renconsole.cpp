@@ -476,13 +476,24 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
+    // should be able to .copy() user but it's not working.  Trying to see
+    // why not...
+
+    /*std::experimental::optional<Context> context;
+    if (count() == 0)
+        context = Context {};
+    else {
+        auto it = tabinfo.find(&replFromIndex(0));
+        context = it->second.context.copy(false);
+    }*/
+
     auto emplacement = tabinfo.emplace(std::make_pair(pad,
         TabInfo {
             static_cast<Function>(consoleFunction),
             (count() > 0)
                 ? std::experimental::nullopt
                 : std::experimental::optional<Tag>{Tag {"&Main"}},
-            Context::lookup("USER"), // should be able to .copy(), not working
+            Context::lookup("USER").copy(),
             new WatchList (nullptr)
         }
     ));
@@ -780,9 +791,9 @@ void RenConsole::handleResults(
 
     // For help with debugging context issues (temporary)
 
-/*    auto it = tabinfo.find(evaluatingRepl);
+    /*auto it = tabinfo.find(evaluatingRepl);
     evaluatingRepl->appendText(to_QString(it->second.context));
-    evaluatingRepl->appendText("\n"); */
+    evaluatingRepl->appendText("\n");*/
 
     if (not success) {
         pendingBuffer.clear();
