@@ -779,7 +779,7 @@ namespace internal {
 class Loadable : protected Value {
 private:
     friend class Value;
-#if REN_CLASSLIB_STD == 1
+#if REN_CLASSLIB_QT == 1
     // if we are constructing this Loadable from a QString, we need its
     // utf8 representation...unfortunately there is no QString::data()
     // equivalent.  We must use QString::toUtf8() and hold onto the byte
