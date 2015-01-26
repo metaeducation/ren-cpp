@@ -294,6 +294,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     if (blk[2].isTag()) {
                         auto it = tabinfo.find(&repl());
                         it->second.label = static_cast<Tag>(blk[2]);
+                        return unset;
                     }
                 }
 
