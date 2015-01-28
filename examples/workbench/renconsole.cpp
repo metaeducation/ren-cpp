@@ -959,10 +959,10 @@ std::pair<QString, int> RenConsole::autoComplete(
 
     auto it = tabinfo.find(&repl());
 
-    std::array<Context, 2> contexts = {
+    std::array<Context, 2> contexts = {{
         it->second.context,
         Context::lookup("LIB")
-    };
+    }};
 
     QString stem = text.left(index);
     QString firstCandidate;

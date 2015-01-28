@@ -242,7 +242,7 @@ private:
     // line).
     //
     // Prior to an entry being "committed", those are the only two positions
-    // that are set.  But Once a record is committed for evaluation, the end
+    // that are set.  But once a record is committed for evaluation, the end
     // of buffer position is determined (endPos).  Any whitespace after the
     // cursor's point of commitment has been trimmed.  Typically after that
     // is a newline and the beginning of the command's output (assumed to be
@@ -250,7 +250,7 @@ private:
     //
     // Additionally saved is the selection position and selection anchor at
     // the time the user committed the buffer.  (If these are the same, it
-    // was a point selection and not a range selection).  Thse are stored as
+    // was a point selection and not a range selection).  These are stored as
     // offsets relative to `inputPos`, so (0,0) would mean a collapsed
     // cursor at the very beginning of the input.
     //

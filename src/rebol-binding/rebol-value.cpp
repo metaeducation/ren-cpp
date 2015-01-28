@@ -62,10 +62,10 @@ void Value::finishInit(RenEngineHandle engine) {
 
 Value Value::copy(bool deep) const {
 
-    std::array<internal::Loadable, 2> loadables = {
+    std::array<internal::Loadable, 2> loadables = {{
         deep ? "copy/deep" : "copy",
         *this
-    };
+    }};
 
     Value result (Dont::Initialize);
 
