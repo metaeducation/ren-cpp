@@ -82,7 +82,7 @@ MainWindow::MainWindow() :
             // Slot wants a "timeout" (0 for "until next message")
             statusBar()->showMessage(message, 0);
         },
-        Qt::DirectConnection
+        Qt::QueuedConnection // May be sent from worker thread
     );
 
     connect(
