@@ -142,7 +142,7 @@ QString WatchList::Watcher::getWatchString() const {
 QString WatchList::Watcher::getValueString() const {
     if (error)
         return to_QString(error);
-    return to_QString(runtime("mold/all", value));
+    return to_QString(runtime("mold/all quote", value));
 }
 
 
