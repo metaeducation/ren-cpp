@@ -23,6 +23,7 @@
 
 #include "common.hpp"
 #include "value.hpp"
+#include "blocks.hpp"
 
 
 namespace ren {
@@ -73,7 +74,7 @@ public:
     }
 
     static Value evaluate(
-        std::initializer_list<internal::Loadable> loadables,
+        std::initializer_list<internal::BlockLoadable<Block>> loadables,
         internal::ContextWrapper const & wrapper
     ) {
         return evaluate(

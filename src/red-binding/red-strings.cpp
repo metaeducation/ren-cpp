@@ -64,18 +64,4 @@ AnyString::AnyString(
 
 
 
-///
-/// EXTRACTION
-///
-
-#if REN_CLASSLIB_STD == 1
-
-AnyString::operator std::string() const {
-    return to_string(*this);
-}
-
-#endif
-
-
-
 } // end namespace ren

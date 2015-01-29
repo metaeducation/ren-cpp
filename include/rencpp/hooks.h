@@ -154,6 +154,7 @@ struct RedCell {
      */
     union {
         double dataD;
+        void * dataP;
         RedCellDataII dataII;
     };
 };

@@ -20,10 +20,10 @@ Runtime & runtimeRef = runtime;
 internal::Loadable::Loadable (char const * sourceCstr) :
     Value (Value::Dont::Initialize)
 {
-    cell = RedRuntime::makeCell4(
+    cell = RedRuntime::makeCell2I1P(
         RedRuntime::TYPE_ALIEN,
-        reinterpret_cast<int32_t>(sourceCstr),
-        0, 0
+        0,
+        const_cast<char *>(sourceCstr)
     );
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;

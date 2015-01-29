@@ -9,6 +9,10 @@
 namespace ren {
 
 
+bool Value::isFunction() const {
+    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FUNCTION;
+}
+
 void Function::finishInitSpecial(
     RenEngineHandle engine,
     Block const &, // spec

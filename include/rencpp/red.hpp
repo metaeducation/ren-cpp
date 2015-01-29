@@ -83,7 +83,7 @@ public:
         TYPE_PORT
     };
 
-    inline static RedCell makeCell4(
+    inline static RedCell makeCell4I(
         int32_t header,
         int32_t data1,
         int32_t data2,
@@ -97,7 +97,7 @@ public:
         return result;
     }
 
-    inline static RedCell makeCell3(
+    inline static RedCell makeCell2I1D(
         int32_t header,
         int32_t data1,
         double dataD
@@ -112,6 +112,24 @@ public:
         result.header = header;
         result.data1 = data1;
         result.dataD = dataD;
+        return result;
+    }
+
+    inline static RedCell makeCell2I1P(
+        int32_t header,
+        int32_t data1,
+        void * dataP
+    ) {
+        // checked only at compile time
+        static_assert(
+            sizeof(void *) <= sizeof(int32_t) * 2,
+            "Double is not exactly the size of two int32s"
+        );
+
+        RedCell result;
+        result.header = header;
+        result.data1 = data1;
+        result.dataP = dataP;
         return result;
     }
 

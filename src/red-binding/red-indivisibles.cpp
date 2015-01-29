@@ -24,9 +24,9 @@ bool Value::isUnset() const {
 }
 
 
-Value::Value (unset_t, Engine * engine) :
+Value::Value (unset_t, Engine * engine) noexcept :
     Value (
-        RedRuntime::makeCell4(RedRuntime::TYPE_UNSET, 0, 0, 0),
+        RedRuntime::makeCell4I(RedRuntime::TYPE_UNSET, 0, 0, 0),
         ensureEngine(engine)
     )
 {
@@ -43,9 +43,9 @@ bool Value::isNone() const {
 }
 
 
-Value::Value (none_t, Engine * engine) :
+Value::Value (none_t, Engine * engine) noexcept  :
     Value (
-        RedRuntime::makeCell4(RedRuntime::TYPE_NONE, 0, 0, 0),
+        RedRuntime::makeCell4I(RedRuntime::TYPE_NONE, 0, 0, 0),
         ensureEngine(engine)
     )
 {
@@ -72,9 +72,9 @@ bool Value::isFalse() const {
 }
 
 
-Value::Value (bool b, Engine * engine) :
+Value::Value (bool b, Engine * engine) noexcept :
     Value (
-        RedRuntime::makeCell4(RedRuntime::TYPE_LOGIC, b, 0, 0),
+        RedRuntime::makeCell4I(RedRuntime::TYPE_LOGIC, b, 0, 0),
         ensureEngine(engine)
     )
 {
@@ -116,9 +116,9 @@ bool Value::isInteger() const {
 }
 
 
-Value::Value (int i, Engine * engine) :
+Value::Value (int i, Engine * engine) noexcept :
     Value (
-        RedRuntime::makeCell4(RedRuntime::TYPE_INTEGER, 0, i, 0),
+        RedRuntime::makeCell4I(RedRuntime::TYPE_INTEGER, 0, i, 0),
         ensureEngine(engine)
     )
 {
@@ -140,9 +140,9 @@ bool Value::isFloat() const {
 }
 
 
-Value::Value (double d, Engine * engine) :
+Value::Value (double d, Engine * engine) noexcept :
     Value (
-        RedRuntime::makeCell3(RedRuntime::TYPE_FLOAT, 0, d),
+        RedRuntime::makeCell2I1D(RedRuntime::TYPE_FLOAT, 0, d),
         ensureEngine(engine)
     )
 {

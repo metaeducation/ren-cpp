@@ -192,6 +192,12 @@ public:
         exit(status);
     }
 
+    RenResult ShimCancel() {
+        // Done by setting a signal and then checking in the interpreter
+        // loop in Rebol and doing a longjmp; how will Red do it?
+        throw std::runtime_error("ShimCancel...coming soon...");
+    }
+
     RenResult ShimRaiseError(RedCell const *) {
         throw std::runtime_error("ShimRaiseError...coming soon...");
     }
@@ -287,6 +293,10 @@ RenResult RenFormAsUtf8(
 
 RenResult RenShimExit(int status) {
     return ren::internal::hooks.ShimExit(status);
+}
+
+RenResult RenShimCancel() {
+    return ren::internal::hooks.ShimCancel();
 }
 
 RenResult RenShimRaiseError(RenCell const * error) {
