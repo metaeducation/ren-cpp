@@ -172,7 +172,7 @@ and Ren Garden type:
 OS X
 ----
 
-**Prerequisites
+**Prerequisites**
 
 * [Xcode](https://developer.apple.com/xcode/)    **install via App store**
 * [QT](http://download.qt.io/official_releases/qt/5.4/5.4.0/qt-opensource-mac-x64-clang-5.4.0.dmg)    **download**
@@ -191,7 +191,7 @@ So from a terminal session:
 
 This will be the working directory.  You can give it any name and place it anyway on your hard disk.  Examples that follow will use the above nomenclature.
 
-***Installing QT and CMake
+**Installing QT and CMake**
 
 Double click the on the downloaded QT dmg package and follow the setup wizard steps:
 
@@ -214,7 +214,7 @@ And you should see (something like) this in your working directory.
 
 We now have QT and CMake ready for us to continue.   
 
-**Build rebol and rencpp
+**Build rebol and rencpp**
 
 	git clone https://github.com/rebolsource/r3 rebol
 	git clone https://github.com/hostilefork/rencpp
