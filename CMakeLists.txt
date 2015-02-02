@@ -267,25 +267,8 @@ if(GARDEN AND NOT (CLASSLIB_QT EQUAL 1))
 endif()
 
 
-if((NOT CLASSLIB_STD) OR (CLASSLIB_STD EQUAL 1))
 
-    # Assume we want the standard classlib if none specified
-
-    add_definitions(-DREN_CLASSLIB_STD=1)
-
-elseif(CLASSLIB_STD EQUAL 0)
-
-    add_definitions(-DREN_CLASSLIB_STD=0)
-
-else()
-
-    message(FATAL_ERROR "CLASSLIB_STD must be 0 or 1 if defined")
-
-endif()
-
-
-
-if((NOT CLASSLIB_QT) OR (CLASSLIB_QT EQUAL 0))
+if((NOT DEFINED CLASSLIB_QT) OR (CLASSLIB_QT EQUAL 0))
 
     # Assume we don't want the Qt classlib if none specified
 

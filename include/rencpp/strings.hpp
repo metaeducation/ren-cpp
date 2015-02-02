@@ -43,13 +43,11 @@ protected:
         Engine * engine = nullptr
     );
 
-#if REN_CLASSLIB_STD == 1
     AnyString (
         std::string const & str,
         internal::CellFunction cellfun,
         Engine * engine = nullptr
     );
-#endif
 
 #if REN_CLASSLIB_QT == 1
     AnyString (
@@ -65,9 +63,7 @@ public:
     //
     //     https://github.com/hostilefork/rencpp/issues/6
 
-#if REN_CLASSLIB_STD == 1
     operator std::string () const { return to_string(*this); }
-#endif
 
 #if REN_CLASSLIB_QT == 1
     operator QString () const { return to_QString(*this); }
@@ -129,23 +125,12 @@ public:
     }
 
 public:
-    template <
-        class T =
-#if REN_CLASSLIB_STD == 1
-            std::string
-#elif REN_CLASSLIB_QT == 1
-            QString
-#else
-    static_assert(false, "https://github.com/hostilefork/rencpp/issues/22");
-#endif
-    >
+    template <class T = std::string>
     T spellingOf() const {
         throw std::runtime_error("Unspecialized version of spellingOf called");
     }
 
-#if REN_CLASSLIB_STD == 1
     std::string spellingOf_STD() const;
-#endif
 
 #if REN_CLASSLIB_QT == 1
     QString spellingOf_QT() const;
@@ -163,12 +148,10 @@ public:
 
 // http://stackoverflow.com/a/3052604/211160
 
-#if REN_CLASSLIB_STD == 1
 template<>
 inline std::string AnyString::spellingOf<std::string>() const {
     return spellingOf_STD();
 }
-#endif
 
 #if REN_CLASSLIB_QT == 1
 template<>
@@ -198,12 +181,10 @@ public:
     {
     }
 
-#if REN_CLASSLIB_STD == 1
     explicit AnyString_ (std::string const & str, Engine * engine = nullptr) :
         AnyString (str.c_str(), F, engine)
     {
     }
-#endif
 
 #if REN_CLASSLIB_QT == 1
     explicit AnyString_ (QString const & str, Engine * engine = nullptr) :
@@ -249,12 +230,10 @@ public:
     {
     }
 
-#if REN_CLASSLIB_STD == 1
     String (std::string const & str, Engine * engine = nullptr) :
         AnyString_ (str.c_str(), engine)
     {
     }
-#endif
 
 #if REN_CLASSLIB_QT == 1
     String (QString const & str, Engine * engine = nullptr) :

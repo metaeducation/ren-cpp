@@ -47,30 +47,6 @@
 #endif
 
 
-#if REN_CLASSLIB_STD == 1
-
-    // Although we use C++11 classes internally for data structures, there
-    // is no express requirement to include std::string.  It is a fairly
-    // anemic class in the first place.  So this is the only place we should
-    // be including it.
-
-    #include <string>
-
-#elif REN_CLASSLIB_STD != 0
-
-    static_assert(false, "Invalid value for REN_CLASSLIB_STD, not 0 or 1.");
-
-#endif
-
-
-#if (REN_CLASSLIB_STD == 0) and (REN_CLASSLIB_QT == 0)
-
-    static_assert(false, "Unimplemented feature: no REN_CLASSLIB set"
-        " see https://github.com/hostilefork/rencpp/issues/22");
-
-#endif
-
-
 
 ///
 /// UNREACHABLE CODE MACRO

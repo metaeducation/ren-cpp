@@ -122,8 +122,6 @@ Value Value::copy(bool deep) const {
 /// BASIC STRING CONVERSIONS
 ///
 
-#if REN_CLASSLIB_STD
-
 std::string to_string(Value const & value) {
     const size_t defaultBufLen = 100;
 
@@ -171,8 +169,6 @@ std::string to_string(Value const & value) {
     auto result = std::string(buffer.data(), numBytes);
     return result;
 }
-
-#endif
 
 
 #if REN_CLASSLIB_QT == 1

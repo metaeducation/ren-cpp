@@ -81,7 +81,6 @@ bool Value::isAnyWord() const {
 // On the other hand, this returns just the "spelling" of the symbol, "FOO"
 //
 
-#if REN_CLASSLIB_STD
 std::string AnyWord::spellingOf_STD() const {
     std::string result = to_string(*this);
     if (isWord())
@@ -92,7 +91,6 @@ std::string AnyWord::spellingOf_STD() const {
         return result.erase(result.length() - 1, 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
-#endif
 
 
 #if REN_CLASSLIB_QT

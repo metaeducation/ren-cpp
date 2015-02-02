@@ -92,8 +92,6 @@ AnyString::AnyString (
 }
 
 
-#if REN_CLASSLIB_STD == 1
-
 AnyString::AnyString (
     std::string const & spelling,
     internal::CellFunction cellfun,
@@ -103,7 +101,6 @@ AnyString::AnyString (
 {
 }
 
-#endif
 
 
 
@@ -160,9 +157,6 @@ AnyString::AnyString (
 /// EXTRACTION
 ///
 
-
-#if REN_CLASSLIB_STD
-
 std::string AnyString::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
     if (isString() /* or isUrl() or isEmail() or isFile() */)
@@ -173,9 +167,6 @@ std::string AnyString::spellingOf_STD() const {
     }
     throw std::runtime_error {"Invalid String Type"};
 }
-
-#endif
-
 
 
 #if REN_CLASSLIB_QT

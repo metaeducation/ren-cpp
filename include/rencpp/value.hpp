@@ -141,9 +141,7 @@ public:
 // `using std::to_string;` and then use the unqualified `to_string(...)`,
 // it will notice that the argument is a ren:: type and pick these versions
 
-#if REN_CLASSLIB_STD == 1
 std::string to_string (Value const & value);
-#endif
 
 #if REN_CLASSLIB_QT == 1
 QString to_QString(Value const & value);
@@ -564,9 +562,7 @@ public:
 
 
 public:
-#if REN_CLASSLIB_STD == 1
     friend std::string to_string (Value const & value);
-#endif
 
 #if REN_CLASSLIB_QT == 1
     friend QString to_QString(Value const & value);
@@ -798,9 +794,7 @@ public:
     // to getting a ren::String value from it...while const char * continues
     // to be loaded as a run of source.
 
-#if REN_CLASSLIB_STD == 1
     Loadable (std::string const & source);
-#endif
 
 #if REN_CLASSLIB_QT == 1
     Loadable (QString const & source);

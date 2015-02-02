@@ -52,8 +52,6 @@ protected:
 
 
 protected:
-
-#if REN_CLASSLIB_STD == 1
     explicit AnyWord (
         std::string const & str,
         internal::CellFunction cellfun,
@@ -71,7 +69,6 @@ protected:
         AnyWord (str.c_str(), cellfun, nullptr, engine)
     {
     }
-#endif
 
 
 #if REN_CLASSLIB_QT == 1
@@ -83,23 +80,12 @@ protected:
 #endif
 
 public:
-    template <
-        class T =
-#if REN_CLASSLIB_STD == 1
-            std::string
-#elif REN_CLASSLIB_QT
-            QString
-#else
-    static_assert(false, "https://github.com/hostilefork/rencpp/issues/22");
-#endif
-    >
+    template <class T = std::string>
     T spellingOf() const {
         throw std::runtime_error("Unspecialized version of spellingOf called");
     }
 
-#if REN_CLASSLIB_STD == 1
     std::string spellingOf_STD() const;
-#endif
 
 #if REN_CLASSLIB_QT == 1
     QString spellingOf_QT() const;
@@ -112,12 +98,10 @@ public:
 
 // http://stackoverflow.com/a/3052604/211160
 
-#if REN_CLASSLIB_STD == 1
 template<>
 inline std::string AnyWord::spellingOf<std::string>() const {
     return spellingOf_STD();
 }
-#endif
 
 #if REN_CLASSLIB_QT == 1
 template<>
@@ -153,7 +137,6 @@ public:
     {
     }
 
-#if REN_CLASSLIB_STD == 1
     explicit AnyWord_ (std::string const & str, Engine * engine = nullptr) :
         AnyWord (str.c_str(), F, nullptr, engine)
     {
@@ -163,7 +146,6 @@ public:
         AnyWord (str.c_str(), F, &context, nullptr)
     {
     }
-#endif
 
 #if REN_CLASSLIB_QT == 1
     explicit AnyWord_ (QString const & str, Engine * engine = nullptr) :
