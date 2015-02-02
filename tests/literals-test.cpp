@@ -26,6 +26,19 @@ TEST_CASE("literals construction", "[rebol] [literals]")
     {
         Value value = false;
         CHECK(value.isLogic());
+
+        // https://github.com/hostilefork/rencpp/issues/24
+        // No way ATM to test the "shouldn't compile" cases
+
+        auto logical = [](Logic const &) {};
+
+        logical(true); // should work
+        // logical("hello"); // shouldn't compile (!)
+        // logical(15); // shouldn't compile (!)
+
+        logical(Logic {true}); // should work
+        // logical(Logic {"hello"}); // it's o.k. this doesn't compile
+        // logical(Logic {15}); // it's o.k. this doesn't compile
     }
 
     SECTION("integer")
