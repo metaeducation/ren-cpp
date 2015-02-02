@@ -19,7 +19,6 @@
 // See http://ren-garden.metaeducation.com for more information on this project
 //
 
-#include <array>
 #include <vector>
 
 #include "optional/optional.hpp"
@@ -231,8 +230,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     if (runtime("find words-of quote", arg, "/meta"))
                         runtime(Path {arg, "meta"}, LitWord {"banner"});
 
-                    auto it = tabinfo.find(&repl());
-                    it->second.dialect = static_cast<Function>(arg);
+                    getTabInfo(repl()).dialect = static_cast<Function>(arg);
 
                     return unset;
                 }
@@ -307,8 +305,7 @@ RenConsole::RenConsole (QWidget * parent) :
 
                 if (blk[1].isEqualTo<Word>("tab")) {
                     if (blk[2].isTag()) {
-                        auto it = tabinfo.find(&repl());
-                        it->second.label = static_cast<Tag>(blk[2]);
+                        getTabInfo(repl()).label = static_cast<Tag>(blk[2]);
                         return unset;
                     }
                 }
@@ -347,11 +344,10 @@ RenConsole::RenConsole (QWidget * parent) :
 
         [this](Value const & arg, Value const & useResult) -> Value {
 
-            auto it = tabinfo.find(&repl());
-            WatchList * watchList = it->second.watchList;
+            WatchList & watchList = *getTabInfo(repl()).watchList;
 
             if (not arg.isBlock())
-                return watchList->watchDialect(arg, not useResult, nullopt);
+                return watchList.watchDialect(arg, not useResult, nullopt);
 
             Block aggregate {};
 
@@ -378,7 +374,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     // but y doesn't?
 
                     Value watchResult
-                        = watchList->watchDialect(
+                        = watchList.watchDialect(
                             item, nextRecalculates, nextLabel
                         );
                     nextRecalculates = true;
@@ -494,8 +490,7 @@ RenConsole::RenConsole (QWidget * parent) :
     connect(
         this, &QTabWidget::currentChanged,
         [this](int) {
-            auto it = tabinfo.find(&repl());
-            emit switchWatchList(it->second.watchList);
+            emit switchWatchList(getTabInfo(repl()).watchList);
         }
     );
 
@@ -521,7 +516,7 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
-    auto emplacement = tabinfo.emplace(std::make_pair(pad,
+    auto emplacement = tabinfos.emplace(std::make_pair(pad,
         TabInfo {
             static_cast<Function>(consoleFunction),
             (count() > 0) ? nullopt : optional<Tag>{Tag {"&Main"}},
@@ -564,7 +559,7 @@ void RenConsole::createNewTab() {
 
     setCurrentWidget(pad);
 
-    evaluate("console :console", false);
+    evaluate(*pad, "console :console", false);
 }
 
 
@@ -581,12 +576,12 @@ void RenConsole::tryCloseTab(int index) {
         return;
     }
 
-    auto it = tabinfo.find(pad);
+    auto it = tabinfos.find(pad);
 
     removeTab(index);
     delete pad;
     delete it->second.watchList;
-    tabinfo.erase(it);
+    tabinfos.erase(it);
 
     repl().setFocus();
 }
@@ -594,8 +589,7 @@ void RenConsole::tryCloseTab(int index) {
 
 void RenConsole::updateTabLabels() {
     for (int index = 0; index < count(); index++) {
-        auto it = tabinfo.find(&replFromIndex(index));
-        auto label = it->second.label;
+        auto & label = getTabInfo(replFromIndex(index)).label;
 
         // Use a number (starting at 1) followed by the label (if there is one)
 
@@ -712,7 +706,7 @@ void RenConsole::printBanner() {
 // from RenCpp.
 //
 
-bool RenConsole::isReadyToModify(QKeyEvent * event) {
+bool RenConsole::isReadyToModify(ReplPad & pad, QKeyEvent * event) {
 
     // No modifying operations while you are running in the console.  You
     // can only request to cancel.  For issues tied to canceling semantics
@@ -722,7 +716,7 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
 
     if (evaluatingRepl) {
         if (event->key() == Qt::Key_Escape) {
-            if (evaluatingRepl == &repl())
+            if (evaluatingRepl == &pad)
                 runtime.cancel();
             else
                 emit reportStatus(
@@ -742,72 +736,60 @@ bool RenConsole::isReadyToModify(QKeyEvent * event) {
 }
 
 
-void RenConsole::evaluate(
-    QString const & input,
-    bool meta
-) {
-    static int count = 0;
+void RenConsole::evaluate(ReplPad & pad, QString const & input, bool meta) {
+    Engine::runFinder().setOutputStream(pad.fakeOut);
+    Engine::runFinder().setInputStream(pad.fakeIn);
 
-    evaluatingRepl = &repl();
-
-    Engine::runFinder().setOutputStream(evaluatingRepl->fakeOut);
-    Engine::runFinder().setInputStream(evaluatingRepl->fakeIn);
-
-    auto it = tabinfo.find(evaluatingRepl);
+    auto tabinfo = getTabInfo(pad);
 
     // Allow the output text to be a different format
 
-    evaluatingRepl->pushFormat(evaluatingRepl->outputFormat);
+    pad.pushFormat(pad.outputFormat);
 
-    emit operate(
-        it->second.dialect,
-        it->second.context,
-        input,
-        meta
-    );
+    evaluatingRepl = &pad;
 
-    count++;
+    emit operate(tabinfo.dialect, tabinfo.context, input, meta);
 }
 
 
-void RenConsole::escape() {
+void RenConsole::escape(ReplPad & pad) {
     if (evaluatingRepl) {
 
         // For issues tied to canceling semantics in RenCpp, see:
         //
         //     https://github.com/hostilefork/rencpp/issues/19
 
-        if (evaluatingRepl == &repl())
+        if (evaluatingRepl == &pad)
             runtime.cancel();
         else
             emit reportStatus("Current tab is not evaluating to be canceled.");
         return;
     }
 
-    auto it = tabinfo.find(&repl());
-    if (not it->second.dialect.isEqualTo(consoleFunction)) {
+    if (not getTabInfo(pad).dialect.isEqualTo(consoleFunction)) {
 
         // give banner opportunity or other dialect switch code, which would
         // not be able to run if we just said dialect = consoleFunction
 
         runtime(consoleFunction, "quote", consoleFunction);
 
-        repl().appendText("\n\n");
-        repl().appendNewPrompt();
+        pad.appendText("\n\n");
+        pad.appendNewPrompt();
     }
 }
 
 
-QString RenConsole::getPromptString() {
+QString RenConsole::getPromptString(ReplPad & pad) {
     // If a function has a /meta refinement, we will ask it via the
     // meta protocol what it wants its prompt to be.
 
     QString customPrompt;
 
-    auto it = tabinfo.find(&repl());
-    if (runtime("find words-of quote", it->second.dialect, "/meta"))
+    auto dialect = getTabInfo(pad).dialect;
+
+    if (runtime("find words-of quote", dialect, "/meta"))
         customPrompt = to_QString(runtime(
-            Path {it->second.dialect, "meta"}, LitWord {"prompt"}
+            Path {dialect, "meta"}, LitWord {"prompt"}
         ));
     else
         customPrompt = "?";
@@ -993,18 +975,14 @@ std::pair<QString, int> RenConsole::autoComplete(
     QString const & text,
     int index,
     bool backward
-)
-const {
+) {
     // Currently we use the knowledge that all contexts are inheriting from
     // LIB, so we search this tab's context and then fall back upon LIB
-    // for other finding.  But we need better lookup than that (e.g.
-    // contextual, noticing if it's a path and doing some sort of eval
-    // to see if we're picking outside of an object).
-
-    auto it = tabinfo.find(&repl());
+    // for other finding.  DocKimbel has suggested that Red's contexts
+    // may not have any complex hierarchy, so more understanding is needed
 
     Block contexts {
-        it->second.context,
+        getTabInfo(repl()).context,
         Context::lookup("LIB")
     };
 

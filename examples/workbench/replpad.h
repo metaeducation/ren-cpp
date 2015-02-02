@@ -73,7 +73,7 @@ public:
 
     virtual std::pair<QString, int> autoComplete(
         QString const & token, int index, bool backwards
-    ) const = 0;
+    ) = 0;
 
     virtual ~IReplPadSyntaxer () {}
 };
@@ -93,10 +93,10 @@ public:
 
 class IReplPadHooks {
 public:
-    virtual bool isReadyToModify(QKeyEvent * event) = 0;
-    virtual QString getPromptString() = 0;
-    virtual void evaluate(QString const & input, bool meta) = 0;
-    virtual void escape() = 0;
+    virtual bool isReadyToModify(ReplPad & pad, QKeyEvent * event) = 0;
+    virtual QString getPromptString(ReplPad & pad) = 0;
+    virtual void evaluate(ReplPad & pad, QString const & input, bool meta) = 0;
+    virtual void escape(ReplPad & pad) = 0;
 
     virtual ~IReplPadHooks () {}
 };

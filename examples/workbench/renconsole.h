@@ -55,7 +55,7 @@ private:
 
     std::pair<QString, int> autoComplete(
         QString const & text, int index, bool backwards
-    ) const override;
+    ) override;
 
 private:
     ren::Context helpers;
@@ -84,13 +84,13 @@ private:
         WatchList * watchList;
     };
 
-    std::unordered_map<ReplPad const *, TabInfo> tabinfo;
+    std::unordered_map<ReplPad const *, TabInfo> tabinfos;
 
-public:
-    WatchList & watchList() {
-        auto it = tabinfo.find(&repl());
-        return *(it->second.watchList);
+    TabInfo & getTabInfo(ReplPad const & pad) {
+        auto it = tabinfos.find(&pad);
+        return it->second;
     }
+
 
 signals:
     void switchWatchList(WatchList * watchList);
@@ -102,10 +102,10 @@ signals:
 protected:
     bool bannerPrinted;
     void printBanner();
-    QString getPromptString() override;
+    QString getPromptString(ReplPad & pad) override;
 
 protected:
-    bool isReadyToModify(QKeyEvent * event) override;
+    bool isReadyToModify(ReplPad & pad, QKeyEvent * event) override;
 
 private:
     ReplPad * evaluatingRepl;
@@ -115,7 +115,7 @@ private:
 private:
     ren::Value consoleFunction;
 
-    void escape() override;
+    void escape(ReplPad & pad) override;
 
 private:
     // Experimental facility for writing the shell's output to a string
@@ -146,7 +146,7 @@ signals:
     );
     void finishedEvaluation();
 protected:
-    void evaluate(QString const & input, bool meta) override;
+    void evaluate(ReplPad & pad, QString const & input, bool meta) override;
 
     // Primitive "package management", which is just an experiment to get
     // some basic caching and updating started (a test case for figuring out

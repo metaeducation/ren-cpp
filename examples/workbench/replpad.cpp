@@ -583,7 +583,7 @@ void ReplPad::rewritePrompt() {
         ? promptFormatMeta
         : promptFormatNormal;
 
-    cursor.insertText(hooks.getPromptString() + ">>", promptFormat);
+    cursor.insertText(hooks.getPromptString(*this) + ">>", promptFormat);
 
     QTextCharFormat inputFormat = entry.meta
         ? inputFormatMeta
@@ -901,7 +901,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // asking to do some kind of modification when there may be an evaluation
     // running on another thread.
 
-    if (not hooks.isReadyToModify(event)) {
+    if (not hooks.isReadyToModify(*this, event)) {
         followLatestOutput();
         return;
     }
@@ -1102,7 +1102,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         if (not escapeTimer.hasExpired(
             qApp->styleHints()->mouseDoubleClickInterval()
         )) {
-            hooks.escape();
+            hooks.escape(*this);
             return;
         }
 
@@ -1252,7 +1252,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             else {
                 followLatestOutput();
                 // implementation may (does) queue...
-                hooks.evaluate(input, entry.meta);
+                hooks.evaluate(*this, input, entry.meta);
             }
 
             return;
