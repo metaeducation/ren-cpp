@@ -71,6 +71,10 @@ AnyString::AnyString (
         source += spelling;
         source += '>';
     }
+    else if (isFilename()) {
+        source += "%";
+        source += spelling;
+    }
     else
         UNREACHABLE_CODE();
 
