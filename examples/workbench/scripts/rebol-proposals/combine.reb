@@ -1,40 +1,49 @@
 Rebol [
-    Title: {Combine}
+    Title: {COMBINE dialect}
 
     Description: {
-       The COMBINE dialect is intended to assist with the common task of creating
-       a merged string series out of component Rebol values.  Its
-       goal is to be friendlier than REJOIN, and to hopefully become the
-       behavior backing PRINT.
+        The COMBINE dialect is intended to assist with the common task of
+        creating a merged string series out of component Rebol values.  Its
+        goal is to be friendlier than REJOIN...and to be the engine that
+        powers the PRINT primitive.
 
-       Currently in a proposal period, and there are questions about whether the
-       same dialect can be meaningful for blocks or not.
+        Currently in a proposal period, and there are questions about whether
+        the same dialect can be meaningful for blocks or not.
 
            http://blog.hostilefork.com/combine-alternative-rebol-red-rejoin/ 
+
+        While the name COMBINE is pretty good, it does have the problem of
+        getting easily mixed up with COMPOSE.  Having made the slip-up
+        several times, the gates aren't closed on a name which wouldn't have
+        that propery.
     }
 ]
 
 
-combine: func [
+combine: function [
     block [block!]
+
     /with "Add delimiter between values (will be COMBINEd if a block)"
         delimiter
-    /into
+
+    /into "avoid intermediate by combining into existing string buffer"
         out [any-string!]
-    /local
-        needs-delimiter pre-delimit value temp
-    ; hidden way of passing depth after /local, review...
-    /level depth
+
+    /part "Limit the amount of the input block(s) used in combination"
+        limit [integer! block!] ;; REVIEW: add pair?
+
+    /level "Starting level to report when using /with a function"
+        depth [integer!]
 ] [
-    ;-- No good heuristic for string size yet
     unless into [
-        out: make string! 10
+        out: make string! 10 ;; No good heuristic for string size yet
     ]
 
     unless any-function? :delimiter [
         unless block? delimiter [
             delimiter: reduce [delimiter]
         ]
+
         delimiter: func [depth [integer!]] compose/only/deep [
             combine (delimiter)
         ]
@@ -44,10 +53,19 @@ combine: func [
         depth: 1
     ]
 
+    if all [
+        part 
+        block? limit
+    ] [
+        unless (head limit) = (head block) [
+            do make error! {/PART limit series must be same as input series}
+        ]
+    ]
+
     needs-delimiter: false
     pre-delimit: does [
         either needs-delimiter [
-            set/any 'temp delimiter depth
+            set/any quote temp: delimiter depth
             if all [
                 value? 'temp
                 (not none? temp) or (block? out)
@@ -59,41 +77,100 @@ combine: func [
         ]
     ]
 
-    ;-- Do evaluation of the block until a non-none evaluation result
-    ;-- is found... or the end of the input is reached.
-    while [not tail? block] [
-        set/any 'value do/next block 'block
 
-        ;-- Blocks are substituted in evaluation, like the recursive nature
-        ;-- of parse rules.
+    ; Do evaluation of the block until a non-none evaluation result
+    ; is found... the limit is hit...or end of the input is reached.
+
+    original: block
+
+    while [
+        all [
+            not tail? block
+            any [
+                none? part
+                either integer? limit [
+                    0 <= limit: limit - 1
+                ] [
+                    block <> limit
+                ]
+            ]
+        ] 
+    ] [
+        ; Note: DO/NEXT should be able to take `quote block:` in order for
+        ; FUNCTION to pick it up as a local.  It does not currently, and
+        ; in this case that is okay since block is a parameter and won't
+        ; leak as a global
+ 
+        set/any quote value: do/next block 'block
+
+
+        ; Major point of review for using a /PART-style refinement on
+        ; a DO-like evaluator...what if your /PART location does not
+        ; land on an evaluation boundary?  How would you stop at half
+        ; an addition, e.g.:
+        ;
+        ;     do/part [1 + 2 3 + 4] 2
+        ;
+        ; A little sad to rule it out when many scenarios do have enough
+        ; control to make use of what they need.  Restricting /PART to
+        ; mechanical cases where they "can't fail" only causes people
+        ; to use a COPY/PART and then a DO (or COMPOSE) on the extracted
+        ; portion...often getting errors anyway.
+        ;
+        ; (One unusual case where a COPY/PART can avoid errors that a
+        ; COMPOSE/PART wouldn't is when they remove things off the boundary
+        ; that are infix operators...which can extend an evaluation
+        ; when having it missing would terminate it cleanly.  This is more
+        ; one of the many cases where permitting infix screws something
+        ; up vs. an indictment of COMPOSE/PART.)
+        ;
+        ; In any case, as the first case of setting precedent for an
+        ; evaluative /PART, the test behavior will be to see if you
+        ; passed a point or nailed it.  TBD...
+
+
+        ; Blocks are substituted in evaluation, like the recursive nature
+        ; of parse rules.
 
         case [
-            unset? :value [
-                ;-- Ignore unset! (precedent: any, all, compose)
-            ]
+            ; Ignore unset! (precedent: any, all, compose)
+
+            unset? :value []
+
+
+            ; Give no meaning to if the evaluation produces a function
+            ; value as a product.
 
             any-function? :value [
                 do make error! "Evaluation in COMBINE gave function/closure"
             ]
+
+
+            ; Recursing on blocks is foundational to COMBINE and allowing
+            ; nested sequences; like building nested rules in PARSE
 
             block? value [
                 pre-delimit
                 out: combine/with/into/level value :delimiter out depth + 1
             ]
 
+
             ; This is an idea that was not met with much enthusiasm, which was
             ; to allow COMBINE ['X] to mean the same as COMBINE [MOLD X]
-            ;any [
-            ;    word? value
-            ;    path? value
-            ;] [
-            ;    pre-delimit ;-- overwrites temp!
-            ;    temp: get value
-            ;    out: append out (mold :temp)
-            ;]
+            
+            UNSET? ;; comment hack
+            any [
+                word? value
+                path? value
+            ] [
+                pre-delimit ;-- overwrites temp!
+                temp: get value
+                out: append out (mold :temp)
+            ]
 
-            ; It's a controversial question as to whether or not a literal
-            ; word should mold out as its spelling.  The idea that words
+
+            ; It's a controversial question as to whether or not ANY-WORD!
+            ; should casually print out as its spelling.  The idea that words
             ; don't cover the full spectrum of strings is something that
             ; got stuck in my head that words shouldn't "leak".  So I was
             ; very surprised to see that they did, and if you used a word
@@ -113,9 +190,10 @@ combine: func [
             any [
                 word? value
             ] [
-                pre-delimit ;-- overwrites temp!
+                pre-delimit ;; overwrites temp!
                 out: append out (to-string value)
             ]
+
 
             ; Another idea that seemed good at first but later came back not
             ; seeming so coherent...use of an otherwise dead type to 
@@ -129,45 +207,56 @@ combine: func [
             ; worth implementing another way so that the delimiter-generating
             ; function can have a first crack at processing values?
 
-            ;refinement? value [
-            ;    case [
-            ;        value = /+ [
-            ;            needs-delimiter: false
-            ;        ]
-            ;
-            ;        true [
-            ;            do make error! "COMBINE refinement other than /+ used"
-            ;        ]
-            ;    ]
-            ;]
-
-            any-block? value [
-                ;-- all other block types as *results* of evaluations throw
-                ;-- errors for the moment.  (It's legal to use PAREN! in the
-                ;-- COMBINE, but a function invocation that returns a PAREN!
-                ;-- will not recursively iterate the way BLOCK! does) 
-                do make error! "Evaluation in COMBINE gave non-block! or path! block"
+            UNSET?
+            refinement? value [
+                case [
+                    value = /+ [
+                        needs-delimiter: false
+                    ]
+            
+                    true [
+                        do make error! "COMBINE refinement other than /+ used"
+                    ]
+                ]
             ]
 
+
+            ; all other block types as *results* of evaluations throw
+            ; errors for the moment.  (It's legal to use PAREN! in the
+            ; COMBINE, but a function invocation that returns a PAREN!
+            ; will not recursively iterate the way BLOCK! does) 
+
+            any-block? value [
+                do make error! {
+                    Evaluation in COMBINE gave non-block! or path! block
+                }
+            ]
+
+
+            ; currently this throws errors on words if that's what an
+            ; *evaluation* produces.  Theoretically these could be
+            ; given behaviors in the dialect, but the potential for
+            ; bugs probably outweighs the value (of converting implicitly
+            ; to a string or trying to run an evaluation of a non-block)
+
             any-word? value [
-                ;-- currently this throws errors on words if that's what an
-                ;-- *evaluation* produces.  Theoretically these could be
-                ;-- given behaviors in the dialect, but the potential for
-                ;-- bugs probably outweighs the value (of converting implicitly
-                ;-- to a string or trying to run an evaluation of a non-block)
                 do make error! "Evaluation in COMBINE gave symbolic word"
             ]
 
-            none? value [
-                ;-- Skip all nones
-            ]
+
+            ; Skip all nones
+
+            none? value []
+
+
+            ; If all else fails, then FORM the value
 
             true [
                 pre-delimit
-                out: append out (system/contexts/lib/form :value)
+                out: append out system/contexts/lib/form :value
             ]
         ]
     ]
-    either into [out] [head out]
-]
 
+    return either into [out] [head out]
+]

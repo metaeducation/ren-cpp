@@ -6,7 +6,12 @@ Rebol [
     }
 ]
 
-; foreach is bad, but is "each" literate enough vs. for-each?
+; foreach is bad as a name but is "each" literate enough vs. for-each?  Seems
+; to be pretty good.  A non-destructive /REVERSE is a very important option
+; and needs to be added, but it's not possible to write good non-native
+; wrappers due to a blocking bug ATM:
+;
+;    http://issue.cc/r3/539
 
 each: :foreach
 foreach: does [do make error! "foreach is now each"]

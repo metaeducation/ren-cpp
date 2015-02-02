@@ -4,7 +4,27 @@ Rebol [
 
 prin: does [make error! "prin is now accomplished via print/only"]
 
-print: function [value [any-type!] /only /with delimiter] [
+print: function [
+    {Print a value to standard output, using COMBINE dialect if a block}
+
+    value [any-type!] {The value to print}
+
+    /only {Print the value with no spaces if COMBINEd, and no newline added}
+
+    /with {Use a delimiter or delimiter function (will be COMBINEd if block)}
+        delimiter
+
+    ; Having a /PART refinement is nice if you just want to do the combine
+    ; on some sub-portion of a block and don't want to copy, but it's a
+    ; slippery slope toward adding a /PART to every operation that is
+    ; used on a series that defaults to going to its end (another almost
+    ; always useful one is /REVERSE).  In the absence of an iterator
+    ; abstraction, the question is how many routines actually need such
+    ; a refinement vs. telling people to COPY.  Review.
+
+    /part {Limits to a given length or position}
+        limit [integer! series!] ;; COMBINE doesn't implement pair! yet
+] [
     prin: :system/contexts/lib/prin
     case [
         unset? :value [
@@ -12,7 +32,11 @@ print: function [value [any-type!] /only /with delimiter] [
         ]
 
         block? value [
-            prin combine/with value (case [with [delimiter] only [none] true [space]])
+            prin combine/with/part value (
+                case [with [delimiter] only [none] true [space]]
+            ) (
+                either part [limit] [tail value]
+            )
         ]
 
         string? value [
