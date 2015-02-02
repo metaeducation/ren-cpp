@@ -22,10 +22,13 @@
 #include <array>
 #include <vector>
 
+#include "optional/optional.hpp"
+using std::experimental::optional;
+using std::experimental::nullopt;
+
 #include <QtWidgets>
 
 #include "rencpp/ren.hpp"
-
 using namespace ren;
 
 #include "renconsole.h"
@@ -102,6 +105,12 @@ public slots:
             // Let returning none for the error mean cancellation
             result = none;
         }
+        catch (std::exception const & e) {
+            // Some C++ std::exception thrown...
+            char const * what = e.what();
+            assert(false);
+            throw;
+        }
         catch (...) {
             // some other C++ error was thrown (shouldn't be possible)
             assert(false);
@@ -133,6 +142,8 @@ signals:
 
 RenConsole::RenConsole (QWidget * parent) :
     QTabWidget (parent),
+    helpers (),
+    shell (helpers), // helpers not loaded yet, but context exists
     bannerPrinted (false),
     evaluatingRepl (nullptr),
     target (none)
@@ -280,13 +291,16 @@ RenConsole::RenConsole (QWidget * parent) :
                     // location of the anchor point for the desired selection
                     // and the location of the end point
 
-                    auto triple = static_cast<Block>(runtime(
-                        "ren-garden/console-buffer-helper", blk[2]
+                    auto triple = static_cast<Block>(helpers(
+                        "console-buffer-helper", blk[2]
                     ));
 
+                    // Helpers speak Rebol conventions by design, so we have
+                    // to subtract from the 1-based index for C++ indexing
+
                     pendingBuffer = static_cast<String>(triple[1]);
-                    pendingPosition = static_cast<Integer>(triple[2]);
-                    pendingAnchor = static_cast<Integer>(triple[3]);
+                    pendingPosition = static_cast<Integer>(triple[2]) - 1;
+                    pendingAnchor = static_cast<Integer>(triple[3]) - 1;
 
                     return unset;
                 }
@@ -337,14 +351,11 @@ RenConsole::RenConsole (QWidget * parent) :
             WatchList * watchList = it->second.watchList;
 
             if (not arg.isBlock())
-                return watchList->watchDialect(
-                    arg, not useResult, std::experimental::nullopt
-                );
-
-            std::experimental::optional<Tag> nextLabel;
+                return watchList->watchDialect(arg, not useResult, nullopt);
 
             Block aggregate {};
 
+            optional<Tag> nextLabel;
             bool nextRecalculates = true;
 
             for (Value item : static_cast<Block>(arg)) {
@@ -371,7 +382,7 @@ RenConsole::RenConsole (QWidget * parent) :
                             item, nextRecalculates, nextLabel
                         );
                     nextRecalculates = true;
-                    nextLabel = std::experimental::nullopt;
+                    nextLabel = nullopt;
                     if (not watchResult.isUnset())
                         runtime("append", aggregate, watchResult);
                 }
@@ -391,28 +402,57 @@ RenConsole::RenConsole (QWidget * parent) :
     );
 
 
-    // Load the the ren-garden console helpers for syntax highlight
-    // or other such features.
+    // Load Rebol code from the helpers module.  See the description of the
+    // motivations and explations in:
+    //
+    //     /scripts/helpers/README.md
 
-    helpers = QSharedPointer<RenPackage>::create(
+    helpersPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
-        ":/scripts/",
+        ":/scripts/helpers/",
 
         // URL prefix...should we assume updating the helpers could break Ren
         // Garden and not offer to update?
         "https://raw.githubusercontent.com/hostilefork/rencpp"
-        "/develop/examples/workbench/scripts/",
+        "/develop/examples/workbench/scripts/helpers",
 
         Block {
-            "%ren-garden.reb"
-        }
+            "%shell.reb",
+            "%edit-buffer.reb",
+            "%autocomplete.reb"
+        },
+
+        helpers // context (module?) to load the bits of code into
     );
+
+
+    // This is a placeholder for a test of a question of "what good might Ren
+    // data be without an evaluator, and to force dealing with the question.
+    // The package lists themselves are candidates for the question; to load
+    // and process them as data without binding them into a context or
+    // assigning them to variables.
+
+    rendataPackage = QSharedPointer<RenPackage>::create(
+        // resource file prefix
+        ":/rendata/",
+
+        // URL prefix...
+        "https://raw.githubusercontent.com/hostilefork/rencpp"
+        "/develop/examples/workbench/rendata",
+
+        Block {
+            "%copyright.ren"
+        },
+
+        nullopt // do not load into any context, just data
+    );
+
 
 
     // Incubator routines for addressing as many design questions as
     // possible without modifying the Rebol code itself
 
-    proposals = QSharedPointer<RenPackage>::create(
+    proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
         ":/scripts/rebol-proposals/",
 
@@ -421,6 +461,7 @@ RenConsole::RenConsole (QWidget * parent) :
         "/develop/examples/workbench/scripts/rebol-proposals/",
 
         Block {
+            "%bitwise.reb",
             "%combine.reb",
             "%while-until.reb",
             "%print-only-with.reb",
@@ -433,7 +474,9 @@ RenConsole::RenConsole (QWidget * parent) :
             "%ls-cd-dt-short-names.reb",
             "%for-range-dialect.reb",
             "%object-context.reb"
-        }
+        },
+
+        Context::lookup("USER") // we put these in USER
     );
 
     // The beginnings of a test...
@@ -478,23 +521,10 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
-    // should be able to .copy() user but it's not working.  Trying to see
-    // why not...
-
-    /*std::experimental::optional<Context> context;
-    if (count() == 0)
-        context = Context {};
-    else {
-        auto it = tabinfo.find(&replFromIndex(0));
-        context = it->second.context.copy(false);
-    }*/
-
     auto emplacement = tabinfo.emplace(std::make_pair(pad,
         TabInfo {
             static_cast<Function>(consoleFunction),
-            (count() > 0)
-                ? std::experimental::nullopt
-                : std::experimental::optional<Tag>{Tag {"&Main"}},
+            (count() > 0) ? nullopt : optional<Tag>{Tag {"&Main"}},
             Context::lookup("USER").copy(),
             new WatchList (nullptr)
         }
@@ -639,13 +669,30 @@ void RenConsole::printBanner() {
 
     repl().appendText("\n", true);
 
-    // For the sake of demonstration, get the Ren Garden copyright value
-    // out of a context set up in the resource file in ren-garden.reb
+    // Here is an investigation into using .REN files in a C++ program, via
+    // a resource file which presumes no runtime, and uses RenCpp in a
+    // sort of "JSON parser" way.  Very simple test to get that question
+    // started--get the Ren Garden copyright notice.  The file says:
+    //
+    //      Ren [
+    //         ...
+    //      ]
+    //
+    //      copyright: {...}
+    //
+    // But since it's not a Rebol header, when Rebol LOADs it we get the
+    // header and the data as is.  We have to skip through the structure
+    // ourselves to get what we want.
 
-    repl().appendHtml(
-        static_cast<String>(runtime("ren-garden/copyright")),
-        true
+    auto copyrightData = static_cast<Block>(
+        rendataPackage->getData("copyright.ren")
     );
+
+    assert(copyrightData[1].isEqualTo<Word>("Ren"));
+    assert(copyrightData[2].isBlock());
+    assert(copyrightData[3].isEqualTo<SetWord>("copyright"));
+
+    repl().appendHtml(static_cast<String>(copyrightData[4]), true);
 
     repl().appendText("\n", true);
 
@@ -943,91 +990,54 @@ std::pair<int, int> RenConsole::rangeForWholeToken(
 
 
 std::pair<QString, int> RenConsole::autoComplete(
-    QString const & text, int index, bool backwards
-) const {
-    // TBD: Reverse iterators to run this process backwards
-    // http://stackoverflow.com/questions/8542591/
-    if (backwards)
-        throw std::runtime_error("Backwards autoComplete traversal not written yet.");
-
+    QString const & text,
+    int index,
+    bool backward
+)
+const {
     // Currently we use the knowledge that all contexts are inheriting from
     // LIB, so we search this tab's context and then fall back upon LIB
     // for other finding.  But we need better lookup than that (e.g.
     // contextual, noticing if it's a path and doing some sort of eval
-    // to see if we're picking outside of an object).  Really this should
-    // be calling through the runtime for the whole thing, but starting
-    // it as C++ to define the interface.
+    // to see if we're picking outside of an object).
 
     auto it = tabinfo.find(&repl());
 
-    std::array<Context, 2> contexts = {{
+    Block contexts {
         it->second.context,
         Context::lookup("LIB")
-    }};
+    };
 
-    QString stem = text.left(index);
-    QString firstCandidate;
-    QString candidate;
-    bool takeNext = false;
+    optional<Block> completion;
 
-    for (
-        auto itContext = contexts.begin();
-        itContext != contexts.end();
-        itContext++
-    ) {
-        Context & context = *itContext;
-
-        Block words = static_cast<Block>(runtime("words-of", context));
-        for (auto value : words) {
-            Word word = static_cast<Word>(value);
-            QString spelling = word.spellingOf<QString>();
-            if (
-                (spelling.indexOf(stem) == 0)
-                and (not runtime("unset?", LitPath {context, word}))
-            ) {
-                if (takeNext) {
-                    // If we saw the exact word we were looking for, only
-                    // take it if it doesn't exist in a prior ('higher
-                    // priority') context
-
-                    bool outranked = false;
-                    for (
-                        auto itPriority = contexts.begin();
-                        itPriority != itContext;
-                        it++
-                    ) {
-                        auto path = (*itPriority).create<LitPath>(
-                            *itPriority, spelling
-                        );
-
-                        if (runtime("not unset?", path)) {
-                            outranked = true;
-                            break;
-                        }
-                    }
-
-                    if (not outranked)
-                        return std::make_pair(spelling, index);
-                }
-
-                if (firstCandidate.isEmpty())
-                    firstCandidate = spelling;
-
-                if (spelling == text)
-                    takeNext = true;
-                else
-                    candidate = spelling;
-            }
-        }
+    try {
+        completion = static_cast<Block>(helpers(
+            backward
+                ? "autocomplete-helper/backward"
+                : "autocomplete-helper",
+            contexts,
+            String {text},
+            index + 1 // Rebol conventions, make cursor position 1-base
+        ));
+    }
+    catch (std::exception const & e) {
+        // Some error during the helper... tell user so (but don't crash)
+        auto msg = e.what();
+        QMessageBox::information(
+            NULL,
+            "autocomplete-helper internal error",
+            msg
+        );
+    }
+    catch (...) {
+        assert(false); // some non-std::exception??  :-/
+        throw;
     }
 
-    if (takeNext and (not firstCandidate.isEmpty()))
-        return std::make_pair(firstCandidate, index);
-
-    if (not candidate.isEmpty())
-        return std::make_pair(candidate, index);
-
-    return std::make_pair(text, index);
+    return std::pair<QString, int> {
+        static_cast<String>((*completion)[1]),
+        static_cast<Integer>((*completion)[2]) - 1 // C++ conventions, 0 base
+    };
 }
 
 

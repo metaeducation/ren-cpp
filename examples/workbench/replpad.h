@@ -294,6 +294,14 @@ public:
     void appendNewPrompt();
 
     void setBuffer(QString const & text, int position, int anchor);
+
+private:
+    // We track to see if the way we got our selection was with an
+    // autocomplete.  If so, then a keypress doesn't replace the selection;
+    // it collapses it and adds to the point.
+
+    QMutex autocompleteMutex;
+    bool selectionWasAutocomplete;
 };
 
 #endif

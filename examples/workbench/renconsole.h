@@ -58,6 +58,7 @@ private:
     ) const override;
 
 private:
+    ren::Context helpers;
     RenShell shell;
 
 public:
@@ -149,10 +150,12 @@ protected:
 
     // Primitive "package management", which is just an experiment to get
     // some basic caching and updating started (a test case for figuring out
-    // where to put local files and settings, etc.)
+    // where to put local files and settings, etc.)  Consider it a "from
+    // scratch attempt to make MODULE!" and then compare the implemenations.
 private:
-    QSharedPointer<RenPackage> proposals;
-    QSharedPointer<RenPackage> helpers;
+    QSharedPointer<RenPackage> proposalsPackage;
+    QSharedPointer<RenPackage> helpersPackage;
+    QSharedPointer<RenPackage> rendataPackage;
 
 signals:
     void reportStatus(QString const & str);

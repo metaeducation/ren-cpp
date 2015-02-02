@@ -38,13 +38,33 @@ using namespace ren;
 RenPackage::RenPackage (
     QString rcPrefix,
     QString /*urlPrefix*/,
-    Block const & scripts
+    Block const & scripts,
+    std::experimental::optional<ren::Context> context
 ) {
+    if (not context) {
+        data = Block {};
+    }
+
     for (auto filename : scripts) {
         QFile file {rcPrefix + static_cast<Filename>(filename)};
         file.open(QIODevice::ReadOnly);
         QByteArray bytes = file.readAll();
-        runtime(bytes.data());
+        if (context)
+            (*context)(bytes.data());
+        else {
+            // because pure Ren hasn't been thought about yet, and
+            // runtime defaults to USER context, we have to force
+            // unbound loading behavior.  (Remember again this is a thought
+            // experiment contributing to hammer on the design of module
+            // and on the API.  Note we are cheating by using runtime
+            // functions to perform a data-oriented task.
+
+            runtime("append", *data, filename);
+            runtime(
+                "append/only", *data,
+                    "load/type", String {bytes.data()}, "'unbound"
+            );
+        }
     }
 }
 

@@ -8,7 +8,10 @@
         <file>images/save.png</file>
         <file>images/rebol-logo.png</file>
         <file>images/red-logo.png</file>
-        <file>scripts/ren-garden.reb</file>
+        <file>scripts/helpers/autocomplete.reb</file>
+        <file>scripts/helpers/edit-buffer.reb</file>
+        <file>scripts/helpers/shell.reb</file>
+        <file>scripts/rebol-proposals/bitwise.reb</file>
         <file>scripts/rebol-proposals/combine.reb</file>
         <file>scripts/rebol-proposals/while-until.reb</file>
         <file>scripts/rebol-proposals/print-only-with.reb</file>
@@ -22,5 +25,6 @@
         <file>scripts/rebol-proposals/for-range-dialect.reb</file>
         <file>scripts/rebol-proposals/object-context.reb</file>
         <file>images/banner-logo.png</file>
+        <file>rendata/copyright.ren</file>
     </qresource>
 </RCC>

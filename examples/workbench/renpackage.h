@@ -26,7 +26,8 @@
 
 //
 // Another exploratory attempt...which could be improved somehow or perhaps
-// replaced entirely.  We'll see.
+// replaced entirely.  It may be a synonym for what MODULE! was supposed
+// to be able to do, but does not quite do today.
 //
 // A RenPackage is simply a way of keeping some files up to date in the
 // Ren Garden system.  A package's files may be cached in the binary as
@@ -34,6 +35,12 @@
 // Ren Garden.  The goal is to find a suitable directory on the user's
 // system to put the files.
 //
+// It doesn't do any dynamic updates as of yet, only testing the network
+// API.  Just gets the files out of the QRC resource embedded in the
+// Ren Garden executable for now.
+//
+
+#include "optional/optional.hpp"
 
 #include <QString>
 
@@ -47,7 +54,8 @@ public:
     RenPackage (
         QString rcPrefix,
         QString urlPrefix,
-        ren::Block const & spec
+        ren::Block const & spec,
+        std::experimental::optional<ren::Context> context
     );
 
     virtual ~RenPackage ();
@@ -60,6 +68,14 @@ public:
 
 private slots:
     void replyFinished(QNetworkReply * reply);
+
+private:
+    // If data-only, the loaded data for each file, which can be indexed
+    std::experimental::optional<ren::Block> data;
+public:
+    ren::Value getData(ren::Filename const & filename) const {
+        return (*data)[filename];
+    }
 };
 
 #endif

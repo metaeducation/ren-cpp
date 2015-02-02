@@ -86,7 +86,8 @@ ReplPad::ReplPad (
     isFormatPending (false),
     hasUndo (false),
     hasRedo (false),
-    historyIndex ()
+    historyIndex (),
+    selectionWasAutocomplete (false)
 {
     // QTextEdit is a view into a QTextDocument; and it was not really in any
     // way designed to be used for what Ren Garden is doing with it.  One
@@ -98,10 +99,10 @@ ReplPad::ReplPad (
     // where modifications were made without ReplPad making them.
 
     connect(
-        this, &ReplPad::textChanged,
+        this, &QTextEdit::textChanged,
         [this]() {
             if (not documentMutex.tryLock())
-                return;
+                return; // we are purposefully making the change!
 
             documentMutex.unlock();
 
@@ -138,6 +139,25 @@ ReplPad::ReplPad (
             clear();
             appendNewPrompt();
             dontFollowLatestOutput();
+        }
+    );
+
+
+    // Should the selection change for a reason other than autocomplete, we
+    // want to signal that a keypress should overwrite the content vs. add
+
+    connect(
+        this, &QTextEdit::selectionChanged,
+        [this]() {
+            if (not autocompleteMutex.tryLock()) {
+                // autocomplete is doing the change!
+                selectionWasAutocomplete = true;
+                return;
+            }
+
+            autocompleteMutex.unlock();
+
+            selectionWasAutocomplete = false;
         }
     );
 
@@ -1068,20 +1088,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             rewritePrompt();
             return;
         }
-
-        // Because using tab for autocomplete leaves the completed text
-        // selected (in order to maintain state for paging through more
-        // completions) we want to override space to not clear the selection
-        // in that case.  (Use delete and then space if that's what you want.)
-        // We collapse the selection to a point and insert a space normally.
-
-        if (textCursor().position() != textCursor().anchor()) {
-            QTextCursor cursor = textCursor();
-            cursor.setPosition(cursor.position());
-            setTextCursor(cursor);
-
-            // fall through to normal insertion.
-        }
     }
 
 
@@ -1324,12 +1330,24 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             setTextCursor(cursor);
         }
         else {
-            // Just insert the text.
+            // Just insert the text.  We overwrite what's in a ranged
+            // selection unless the last selection was made by an autocomplete
+            // (and they didn't explicitly say "delete")
 
-            textCursor().removeSelectedText();
+            if ((key == Qt::Key_Backspace) or (key == Qt::Key_Delete)) {
+                textCursor().removeSelectedText();
+            }
+            else {
+                if (selectionWasAutocomplete) {
+                    QTextCursor cursor = textCursor();
+                    cursor.setPosition(cursor.position());
+                    setTextCursor(cursor);
+                }
+                else
+                    textCursor().removeSelectedText();
 
-            if ((key != Qt::Key_Backspace) && (key != Qt::Key_Delete))
                 textCursor().insertText(event->text());
+            }
 
             return;
         }
@@ -1345,6 +1363,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         // distinguish tab from backtab, but backtab (a.k.a. shift-Tab)
         // should cycle backwards through the candidates for completion
 
+        QMutexLocker lockAuto {&autocompleteMutex};
         QTextCursor cursor = textCursor();
 
         if (not find(QRegExp("^"), QTextDocument::FindBackward))
@@ -1376,7 +1395,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         // spaces for now.  (Could have special behavior if isPromptLine)
 
         if (leading.trimmed().isEmpty()) {
-            QMutexLocker lock {&documentMutex};
+            QMutexLocker lockDoc {&documentMutex};
             textCursor().insertText(tabString);
             return;
         }
@@ -1396,7 +1415,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         auto completed = syntaxer.autoComplete(
             incomplete,
             cursor.position() - entry.inputPos - tokenRange.first,
-            false
+            key == Qt::Key_Backtab
         );
 
         // Replace the token with the new token text from the completer

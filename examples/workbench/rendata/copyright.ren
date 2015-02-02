@@ -1,0 +1,21 @@
+Ren [
+    Title: {Beginning of strings data}
+
+    Description: {
+        Putting the copyright string in with an embedded UTF8 character was 
+        a first test of running Rebol scripts from a resource file.  That
+        doesn't necessarily make a lot of sense in the long run, as there
+        already is a format for string tables to be used by Qt...and even
+        tools to localize them.
+
+        However, the question of files for holding arbitrary data used
+        by C++ is a premise of the Ren exchange format in the first place.
+        This file is a placeholder for a study of the application of
+        *non-executable* data...(e.g. that which is processed via LOAD
+        and not with DO).
+    }
+]
+
+; Unicode test (and promotion of @HostileFork's school of philosophy...)
+
+copyright: "<i><b>Ren Garden</b> is © 2015 MetÆducation, GPL 3 License</i>"

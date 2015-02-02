@@ -42,7 +42,7 @@ class RenShell : public QObject
     Q_OBJECT
 
 public:
-    RenShell (QObject * parent = nullptr);
+    RenShell (ren::Context const & helpers, QObject * parent = nullptr);
     ~RenShell () override;
 
 private:
@@ -52,6 +52,7 @@ private:
     int shellDoneResult;
 
 private:
+    ren::Context helpers;
     ren::Value shellFunction;
     bool testMode;
 public:

@@ -484,8 +484,9 @@ void ShellWorker::onStateChanged(QProcess::ProcessState newState) {
 // and RenShell acts as the interface to that worker
 //
 
-RenShell::RenShell (QObject * parent) :
+RenShell::RenShell (Context const & helpers, QObject * parent) :
     QObject (parent),
+    helpers (helpers),
     testMode (false)
 {
     // Set up the Evaluator so it's wired up for signals and slots
@@ -604,9 +605,7 @@ RenShell::RenShell (QObject * parent) :
             // see ren-garden.reb (it's built in as part of the resource file)
 
             auto commands = static_cast<Block>(
-                runtime(
-                    "ren-garden/shell-dialect-to-strings", arg, windows
-                )
+                this->helpers("shell-dialect-to-strings", arg, windows)
             );
 
             if (testMode) {
