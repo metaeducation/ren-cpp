@@ -109,7 +109,8 @@ const {
     // necessary anywhere else, and would involve some kind of tracking map.
     // So we do what building a path would do here.
 
-    auto path = Value::construct_<Path>(Dont::Initialize, &Value::isPath);
+    Value path {Dont::Initialize};
+    Value::isPath(&path.cell);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index
@@ -125,7 +126,7 @@ const {
         nullptr // Don't apply
     );
 
-    return path();
+    return path.apply();
 }
 
 

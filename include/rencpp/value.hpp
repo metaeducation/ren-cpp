@@ -204,6 +204,7 @@ class Value {
     // making cell public, using some kind of pimpl idiom or opaque type,
     // or making all Value's derived classes friends of value.
 protected:
+    friend class Series; // temporary - needs to write path cell in operator[]
     friend class Function; // needs to extract series from spec block
     friend class ren::internal::Series_; // iterator state
 
@@ -275,28 +276,12 @@ protected:
     // Call finishInit once the cell bits have been properly set up, so
     // that any tracking/refcounting/etc. can be added.
     //
-    // We also provide a construct template function which allows friend
-    // classes of value to get access to this constructor on all derived
-    // classes of Value (which have friended Value).
-    //
 
 protected:
     enum class Dont {Initialize};
     Value (Dont);
 
     void finishInit(RenEngineHandle engine);
-
-    template<
-        class T,
-        typename = typename std::enable_if<
-            std::is_base_of<Value, T>::value
-        >::type
-    >
-    static T construct_(Dont, internal::CellFunction cellfun) {
-        T result {Dont::Initialize};
-        (result.*cellfun)(&result.cell);
-        return result;
-    }
 
 
     //
