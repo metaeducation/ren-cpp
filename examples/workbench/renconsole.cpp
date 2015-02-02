@@ -679,7 +679,7 @@ void RenConsole::printBanner() {
     // ourselves to get what we want.
 
     auto copyrightData = static_cast<Block>(
-        rendataPackage->getData("copyright.ren")
+        rendataPackage->getData(Filename {"copyright.ren"})
     );
 
     assert(copyrightData[1].isEqualTo<Word>("Ren"));
@@ -994,7 +994,7 @@ std::pair<QString, int> RenConsole::autoComplete(
                 ? "autocomplete-helper/backward"
                 : "autocomplete-helper",
             contexts,
-            String {text},
+            text,
             index + 1 // Rebol conventions, make cursor position 1-base
         ));
     }

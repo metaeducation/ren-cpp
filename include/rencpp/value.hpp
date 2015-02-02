@@ -204,6 +204,7 @@ class Value {
     // making cell public, using some kind of pimpl idiom or opaque type,
     // or making all Value's derived classes friends of value.
 protected:
+    friend class ren::internal::Loadable; // for string class constructors
     friend class Series; // temporary - needs to write path cell in operator[]
     friend class Function; // needs to extract series from spec block
     friend class ren::internal::Series_; // iterator state
@@ -766,14 +767,6 @@ namespace internal {
 class Loadable : protected Value {
 private:
     friend class Value;
-#if REN_CLASSLIB_QT == 1
-    // if we are constructing this Loadable from a QString, we need its
-    // utf8 representation...unfortunately there is no QString::data()
-    // equivalent.  We must use QString::toUtf8() and hold onto the byte
-    // array to keep the destructor from running before we get a chance
-    // to use its data pointer.  :-/
-    QByteArray bytes;
-#endif
 
     // These constructors *must* be public, although we really don't want
     // users of the binding instantiating loadables explicitly.
@@ -799,11 +792,14 @@ public:
     template <typename T>
     Loadable (std::initializer_list<T> loadables) = delete;
 
+    // After trying for a while with the assumption that a std::string or
+    // a QString would be handled as source, the bias was shifted.  We
+    // assume that if you were using a string *class*, then you default
+    // to getting a ren::String value from it...while const char * continues
+    // to be loaded as a run of source.
+
 #if REN_CLASSLIB_STD == 1
-    Loadable (std::string const & source) :
-        Loadable (source.c_str())
-    {
-    }
+    Loadable (std::string const & source);
 #endif
 
 #if REN_CLASSLIB_QT == 1

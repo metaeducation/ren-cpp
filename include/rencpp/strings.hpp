@@ -193,20 +193,20 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyString_ (char const * cstr, Engine * engine = nullptr) :
+    explicit AnyString_ (char const * cstr, Engine * engine = nullptr) :
         AnyString (cstr, F, engine)
     {
     }
 
 #if REN_CLASSLIB_STD == 1
-    AnyString_ (std::string const & str, Engine * engine = nullptr) :
+    explicit AnyString_ (std::string const & str, Engine * engine = nullptr) :
         AnyString (str.c_str(), F, engine)
     {
     }
 #endif
 
 #if REN_CLASSLIB_QT == 1
-    AnyString_ (QString const & str, Engine * engine = nullptr) :
+    explicit AnyString_ (QString const & str, Engine * engine = nullptr) :
         AnyString (str, F, engine)
     {
     }
@@ -232,7 +232,36 @@ class String : public internal::AnyString_<String, &Value::isString>
 {
 public:
     friend class Value;
-    using AnyString_<String, &Value::isString>::AnyString_;
+    // We can't inherit the constructors when we are switching them from
+    // implicit to explicit when there are default parameters.
+
+    // using AnyString_<String, &Value::isString>::AnyString_;
+
+protected:
+    String (Dont) noexcept : AnyString_ (Dont::Initialize) {}
+
+    // Only String allows you to use implicit construction from string
+    // classes, because trying otherwise for the other string classes
+    // proved to be too accident-prone.
+public:
+    String (char const * cstr, Engine * engine = nullptr) :
+        AnyString_ (cstr, engine)
+    {
+    }
+
+#if REN_CLASSLIB_STD == 1
+    String (std::string const & str, Engine * engine = nullptr) :
+        AnyString_ (str.c_str(), engine)
+    {
+    }
+#endif
+
+#if REN_CLASSLIB_QT == 1
+    String (QString const & str, Engine * engine = nullptr) :
+        AnyString_ (str, engine)
+    {
+    }
+#endif
 };
 
 

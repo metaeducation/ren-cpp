@@ -13,7 +13,7 @@ using namespace ren;
 //
 
 int main(int, char **) {
-    String data {"Hello [Ren C++ Binding] World!"};
+    std::string data {"Hello [Ren C++ Binding] World!"};
 
     Word variable {"foo"};
 
@@ -23,12 +23,10 @@ int main(int, char **) {
         "to end"
     };
 
-    auto result = Word {"parse"}(data, rule);
+    auto result = runtime("parse", data, rule);
 
-    if (result) {
+    if (result)
         std::cout << "Success and target was " << variable() << "\n";
-    }
-    else {
+    else
         std::cout << "PARSE failed.";
-    }
 }
