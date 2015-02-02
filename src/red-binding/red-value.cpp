@@ -49,8 +49,6 @@ void Value::finishInit(RenEngineHandle engine) {
 /// STRING CONVERSIONS
 ///
 
-#if REN_CLASSLIB_STD == 1
-
 std::string to_string(Value const & value) {
 
     // placeholder implementation...
@@ -75,7 +73,5 @@ std::string to_string(Value const & value) {
     else
         throw std::runtime_error("to_string unimplemented for datatype");
 }
-
-#endif
 
 } // end namespace ren

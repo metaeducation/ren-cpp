@@ -71,15 +71,7 @@ typedef int RenResult;
 #define REN_RUNTIME_REBOL 1020
 
 
-#ifndef REN_RUNTIME
-
-/*
- * Need to define REN_RUNTIME, ensure you built CMake with either:
- * -DRUNTIME=rebol or -DRUNTIME=red
- */
-CASSERT(0, hooks_h)
-
-#elif REN_RUNTIME == REN_RUNTIME_RED
+#if defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
 /*
  * RedCell
  *
@@ -195,7 +187,7 @@ typedef RedEngineHandle RenEngineHandle;
     static_cast<RenShimPointer>((stack), nullptr)
 
 
-#elif REN_RUNTIME == REN_RUNTIME_REBOL
+#elif (not defined(REN_RUNTIME)) or (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 /*
  * While Red has no C headers for us to include (being written in Red and

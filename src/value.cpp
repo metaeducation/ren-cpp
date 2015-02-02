@@ -47,16 +47,14 @@ Value::Value (Dont) :
 
 
 Value::operator bool() const {
-    if (isUnset()) {
-        // Is there a better way to throw the same "value is unset" error in a
-        // way that matches what the runtime offers?
-        this->apply();
-        UNREACHABLE_CODE();
-    }
+    if (isUnset())
+        throw has_no_value();
+
     return not (isNone() or isFalse());
 }
 
 
+#ifdef REN_RUNTIME
 
 ///
 /// GENERALIZED APPLY
@@ -110,6 +108,8 @@ Value Value::apply(
     return apply_(loadables.begin(), loadables.size(), nullptr, engine);
 }
 
+#endif
+
 
 void Value::constructOrApplyInitialize(
     RenEngineHandle engine,
@@ -139,10 +139,13 @@ void Value::constructOrApplyInitialize(
             break;
 
         case REN_CONSTRUCT_ERROR:
+            errorOut.finishInit(engine);
+            throw std::runtime_error {to_string(errorOut)};
+
+    #ifdef REN_RUNTIME
         case REN_APPLY_ERROR:
             errorOut.finishInit(engine);
             throw evaluation_error {errorOut};
-
 
         case REN_EVALUATION_CANCELLED:
             throw evaluation_cancelled {};
@@ -157,6 +160,7 @@ void Value::constructOrApplyInitialize(
 
             throw exit_command {status};
         }
+    #endif
 
         default:
             throw std::runtime_error("Unknown error in RenConstructOrApply");

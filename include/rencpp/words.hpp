@@ -211,9 +211,11 @@ public:
     // A get-word! does not take any parameters, but it's nice to have a
     // shorthand for treating it something like a zero-parameter function
 public:
+#ifdef REN_RUNTIME
     inline Value operator()() const {
         return apply();
     }
+#endif
 };
 
 

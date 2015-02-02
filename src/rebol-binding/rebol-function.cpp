@@ -38,6 +38,7 @@ bool Value::isFunction() const {
 }
 
 
+#ifdef REN_RUNTIME
 
 ///
 /// FUNCTION FINALIZER FOR EXTENSION
@@ -52,5 +53,7 @@ void Function::finishInitSpecial(
 
     Value::finishInit(engine);
 }
+
+#endif
 
 } // end namespace ren

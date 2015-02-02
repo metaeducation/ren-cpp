@@ -117,14 +117,14 @@ public:
                 REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
                 *val = *DS_NEXT;
                 if (VAL_ERR_NUM(val) == RE_QUIT) {
-                    throw exit_command (VAL_INT32(VAL_ERR_VALUE(DS_NEXT)));
+                    throw std::runtime_error {"Exit during initialization"};
                 }
                 if (VAL_ERR_NUM(val) == RE_HALT) {
-                    throw evaluation_cancelled {};
+                    throw std::runtime_error {"Halt during initialization"};
                 }
                 if (IS_ERROR(val))
-                    throw evaluation_error {
-                        static_cast<Error>(Value {*val, engine})
+                    throw std::runtime_error {
+                        to_string(Value {*val, engine})
                     };
                 else
                     throw std::runtime_error("!Error thrown in rebol-hooks");

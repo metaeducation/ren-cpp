@@ -156,10 +156,12 @@ public:
     // A block can be invoked something like a function via DO, so it makes
     // sense for it to have a way of applying it...but it doesn't take
     // any "parameters"
+#ifdef REN_RUNTIME
 public:
     inline Value operator()() const {
         return apply();
     }
+#endif
 };
 
 } // end namespace internal
@@ -229,11 +231,13 @@ public:
 
     // As with GetWord, it can be convenient to think of "using" a GetPath
     // as calling a function with no arguments.
+#ifdef REN_RUNTIME
 public:
     template <typename... Ts>
     inline Value operator()() const {
         return apply();
     }
+#endif
 };
 
 

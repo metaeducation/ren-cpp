@@ -8,13 +8,6 @@ int main(int argc, char * argv[]) // char* const conflicts w/Rebol
 {
     Catch::Session session; // There must be exactly once instance
 
-    // Checking the stack pointer to see if that's why Rebolsource
-    // is failing ATM.
-
-#if REN_RUNTIME == REN_RUNTIME_REBOL
-    std::cout << Stack_Limit << "\n";
-#endif
-
     // writing to session.configData() here sets defaults
     // this is the preferred way to set them
 

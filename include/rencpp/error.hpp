@@ -84,6 +84,7 @@ public:
 };
 
 
+#ifdef REN_RUNTIME
 class evaluation_error : public std::exception {
 private:
     Error errorValue;
@@ -104,6 +105,37 @@ public:
         return errorValue;
     }
 };
+#endif
+
+
+//
+// The question of when the binding in C++ code should throw the "same
+// error as the runtime" for certain circumstances is one to think about.
+// for instance, what if you write:
+//
+//     Value x;
+//     if (x) { std::cout << "This needs to throw an exception." }
+//
+// If the runtime were running, it would say "Error: x has no Value".  But
+// generating the exact same error requires some figuring.  Also, it is
+// inappropriate to raise an "evaluation error".
+//
+// So for now, the binding doesn't attempt to mimic the runtime or use
+// the same error class.  However, if a has_no_value were to bubble up
+// through the runtime layer in an extension, it could be converted there.
+//
+
+class has_no_value : public std::exception {
+public:
+    has_no_value ()
+    {
+    }
+
+    char const * what() const noexcept override {
+        return "ren::has_no_value";
+    }
+};
+
 
 
 

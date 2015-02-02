@@ -43,7 +43,7 @@ set(
 # These tests should work with any evaluator, assuming there is one
 #
 
-if(NOT RUNTIME STREQUAL "none")
+if(DEFINED RUNTIME)
 
     set(
         EVALUATOR_TESTS

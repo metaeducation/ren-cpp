@@ -51,13 +51,13 @@
 
 #ifndef REN_RUNTIME
 
-static_assert(false, "No runtime defined (pure data interface unimplemented)");
+#include "rencpp/rebol.hpp" // cheating for now, no C++ version...
 
-#elif REN_RUNTIME == REN_RUNTIME_RED
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
 
 #include "rencpp/red.hpp"
 
-#elif REN_RUNTIME == REN_RUNTIME_REBOL
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 #include "rencpp/rebol.hpp"
 

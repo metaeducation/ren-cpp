@@ -28,20 +28,29 @@
 # for build options, use "cmake -i" (or one of the graphical interfaces)
 # Otherwise you will get the default build.  Here are some resources:
 #
-#       http://en.wikipedia.org/wiki/CMake
-#       http://gearbox.sourceforge.net/gbx_doc_buildsys.html
-#       http://www.ddj.com/cpp/184405251
-#       http://www.elpauer.org/stuff/learning_cmake.pdf
+#     http://en.wikipedia.org/wiki/CMake
+#     http://gearbox.sourceforge.net/gbx_doc_buildsys.html
+#     http://www.ddj.com/cpp/184405251
+#     http://www.elpauer.org/stuff/learning_cmake.pdf
 #
 # If you just want to get a debug build (e.g. running from a CMake
 # project in QtCreator) then open the CMakeLists.txt file in the
 # IDE, and when asked to provide command-line options provide either:
 #
-#       -DRUNTIME=red
+#     -DRUNTIME=red
 #
 # Or if you want the binding for Rebol support instead of Red, then use:
 #
-#       -DRUNTIME=rebol
+#     -DRUNTIME=rebol
+#
+# You may also not define a runtime at all ("[U]ndefine it):
+#
+#     -URUNTIME
+#
+# Future implementations will hopefully allow you to build without either
+# Rebol or Red for a "JSON-style" interface that can manipulate Ren structure
+# but not perform evaluations.  As it stands, this is really done at the
+# moment by a crippling of the Rebol version.
 #
 # (Note: Due to a schedule pacing issue, RenCpp has been pre-released in a
 # mode with Rebol functionality, while the Red function is unfinished. This
@@ -139,9 +148,17 @@ endmacro()
 # We use absolute paths here to find almost all files so that the directories
 # which inherit this file's settings vs add_subdirectory will still work
 #
+# Also: A version of Ren which can be built without Red or Rebol and has some
+# kind of formal parser that is C++ only is a concept for the future, but we
+# can "fake it" for today by subsetting the Rebol code so that there is no
+# evaluator offered...
 
-if(RUNTIME AND NOT RUNTIME_PATH)
+if(DEFINED RUNTIME AND NOT RUNTIME_PATH)
     set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${RUNTIME})
+endif()
+
+if(NOT DEFINED(RUNTIME) AND NOT RUNTIME_PATH)
+    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../rebol)
 endif()
 
 
@@ -299,19 +316,10 @@ endif()
 
 
 
-if(NOT RUNTIME)
-
-    # A version of Ren which can be built without Red or Rebol and has some
-    # kind of formal parser that is C++ only is a concept for the future.
-    # Another idea would be to build on a subset of Rebol or Red code and
-    # just don't include anything related to the evalution engine, just
-    # scanning of the types e.g. l-scan.c
-
-    message(FATAL_ERROR "Please choose -DRUNTIME=red or -DRUNTIME=rebol")
-
-elseif(RUNTIME STREQUAL "red")
+if(RUNTIME STREQUAL "red")
 
     message(STATUS "Configuring Binding for Red")
+
 
     # Include all the sources specific to the Red Binding
 
@@ -320,17 +328,19 @@ elseif(RUNTIME STREQUAL "red")
         SRC_BINDING_LIST
     )
 
+
     # The CMake variable for "RUNTIME" is distinct from the flag we use in
     # the headers, and controls more things (as you can see)
 
     add_definitions("-DREN_RUNTIME=REN_RUNTIME_RED")
+
 
     # Add any extra includes for the project browser
 
     file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding/*.h*)
     set(INC_LIST ${INC_LIST} ${INC_BINDING})
 
-elseif(RUNTIME STREQUAL "rebol")
+elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
 
     # We need to get at the C includes from Rebol to call its internal
     # functions to initialize the interpreter and implement the necessary
@@ -339,12 +349,14 @@ elseif(RUNTIME STREQUAL "rebol")
 
     message(STATUS "Runtime path is ${RUNTIME_PATH}")
 
+
     # Though an initiative for the Red project, this is the grand binding
     # attempt for C++.  And it should be able to recompile and work just as
     # effectively for Rebol, just substituting a different cell type into
     # the structure.  Gives a broader base for testing as well...
 
     message(STATUS "Configuring Binding for Rebol")
+
 
     # We want to be able to #include "rebol/include/whatever.h", but to get
     # that to work we have to add an include path which has rebol as a
@@ -361,6 +373,7 @@ elseif(RUNTIME STREQUAL "rebol")
 
     add_cxx_flags(-I${RUNTIME_PATH}/../)
 
+
     # Include all the sources specific to the Rebol Binding
 
     aux_source_directory(
@@ -368,9 +381,11 @@ elseif(RUNTIME STREQUAL "rebol")
         SRC_BINDING_LIST
     )
 
+
     # Put the Rebol headers in so you can search them in the project
 
     file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
+
 
     # Rebol is written in "old" ANSI C, so when we include its headers then it
     # can have some complaints if the warnings are set too high.  We tone the
@@ -390,15 +405,20 @@ elseif(RUNTIME STREQUAL "rebol")
         add_cxx_flags(-Wno-clobbered)
     endif()
 
+
     # Add any extra includes for the project browser
 
     file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
     set(INC_LIST ${INC_LIST} ${INC_BINDING} ${INC_REBOL})
 
+
     # The CMake variable for "RUNTIME" is distinct from the flag we use in
     # the headers, and controls more things (as you can see)
 
-    add_definitions("-DREN_RUNTIME=REN_RUNTIME_REBOL")
+    if(RUNTIME STREQUAL "rebol")
+        add_definitions("-DREN_RUNTIME=REN_RUNTIME_REBOL")
+    endif()
+
 
     # It's important to make sure you're set to the right platform, as it
     # affects endianness and other things.
@@ -414,6 +434,7 @@ elseif(RUNTIME STREQUAL "rebol")
         add_definitions(-DTO_LINUX)
 
     endif()
+
 
     # Try and get all the guts out of the Rebol Core executable to
     # include in the binding.  Take out the main and Host_Lib
@@ -434,6 +455,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib.o)
     # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib2.o)
 
+
     # The binding could replace the entirety of the "host", implementing all
     # the network calls in "Rebolese" using its ioctl system.  That's work
     # one should only do selectively.  One thing you can't really punt on
@@ -442,6 +464,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # the host kit one.
 
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/dev-stdio.o)
+
 
     # We cannot use the c-do.c file unmodified from github's rebol/rebol,
     # due to Halt_State being static.  Though that's a small change, more
@@ -455,6 +478,7 @@ elseif(RUNTIME STREQUAL "rebol")
 
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-do.o)
 
+
     # There is a nasty issue in Bind_Block_Words, for which a pull request
     # that may (or may not) fix it has been sent:
     #
@@ -466,6 +490,7 @@ elseif(RUNTIME STREQUAL "rebol")
     # solution is integrated.
 
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-frame.o)
+
 
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
@@ -483,7 +508,7 @@ elseif(RUNTIME STREQUAL "rebol")
 
 else()
 
-    message(FATAL_ERROR "Invalid Runtime Specified (not none, red, rebol)")
+    message(FATAL_ERROR "Bad runtime, use -DRUNTIME=red or -DRUNTIME=rebol")
 
 endif()
 

@@ -126,7 +126,22 @@ const {
         nullptr // Don't apply
     );
 
-    return path.apply();
+    Value result {Dont::Initialize};
+
+    // Need to wrap this in a try, and figure out a way to translate the
+    // errors based on whether you have REN_RUNTIME or not
+
+    constructOrApplyInitialize(
+        origin, // use our engine handle
+        nullptr, // no context
+        &path, // path is the applicand
+        nullptr,
+        0,
+        nullptr, // Don't construct
+        &result // Do apply
+    );
+
+    return result;
 }
 
 

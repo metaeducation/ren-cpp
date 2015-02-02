@@ -2,7 +2,7 @@
 
 # See notes in root directory, where this is added via add_subdirectory
 
-if(NOT RUNTIME STREQUAL "none")
+if(DEFINED RUNTIME)
 
     add_executable(parse-1 parse-1.cpp)
     target_link_libraries(parse-1 RenCpp)

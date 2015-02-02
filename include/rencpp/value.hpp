@@ -84,9 +84,10 @@ namespace internal {
     class Series_;
 
 #ifndef REN_RUNTIME
-#elif REN_RUNTIME == REN_RUNTIME_RED
+    class RebolHooks; // faking by borrowing Rebol as "no runtime"
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
     class FakeRedHooks;
-#elif REN_RUNTIME == REN_RUNTIME_REBOL
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
     class RebolHooks;
 #else
     static_assert(false, "Invalid runtime setting");
@@ -210,9 +211,10 @@ protected:
     RenCell cell;
 
 #ifndef REN_RUNTIME
-#elif REN_RUNTIME == REN_RUNTIME_RED
+    friend class internal::RebolHooks;
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
     friend class FakeRedHooks;
-#elif REN_RUNTIME == REN_RUNTIME_REBOL
+#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
     friend class internal::RebolHooks;
 #else
     static_assert(false, "Invalid runtime setting");
@@ -620,6 +622,7 @@ public:
     // is defined to be the meaning of APPLY.  It will hopefully be adopted
     // by both Rebol and Red's core implementations.
     //
+#ifdef REN_RUNTIME
 protected:
     Value apply_(
         internal::Loadable const loadables[],
@@ -643,6 +646,7 @@ public:
     inline Value apply(Ts const &... args) const {
         return apply({ args... });
     }
+#endif
 
 
     // The explicit (and throwing) cast operators are defined via template

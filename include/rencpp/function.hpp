@@ -105,6 +105,7 @@ protected:
     Function (Dont) : Value (Dont::Initialize) {}
     inline bool isValid() const { return isFunction(); }
 
+#ifdef REN_RUNTIME
 private:
     // Most classes can get away with setting up cell bits all in the
     // implementation files, but FunctionGenerator is a template.  It
@@ -307,9 +308,11 @@ public:
     inline Value operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
+#endif
 };
 
 
+#ifdef REN_RUNTIME
 
 ///
 /// EXTENSION FUNCTION TEMPLATE
@@ -636,13 +639,7 @@ std::vector<
 } // end namespace internal
 
 
-
-///
-/// USER-FACING CONSTRUCTION FOR MAKE FUNCTION
-///
-
-
-
+#endif
 
 }
 

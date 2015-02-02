@@ -1,5 +1,5 @@
 //
-// extension.cpp
+// function.cpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -22,6 +22,8 @@
 
 namespace ren {
 
+#ifdef REN_RUNTIME
+
 namespace internal {
     std::mutex extensionTablesMutex;
 
@@ -30,5 +32,6 @@ namespace internal {
     RenShimBouncer shimBouncerToCapture = nullptr;
 }
 
+#endif
 
 }
