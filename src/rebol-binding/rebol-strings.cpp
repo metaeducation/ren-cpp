@@ -133,7 +133,8 @@ AnyString::AnyString (
     else
         UNREACHABLE_CODE();
 
-    internal::Loadable loadable (source);
+    QByteArray utf8 = source.toUtf8();
+    internal::Loadable loadable (utf8.data());
 
     if (not engine)
         engine = &Engine::runFinder();
