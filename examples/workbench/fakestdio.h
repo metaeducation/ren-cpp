@@ -26,6 +26,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <istream>
 #include <ostream>
 #include <streambuf>
 #include <vector>

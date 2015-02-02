@@ -169,39 +169,91 @@ and Ren Garden type:
 
 
 
-OS/X
+OS X
 ----
 
-While it is possible to install GCC on an OS/X machine, it involves some extra
-steps...so we will assume you are using Clang and/or XCode.
+**Prerequisites**
 
-Certainly no Clang older than 3.1 can build RenCpp (which introduced lambda
-support, and was released in May 2012).  So check your version with:
+* [Xcode](https://developer.apple.com/xcode/)    **install via App store**
+* [QT](http://download.qt.io/official_releases/qt/5.4/5.4.0/qt-opensource-mac-x64-clang-5.4.0.dmg)    **download**
 
-   clang -v
+QT setup wizard (see later) complains if Xcode is not installed.  It may well work without it?  All the other steps work fine just with the [Command Line Tools](https://developer.apple.com/library/ios/technotes/tn2339/_index.html#//apple_ref/doc/uid/DTS40014588-CH1-DOWNLOADING_COMMAND_LINE_TOOLS_IS_NOT_AVAILABLE_IN_XCODE_FOR_OS_X_10_9__HOW_CAN_I_INSTALL_THEM_ON_MY_MACHINE_).
 
-**Without Ren Garden**
+*You can use alternative GNU/GCC development environment instead of above.  These can be installed via package tools like Homebrew or Macports.  These package tools could also be used to install CMake and QT.  NB. You will need Clang older than version 3.1*
 
-Follow the steps for building Rebol and placing the directories as in the
-Windows instructions, but with a different OS_ID.  There is also an issue
-at the time of writing which needs to be investigated which requires a small
-edit to the Rebol source:
+**Build with Ren Garden**
 
-    make make OS_ID=0.2.5
-    make prep
-    make
+The following steps are self-contained and are as simple as I can make them!  
 
-As on other platforms, if you're on a 64 bit system you will (for the moment)
-have to build as 32-bit:
+So from a terminal session:
 
-   cmake -DCMAKE_CXX_FLAGS=-m32 -DRUNTIME=rebol
+    mkdir RenGarden
 
-**With Ren Garden**
+This will be the working directory.  You can give it any name and place it anyway on your hard disk.  Examples that follow will use the above nomenclature.
 
-On other platforms, 32-bit Qt libraries are distributed pre-built by the
-Qt project.  For Mac only 64-bit binaries are available.  Ren Garden has been
-built successfully using a 64-bit patched Rebol, and turnkey instructions for
-this process are still pending.  See [this chat log][7].
+**Installing QT and CMake**
+
+Double click the on the downloaded QT dmg package and follow the setup wizard steps:
+
+* **Installation folder** - Set this to be your working directory (ie. RenGarden folder)
+* **Select Components** - Fine to leave this as is.  However it can be trimmed down to just **clang 64-bit** (and **Qt Creator**)
+* Click through rest of steps
+
+NB. *Qt Creator would allow you participate in the QT development of the project.*
+
+You should now have QT installed in our working directory.   Now do the next steps:
+
+    cd RenGarden
+	curl http://www.cmake.org/files/v3.1/cmake-3.1.1-Darwin-x86_64.tar.gz | tar -xz
+	ls -F
+
+And you should see (something like) this in your working directory.
+
+    Qt5.4.0/
+	cmake-3.1.1-Darwin-x86_64/
+
+We now have QT and CMake ready for us to continue.   
+
+**Build rebol and rencpp**
+
+	git clone https://github.com/rebolsource/r3 rebol
+	git clone https://github.com/hostilefork/rencpp
+	cd rebol
+	curl http://rebolsource.net/downloads/osx-x86/r3-g25033f8 > ./make/r3-make
+
+Before building Rebol will need to apply following patch:
+
+	git clone https://gist.github.com/earl/d027d702121323efdfec
+	patch src/core/a-lib.c < d027d702121323efdfec/r3-rencpp-host-lib-hack.diff
+
+We are now ready to compile Rebol:
+
+	cd make
+	chmod +x ./r3-make
+	make make OS_ID=0.2.40
+	make clean
+	make prep
+	make r3
+
+And if all went well we now have a brand new Rebol executable.
+
+    file r3
+
+So lets build rencpp 
+
+    cd ../../rencpp
+	PATH=$PATH:../Qt5.4.0/5.4/clang_64/bin ../cmake-3.1.1-Darwin-x86_64/CMake.app/Contents/bin/cmake -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+	make
+
+If CMake gets to 100% then we are all good!   You can test rencpp with following step.
+
+    ./tests/test-rencpp
+
+If no errors are reported then you're ready to open RenGarden.
+
+    open examples/workbench/
+
+This will open a Finder window on desktop.  Look for **workbench**, double click and enjoy :)
 
 
 Support
