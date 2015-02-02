@@ -1,8 +1,10 @@
+#include <array>
 #include <stdexcept>
 
 #include "rencpp/value.hpp"
 #include "rencpp/indivisibles.hpp"
 #include "rencpp/series.hpp"
+#include "rencpp/blocks.hpp" // For Path evaluation in operator[]
 
 
 namespace ren {
@@ -86,20 +88,44 @@ size_t Series::length() const {
 }
 
 
-Value Series::operator[](size_t index) const {
-    // Terrible placeholder implementation (helps with testing in any case)
+Value Series::operator[](Value const & index)
+const {
+    // See notes on semantic questions about SELECT vs PICK for the meaning
+    // of operator[] here, and why we go with "whatever path selection does"
+    //
+    //    https://github.com/hostilefork/rencpp/issues/64
+    //
+    // If there are complaints about this choice, it probably points to the
+    // idea that Path selection needs to be addressed.  (Not that the
+    // operator[] in the C++ binding needs to outsmart it.  :-P)
 
-    if (index > length())
-        return none;
+    // Note this code isn't as simple as:
+    //
+    //    return Path {*this, index, origin}.apply();
+    //
+    // Because there is a difference between an Engine object and a
+    // RenEngineHandle...and as an internal all we know for this object
+    // is its handle.  Finding the engine for that handle hasn't been
+    // necessary anywhere else, and would involve some kind of tracking map.
+    // So we do what building a path would do here.
 
-    size_t count = index;
-    auto it = begin();
-    while (count > 1) {
-        count--;
-        it++;
-    }
+    auto path = Value::construct_<Path>(Dont::Initialize, &Value::isPath);
 
-    return *it;
+    std::array<internal::Loadable, 2> loadables {{
+        *this, index
+    }};
+
+    constructOrApplyInitialize(
+        origin, // use our engine handle
+        nullptr, // no context
+        nullptr, // no applicand
+        loadables.data(),
+        loadables.size(),
+        &path, // Do construct
+        nullptr // Don't apply
+    );
+
+    return path();
 }
 
 

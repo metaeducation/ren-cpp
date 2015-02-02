@@ -127,9 +127,16 @@ public:
 
     bool isEmpty() const { return length() == 0; }
 
+
+    // All series can be accessed by index, but there is no general rule
+    // about any other way to index into them.  But if you have a base
+    // class series and don't know what it is, you need to be able to use
+    // the broader indexing method on it.  So this takes any Value, with
+    // risk of giving you a runtime error for a bad combination.
+
     // Note: Rebol/Red use 1-based indexing with a "zero-hole" by default
 
-    Value operator[](size_t index) const;
+    Value operator[](Value const & index) const;
 };
 
 } // end namespace ren

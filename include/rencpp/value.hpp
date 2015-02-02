@@ -277,7 +277,7 @@ protected:
     //
     // We also provide a construct template function which allows friend
     // classes of value to get access to this constructor on all derived
-    // classes of Value (which have friended Value)
+    // classes of Value (which have friended Value).
     //
 
 protected:
@@ -292,8 +292,10 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct_(Dont) {
-        return T {Dont::Initialize};
+    static T construct_(Dont, internal::CellFunction cellfun) {
+        T result {Dont::Initialize};
+        (result.*cellfun)(&result.cell);
+        return result;
     }
 
 
