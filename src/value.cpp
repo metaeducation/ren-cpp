@@ -24,6 +24,7 @@
 #include "rencpp/context.hpp"
 #include "rencpp/runtime.hpp"
 #include "rencpp/error.hpp"
+#include "rencpp/strings.hpp"
 
 namespace ren {
 
@@ -175,5 +176,28 @@ void Value::constructOrApplyInitialize(
         applyOut->finishInit(engine);
 }
 
+
+
+///
+/// LOADABLE
+///
+
+#if REN_CLASSLIB_STD == 1
+internal::Loadable::Loadable (std::string const & source) :
+    Loadable (Dont::Initialize)
+{
+    String value {source};
+    cell = value.cell;
+}
+#endif
+
+#if REN_CLASSLIB_QT == 1
+internal::Loadable::Loadable (QString const & source) :
+    Loadable (Dont::Initialize)
+{
+    String value {source};
+    cell = value.cell;
+}
+#endif
 
 } // end namespace ren

@@ -5,7 +5,6 @@
 #include "rencpp/value.hpp"
 #include "rencpp/blocks.hpp"
 #include "rencpp/context.hpp"
-#include "rencpp/strings.hpp"
 
 #include "rencpp/rebol.hpp" // ren::internal::nodes
 
@@ -246,25 +245,6 @@ Loadable::Loadable (char const * sourceCstr) :
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
 }
-
-
-#if REN_CLASSLIB_STD == 1
-Loadable::Loadable (std::string const & source) :
-    Loadable (Dont::Initialize)
-{
-    String value {source};
-    cell = value.cell;
-}
-#endif
-
-#if REN_CLASSLIB_QT == 1
-Loadable::Loadable (QString const & source) :
-    Loadable (Dont::Initialize)
-{
-    String value {source};
-    cell = value.cell;
-}
-#endif
 
 
 } // end namespace internal
