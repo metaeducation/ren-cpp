@@ -95,13 +95,17 @@ size_t Series::length() const {
 }
 
 
-Value Series::operator[](size_t index) const {
-    // Terrible placeholder implementation (helps with testing in any case)
+Value Series::operator[](Value const & index) const {
+    if (not index.isInteger())
+        throw std::runtime_error("operator[] currently integers only...");
 
-    if (index > length())
+    // Terrible placeholder implementation (helps with testing in any case)
+    // See Rebol implementation for another take
+
+    size_t count = static_cast<size_t>(static_cast<Integer>(index));
+    if (count > length())
         return none;
 
-    size_t count = index;
     auto it = begin();
     while (count > 1) {
         count--;
