@@ -6,6 +6,12 @@ Rebol [
     }
 ]
 
+;
+; NOTE: These are currently broken due to the issue here:
+;
+;     http://issue.cc/r3/539
+;
+
 while: func [
     {While a condition block is TRUE?, evaluates another block.}
     cond-block [block!]
