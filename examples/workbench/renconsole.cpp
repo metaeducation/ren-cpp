@@ -820,12 +820,6 @@ void RenConsole::handleResults(
 
     Engine::runFinder().getOutputStream().flush();
 
-    // For help with debugging context issues (temporary)
-
-    /*auto it = tabinfo.find(evaluatingRepl);
-    evaluatingRepl->appendText(to_QString(it->second.context));
-    evaluatingRepl->appendText("\n");*/
-
     if (not success) {
         pendingBuffer.clear();
 
@@ -997,6 +991,11 @@ std::pair<QString, int> RenConsole::autoComplete(
             text,
             index + 1 // Rebol conventions, make cursor position 1-base
         ));
+
+        return std::pair<QString, int> {
+            static_cast<String>((*completion)[1]),
+            static_cast<Integer>((*completion)[2]) - 1 // C++ conventions
+        };
     }
     catch (std::exception const & e) {
         // Some error during the helper... tell user so (but don't crash)
@@ -1012,10 +1011,7 @@ std::pair<QString, int> RenConsole::autoComplete(
         throw;
     }
 
-    return std::pair<QString, int> {
-        static_cast<String>((*completion)[1]),
-        static_cast<Integer>((*completion)[2]) - 1 // C++ conventions, 0 base
-    };
+    return std::make_pair(text, index);
 }
 
 

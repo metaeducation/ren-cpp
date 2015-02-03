@@ -18,7 +18,7 @@ matrix:
     exclude:
         # Don't try 32-bit Clang builds
         - compiler: clang
-          env: RUNTIME=rebol REBOL=rebol/rebol OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
+          env: REBOL=rebol/rebol OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
         - compiler: clang
           env: RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
 
@@ -78,6 +78,10 @@ before_script:
     - pushd build/
     - if [ "${RUNTIME}" = "rebol" ]; then cmake -DRUNTIME=${RUNTIME} -DRUNTIME_PATH=$(pwd)/../runtimes/${RUNTIME} ..; fi
     - if [ "${RUNTIME}" = "red" ]; then cmake -DRUNTIME=${RUNTIME} ..; fi
+    # We now support not setting a runtime, as it's a possible "default" it
+    # is simply unset and not "none".  The +x trick is how to check for unset
+    # http://stackoverflow.com/a/13864829/211160
+    - if [ -z ${RUNTIME+x} ]; then cmake -URUNTIME ..; fi
     - popd
 
 script:
@@ -85,7 +89,8 @@ script:
     - make -C build/
 
     # Run RenCpp all-in-one test runner.  Only run tests tagged with the
-    # runtime in effect.  For list of Catch command-line parameters, see:
+    # runtime in effect (which may be nothing).  For list of Catch
+    # command-line parameters, see:
     #
     # https://github.com/philsquared/Catch/blob/master/docs/command-line.md
     #

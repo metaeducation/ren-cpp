@@ -80,8 +80,10 @@ Rebol [
 ; and see if we find something we can "complete" in.  (Currently that means
 ; fields in objects and refinements for functions.)
 ;
+; Returns a list (as a block) or none
+;
 
-try-get-context-from-path: function [path [path!]] [
+try-get-contexts-from-path: function [path [path!]] [
     obj: none
 
     each element path [
@@ -119,7 +121,7 @@ try-get-context-from-path: function [path [path!]] [
             ]
             append spec none
             obj: make object! spec
-            return obj
+            return reduce [obj]
         ]
 
 
@@ -137,7 +139,7 @@ try-get-context-from-path: function [path [path!]] [
         obj: value
     ]
 
-    return obj
+    return reduce [obj]
 ]
 
 
@@ -180,12 +182,11 @@ autocomplete-helper: function [
         fragment: next last-slash
         stem: copy/part (next last-slash) (index - index-of next last-slash)
         base: copy/part text last-slash
-        success: false
 
-        value: try [
-            loaded: load/type base 'unbound
+        success: false
+        try [
+            value: load/type base 'unbound
             success: true
-            loaded ;-- "return" it as value
         ]
 
         ; Now that we've loaded the path, put the trailing slash back on the
@@ -205,11 +206,7 @@ autocomplete-helper: function [
             ; Go from lowest priority to highest priority and try binding,
             ; potentially overriding each time.  This would ideally use
             ; each/reverse, but that can't be implemented as a mezzanine yet
-            ; due to a blocking bug that Andreas said he'll be fixing :-)
-            ;
-            ;    http://chat.stackoverflow.com/transcript/message/21300414#21300414
-            ;
-            ; Though really it should be native anyway.
+            ; due to a bug.
 
             iter: back tail contexts
             final: false
@@ -221,9 +218,7 @@ autocomplete-helper: function [
             ; With the path now (maybe) bound, we can interpret it and look
             ; to see if we have a context corresponding to it
 
-            completion-contexts: reduce [
-                try-get-context-from-path to-path value
-            ]
+            completion-contexts: try-get-contexts-from-path to-path value
         ]
     ]
 
