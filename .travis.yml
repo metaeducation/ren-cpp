@@ -83,7 +83,7 @@ before_script:
     # We now support not setting a runtime, as it's a possible "default" it
     # is simply unset and not "none".  The +x trick is how to check for unset
     # http://stackoverflow.com/a/13864829/211160
-    - if [ -z ${RUNTIME+x} ]; then cmake -URUNTIME -DRUNTIME_PATH=$(pwd)/../runtimes/${RUNTIME} ..; fi
+    - if [ -z ${RUNTIME+x} ]; then cmake -URUNTIME -DRUNTIME_PATH=$(pwd)/../runtimes/rebol ..; fi
     - popd
 
 script:

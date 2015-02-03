@@ -211,19 +211,25 @@ public:
 
 class String : public internal::AnyString_<String, &Value::isString>
 {
-public:
-    friend class Value;
-    // We can't inherit the constructors when we are switching them from
-    // implicit to explicit when there are default parameters.
-
-    // using AnyString_<String, &Value::isString>::AnyString_;
-
 protected:
     String (Dont) noexcept : AnyString_ (Dont::Initialize) {}
+    friend class Value;
 
     // Only String allows you to use implicit construction from string
     // classes, because trying otherwise for the other string classes
-    // proved to be too accident-prone.
+    // proved to be too accident-prone:
+    //
+    //     https://github.com/hostilefork/rencpp/issues/6
+    //
+    // We can't inherit the constructors when we are switching them from
+    // implicit to explicit when there are default parameters.  (???)
+    // They become ambiguous for some reason.  @Morwenn has pointed out that
+    // constructor inheritance is tricky and often breaks down:
+    //
+    //    http://stackoverflow.com/questions/24912280/
+    //
+    // So we retype them here, minus the "explicit".  :-/
+
 public:
     String (char const * cstr, Engine * engine = nullptr) :
         AnyString_ (cstr, engine)
