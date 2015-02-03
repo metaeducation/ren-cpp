@@ -54,13 +54,15 @@ install:
       fi
     # Set up our runtimes
     - mkdir runtimes/
-    # Fetch a Rebol binary needed for building Rebol
-    - if [ [-z ${RUNTIME+x}] || ["${RUNTIME}" = "rebol"] ]; then
+    # Fetch a Rebol binary needed for building Rebol, needed for both the
+    # Rebol runtime and also currently for "no runtime" (to implement the
+    # data structure, basically stripped down Rebol...)
+    - if [[ (-z ${RUNTIME+x}) || ("${RUNTIME}" = "rebol") ]]; then
         wget http://www.rebol.com/r3/downloads/r3-a111-4-2.tar.gz &&
         tar xvzf r3-a111-4-2.tar.gz;
       fi
     # Fetch and build Rebol
-    - if [ [-z ${RUNTIME+x}] || ["${RUNTIME}" = "rebol"] ]; then
+    - if [[ (-z ${RUNTIME+x}) || ("${RUNTIME}" = "rebol") ]]; then
         git clone https://github.com/${REBOL} runtimes/rebol &&
         cp r3 runtimes/rebol/make/r3-make &&
         make -C runtimes/rebol/make/ make OS_ID=${OS_ID} &&

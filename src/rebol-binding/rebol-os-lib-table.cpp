@@ -75,8 +75,11 @@ extern "C" {
 
 //
 // It so happens that the makefiles for Rebol define -fno-common on OS/X.
-// As a consequence, the linker winds up with multiple symbols somehow.
-// So only define the Host_Lib table at this point if not on OS/X.  Sigh.
+// As a consequence, the linker winds up with either multiple Host_Lib_Init
+// (that confuse linking Rebol) or no Host_Lib_Init (breaking RenCpp).  The
+// hack here uses the preprocessor to get host-lib.h to define its statics
+// under different names, thus moving them out of the way.  It's shady but
+// seems to work for the moment...
 //
 
 #define Host_Lib_Init Host_Lib_Init_RenCpp
