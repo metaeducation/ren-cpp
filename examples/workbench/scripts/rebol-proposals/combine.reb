@@ -1,5 +1,5 @@
 Rebol [
-    Title: {COMBINE dialect}
+    Title: {JOIN Dialect (codename: COMBINE)}
 
     Description: {
         The COMBINE dialect is intended to assist with the common task of
@@ -12,25 +12,48 @@ Rebol [
 
            http://blog.hostilefork.com/combine-alternative-rebol-red-rejoin/ 
 
-        While the name COMBINE is pretty good, it does have the problem of
-        getting easily mixed up with COMPOSE.  Having made the slip-up
-        several times, the gates aren't closed on a name which wouldn't have
-        that propery.
+        While the name COMBINE is not bad, it has several things making it
+        less desirable than JOIN.  While JOIN was the original requested
+        name, it was backed off after significant resistance defending
+        its existing definition:
+
+            join: func [
+                "Concatenates values."
+                value "Base value"
+                rest "Value or block of values"
+            ] [
+                value: either series? :value [copy value] [form :value]
+                repend value :rest
+            ]
+
+        Yet the usefulness of COMBINE has come to be so overwhelming that the
+        Ren Garden project is going ahead with giving the name JOIN to it,
+        in the defaults.  But the proposal is keeping the name COMBINE for
+        usage in Rebol if it refuses to accept the change.  Thus, for the
+        purposes of co-evolution it will continue to be called COMBINE in
+        conversation.
     }
 ]
 
 
 combine: function [
+    {Produce a formatted string by recursively descending into a block.}
+
     block [block!]
 
-    /with "Add delimiter between values (will be COMBINEd if a block)"
+    /with "Add delimiter between values (will be joined if a block)"
         delimiter
 
     /into "avoid intermediate by combining into existing string buffer"
         out [any-string!]
 
-    /part "Limit the amount of the input block(s) used in combination"
-        limit [integer! block!] ;; REVIEW: add pair?
+    ; Should /PART support a pair! ?  COPY/PART claims to, but does not
+    ; seem to actually work...
+
+    /part {Limits to a given length or position}
+        limit [integer! block!]
+
+    /safe "Do not perform function evaluations, only GET values"
 
     /level "Starting level to report when using /with a function"
         depth [integer!]
@@ -101,7 +124,15 @@ combine: function [
         ; in this case that is okay since block is a parameter and won't
         ; leak as a global
  
-        set/any quote value: do/next block 'block
+        set/any (quote value:) either safe [
+            either any [word? block/1 path? block/1] [
+                get/any first back (block: next block)
+            ] [
+                first back (block: next block)
+            ]
+        ] [
+            do/next block 'block
+        ]
 
 
         ; Major point of review for using a /PART-style refinement on

@@ -446,7 +446,10 @@ RenConsole::RenConsole (QWidget * parent) :
 
 
     // Incubator routines for addressing as many design questions as
-    // possible without modifying the Rebol code itself
+    // possible without modifying the Rebol code itself.  The COMBINE
+    // assignment to JOIN is done here internally in order to help
+    // co-evolve COMBINE-the-proposal despite the defenders of the
+    // current JOIN.
 
     proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
@@ -474,6 +477,12 @@ RenConsole::RenConsole (QWidget * parent) :
 
         Context::lookup("USER") // we put these in USER
     );
+
+    Context::lookup("USER")(
+        "concat: :join", // I don't care what you call it, it's bad
+        "join: :combine" // Righful owner of the fitting name...
+    );
+
 
     // The beginnings of a test...
     /* proposals->downloadLocally(); */
