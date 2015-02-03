@@ -62,7 +62,7 @@ print: function [
     ; Transform our refinements into arguments for COMBINE
 
     with-arg: case [with [delimiter] only [none] true [space]]
-    part-arg: either part [limit] [tail value]
+    part-arg: either part [limit] [if series? value [tail value]]
 
     case [
         unset? :value [

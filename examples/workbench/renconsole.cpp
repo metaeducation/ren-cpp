@@ -471,7 +471,7 @@ RenConsole::RenConsole (QWidget * parent) :
             "%to-string-spelling.reb",
             "%find-min-max.reb",
             "%ls-cd-dt-short-names.reb",
-            "%for-range-dialect.reb",
+            "%loop-dialect.reb",
             "%object-context.reb"
         },
 
