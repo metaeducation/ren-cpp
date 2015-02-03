@@ -221,11 +221,6 @@ We now have QT and CMake ready for us to continue.
 	cd rebol
 	curl http://rebolsource.net/downloads/osx-x86/r3-g25033f8 > ./make/r3-make
 
-Before building Rebol will need to apply following patch:
-
-	git clone https://gist.github.com/earl/d027d702121323efdfec
-	patch src/core/a-lib.c < d027d702121323efdfec/r3-rencpp-host-lib-hack.diff
-
 We are now ready to compile Rebol:
 
 	cd make

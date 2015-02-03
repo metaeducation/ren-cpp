@@ -79,10 +79,9 @@ extern "C" {
 // So only define the Host_Lib table at this point if not on OS/X.  Sigh.
 //
 
-#ifndef TO_OSXI
-
+#define Host_Lib_Init Host_Lib_Init_RenCpp
+#define Host_Lib Host_Lib_Null
 #define OS_LIB_TABLE
 #include "rebol/src/include/host-lib.h"
 
-#endif
 }
