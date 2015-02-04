@@ -46,16 +46,16 @@ void Value::finishInit(RenEngineHandle engine) {
         refcountPtr = new RefcountType (1);
 
     #ifndef NDEBUG
-        auto it = internal::nodes[engine.data].find(VAL_SERIES(&cell));
+        REBSER * series = VAL_SERIES(&cell);
+        auto it = internal::nodes[engine.data].find(series);
         if (it == internal::nodes[engine.data].end())
-            internal::nodes[engine.data].emplace(VAL_SERIES(&cell), 1);
+            internal::nodes[engine.data].emplace(series, 1);
         else
             it->second++;
     #endif
-
-    } else {
-        refcountPtr = nullptr;
     }
+    else
+        refcountPtr = nullptr;
 
     origin = engine;
 }

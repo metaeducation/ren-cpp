@@ -310,7 +310,11 @@ protected:
         >::type
     >
     static T construct_(RenCell const & cell, RenEngineHandle engine) noexcept {
-        T result {Dont::Initialize};
+        T result (Dont::Initialize); // Do NOT use {} construction!
+        // If you use {} then if T is a series type, due to Value's privileged
+        // access to the Dont constructor, it will make a block with an
+        // uninitialized value *in the block*!  :-/
+
         result.cell = cell;
         result.finishInit(engine);
         return result;
@@ -481,17 +485,19 @@ protected:
 
 private:
     inline void releaseRefIfNecessary() {
-        // refcount is nullptr if it's not an refcountable type, or if it was
-        // a refcountable type and we used the move constructor to empty i
-        if (refcountPtr && !--(*refcountPtr)) {
-            delete refcountPtr;
-            if (
-                ::RenReleaseCells(origin, &this->cell, 1, sizeof(Value))
-                != REN_SUCCESS
-            ) {
-                throw std::runtime_error(
-                    "Refcounting problem reported by the Ren binding hook"
-                );
+        // refcount is nullptr if it's not a refcountable type, or if it was
+        // a refcountable type and we used the move constructor to empty it
+        if (refcountPtr) {
+            if (0 == --(*refcountPtr)) {
+                delete refcountPtr;
+                if (
+                    ::RenReleaseCells(origin, &this->cell, 1, sizeof(Value))
+                    != REN_SUCCESS
+                ) {
+                    throw std::runtime_error(
+                        "Refcounting problem reported by the Ren binding hook"
+                    );
+                }
             }
         }
     }

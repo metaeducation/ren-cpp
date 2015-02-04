@@ -35,6 +35,10 @@ RebolRuntime runtime {true};
 
 
 bool Runtime::needsRefcount(REBVAL const & cell) {
+    // actually need to include ANY_OBJECT as well, but since the hooks
+    // from Rebol to actually call and ask us what we know about garbage
+    // collection aren't in yet... leaving it at series for the moment
+
     return ANY_SERIES(&cell);
 }
 

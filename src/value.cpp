@@ -66,7 +66,7 @@ Value Value::apply_(
     Context const * contextPtr,
     Engine * engine
 ) const {
-    Value result {Dont::Initialize};
+    Value result (Dont::Initialize);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 

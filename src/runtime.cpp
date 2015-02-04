@@ -28,7 +28,7 @@ Value Runtime::evaluate(
     Context const * contextPtr,
     Engine * engine
 ) {
-    Value result {Value::Dont::Initialize};
+    Value result (Value::Dont::Initialize);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
