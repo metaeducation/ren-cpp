@@ -225,6 +225,33 @@ typedef RebolEngineHandle RenEngineHandle;
 
 
 /*
+ * "Generalized Apply" is a concept central to the definition of operator()
+ * and how the binding works.  We have to add it because APPLY is only for
+ * functions ATM...but as it's a superset of the existing behavior, we
+ * shift it over to the "what should be in Rebol" side of the hooks.
+ */
+RenResult Generalized_Apply(
+    REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
+);
+
+
+/*
+ * The mechanical question of whether something is a function, or a closure,
+ * or a native, or an action is generally not something the user needs
+ * to distinguish in the type system.  (There's a lot of code that handles
+ * functions which could just as easily work with a closure, but this
+ * technical mistake of exposing it as a distinct type prevents it.)
+ */
+inline int IS_ANY_FUNCTION(REBVAL const * value) {
+    return IS_FUNCTION(value)
+        || IS_NATIVE(value)
+        || IS_CLOSURE(value)
+        || IS_ACTION(value);
+}
+
+
+
+/*
  * Here we have our definitions for how to find the relevant values on the
  * stack.  Because Rebol uses 1 based calculations, we have to add 1.  The
  * shim accessor here gets the actual pointer out vs. returning the whole

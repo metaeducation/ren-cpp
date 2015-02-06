@@ -27,11 +27,112 @@ extern "C" {
 #define MAX_PATH 4096  // from host-lib.c, generally lacking in Posix
 #endif
 
+
+
+///
+/// "GENERALIZED APPLY"
+///
+
+//
+// "Generalized Apply" is at the heart of the working of the binding, yet
+// what we currently call APPLY only works for function values.  This
+// is a "cheating" implementation and defers to APPLY only in the case
+// where the applicand is a function.  It should be the default behavior
+// of apply
+//
+
+RenResult Generalized_Apply(
+    REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
+) {
+
+    if (IS_ANY_FUNCTION(applicand)) {
+
+        // We get args as a series, but Apply_Block expects a RebVal.
+        REBVAL block;
+        VAL_SET(&block, REB_BLOCK);
+        Set_Block(&block, args);
+
+        Apply_Block(applicand, &block, reduce);
+
+    }
+    else if (IS_ERROR(applicand)) {
+        if (SERIES_LEN(args) - 1 != 0) {
+            *error = *applicand;
+            return REN_APPLY_ERROR;
+        }
+
+        // from REBNATIVE(do) ?  What's the difference?  How return?
+        if (IS_THROW(applicand)) {
+            DS_PUSH(applicand);
+        } else {
+            *error = *applicand;
+            return REN_APPLY_ERROR;
+        }
+    }
+    else {
+        assert(not reduce); // To be added?
+
+        // If it's an object (context) then "apply" means run the code
+        // but bind it inside the object.  Suggestion by @WiseGenius:
+        //
+        // http://chat.stackoverflow.com/transcript/message/20530463#20530463
+
+        if (IS_OBJECT(applicand)) {
+            REBSER * reboundArgs = Clone_Block(args);
+
+            // This says it takes a "REBVAL" for block, but doesn't mean
+            // it wants a value that is a block.  It wants the value
+            // pointer at the head of the block!!  :-/
+
+            Bind_Block(
+                VAL_OBJ_FRAME(applicand), BLK_HEAD(reboundArgs), BIND_DEEP
+            );
+
+            // result is just TOS
+            DS_PUSH(Do_Blk(reboundArgs, 0));
+        }
+        else {
+            // Just put the value at the head of a DO chain...
+            Insert_Series(
+                args, 0, reinterpret_cast<REBYTE *>(applicand), 1
+            );
+
+            REBCNT index = Do_Next(args, 0, FALSE /* not op! */);
+
+            // If the DO chain didn't end, then consider that an error.  So
+            // generalized apply of FOO: with `1 + 2 3` will do the addition,
+            // satisfy FOO, but have a 3 left over unused.  If FOO: were a
+            // function being APPLY'd, you'd say that was too many arguments
+
+            if (index != SERIES_TAIL(args)) {
+                // shouldn't throw exceptions from here...we return a
+                // Rebol error
+
+                REBSER * ser = Make_Error(
+                    RE_INVALID_ARG,
+                    BLK_SKIP(args, index),
+                    0,
+                    0
+                );
+                SET_ERROR(error, RE_INVALID_ARG, ser);
+
+                return REN_APPLY_ERROR;
+            }
+
+            Remove_Series(args, 0, 1);
+        }
+    }
+
+    // Result on top of stack
+    return REN_SUCCESS;
+}
+
+
+
 namespace ren {
 
 
 RebolRuntime runtime {true};
-
 
 
 bool Runtime::needsRefcount(REBVAL const & cell) {
@@ -260,17 +361,16 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     if (Init_Mezz(0) != 0)
         throw std::runtime_error("RebolHooks: Mezzanine startup failure");
 
-    // There is an unfortunate property of QUIT which is that it calls
-    // Halt_Code, which uses a jump buffer Halt_State which is static to
-    // c-do.c - hence we cannot catch QUIT.  Unless...we rewrite the value
-    // it is set to, to use a "fake quit" that shares the jump buffer we
-    // use for execution...
+    // RenCpp is based on "generalized apply", e.g. a notion of APPLY
+    // that is willing to evaluate expressions and give them to a set-word!
+    // We patch apply here (also a good place to see how other such
+    // patches could be done...)
 
-    REBVAL quitWord = loadAndBindWord(Lib_Context, "quit");
+    REBVAL applyWord = loadAndBindWord(Lib_Context, "apply");
 
-    REBVAL quitNative = *Get_Var(&quitWord);
+    REBVAL applyNative = *Get_Var(&applyWord);
 
-    if (not IS_NATIVE(&quitNative)) {
+    if (not IS_NATIVE(&applyNative)) {
 
         // If you look at sys-value.h and check out the definition of
         // REBHDR, you will see that the order of fields depends on the
@@ -278,10 +378,10 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         // build do not have the same #define for ENDIAN_LITTLE then they
         // will wind up disagreeing.  You might have successfully loaded
         // a function but have the bits scrambled.  So before telling you
-        // we can't find "load" in the Mezzanine, we look for the
+        // we can't find "apply" in the Mezzanine, we look for the
         // scrambling in question and tell you that's what the problem is
 
-        if (quitNative.flags.flags.resv == REB_NATIVE) {
+        if (applyNative.flags.flags.resv == REB_NATIVE) {
             throw std::runtime_error(
                 "Bit field order swap detected..."
                 " Did you compile Rebol with a different setting for"
@@ -292,18 +392,42 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         // If that wasn't the problem, it was something else.
 
         throw std::runtime_error(
-            "Couldn't get QUIT native for unknown reason"
+            "Couldn't get APPLY native for unknown reason"
         );
     }
 
-    // Tweak the bits to put our fake quit function in and save it back...
-    // This worked for QUIT but unfortunately couldn't work for Escape/CtrlC
-    // Had to extract c-do.c => c-do.cpp
+    REBFUN applyFun = [](REBVAL * ds) -> int {
+        REBVAL * applicand = D_ARG(1);
+        REBVAL * blk = D_ARG(2);
+        REBVAL error;
+        bool only = D_REF(3);
+        if (
+            // stack volatile
+            Generalized_Apply(applicand, VAL_SERIES(blk), not only, &error)
+            == REN_APPLY_ERROR
+        ) {
+            Throw_Error(VAL_ERR_OBJECT(&error));
+        }
+        return R_TOS;
+    };
 
-/*    quitNative.data.func.func.code = &internal::Fake_Quit;
-    Set_Var(&quitWord, &quitNative); */
+    const char * applySpecStr {
+        "{Generalized apply of a value to reduced arguments.}"
+        " value {Value to apply}"
+        " block [block!] {Block of args, reduced first (unless /only)}"
+        " /only {Use arg values as-is, do not reduce the block}"
+    };
+
+    REBSER * applySpec = Scan_Source(
+        reinterpret_cast<REBYTE *>(const_cast<char *>((applySpecStr))),
+        LEN_BYTES(applySpecStr)
+    );
+
+    Make_Native(&applyNative, applySpec, applyFun, REB_NATIVE);
+    Set_Var(&applyWord, &applyNative);
 
     initialized = true;
+
     return true;
 }
 

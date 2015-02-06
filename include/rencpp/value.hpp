@@ -628,6 +628,11 @@ public:
     // is defined to be the meaning of APPLY.  It will hopefully be adopted
     // by both Rebol and Red's core implementations.
     //
+    // The /ONLY option on APPLY is used to say whether to reduce the arguments
+    // or not.  What's the right default?  We have the problem of there not
+    // being anywhere to put a boolean in the call because it would be
+    // assumed as a parameter...is a separate printOnly required?
+    //
 #ifdef REN_RUNTIME
 protected:
     Value apply_(

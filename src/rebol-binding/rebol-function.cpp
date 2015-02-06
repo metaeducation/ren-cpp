@@ -31,10 +31,7 @@ static_assert(R_RET == 0, "R_RET must be 0 for RenShimPointer to work");
 //
 
 bool Value::isFunction() const {
-    return IS_FUNCTION(&cell)
-        or IS_NATIVE(&cell)
-        or IS_CLOSURE(&cell)
-        or IS_ACTION(&cell);
+    return IS_ANY_FUNCTION(&cell);
 }
 
 

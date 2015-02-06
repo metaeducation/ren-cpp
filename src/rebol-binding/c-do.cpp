@@ -1,6 +1,16 @@
 //
-// This is an experimental adaptation of Rebol 3's c-do.c for use in the
-// Rencpp binding for Rebol and Red.
+// Note: There is an unfortunate property of QUIT which is that it calls
+// Halt_Code, which uses a jump buffer Halt_State which is static to
+// c-do.c - hence we cannot catch QUIT.  Once we overwrote the value
+// it is set to, to use a "fake quit" that shared the jump buffer we
+// use for execution.  However, that "workaround" failed because it
+// did not work for catching escape (Ctrl-C) signals...so c-do.c had
+// to be subsumed into RenCpp.
+//
+// Due to being central to evaluation, having this file in the distribution
+// could be important for other reasons; like modifications to add
+// breakpoints or other interpreter features.  Those are on the long list
+// of "things to look at".
 //
 // Although RenCpp is under a Boost license in general, when built against
 // Rebol the Rebol portions are governed by the Apache 2 license.  Although
