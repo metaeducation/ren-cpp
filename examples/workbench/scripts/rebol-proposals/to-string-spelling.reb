@@ -14,10 +14,10 @@ to: function [
 ] [
     switch/default to-word type [
        string! [
-           either block? value [
+           either block? :value [
                ; dumb heuristic, assume the average item is length 5?  :-/
                result: make string! (5 * length value)
-               every value [
+               iterate value [
                    append result case [
                        block? value/1 ["["]
                        paren? value/1 ["("]
@@ -35,11 +35,11 @@ to: function [
                ]
                result
            ] [
-               system/contexts/lib/form value
+               system/contexts/lib/form :value
            ]
        ]
     ] [
-       system/contexts/lib/to type value
+       system/contexts/lib/to type :value
     ]
 ]
 

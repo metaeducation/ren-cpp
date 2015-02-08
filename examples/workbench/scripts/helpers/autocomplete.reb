@@ -80,10 +80,11 @@ Rebol [
 ; and see if we find something we can "complete" in.  (Currently that means
 ; fields in objects and refinements for functions.)
 ;
-; Returns a list (as a block) or none
+; The thing we find--be it a function or an object--is shown in the explorer
+; as the thing you're given "help" about.
 ;
 
-try-get-contexts-from-path: function [path [path!]] [
+try-get-scope-from-path: function [path [path!]] [
     obj: none
 
     each element path [
@@ -103,25 +104,8 @@ try-get-contexts-from-path: function [path [path!]] [
             get/any element
         ]
 
-
-        ; We can complete in a function by letting you autocomplete
-        ; refinements...so we make a fake context.  Note that once we see a
-        ; function we stop checking, so you could say:
-        ;
-        ;     append/banana/on|
-        ;
-        ; ...and get it to complete with only, despite no /banana refinement
-
         if any-function? :value [
-            spec: copy []
-            each word words-of :value [
-                if refinement? word [
-                    append spec to-set-word word
-                ]
-            ]
-            append spec none
-            obj: make object! spec
-            return reduce [obj]
+            return :value
         ]
 
 
@@ -139,13 +123,39 @@ try-get-contexts-from-path: function [path [path!]] [
         obj: value
     ]
 
-    return reduce [obj]
+    return obj
+]
+
+
+
+; We can complete in a function by letting you autocomplete
+; refinements...so we make a fake context.  Note that once we see a
+; function we stop checking, so you could say:
+;
+;     append/banana/on|
+;
+; ...and get it to complete with only, despite no /banana refinement
+
+fake-context-from-function: function [fun [any-function!]] [
+    spec: copy []
+    each word words-of :fun [
+        if refinement? word [
+            append spec to-set-word word
+        ]
+    ]
+    append spec none
+    return make object! spec
 ]
 
 
 
 ;
-; The exported hook called by Ren Garden
+; The exported hook called by Ren Garden; needs to return three values in
+; a block:
+;
+;    - completed text string
+;    - index position for start of completion
+;    - value to browse in the explorer
 ;
 
 autocomplete-helper: function [
@@ -165,7 +175,7 @@ autocomplete-helper: function [
     ; asking to have completed?  :-/  Leave it alone for now.
 
     if index = 1 [
-        return reduce [text index]
+        return reduce [text index #[unset!]]
     ]
 
 
@@ -185,7 +195,7 @@ autocomplete-helper: function [
 
         success: false
         try [
-            value: load/type base 'unbound
+            loaded: load/type base 'unbound
             success: true
         ]
 
@@ -195,8 +205,8 @@ autocomplete-helper: function [
 
         append base "/"
 
-        if all [success any [path? value word? value]] [
-            value: to-path value
+        if all [success any [path? loaded word? loaded]] [
+            path: to-path loaded
 
             ; We loaded the path (or the word that would have been the head
             ; of a path, had we not swiped out the slash).  Yet we loaded
@@ -211,21 +221,31 @@ autocomplete-helper: function [
             iter: back tail contexts
             final: false
             until [any [final (final: head? iter false)]] [
-                value: first bind reduce [value] iter/1
+                path: first bind reduce [path] iter/1
                 iter: back iter
             ]
 
             ; With the path now (maybe) bound, we can interpret it and look
-            ; to see if we have a context corresponding to it
+            ; to see if we have an item we might call a "scope" for it
+            ; (either a function or an object)
 
-            completion-contexts: try-get-contexts-from-path to-path value
+            scope: try-get-scope-from-path path
+
+            if any-function? :scope [
+                completion-contexts: reduce [fake-context-from-function :scope]
+            ]
+
+            if object? :scope [
+                completion-contexts: reduce [:scope]
+            ]
         ]
     ]
 
     ; If our path-trickery above didn't get us any completion-contexts, then
     ; just do a "global" search with the ones that were passed in.  Note that
     ; Ren Garden typically passes us two right now...the context for the tab
-    ; window you are in, followed by LIB
+    ; window you are in, followed by LIB.  There seems to be a strong need
+    ; for a notion of inheritance in contexts that is more general.  :-/
 
     unless completion-contexts [
         completion-contexts: copy contexts
@@ -252,7 +272,8 @@ autocomplete-helper: function [
     ; to the current complete "state" embodied by the selection, and want
     ; whichever one is after that instead.
 
-    first-candidate: none
+    first-candidate-word: none
+    first-candidate-ctx: none
     take-next: false
 
     each ctx adjusted-contexts [
@@ -323,26 +344,29 @@ autocomplete-helper: function [
             ; by interpreting it as an instruction to take the next
             ; candidate that we see.
 
-            if spelling = fragment [
+            either spelling = fragment [
                 assert [not take-next]
                 take-next: true
-                continue
-            ]
+            ] [
+                ; As long as this word wasn't outranked, we can use it if we
+                ; were told to take the next one we see.
 
-
-            ; As long as this word wasn't outranked, we can use it if we
-            ; were told to take the next one we see.
-
-            if take-next [
-                return reduce [combine [base spelling] index]
+                if take-next [
+                    return reduce [
+                        combine [base spelling]
+                        index
+                        either :scope [:scope] [in ctx word]
+                    ]
+                ]
             ]
 
 
             ; This still might be a candidate for completion, if we reach
             ; the end of the loops.
 
-            unless first-candidate [
-                first-candidate: spelling
+            unless first-candidate-word [
+                first-candidate-word: word
+                first-candidate-ctx: ctx
             ]
         ]
     ] 
@@ -351,11 +375,23 @@ autocomplete-helper: function [
     ; If we get to the end, then we just take the first candidate for
     ; completion if there was one (whether take-next was set or not)
 
-    if first-candidate [
-        return reduce [combine [base first-candidate] index]
+    if first-candidate-word [
+        result: reduce [
+            combine [base spelling-of first-candidate-word]
+            index
+            either :scope [
+                :scope
+            ] [
+                in first-candidate-ctx first-candidate-word
+            ]
+        ]
+        if 3 <> length result [
+            do make error! "Come on all my people"
+        ]
+        return result
     ]
 
 
     ; Didn't find anything, just return what we were given...
-    return reduce [text index]
+    return reduce [text index #[unset!]]
 ]

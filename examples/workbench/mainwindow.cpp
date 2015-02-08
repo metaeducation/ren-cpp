@@ -1,5 +1,5 @@
 //
-// renconsole.cpp
+// mainwindow.cpp
 // This file is part of Ren Garden
 // Copyright (C) 2015 MetÆducation
 //
@@ -25,6 +25,7 @@
 #include "mainwindow.h"
 #include "renconsole.h"
 #include "watchlist.h"
+#include "valueexplorer.h"
 
 #include "rencpp/ren.hpp"
 
@@ -51,6 +52,11 @@ MainWindow::MainWindow() :
     console = new RenConsole;
     setCentralWidget(console);
     console->show();
+
+    dockValueExplorer = new QDockWidget(tr("explorer"), this);
+
+    auto explorer = new ValueExplorer (dockValueExplorer);
+    dockValueExplorer->setWidget(explorer);
 
     dockWatch = new QDockWidget(tr("watch"), this);
     dockWatch->setAllowedAreas(
@@ -91,8 +97,17 @@ MainWindow::MainWindow() :
         Qt::DirectConnection
     );
 
+    connect(
+        console, &RenConsole::exploreValue,
+        explorer, &ValueExplorer::setValue,
+        Qt::QueuedConnection
+    );
+
     addDockWidget(Qt::RightDockWidgetArea, dockWatch);
     dockWatch->hide();
+
+    addDockWidget(Qt::TopDockWidgetArea, dockValueExplorer);
+    dockValueExplorer->hide();
 
     createActions();
     createMenus();
@@ -111,6 +126,19 @@ MainWindow::MainWindow() :
         copyAct, &QAction::setEnabled,
         Qt::DirectConnection
     );
+
+    connect(
+        dockValueExplorer, &QDockWidget::visibilityChanged,
+        valueExplorerAct, &QAction::setChecked,
+        Qt::DirectConnection
+    );
+
+    connect(
+        dockWatch, &QDockWidget::visibilityChanged,
+        watchListAct, &QAction::setChecked,
+        Qt::DirectConnection
+    );
+
 
     readSettings();
 
@@ -260,6 +288,24 @@ void MainWindow::createActions()
         }
     );
 
+    watchListAct = new QAction(tr("&Watch List"), this);
+    watchListAct->setCheckable(true);
+    connect(
+        watchListAct, &QAction::triggered,
+        [this](bool checked) {
+            dockWatch->setVisible(checked);
+        }
+    );
+
+    valueExplorerAct = new QAction(tr("Value &Explorer"), this);
+    valueExplorerAct->setCheckable(true);
+    connect(
+        valueExplorerAct, &QAction::triggered,
+        [this](bool checked) {
+            dockValueExplorer->setVisible(checked);
+        }
+    );
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(
@@ -274,7 +320,11 @@ void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
     QAction *action = fileMenu->addAction(tr("Switch layout direction"));
-    connect(action, &QAction::triggered, this, &MainWindow::switchLayoutDirection, Qt::DirectConnection);
+    connect(
+        action, &QAction::triggered,
+        this, &MainWindow::switchLayoutDirection,
+        Qt::DirectConnection
+    );
     fileMenu->addAction(exitAct);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
@@ -287,6 +337,9 @@ void MainWindow::createMenus()
     windowMenu->addAction(nextTabAct);
     windowMenu->addAction(previousTabAct);
     windowMenu->addAction(closeTabAct);
+    windowMenu->addSeparator();
+    windowMenu->addAction(watchListAct);
+    windowMenu->addAction(valueExplorerAct);
 
     menuBar()->addSeparator();
 
@@ -407,6 +460,7 @@ void MainWindow::onShowDockRequested(WatchList * watchList) {
     dockWatch->setWidget(watchList);
     dockWatch->show();
 }
+
 
 void MainWindow::onHideDockRequested(WatchList * watchList) {
     dockWatch->setWidget(watchList);

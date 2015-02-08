@@ -101,6 +101,11 @@ signals:
 
     void hideDockRequested(WatchList * watchList);
 
+    void exploreValue(
+        ren::Value const & helpFunction,
+        ren::Value const & value
+    );
+
 protected:
     bool bannerPrinted;
     void printBanner();

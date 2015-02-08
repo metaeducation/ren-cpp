@@ -1071,6 +1071,11 @@ std::pair<QString, int> RenConsole::autoComplete(
             index + 1 // Rebol conventions, make cursor position 1-base
         ));
 
+        // We send even if it's unset, to clear the panel.  Is that a
+        // good idea or not?
+
+        emit exploreValue((*proposalsContext)(":help"), (*completion)[3]);
+
         return std::pair<QString, int> {
             static_cast<String>((*completion)[1]),
             static_cast<Integer>((*completion)[2]) - 1 // C++ conventions

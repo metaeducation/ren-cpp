@@ -27,6 +27,7 @@
 
 class RenConsole;
 class WatchList;
+class ValueExplorer;
 
 class QAction;
 class QMenu;
@@ -83,6 +84,7 @@ private:
 public:
     RenConsole * console;
     QDockWidget * dockWatch;
+    QDockWidget * dockValueExplorer;
 
 private:
     QMenu * fileMenu;
@@ -100,6 +102,8 @@ private:
     QAction * nextTabAct;
     QAction * previousTabAct;
     QAction * closeTabAct;
+    QAction * watchListAct;
+    QAction * valueExplorerAct;
 
     QAction * separatorAct;
 

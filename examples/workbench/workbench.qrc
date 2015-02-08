@@ -24,6 +24,7 @@
         <file>scripts/rebol-proposals/ls-cd-dt-short-names.reb</file>
         <file>scripts/rebol-proposals/loop-dialect.reb</file>
         <file>scripts/rebol-proposals/object-context.reb</file>
+        <file>scripts/rebol-proposals/help-dialect.reb</file>
         <file>images/banner-logo.png</file>
         <file>rendata/copyright.ren</file>
     </qresource>
