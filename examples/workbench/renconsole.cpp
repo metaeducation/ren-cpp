@@ -175,7 +175,7 @@ RenConsole::RenConsole (QWidget * parent) :
     helpersContext (),
     userContext (static_cast<Context>(runtime("system/contexts/user"))),
     libContext (static_cast<Context>(runtime("system/contexts/lib"))),
-    shell (helpersContext), // helpers not loaded yet, but context exists
+    shell (),
     bannerPrinted (false),
     evaluatingRepl (nullptr),
     target (none),
@@ -331,7 +331,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     // location of the anchor point for the desired selection
                     // and the location of the end point
 
-                    auto triple = static_cast<Block>(helpersContext(
+                    auto triple = static_cast<Block>((*helpersContext)(
                         "console-buffer-helper", blk[2]
                     ));
 
@@ -429,41 +429,6 @@ RenConsole::RenConsole (QWidget * parent) :
         }
     );
 
-
-    userContext(
-        "console: quote", consoleFunction,
-        "shell: quote", shell.getShellDialectFunction(),
-        "watch: quote", watchFunction,
-
-        // A bit too easy to overwrite them, e.g. `console: :shell`
-        "protect 'console protect 'shell"
-    );
-
-
-    // Load Rebol code from the helpers module.  See the description of the
-    // motivations and explations in:
-    //
-    //     /scripts/helpers/README.md
-
-    helpersPackage = QSharedPointer<RenPackage>::create(
-        // resource file prefix
-        ":/scripts/helpers/",
-
-        // URL prefix...should we assume updating the helpers could break Ren
-        // Garden and not offer to update?
-        "https://raw.githubusercontent.com/hostilefork/rencpp"
-        "/develop/examples/workbench/scripts/helpers",
-
-        Block {
-            "%shell.reb",
-            "%edit-buffer.reb",
-            "%autocomplete.reb"
-        },
-
-        helpersContext
-    );
-
-
     // This is a placeholder for a test of a question of "what good might Ren
     // data be without an evaluator, and to force dealing with the question.
     // The package lists themselves are candidates for the question; to load
@@ -535,18 +500,63 @@ RenConsole::RenConsole (QWidget * parent) :
         "combine: quote", (*proposalsContext)(":combine")
     );
 
-    // make it possible to get at the proposals context from both user
-    // and proposals:
-
-    for (auto context : std::vector<Context>{*proposalsContext, userContext}) {
-        context(
-            "append system/contexts", Block {"proposals:", *proposalsContext}
-        );
-    }
 
     // The beginnings of a test...
     /* proposalsPackage->downloadLocally(); */
 
+
+    // Load Rebol code from the helpers module.  See the description of the
+    // motivations and explations in:
+    //
+    //     /scripts/helpers/README.md
+    //
+    // Because the helpers rely upon the implementation in proposals, they
+    // have to be bound against the functions in proposals.  The lack of
+    // an ability to have a hierarchy besides the hardcoded LIB means we
+    // have to load into a copy of proposals.
+
+    helpersContext = proposalsContext->copy();
+
+    helpersPackage = QSharedPointer<RenPackage>::create(
+        // resource file prefix
+        ":/scripts/helpers/",
+
+        // URL prefix...should we assume updating the helpers could break Ren
+        // Garden and not offer to update?
+        "https://raw.githubusercontent.com/hostilefork/rencpp"
+        "/develop/examples/workbench/scripts/helpers",
+
+        Block {
+            "%shell.reb",
+            "%edit-buffer.reb",
+            "%autocomplete.reb"
+        },
+
+        *helpersContext
+    );
+
+    // The shell relies on the helpers, so we couldn't initialize it until
+    // this point...
+
+    shell.reset(new RenShell(*helpersContext));
+
+
+    // make it possible to get at the proposals context from both user
+    // and proposals, and also install the console extensions in both
+
+    for (auto context : std::vector<Context>{*proposalsContext, userContext}) {
+        context(
+            "append system/contexts", Block {"proposals:", *proposalsContext},
+
+            "console: quote", consoleFunction,
+            "shell: quote", shell->getShellDialectFunction(),
+            "watch: quote", watchFunction,
+
+            // A bit too easy to overwrite them, e.g. `console: :shell`
+            "protect 'console",
+            "protect 'shell"
+        );
+    }
 
     // With everything set up, it's time to add our Repl(s)
 
@@ -1051,7 +1061,7 @@ std::pair<QString, int> RenConsole::autoComplete(
     optional<Block> completion;
 
     try {
-        completion = static_cast<Block>(helpersContext(
+        completion = static_cast<Block>((*helpersContext)(
             backward
                 ? "autocomplete-helper/backward"
                 : "autocomplete-helper",

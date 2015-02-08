@@ -58,10 +58,10 @@ private:
     ) override;
 
 private:
-    ren::Context helpersContext;
+    std::experimental::optional<ren::Context> helpersContext;
     ren::Context userContext;
     ren::Context libContext;
-    RenShell shell;
+    std::unique_ptr<RenShell> shell;
 
 public:
     ReplPad const & repl() const {
