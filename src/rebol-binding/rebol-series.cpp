@@ -101,7 +101,7 @@ const {
 
     // Note this code isn't as simple as:
     //
-    //    return Path {*this, index, origin}.apply();
+    //    return GetPath {*this, index, origin}.apply();
     //
     // Because there is a difference between an Engine object and a
     // RenEngineHandle...and as an internal all we know for this object
@@ -109,8 +109,8 @@ const {
     // necessary anywhere else, and would involve some kind of tracking map.
     // So we do what building a path would do here.
 
-    Value path {Dont::Initialize};
-    Value::isPath(&path.cell);
+    Value getPath {Dont::Initialize};
+    Value::isGetPath(&getPath.cell);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index
@@ -122,7 +122,7 @@ const {
         nullptr, // no applicand
         loadables.data(),
         loadables.size(),
-        &path, // Do construct
+        &getPath, // Do construct
         nullptr // Don't apply
     );
 
@@ -134,7 +134,7 @@ const {
     constructOrApplyInitialize(
         origin, // use our engine handle
         nullptr, // no context
-        &path, // path is the applicand
+        &getPath, // path is the applicand
         nullptr,
         0,
         nullptr, // Don't construct
