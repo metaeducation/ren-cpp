@@ -140,7 +140,7 @@ void Value::constructOrApplyInitialize(
 
         case REN_CONSTRUCT_ERROR:
             errorOut.finishInit(engine);
-            throw std::runtime_error {to_string(errorOut)};
+            throw load_error {errorOut};
 
     #ifdef REN_RUNTIME
         case REN_APPLY_ERROR:

@@ -527,6 +527,10 @@ private:
             success = false;
             *REN_STACK_RETURN(stack) = e.error().cell;
         }
+        catch (load_error const & e) {
+            success = false;
+            *REN_STACK_RETURN(stack) = e.error().cell;
+        }
         catch (exit_command const & e) {
 
             // If there was an exit_command received, we have to offer the

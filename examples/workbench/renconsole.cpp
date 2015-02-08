@@ -94,26 +94,57 @@ public slots:
 
             success = true;
         }
+        catch (load_error const & e) {
+            // Syntax errors which would trip up RenCpp even if no runtime was
+            // loaded, so things like `runtime("print {Foo");`
+
+            result = e.error();
+        }
         catch (evaluation_error const & e) {
+            // Evaluation errors, like `first 100`
+
             result = e.error();
         }
         catch (exit_command const & e) {
+            // A programmatic request to quit the system (e.g. QUIT).  Might
+            // be interesting to have some UI to configure it not actually
+            // exiting the whole GUI app, if you don't want it to:
+            //
+            //    https://github.com/metaeducation/ren-garden/issues/17
+
             qApp->exit(e.code());
         }
         catch (evaluation_cancelled const & e) {
-            // Let returning none for the error mean cancellation
+            // Cancellation as with hitting the escape key during an infinite
+            // loop.  (Such requests must originate from the GUI thread.)
+            // Let returning none for the error mean cancellation.
+
             result = none;
         }
         catch (std::exception const & e) {
-            // Some C++ std::exception thrown...
-            char const * what = e.what();
-            assert(false);
-            throw;
+            QMessageBox::information(
+                nullptr,
+                e.what(),
+                "A C++ std::exception was thrown during evaluation.  That"
+                " means that somewhere in the chain a function was"
+                " called that was implemented as a C++ extension that"
+                " threw it.  We're gracefully catching it and not crashing,"
+                " BUT please report the issue to the bug tracker.  (Unless"
+                " you're extending Ren Garden and it's your bug, in which"
+                " case...fix it yourself!  :-P)"
+            );
         }
         catch (...) {
-            // some other C++ error was thrown (shouldn't be possible)
-            assert(false);
-            throw;
+            QMessageBox::information(
+                nullptr,
+                "Mystery C++ datatype thrown",
+                "A C++ exception was thrown during evaluation, which was *not*"
+                " derived from std::exception.  This is considered poor"
+                " practice...you're not supposed to write things like"
+                " `throw 10;`.  Because it doesn't have a what() method we"
+                " can't tell you much about what went wrong.  We're gracefully"
+                " catching it and not crashing...but please report this!"
+            );
         }
 
         emit resultReady(success, result);
@@ -141,11 +172,14 @@ signals:
 
 RenConsole::RenConsole (QWidget * parent) :
     QTabWidget (parent),
-    helpers (),
-    shell (helpers), // helpers not loaded yet, but context exists
+    helpersContext (),
+    userContext (static_cast<Context>(runtime("system/contexts/user"))),
+    libContext (static_cast<Context>(runtime("system/contexts/lib"))),
+    shell (helpersContext), // helpers not loaded yet, but context exists
     bannerPrinted (false),
     evaluatingRepl (nullptr),
-    target (none)
+    target (none),
+    proposalsContext () // we will copy it from userContext when ready...
 {
     // Set up the Evaluator so it's wired up for signals and slots
     // and on another thread from the GUI.  This technique is taken directly
@@ -182,7 +216,7 @@ RenConsole::RenConsole (QWidget * parent) :
 
     consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
-        "arg [block! any-function! string! word! image!]"
+        "arg [block! any-function! string! word! image! object!]"
         "    {block to execute or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
@@ -232,6 +266,14 @@ RenConsole::RenConsole (QWidget * parent) :
 
                     getTabInfo(repl()).dialect = static_cast<Function>(arg);
 
+                    return unset;
+                }
+
+                // Passing in an object means it will use that object as the
+                // context for this tab.
+
+                if (arg.isContext()) {
+                    getTabInfo(repl()).context = static_cast<Context>(arg);
                     return unset;
                 }
 
@@ -289,7 +331,7 @@ RenConsole::RenConsole (QWidget * parent) :
                     // location of the anchor point for the desired selection
                     // and the location of the end point
 
-                    auto triple = static_cast<Block>(helpers(
+                    auto triple = static_cast<Block>(helpersContext(
                         "console-buffer-helper", blk[2]
                     ));
 
@@ -388,7 +430,7 @@ RenConsole::RenConsole (QWidget * parent) :
     );
 
 
-    runtime(
+    userContext(
         "console: quote", consoleFunction,
         "shell: quote", shell.getShellDialectFunction(),
         "watch: quote", watchFunction,
@@ -418,7 +460,7 @@ RenConsole::RenConsole (QWidget * parent) :
             "%autocomplete.reb"
         },
 
-        helpers // context (module?) to load the bits of code into
+        helpersContext
     );
 
 
@@ -447,9 +489,11 @@ RenConsole::RenConsole (QWidget * parent) :
 
     // Incubator routines for addressing as many design questions as
     // possible without modifying the Rebol code itself.  The COMBINE
-    // assignment to JOIN is done here internally in order to help
-    // co-evolve COMBINE-the-proposal despite the defenders of the
-    // current JOIN.
+    // assignment to JOIN is done here internally vs. in the proposal itself,
+    // as a practical issue to co-evolve COMBINE-the-proposal even with
+    // those who defender of the current JOIN.
+
+    proposalsContext = userContext.copy(false);
 
     proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
@@ -475,17 +519,33 @@ RenConsole::RenConsole (QWidget * parent) :
             "%object-context.reb"
         },
 
-        Context::lookup("USER") // we put these in USER
+        *proposalsContext
     );
 
-    Context::lookup("USER")(
+    (*proposalsContext)(
         "concat: :join", // I don't care what you call it, it's bad
         "join: :combine" // Righful owner of the fitting name...
     );
 
+    // go ahead and take the good print, even in "vanilla" Rebol, and also
+    // include COMBINE
+
+    userContext(
+        "print: quote", (*proposalsContext)(":print"),
+        "combine: quote", (*proposalsContext)(":combine")
+    );
+
+    // make it possible to get at the proposals context from both user
+    // and proposals:
+
+    for (auto context : std::vector<Context>{*proposalsContext, userContext}) {
+        context(
+            "append system/contexts", Block {"proposals:", *proposalsContext}
+        );
+    }
 
     // The beginnings of a test...
-    /* proposals->downloadLocally(); */
+    /* proposalsPackage->downloadLocally(); */
 
 
     // With everything set up, it's time to add our Repl(s)
@@ -525,11 +585,13 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
+    auto context = proposalsContext->copy();
+
     auto emplacement = tabinfos.emplace(std::make_pair(pad,
         TabInfo {
             static_cast<Function>(consoleFunction),
             (count() > 0) ? nullopt : optional<Tag>{Tag {"&Main"}},
-            Context::lookup("USER").copy(),
+            context,
             new WatchList (nullptr)
         }
     ));
@@ -780,7 +842,7 @@ void RenConsole::escape(ReplPad & pad) {
         // give banner opportunity or other dialect switch code, which would
         // not be able to run if we just said dialect = consoleFunction
 
-        runtime(consoleFunction, "quote", consoleFunction);
+        getTabInfo(pad).context(consoleFunction, "quote", consoleFunction);
 
         pad.appendText("\n\n");
         pad.appendNewPrompt();
@@ -984,15 +1046,12 @@ std::pair<QString, int> RenConsole::autoComplete(
     // for other finding.  DocKimbel has suggested that Red's contexts
     // may not have any complex hierarchy, so more understanding is needed
 
-    Block contexts {
-        getTabInfo(repl()).context,
-        Context::lookup("LIB")
-    };
+    Block contexts {getTabInfo(repl()).context, libContext};
 
     optional<Block> completion;
 
     try {
-        completion = static_cast<Block>(helpers(
+        completion = static_cast<Block>(helpersContext(
             backward
                 ? "autocomplete-helper/backward"
                 : "autocomplete-helper",

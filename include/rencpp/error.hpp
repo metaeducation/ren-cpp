@@ -84,6 +84,36 @@ public:
 };
 
 
+// When you try to LOAD badly formatted data, you will get this, e.g.
+// if you say something like:
+//
+//     Block {"1 2 {Foo"}; // missing closing brace...
+//
+// Unlike evaluation_error, these can happen even if there's no runtime.
+
+class load_error : public std::exception {
+private:
+    Error errorValue;
+    std::string whatString;
+
+public:
+    load_error (Error const & error) :
+        errorValue (error),
+        whatString (to_string(errorValue))
+    {
+    }
+
+    char const * what() const noexcept override {
+        return whatString.c_str();
+    }
+
+    Error error() const noexcept {
+        return errorValue;
+    }
+};
+
+
+
 #ifdef REN_RUNTIME
 class evaluation_error : public std::exception {
 private:

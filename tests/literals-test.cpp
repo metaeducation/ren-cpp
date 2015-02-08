@@ -53,4 +53,24 @@ TEST_CASE("literals construction", "[rebol] [literals]")
         Value value = 10.20;
         CHECK(value.isFloat());
     }
+
+
+    SECTION("string construction")
+    {
+        String value {"Hello"};
+        CHECK(value.length() == 5);
+    }
+
+
+    SECTION("string construction error")
+    {
+        bool caught = false;
+        try {
+            runtime("{Hello");
+        }
+        catch (load_error const & e) {
+            caught = true;
+        }
+        CHECK(caught);
+    }
 }
