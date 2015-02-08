@@ -24,19 +24,10 @@ Rebol [
     }
 ]
 
-help: function [
-    "Help dialect and interactive help shell"
-    'word [any-type!]
-    /meta
-    
-] [
-    if unset? get/any 'word [
-        console :help
-        end
-    ]
-
-    if meta and word = 'banner [
-        print trim/auto {
+;--
+;-- This was the old help string to be borrowed from as appropriate.
+;--
+{
 ^-^-^-Use HELP or ? to see built-in info:
 
 ^-^-^-^-help insert
@@ -86,27 +77,66 @@ help: function [
 ^-^-^-^-license - show user license
 ^-^-^-^-usage - program cmd line options
 ^-^-}
+
+help: function [
+    "Help dialect and interactive help system"
+    'arg [any-type!]
+    /meta
+] [ 
+    if unset? get/any 'arg [
+        console :help
         end
     ]
 
-    if meta and word = 'prompt [
-        return "help"
+    if meta [
+        if arg = 'banner [
+            print/only [
+
+    {Entering HELP dialect mode for the command line.} newline
+    {(To exit this mode, hit ESCAPE twice quickly.)} newline
+    {More information coming on this development soon...} newline
+
+            ]
+            end
+        ]
+
+        if arg = 'prompt [
+            return "help"
+        ]
+
+        ;-- Ignore any meta requests we don't understand (room for expansion)
+
+        end
     ]
 
     if all [
-        word? :word 
-        not value? :word
+        word? :arg
+        not value? :arg
     ] [
-        word: mold :word
+        arg: to-string :arg
     ]
+
+    ; Online documentation search request... could technically support this
+    ; as a refinement but then you couldn't "get at it" from inside the
+    ; dialect.  Could have a meta switch that would automatically fetch the
+    ; online help instead of the built-in, when available:
+    ;
+    ;     help/meta [online on]
+    ;
+    ; The larger question of whether Ren Garden wants to get "thicker" by
+    ; including a WebKit build to put HTML inline is an undecided issue,
+    ; but it would be a no-brainer if the actual console itself were
+    ; switched to a web view instead of a QTextEdit
+
+    doc: false
 
     if all [
         doc
-        word? :word
-        any [any-function? get :word datatype? get :word]
+        word? :arg
+        any [any-function? get :arg datatype? get :arg]
     ] [
-        item: form :word
-        either any-function? get :word [
+        item: to-string :arg
+        either any-function? get :arg [
             foreach [a b] [
                 "!" "-ex"
                 "?" "-q"
@@ -122,60 +152,83 @@ help: function [
             tmp: http://www.rebol.com/r3/docs/datatypes/
             remove back tail item
         ]
-        browse join tmp [item ".html"]
-    ]
-
-    if any [string? :word all [word? :word datatype? get :word]] [
-        if all [word? :word datatype? get :word] [
-            value: spec-of get :word
-            print [
-                mold :word "is a datatype" newline
-                "It is defined as" either find "aeiou" first value/title ["an"] ["a"] value/title newline
-                "It is of the general type" value/type newline
-            ]
-        ]
-        if any [:word = 'unset! not value? :word] [exit]
-        types: dump-obj/match lib :word
-        sort types
-        if not empty? types [
-            print ["Found these related words:" newline types]
-            end
-        ]
-        if all [word? :word datatype? get :word] [
-            print ["No values defined for" word]
-            end
-        ]
-        print ["No information on" word]
-        end
+        browse combine [tmp item ".html"]
     ]
 
     type-name: function [value] [
-        value: mold type? :value
-        clear back tail value
-        join either find "aeiou" first value ["an "] ["a "] value
+        str: to-string type-of :value
+        clear back tail str ;-- remove exclamation point from type
+        combine [(either find "aeiou" first str ["an"] ["a"]) space str]
     ]
 
-    if not any [word? :word path? :word] [
-        print [mold :word "is" type-name :word]
-        end
-    ]
+; Needs to be improved and done properly in the dialect.. what about
+; searching with PARSE, e.g.
+;
+;     help [match ["ap" to end]]
+;
+; That could give back a list of all the entries with ap as a prefix, for
+; instance... (not that it couldn't be supported the old way too)
 
-    either path? :word [
-        if any [
-            error? set/any 'value try [get :word]
-            not value? 'value
-        ] [
-            print ["No information on" word "(path has no value)"]
+;        types: dump-obj/match lib :arg
+;        sort types
+;        if not empty? types [
+;            print ["Found these related words:" newline types]
+;            end
+;        ]
+
+    case [
+        all [word? :arg datatype? get :arg] [
+            value: spec-of get :arg
+            print [
+                to-string :arg "is a datatype" newline
+
+                "It is defined as"
+                either find "aeiou" first value/title ["an"] ["a"]
+                value/title newline
+
+                "It is of the general type" value/type newline
+            ]
+        ]
+
+        word? :arg [
+            value: get :arg
+        ]
+
+        any [:arg = 'unset! not value? :arg] [
             end
         ]
-    ] [
-        value: get :word
+
+        all [word? :arg datatype? get :arg] [
+            print ["No values defined for" arg]
+            end
+        ]
+
+        path? :arg [
+            if any [
+                error? set/any 'value try [get :arg]
+                not value? 'value
+            ] [
+                print [{No information on} :arg "(path has no value)"]
+                end
+            ]
+        ]
+
+        true [
+            value: :arg
+        ]
     ]
 
     unless any-function? :value [
         print [
-            uppercase mold word "is" type-name :value "of value: "
-            either any [object? value port? value] [print "" dump-obj value] [mold :value]
+            if word? :arg [
+                uppercase to-string :arg "is"
+            ]
+            type-name :value "of value: "
+            either any [object? value port? value] [
+                [newline dump-obj value]
+            ] [
+                to-string :value
+            ]
         ]
         end
     ]
@@ -185,52 +238,72 @@ help: function [
     print "USAGE:"
     print/only tab
 
-    args: words-of :value
-    clear find args /local
+    parameters: words-of :value
+    clear find parameters /local
     either op? :value [
-        print [args/1 word args/2]
+        print [
+            parameters/1
+            either any-function? :arg ["(...)"] [to-string :arg]
+            parameters/2
+        ]
     ] [
-        print [uppercase mold word args]
+        print [
+            either any-function? :arg ["(...)"] [uppercase to-string :arg]
+            to-string parameters
+        ]
     ]
 
     print/only [
         newline 
+
         "DESCRIPTION:" newline
+
         tab any [title-of :value "(undocumented)"] newline
-        tab uppercase mold word { is } type-name :value { value.}
+
+        tab
+        {Function sub-type is} space
+        type-name :value newline
     ]
 
-    unless args: find spec-of :value any-word! [exit]
-    clear find args /local
-    print-args: func [label list /extra /local str] [
+    unless parameters: find spec-of :value any-word! [end]
+    clear find parameters /local
+    print-parameters: function [label list /extra] [
         if empty? list [end]
         print label
-        each arg list [
-            str: combine [tab arg/1]
-            if all [extra word? arg/1] [insert str tab]
-            if arg/2 [append append str " -- " arg/2]
-            if all [arg/3 not refinement? arg/1] [
-                repend str [" (" arg/3 ")"]
+        each param list [
+            print/only [
+                if all [extra word? param/1] [tab]
+                tab to-string param/1
+                if param/2 [
+                    [space "--" space to-string param/2]
+                ]
+                if all [
+                    param/3
+                    not refinement? param/1
+                ] [
+                    [space "(" to-string param/3 ")"]
+                ]
+                newline
             ]
-            print str
         ]
     ]
 
-    use [argl refl ref b v] [
-        argl: copy []
-        refl: copy []
-        ref: b: v: none
-        parse args [
-            any [string! | block!]
-            any [
-                set word [refinement! (ref: true) | any-word!]
-                (append/only either ref [refl] [argl] b: reduce [word none none])
-                any [set v block! (b/3: v) | set v string! (b/2: v)]
-            ]
+    argl: copy []
+    refl: copy []
+    ref: b: v: none
+    parse parameters [
+        any [string! | block!]
+        any [
+            set item [refinement! (ref: true) | any-word!]
+            (
+                b: reduce [item none none]
+                append/only either ref [refl] [argl] b
+            )
+            any [set v block! (b/3: v) | set v string! (b/2: v)]
         ]
-        print-args "^/ARGUMENTS:" argl
-        print-args/extra "^/REFINEMENTS:" refl
     ]
+    print-parameters "^/ARGUMENTS:" argl
+    print-parameters/extra "^/REFINEMENTS:" refl
     end
 ]
 

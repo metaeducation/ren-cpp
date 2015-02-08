@@ -481,7 +481,8 @@ RenConsole::RenConsole (QWidget * parent) :
             "%find-min-max.reb",
             "%ls-cd-dt-short-names.reb",
             "%loop-dialect.reb",
-            "%object-context.reb"
+            "%object-context.reb",
+            "%help-dialect.reb"
         },
 
         *proposalsContext
