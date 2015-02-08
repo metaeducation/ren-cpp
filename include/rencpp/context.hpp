@@ -152,7 +152,7 @@ public:
 public:
     template <typename... Ts>
     inline Value operator()(Ts &&... args) const {
-        return apply(std::forward<Ts>(args)...);
+        return apply({std::forward<Ts>(args)...}, internal::ContextWrapper {*this});
     }
 
     template <typename R, typename... Ts>

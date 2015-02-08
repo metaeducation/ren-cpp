@@ -85,7 +85,9 @@ RenResult Generalized_Apply(
             // pointer at the head of the block!!  :-/
 
             Bind_Block(
-                VAL_OBJ_FRAME(applicand), BLK_HEAD(reboundArgs), BIND_DEEP
+                VAL_OBJ_FRAME(applicand),
+                BLK_HEAD(reboundArgs),
+                BIND_DEEP | BIND_SET
             );
 
             // result is just TOS

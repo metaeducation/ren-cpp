@@ -63,32 +63,12 @@ void Value::finishInit(RenEngineHandle engine) {
 
 Value Value::copy(bool deep) const {
 
-    std::array<internal::Loadable, 2> loadables = {{
-        deep ? "copy/deep" : "copy",
-        *this
-    }};
-
-    Value result (Dont::Initialize);
-
-    Context userContext = Context::lookup("USER");
-    constructOrApplyInitialize(
-        origin,
-        &userContext, // hope that COPY hasn't been overwritten...
-        nullptr, // no applicand
-        loadables.data(),
-        loadables.size(),
-        nullptr, // Don't construct
-        &result // Do apply
-    );
-
-    return result;
-
     // It seems the only way to call an action is to put the arguments it
     // expects onto the stack :-/  For instance in the dispatch of A_COPY
     // we see it uses D_REF(ARG_COPY_DEEP) in the block handler to determine
     // whether to copy deeply.  So there is no deep flag to Copy_Value.  :-/
     // Exactly what the incantation would be can be figured out another
-    // day but it would look something(?) like the below
+    // day but it would look something(?) like this commented out code...
 
   /*
     auto saved_DS_TOP = DS_TOP;
@@ -112,9 +92,38 @@ Value Value::copy(bool deep) const {
     result.finishInit(origin);
 
     DS_TOP = saved_DS_TOP;
+   */
+
+    // However, that's not quite right and so the easier thing for the moment
+    // is to just invoke it like running normal code.  :-/  But if anyone
+    // feels like fixing the above, be my guest...
+
+    Context userContext (Dont::Initialize);
+    // This sets REB_OBJECT in the header
+    Set_Object(
+        &userContext.cell,
+        VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
+    );
+    userContext.finishInit(origin);
+
+    std::array<internal::Loadable, 2> loadables = {{
+        deep ? "copy/deep" : "copy",
+        *this
+    }};
+
+    Value result (Dont::Initialize);
+
+    constructOrApplyInitialize(
+        origin,
+        &userContext, // hope that COPY hasn't been overwritten...
+        nullptr, // no applicand
+        loadables.data(),
+        loadables.size(),
+        nullptr, // Don't construct
+        &result // Do apply
+    );
 
     return result;
-*/
 }
 
 

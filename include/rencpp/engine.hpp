@@ -152,9 +152,14 @@ public:
     }
 
 public:
+    static Value evaluate(
+        std::initializer_list<internal::BlockLoadable<Block>> loadables,
+        Engine & engine
+    );
+
     template <typename... Ts>
     Value operator()(Ts... args) {
-        return runtime({args...}, this);
+        return evaluate({args...}, *this);
     }
 };
 

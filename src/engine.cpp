@@ -17,6 +17,7 @@
 //
 
 #include "rencpp/engine.hpp"
+#include "rencpp/ren.hpp"
 
 
 namespace ren {
@@ -47,5 +48,17 @@ std::istream & Engine::getInputStream() {
     return *isPtr;
 }
 
+
+Value Engine::evaluate(
+    std::initializer_list<internal::BlockLoadable<Block>> loadables,
+    Engine & engine
+) {
+    return runtime.evaluate(
+        loadables.begin(),
+        loadables.size(),
+        nullptr,
+        &engine
+    );
+}
 
 }

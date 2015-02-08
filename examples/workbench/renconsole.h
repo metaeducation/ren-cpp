@@ -58,7 +58,9 @@ private:
     ) override;
 
 private:
-    ren::Context helpers;
+    ren::Context helpersContext;
+    ren::Context userContext;
+    ren::Context libContext;
     RenShell shell;
 
 public:
@@ -154,6 +156,7 @@ protected:
     // scratch attempt to make MODULE!" and then compare the implemenations.
 private:
     QSharedPointer<RenPackage> proposalsPackage;
+    std::experimental::optional<ren::Context> proposalsContext;
     QSharedPointer<RenPackage> helpersPackage;
     QSharedPointer<RenPackage> rendataPackage;
 

@@ -55,6 +55,7 @@ protected:
     friend class Value;
     friend class AnyString;
     friend class AnyWord;
+    friend class Engine;
 
     static bool needsRefcount(RenCell const & cell);
 
