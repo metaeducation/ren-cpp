@@ -57,64 +57,37 @@ print: function [
     /part {Limits to a given length or position}
         limit [integer! series!] ;; COMBINE doesn't implement pair! yet
 ] [
-    prin: :system/contexts/lib/prin
-
     ; Transform our refinements into arguments for COMBINE
 
     with-arg: case [with [delimiter] only [none] true [space]]
-    part-arg: either part [limit] [if series? value [tail value]]
+    part-arg: either part [limit] [if any-block? value [tail value]]
 
-    case [
-        unset? :value [
-            ;-- ignore it...
+    ; if it's not a block, do the same thing that would have been done if
+    ; the COMBINE happened with the value in a block.  e.g. PRINT NONE is
+    ; defined as doing whatever PRINT [NONE] would have done...
+
+    unless block? value [value: reduce [value]]
+
+    ;-- chaining proposal would make this oh-so-much-better :-/
+    ;-- APPLY is fragile and based on ordering issues of the refinements
+
+    system/contexts/lib/prin either safe [
+        either part [
+            combine/with/part/safe value with-arg part-arg
+        ] [
+            combine/with/safe value with-arg
         ]
-
-        block? value [
-            ;-- chaining proposal would make this oh-so-much-better
-            prin either safe [
-                combine/with/part/safe value with-arg part-arg
-            ] [
-                combine/with/part value with-arg part-arg
-            ]
-        ]
-
-        string? value [
-            prin value
-        ]
-
-        path? value [
-            prin mold get value
-        ]
-
-        series? value [
-            do make error! "Cannot print non-block!/string! series directly, use MOLD or lit-word"
-        ]
-
-        word? value [
-            prin mold get value
-        ]
-
-        any-word? value [
-            do make error! "Cannot print non-word! words directly, use MOLD"
-        ]
-
-        any-function? value [
-            do make error! "Cannot print functions directly, use MOLD or lit-word"
-        ]
-
-        object? value [
-            do make error! "Cannot print objects directly, use MOLD or lit-word"
-        ]
-
-        true [
-            prin system/contexts/lib/form value
+    ] [
+        either part [
+            combine/with/part value with-arg part-arg
+        ] [
+            combine/with value with-arg
         ]
     ]
 
     unless only [
-        prin newline
+        system/contexts/lib/prin newline
     ]
 
     system/contexts/lib/exit
 ]
-
