@@ -874,7 +874,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         if (
             event->matches(QKeySequence::Cut)
-            or event->matches(QKeySequence::Paste)
             or event->matches(QKeySequence::Delete)
             or event->matches(QKeySequence::DeleteCompleteLine)
             or event->matches(QKeySequence::DeleteEndOfLine)
@@ -882,8 +881,13 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             or event->matches(QKeySequence::DeleteStartOfWord)
         ) {
             containInputSelection();
+
             QMutexLocker lock {&documentMutex};
             QTextEdit::keyPressEvent(event);
+            return;
+        }
+        else if (event->matches(QKeySequence::Paste)) {
+            pasteSafely();
             return;
         }
 
@@ -1139,46 +1143,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     if ((key == Qt::Key_Enter) or (key == Qt::Key_Return)) {
 
         if ((not entry.multiline) and (shifted and (not ctrled))) {
-            // Switch from single to multi-line mode
-
-            // Save the string and current offsets for the selection start
-            // and end points
-
-            QString input = entry.getInput(*this);
-            int position = textCursor().position() - entry.inputPos;
-            int anchor = textCursor().anchor() - entry.inputPos;
-
-
-            // Add a newline to the buffer and bump the position in special
-            // case where you had an insertion point at the end of input
-            //
-            // https://github.com/metaeducation/ren-garden/issues/11
-
-            if (
-                (position == anchor) and (position == input.length())
-                and (not input.isEmpty())
-            ) {
-                input += "\n";
-                position++;
-                anchor++;
-            }
-
-
-            // Clear the input area and then rewrite as a multi-line prompt
-
-            clearCurrentInput();
-            entry.multiline = true;
-            rewritePrompt();
-
-            // Put the buffer and selection back, now on its own line
-
-            setBuffer(input, position, anchor);
-
-            // It may be possible to detect when we undo backwards across
-            // a multi-line switch and reset the history item, but until
-            // then allowing an undo might mess with our history record
-
-            document()->clearUndoRedoStacks();
+            switchToMultiline();
             return;
         }
 
@@ -1516,6 +1481,53 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 }
 
 //
+// Switch the input from single to multi-line mode
+//
+void ReplPad::switchToMultiline() {
+    HistoryEntry & entry = history.back();
+
+    // Save the string and current offsets for the selection start
+    // and end points
+
+    QString input = entry.getInput(*this);
+    int position = this->textCursor().position() - entry.inputPos;
+    int anchor = this->textCursor().anchor() - entry.inputPos;
+
+
+    // Add a newline to the buffer and bump the position in special
+    // case where you had an insertion point at the end of input
+    //
+    // https://github.com/metaeducation/ren-garden/issues/11
+
+    if (
+            (position == anchor) and (position == input.length())
+            and (not input.isEmpty())
+        ) {
+            input += "\n";
+            position++;
+            anchor++;
+        }
+
+
+    // Clear the input area and then rewrite as a multi-line prompt
+
+    clearCurrentInput();
+    entry.multiline = true;
+    rewritePrompt();
+
+    // Put the buffer and selection back, now on its own line
+
+    setBuffer(input, position, anchor);
+
+    // It may be possible to detect when we undo backwards across
+    // a multi-line switch and reset the history item, but until
+    // then allowing an undo might mess with our history record
+
+    this->document()->clearUndoRedoStacks();
+}
+
+
+//
 // Testing fun gimmick for those upset over the loss of ordinary quit...a
 // way to cancel and exit by holding down escape
 //
@@ -1547,6 +1559,13 @@ void ReplPad::cutSafely() {
 
 void ReplPad::pasteSafely() {
     containInputSelection();
+
+    QClipboard *clipboard = QApplication::clipboard();
+    QString clipboardText = clipboard->text();
+
+    // Note that we're not checking for CR
+    if (clipboardText.contains('\n', Qt::CaseInsensitive))
+        switchToMultiline();
 
     QMutexLocker lock {&documentMutex};
     QTextEdit::paste();
