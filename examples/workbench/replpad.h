@@ -203,6 +203,7 @@ protected slots:
 protected:
     void clearCurrentInput();
     void containInputSelection();
+    void switchToMultiline();
 
 
 protected:
