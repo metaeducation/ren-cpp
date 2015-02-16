@@ -167,7 +167,75 @@ and Ren Garden type:
 
 (Adaptations for other Linuxes TBD...)
 
+**Kubuntu 14.10 (32bit)**
 
+Here are my steps for running on a local VM under virtual box.
+
+First up the resolution is not right running under virtualbox so we need to fix that
+
+    sudo apt-get install virtualbox-guest-dkms
+
+Grab qt and install it (I had a few problems with the download, but it worked in the end)
+
+    wget http://download.qt-project.org/official_releases/online_installers/qt-opensource-linux-x86-online.run
+    chmod 755 qt-opensource-linux-x86-online.run
+    ./qt-opensource-linux-x86-online.run
+
+and install a few dependencies
+
+    sudo apt-get install cmake -y
+    sudo apt-get install ia32-libs -y
+    sudo apt-get install lib32z1 -y
+    sudo apt-get install libc6-dev-i386 -y
+
+and a few more ...
+
+    sudo apt-get install build-essential -y
+    sudo apt-get install mesa-common-dev -y
+    sudo apt-get install libglu1-mesa-dev -y
+    sudo apt-get install git -y
+
+Now setup a directory for rencpp
+
+    mkdir ren
+    cd ren
+
+Download the Rebol source
+
+    git clone https://github.com/rebol/rebol.git
+    cd rebol/make/
+
+Grab a pre-built Rebol executable to run the make
+
+    wget http://rebolsource.net/downloads/linux-x86/r3-g25033f8
+    chmod 755 r3-g25033f8 
+    cp r3-g25033f8 r3-make
+
+Set up to build Rebol
+
+    make make OS_ID=0.4.4
+    make prep
+    make
+    
+This should have successfully built Rebol.
+Change dir back to the ren dir, setup the path to Qt for cmake and grab rencpp
+
+    export CMAKE_PREFIX_PATH=~/Qt/5.4/gcc_64/lib/cmake
+    git clone https://github.com/hostilefork/rencpp.git
+
+Change dir to rencpp and build it (note: if you installed your Qt elsewhere be sure to update the path)
+
+    cd rencpp
+    mkdir build
+    cd build
+    cmake .. -G "Unix Makefiles" -DRUNTIME=rebol -DGARDEN=1 -DCLASSLIB_QT=1 -DCMAKE_PREFIX_PATH=~/Qt/5.4/gcc/lib/cmake
+    make
+
+If the make is successful then try to launch RenGarden  
+
+    cd examples/workbench
+    ./workbench
+    
 
 OS X
 ----
