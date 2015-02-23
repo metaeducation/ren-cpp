@@ -376,7 +376,7 @@ autocomplete-helper: function [
     ; completion if there was one (whether take-next was set or not)
 
     if first-candidate-word [
-        result: reduce [
+        return reduce [
             combine [base spelling-of first-candidate-word]
             index
             either :scope [
@@ -385,10 +385,6 @@ autocomplete-helper: function [
                 in first-candidate-ctx first-candidate-word
             ]
         ]
-        if 3 <> length result [
-            do make error! "Come on all my people"
-        ]
-        return result
     ]
 
 
