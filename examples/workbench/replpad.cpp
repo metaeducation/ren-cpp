@@ -905,7 +905,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // asking to do some kind of modification when there may be an evaluation
     // running on another thread.
 
-    if (not hooks.isReadyToModify(*this, event)) {
+    if (not hooks.isReadyToModify(*this, key == Qt::Key_Escape)) {
         followLatestOutput();
         return;
     }
@@ -1527,6 +1527,7 @@ void ReplPad::switchToMultiline() {
 }
 
 
+
 //
 // Testing fun gimmick for those upset over the loss of ordinary quit...a
 // way to cancel and exit by holding down escape
@@ -1544,6 +1545,44 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
         emit fadeOutToQuit(false);
 
     QTextEdit::keyReleaseEvent(event);
+}
+
+
+
+//
+// There is a transformation process in input methods that actually mutate
+// existing characters "out from under you".  So a half-formed character goes
+// back and gets changed...it's not a "fully additive" process.
+//
+void ReplPad::inputMethodEvent(QInputMethodEvent * event) {
+
+    // Give a hook opportunity to do something about this key, which is
+    // asking to do some kind of modification when there may be an evaluation
+    // running on another thread.
+
+    if (not hooks.isReadyToModify(*this, false)) {
+        followLatestOutput();
+        return;
+    }
+
+    // If our current selection was made by an autocomplete, we want to
+    // collapse it down to a single point instead of a range so that the
+    // insertion won't overwrite it
+
+    if (selectionWasAutocomplete) {
+        QTextCursor cursor = textCursor();
+        cursor.setPosition(cursor.position());
+        setTextCursor(cursor);
+    }
+
+    // While we wanted to do all the changes to the QTextEdit ourselves with
+    // the "text to be inserted" for complete control, that's not the case
+    // with input method editing.  We pretty much always want to defer to that
+    // logic!
+
+    QMutexLocker lock (&documentMutex);
+
+    QTextEdit::inputMethodEvent(event);
 }
 
 

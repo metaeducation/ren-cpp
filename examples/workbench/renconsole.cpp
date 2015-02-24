@@ -788,7 +788,7 @@ void RenConsole::printBanner() {
 // from RenCpp.
 //
 
-bool RenConsole::isReadyToModify(ReplPad & pad, QKeyEvent * event) {
+bool RenConsole::isReadyToModify(ReplPad & pad, bool escaping) {
 
     // No modifying operations while you are running in the console.  You
     // can only request to cancel.  For issues tied to canceling semantics
@@ -797,7 +797,7 @@ bool RenConsole::isReadyToModify(ReplPad & pad, QKeyEvent * event) {
     //     https://github.com/hostilefork/rencpp/issues/19
 
     if (evaluatingRepl) {
-        if (event->key() == Qt::Key_Escape) {
+        if (escaping) {
             if (evaluatingRepl == &pad)
                 runtime.cancel();
             else

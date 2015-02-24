@@ -112,7 +112,7 @@ protected:
     QString getPromptString(ReplPad & pad) override;
 
 protected:
-    bool isReadyToModify(ReplPad & pad, QKeyEvent * event) override;
+    bool isReadyToModify(ReplPad & pad, bool escaping) override;
 
 private:
     ReplPad * evaluatingRepl;

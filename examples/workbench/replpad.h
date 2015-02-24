@@ -93,7 +93,7 @@ public:
 
 class IReplPadHooks {
 public:
-    virtual bool isReadyToModify(ReplPad & pad, QKeyEvent * event) = 0;
+    virtual bool isReadyToModify(ReplPad & pad, bool escaping) = 0;
     virtual QString getPromptString(ReplPad & pad) = 0;
     virtual void evaluate(ReplPad & pad, QString const & input, bool meta) = 0;
     virtual void escape(ReplPad & pad) = 0;
@@ -209,6 +209,7 @@ protected:
 protected:
     void keyPressEvent(QKeyEvent * event) override;
     void keyReleaseEvent(QKeyEvent * event) override;
+    void inputMethodEvent(QInputMethodEvent * event) override;
     void mousePressEvent(QMouseEvent * event) override;
     void mouseDoubleClickEvent(QMouseEvent * event) override;
 
