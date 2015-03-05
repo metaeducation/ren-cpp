@@ -2,7 +2,8 @@ Rebol [
     Title: {Exit, End, Quit proposal}
 
     Description {
-        TBD
+        http://curecode.org/rebol3/ticket.rsp?id=2200
+        http://curecode.org/rebol3/ticket.rsp?id=2181
     }
 ]
 
@@ -12,6 +13,7 @@ quit: func [
     system/contexts/lib/quit
 ]
 
+
 exit: func [
     {Stops evaluation and exits the interpreter, returning a status code.}
 
@@ -20,8 +22,12 @@ exit: func [
     system/contexts/lib/quit/return status
 ]
 
-;-- Can't be a wrapper function because it would return the exit
-end: :system/contexts/lib/exit
+
+void: func [
+    {Evaluates to no value.}
+] [
+    #[unset!]
+]
 
 
 ;-- Rename /QUIT to /EXIT to signify that you're getting the code

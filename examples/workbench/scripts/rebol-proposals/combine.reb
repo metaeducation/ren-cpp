@@ -13,7 +13,7 @@ Rebol [
            http://blog.hostilefork.com/combine-alternative-rebol-red-rejoin/ 
 
         While the name COMBINE is not bad, it has several things making it
-        less desirable than JOIN.  While JOIN was the original requested
+        less desirable than JOIN.  Though JOIN was the original requested
         name, it was backed off after significant resistance defending
         its existing definition:
 
@@ -164,16 +164,44 @@ combine: function [
         ; of parse rules.
 
         case [
-            ; Ignore unset! (precedent: any, all, compose)
+            ; Ignore UNSET! (precedent: ANY, ALL, COMPOSE)
 
             unset? :value []
 
 
-            ; Give no meaning to if the evaluation produces a function
-            ; value as a product.
+            ; Skip all nones.  This is suggested for COMPOSE as well:
+            ;
+            ;     http://curecode.org/rebol3/ticket.rsp?id=2198
 
-            any-function? :value [
-                do make error! "Evaluation in COMBINE gave function/closure"
+            none? :value []
+
+
+            ; If a function or PAREN! are returned, then evaluate it at
+            ; the same nesting level (unless /SAFE is chosen)
+            ;
+            ; This does mean you can get an infinite loop, for instance by
+            ; writing something like:
+            ;
+            ;    foo: quote (foo)
+            ;    combine [foo]
+            ;
+            ; Of course, in general Rebol offers no guarantees against
+            ; infinite loops.  So this experiment is just a test to see if
+            ; it's more useful to allow the feature than to disallow it; and
+            ; see if creative usages arise making it worth not prohibiting.
+            ; The existence of a /SAFE option made this seem less insane.
+
+            any [
+                any-function? :value
+                paren? value
+            ] [
+                if safe [
+                    do make error! {
+                        COMBINE evaluation cannot re-evaluate result if /SAFE
+                    }
+                ]
+                pre-delimit ;; overwrites temp!
+                out: combine/with/into/level reduce [value] :delimiter out depth
             ]
 
 
@@ -181,110 +209,42 @@ combine: function [
             ; nested sequences; like building nested rules in PARSE
 
             block? value [
-                pre-delimit
+                pre-delimit ;; overwrites temp!
                 out: combine/with/into/level value :delimiter out depth + 1
             ]
 
 
-            ; This is an idea that was not met with much enthusiasm, which was
-            ; to allow COMBINE ['X] to mean the same as COMBINE [MOLD X]
-            
-            UNSET? ;; comment hack
-            any [
-                word? value
-                path? value
-            ] [
-                pre-delimit ;-- overwrites temp!
-                temp: get value
-                out: append out (mold :temp)
-            ]
-
-
-            ; It's a controversial question as to whether or not ANY-WORD!
-            ; should casually print out as its spelling.  The idea that words
-            ; don't cover the full spectrum of strings is something that
-            ; got stuck in my head that words shouldn't "leak".  So I was
-            ; very surprised to see that they did, and if you used a word
-            ; selection out of a file path as FILE/SOME-WORD then it would
-            ; append the spelling of SOME-WORD to the file.  That turned
-            ; the idea on its head to where leakage of words might be okay,
-            ; along with the idea of liberalizing what strings could be 
-            ; used as the spelling of words to anything via construction
-            ; syntax.  So pursuant to that I'm trying to ease up so that
-            ; if evaluation winds up with a word value, e.g. held in 
-            ; a variable or returned from a function then that is 
-            ; printable.  But set words, get words, and paths are too
-            ; "alive" and should be molded.  Hmmm.  FORM is a better
-            ; word than MOLD.  If TO-STRING could take the responsibility
-            ; of FORM then MOLD could take FORM.  Enough tangent.
-
-            any [
-                word? value
-            ] [
-                pre-delimit ;; overwrites temp!
-                out: append out (to-string value)
-            ]
-
-
-            ; Another idea that seemed good at first but later came back not
-            ; seeming so coherent...use of an otherwise dead type to 
-            ; suppress delimiting.  So:
+            ; If all else fails, run a TO-STRING conversion on the item.
             ;
-            ;     >> combine/with ["A" "B" /+ "C"] "."
-            ;     == "A.BC"
-            ;  
-            ; This was particularly ugly when the pieces being joined were
-            ; file paths and had slashes in them.  But the concept may be  
-            ; worth implementing another way so that the delimiter-generating
-            ; function can have a first crack at processing values?
-
-            UNSET?
-            refinement? value [
-                case [
-                    value = /+ [
-                        needs-delimiter: false
-                    ]
-            
-                    true [
-                        do make error! "COMBINE refinement other than /+ used"
-                    ]
-                ]
-            ]
-
-
-            ; all other block types as *results* of evaluations throw
-            ; errors for the moment.  (It's legal to use PAREN! in the
-            ; COMBINE, but a function invocation that returns a PAREN!
-            ; will not recursively iterate the way BLOCK! does) 
-
-            any-block? value [
-                do make error! {
-                    Evaluation in COMBINE gave non-block! or path! block
-                }
-            ]
-
-
-            ; currently this throws errors on words if that's what an
-            ; *evaluation* produces.  Theoretically these could be
-            ; given behaviors in the dialect, but the potential for
-            ; bugs probably outweighs the value (of converting implicitly
-            ; to a string or trying to run an evaluation of a non-block)
-
-            any-word? value [
-                do make error! "Evaluation in COMBINE gave symbolic word"
-            ]
-
-
-            ; Skip all nones
-
-            none? value []
-
-
-            ; If all else fails, then FORM the value
+            ; Initial versions of COMBINE would not automatically TO-STRING a
+            ; word!, set-word!, path!, etc.  But once COMBINE became used in
+            ; PRINT, previous applications suggested that these cases were
+            ; valuable for doing debug-related or reflective processing.  The
+            ; automatic choice to use TO-STRING (previously FORM) vs.
+            ; something more MOLD-like has a consequence, e.g.:
+            ;
+            ;     print [quote Hello: %{/filename with/spaces/in it}]
+            ;
+            ; Gives you:
+            ;
+            ;     Hello: /filename with/spaces/in it
+            ;
+            ; Which is clearly not LOADable, and puts responsibility of
+            ; delimiting things which may contain spaces upon the user.
+            ; You may MOLD to avoid this, of course:
+            ;
+            ;     print [quote Hello: mold %{/filename with/spaces in it}]
+            ;
+            ; Then you will get:
+            ;
+            ;     Hello: %{/filename with/spaces in it}
+            ;
+            ; However, the default is to use TO-STRING and not raise an error,
+            ; by popular request.
 
             true [
-                pre-delimit
-                out: append out system/contexts/lib/form :value
+                pre-delimit ;; overwrites temp!
+                out: append out to-string value
             ]
         ]
     ]

@@ -85,7 +85,7 @@ help: function [
 ] [ 
     if unset? get/any 'arg [
         console :help
-        end
+        return void 
     ]
 
     if meta [
@@ -97,7 +97,7 @@ help: function [
     {More information coming on this development soon...} newline
 
             ]
-            end
+            return void 
         ]
 
         if arg = 'prompt [
@@ -106,7 +106,7 @@ help: function [
 
         ;-- Ignore any meta requests we don't understand (room for expansion)
 
-        end
+        return void 
     ]
 
     if all [
@@ -173,7 +173,7 @@ help: function [
 ;        sort types
 ;        if not empty? types [
 ;            print ["Found these related words:" newline types]
-;            end
+;            return void
 ;        ]
 
     case [
@@ -195,12 +195,12 @@ help: function [
         ]
 
         any [:arg = 'unset! not value? :arg] [
-            end
+            return void
         ]
 
         all [word? :arg datatype? get :arg] [
             print ["No values defined for" arg]
-            end
+            return void
         ]
 
         path? :arg [
@@ -209,7 +209,7 @@ help: function [
                 not value? 'value
             ] [
                 print [{No information on} :arg "(path has no value)"]
-                end
+                return void
             ]
         ]
 
@@ -230,7 +230,7 @@ help: function [
                 to-string :value
             ]
         ]
-        end
+        return void 
     ]
 
     ; It's a function, so print out the usage information
@@ -265,10 +265,10 @@ help: function [
         type-name :value newline
     ]
 
-    unless parameters: find spec-of :value any-word! [end]
+    unless parameters: find spec-of :value any-word! [return void]
     clear find parameters /local
     print-parameters: function [label list /extra] [
-        if empty? list [end]
+        if empty? list [return void]
         print label
         each param list [
             print/only [
@@ -304,6 +304,6 @@ help: function [
     ]
     print-parameters "^/ARGUMENTS:" argl
     print-parameters/extra "^/REFINEMENTS:" refl
-    end
+    void 
 ]
 
