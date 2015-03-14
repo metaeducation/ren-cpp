@@ -109,6 +109,8 @@ MainWindow::MainWindow() :
     addDockWidget(Qt::TopDockWidgetArea, dockValueExplorer);
     dockValueExplorer->hide();
 
+    readSettings();
+
     createActions();
     createMenus();
     createStatusBar();
@@ -138,9 +140,6 @@ MainWindow::MainWindow() :
         watchListAct, &QAction::setChecked,
         Qt::DirectConnection
     );
-
-
-    readSettings();
 
     setWindowTitle(tr("Ren Garden"));
     setUnifiedTitleAndToolBarOnMac(true);
@@ -232,6 +231,18 @@ void MainWindow::createActions()
         pasteAct, &QAction::triggered,
         this, &MainWindow::paste,
         Qt::DirectConnection
+    );
+
+    proposalsAct = new QAction(tr("Use &Proposals "), this);
+    proposalsAct->setStatusTip(tr("Enable or disable experimental language "
+                                  "proposals curated by @HostileFork."));
+    proposalsAct->setCheckable(true);
+    proposalsAct->setChecked(console->getUseProposals());
+    connect(
+        proposalsAct, &QAction::triggered,
+        [this](bool checked) {
+            console->setUseProposals(checked);
+        }
     );
 
     newTabAct = new QAction(tr("New &Tab"), this);
@@ -341,6 +352,9 @@ void MainWindow::createMenus()
     windowMenu->addAction(watchListAct);
     windowMenu->addAction(valueExplorerAct);
 
+    languageMenu = menuBar()->addMenu(tr("&Language"));
+    languageMenu->addAction(proposalsAct);
+
     menuBar()->addSeparator();
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -360,10 +374,12 @@ void MainWindow::readSettings()
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
     int zoom = settings.value("zoom", 0).toInt();
+    bool useProposals = settings.value("useProposals", true).toBool();
 
     move(pos);
     resize(size);
     console->repl().setZoom(zoom);
+    console->setUseProposals(useProposals);
 }
 
 
@@ -373,6 +389,7 @@ void MainWindow::writeSettings()
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("zoom", console->repl().getZoom());
+    settings.setValue("useProposals", console->getUseProposals());
 }
 
 

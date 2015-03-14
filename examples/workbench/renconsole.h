@@ -172,6 +172,12 @@ public:
     void createNewTab();
     void tryCloseTab(int index);
     void updateTabLabels();
+
+private:
+    bool useProposals;
+public:
+    void setUseProposals(bool useProposals);
+    bool getUseProposals() { return useProposals; }
 };
 
 #endif

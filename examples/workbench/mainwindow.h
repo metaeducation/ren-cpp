@@ -87,17 +87,20 @@ public:
     QDockWidget * dockValueExplorer;
 
 private:
-    QMenu * fileMenu;
-    QMenu * editMenu;
-    QMenu * windowMenu;
-    QMenu * helpMenu;
+    QAction * separatorAct;
 
+    QMenu * fileMenu;
     QAction * exitAct;
 
+    QMenu * editMenu;
     QAction * cutAct;
     QAction * copyAct;
     QAction * pasteAct;
 
+    QMenu * languageMenu;
+    QAction * proposalsAct;
+
+    QMenu * windowMenu;
     QAction * newTabAct;
     QAction * nextTabAct;
     QAction * previousTabAct;
@@ -105,8 +108,7 @@ private:
     QAction * watchListAct;
     QAction * valueExplorerAct;
 
-    QAction * separatorAct;
-
+    QMenu * helpMenu;
     QAction * aboutAct;
 
 private slots:

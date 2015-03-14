@@ -39,9 +39,9 @@ using namespace ren;
 extern bool forcingQuit;
 
 
-///
-/// WORKER OBJECT FOR HANDLING REN EVALUATIONS
-///
+//#
+//# WORKER OBJECT FOR HANDLING REN EVALUATIONS
+//#
 
 //
 // We push this item to the worker thread and let it do the actual evaluation
@@ -159,9 +159,9 @@ signals:
 
 
 
-///
-/// CONSOLE CONSTRUCTION
-///
+//#
+//# CONSOLE CONSTRUCTION
+//#
 
 //
 // The console doesn't inherit from ReplPad, it *contains* it.  This
@@ -179,7 +179,8 @@ RenConsole::RenConsole (QWidget * parent) :
     bannerPrinted (false),
     evaluatingRepl (nullptr),
     target (none),
-    proposalsContext () // we will copy it from userContext when ready...
+    proposalsContext (), // we will copy it from userContext when ready...
+    useProposals (true)
 {
     // Set up the Evaluator so it's wired up for signals and slots
     // and on another thread from the GUI.  This technique is taken directly
@@ -596,7 +597,9 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
-    auto context = proposalsContext->copy();
+    Context context = useProposals
+        ? proposalsContext->copy()
+        : userContext.copy();
 
     auto emplacement = tabinfos.emplace(std::make_pair(pad,
         TabInfo {
@@ -778,9 +781,9 @@ void RenConsole::printBanner() {
 
 
 
-///
-/// REPLPAD HOOKS
-///
+//#
+//# REPLPAD HOOKS
+//#
 
 //
 // The ReplPad is language-and-evaluator agnostic.  It offers an interface
@@ -881,9 +884,9 @@ QString RenConsole::getPromptString(ReplPad & pad) {
 
 
 
-///
-/// EVALUATION RESULT HANDLER
-///
+//#
+//# EVALUATION RESULT HANDLER
+//#
 
 //
 // When the evaluator has finished running, we want to print out the
@@ -975,9 +978,9 @@ void RenConsole::handleResults(
 
 
 
-///
-/// SYNTAX-SENSITIVE HOOKS
-///
+//#
+//# SYNTAX-SENSITIVE HOOKS
+//#
 
 //
 // Ideally this would be done with separately sandboxed "Engines", a feature
@@ -1100,9 +1103,9 @@ std::pair<QString, int> RenConsole::autoComplete(
 
 
 
-///
-/// DESTRUCTOR
-///
+//#
+//# DESTRUCTOR
+//#
 
 //
 // If we try to destroy a RenConsole, there may be a worker thread still
@@ -1124,6 +1127,15 @@ RenConsole::~RenConsole() {
         );
         exit(1337); // REVIEW: What exit codes will Ren Garden use?
     }
+}
+
+
+void RenConsole::setUseProposals(bool useProposals) {
+    this->useProposals = useProposals;
+
+    std::string command {"console system/contexts/"};
+    command += useProposals ? "proposals" : "user";
+    getTabInfo(repl()).context(command.c_str());
 }
 
 
