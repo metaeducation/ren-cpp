@@ -5,7 +5,7 @@ This tutorial is still incomplete but it aims to explain at best how to build
 RenCpp on different systems.
 
 Be aware that although RenCpp was originally an initiative instigated by the
-[Red Project](http://red-lang.org/contributions.html), it turned out to be
+[Red Project](http://www.red-lang.org/p/contributions.html), it turned out to be
 possible to abstract its design so it could also be used with Rebol. Due to
 Rebol's C heritage, it was more feasible to make the first `ren::runtime` be
 based on it for working out the design.
