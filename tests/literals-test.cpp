@@ -36,9 +36,13 @@ TEST_CASE("literals construction", "[rebol] [literals]")
         // logical("hello"); // shouldn't compile (!)
         // logical(15); // shouldn't compile (!)
 
+        Logic temp1 = true;
+        // Logic temp2 = "hello"; // shouldn't compile (!)
+        // Logic temp3 = 15; // shouldn't compile (!)
+
         logical(Logic {true}); // should work
-        // logical(Logic {"hello"}); // it's o.k. this doesn't compile
-        // logical(Logic {15}); // it's o.k. this doesn't compile
+        logical(Logic {"hello"}); // this compiles, as it's "explicit"
+        logical(Logic {15}); // also okay, as it's "explicit"
     }
 
     SECTION("integer")

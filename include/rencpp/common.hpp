@@ -231,39 +231,6 @@ using result_type = typename function_traits<T>::result_type;
 template<typename T, std::size_t N>
 using argument_type = typename function_traits<T>::template arg<N>;
 
-
-///
-/// SAFE BOOL CLASS
-///
-
-//
-// This is a little bit different from the "safe bool idiom"
-// used in the pre-C++11 era. This class allows some level of
-// trickery so that classes can be implicitly constructed from
-// bool but not implicitly constructed from type that can be
-// implicitly converted to bool.
-//
-
-class safe_bool {
-private:
-    bool value;
-
-public:
-    explicit constexpr safe_bool(bool value) :
-        value (value)
-    {
-    }
-
-    // This class can only be constructed from bool
-    template <typename T>
-    safe_bool(T) = delete;
-
-    explicit constexpr operator bool () const {
-        return value;
-    }
-};
-
-
 } // end namespace utility
 
 } // end namespace ren

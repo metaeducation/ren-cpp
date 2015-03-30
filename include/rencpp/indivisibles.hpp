@@ -105,20 +105,37 @@ protected:
     inline bool isValid() const { return isLogic(); }
 
 public:
-    explicit Logic (bool b, Engine * engine = nullptr) :
-        Value (b, engine)
-    {
-    }
-
-    // Trick so that Logic can be implicitly constructed from
-    // bool but not from a type implicitly convertible to bool.
+    // Trick so that Logic can be implicitly constructed from bool but not
+    // from a type implicitly convertible to bool (which requires explicit
+    // construction):
     //
     //     https://github.com/hostilefork/rencpp/issues/24
     //
 
     template <typename T>
-    Logic (const T & value, Engine * engine = nullptr) :
-        Logic (bool(utility::safe_bool(value)), engine)
+    Logic (
+        const T & b,
+        Engine * engine = nullptr,
+        typename std::enable_if<
+            std::is_same<T, bool>::value,
+            void *
+        >::type = nullptr
+    ) :
+        Value (b, engine)
+    {
+    }
+
+    template <typename T>
+    explicit Logic (
+        const T & b,
+        Engine * engine = nullptr,
+        typename std::enable_if<
+            not std::is_same<T, bool>::value
+            and std::is_convertible<T, bool>::value,
+            void *
+        >::type = nullptr
+    ) :
+        Value (static_cast<bool>(b), engine)
     {
     }
 
