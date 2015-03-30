@@ -27,9 +27,62 @@ Rebol [
 ;-- in a sort of "IF/ELSE" kind of spirit instead of inventing EITHER and
 ;-- UNLESS...
 
-|: does [do make error! {No infix bitwise "OR"... use prefix OR~}]
 &: does [do make error! {No infix bitwise "AND"... use prefix AND~}]
+
+;-- adjusted http://curecode.org/rebol3/ticket.rsp?id=2156
+|: func [{Expression separator}] [#[unset!]]
 
 
 ;-- For the moment, reprogramming the infix operators is stalled because
 ;-- defining infix custom operators is not possible.  Stay tuned.
+
+;-- unequal? is better because it less typing AND it keeps you from worring
+;-- about things like whether it's not-strict-equal? or strict-not-equal?
+;-- by merging the negativity into the words.  (And Rebmu can use U? and SU?)
+
+not-equal?: does [do make error! "unequal? vs not-equal?"]
+
+strict-not-equal?: does [do make error! "strict-unequal? vs strict-not-equal?"]
+
+unequal?: :system/contexts/lib/not-equal?
+
+strict-unequal?: :system/contexts/lib/strict-not-equal?
+
+;-- There is no exposure of the internal "strict" form "/CASE" compare so
+;-- we only get to it by invoking sort.
+
+;-- should be also <<
+strict-lesser?: func [a b] [
+    either strict-equal? :a :b [
+        false
+    ] [
+        :a = first sort/case reduce [a b]
+    ]
+]
+
+;-- should be also >>
+strict-greater?: func [a b] [
+    either strict-equal? :a :b [
+        false
+    ] [
+        :b = first sort/case reduce [a b]
+    ]
+]
+
+;-- should be also <<=
+strict-lesser-or-equal?: func [a b] [
+    either strict-equal? :a :b [
+        true
+    ] [
+        :a = first sort/case reduce [a b]
+    ]
+]
+
+;-- should be also >>=
+strict-greater-or-equal?: func [a b] [
+    either strict-equal? :a :b [
+        true
+    ] [
+        :b = first sort/case reduce [a b]
+    ]
+]

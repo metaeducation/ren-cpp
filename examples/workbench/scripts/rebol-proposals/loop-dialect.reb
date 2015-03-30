@@ -77,14 +77,14 @@ make-looper: closure [
     bump: either reverse -1 1
     final: either reverse start finish
     first-run: true
-    all-done: false
+    all-done: state >= final
 
-    return func [] [
+    func [] [
        if all-done [
            return none
        ]
        temp: state
-       if state = final [
+       if state >= final [
            all-done: true
        ]
        state: state + bump
@@ -125,9 +125,14 @@ loop: func [
     /reverse
     /local fun
 ] [
+    if word [set/any quote word-original: get/any word]
     looper: either reverse [make-looper/reverse spec] [make-looper spec]
-    while [not none? either word [set/any word looper] [looper]]
-        body
+    also (
+        while [not none? either word [set/any word looper] [looper]]
+            body
+    ) (
+        if word [set/any word :word-original]
+    )
 ]
 
 
@@ -167,33 +172,25 @@ for: func [
 ; "FOREACH" is bad as a name; it's hard to scan, and given that it's a
 ; non-word the eye often has the word "REACH" jump out of it.  EACH is
 ; shorter, known well by its name in systems like jQuery, and given the
-; distancing from "FOR" makes more sense to be using.
+; distancing from "FOR" makes more sense to be using.  However, it is
+; not quite as nice as EVERY, so we are trying that even though it is
+; a little more uncommon.
 ;
 ; With support for a none! type, you could write:
 ;
-;     each # [a b c] [print "No loop variable"]
+;     every # [a b c] [print "No loop variable"]
 ;
 ; ...as a shorter version of something more verbose like:
 ;
 ;     loop # [1 to (length? [a b c])] [print "No loop variable"]
 ;
-; At present FOREACH does not support that, but it could be useful and a
-; consistent point of learnability with LOOP.
+; At present EVERY does not support that, but it could be useful and a
+; consistent point of learnability with LOOP.  The name for-each is
+; available also but is hyphenated making it a little "thorny" although
+; it may be okay; trying different things.
 
-each: :lib/foreach
-foreach: does [do make error! "foreach is now EACH"]
-
-
-
-; The idea of visiting every position in a series vs. every value is an
-; odd one, which is what REPEAT does.  The distinction between "With EACH
-; element do this body" and "With EVERY position in the series do this
-; body" is questionable, but it's a tough one to name.  Giving the shorter
-; and more common programming name to the more frequently used primitive
-; is at least a start.
-
-every: :lib/repeat
-repeat: does [do make error! "repeat is now EVERY"]
+every: :lib/foreach
+foreach: does [do make error! "foreach is now EVERY"]
 
 
 
@@ -220,9 +217,42 @@ repeat: does [do make error! "repeat is now EVERY"]
 ; Used as a transitive verb, you can see it taking the series and use
 ; it as its own iterator.  So ITERATE is a good starting name for it.
 ;
-; Generally speaking it would be nicer if there were some clearer pattern to
-; the relationship between EVERY and ITERATE.  Also especially nice would
-; be a /REVERSE on this one.
+; In fact, using the trick of passing in a literal NONE can be similar here;
+; spun differently.  Instead of passing a none for the variable to be used
+; in the loop, you can optionally pass it in for the *series to be iterated*.
+; If none, it will assume you mean the variable already contains the
+; series, set to the position you want to iterate from.
 
-iterate: :lib/forall
 forall: does [do make error! "forall is now ITERATE"]
+
+;-- Note: REPEAT becomes what used to be UNTIL
+
+iterate: function [
+    {Iterate through all the positions in a series}
+    'word [word!]
+        {Word whose value is set each time through the iteration}
+    series [series! none!]
+        {Series to iterate or literal NONE! (#) if word contains series}
+    body [block!]
+        {Code to execute on each position iteration}
+] [
+    set/any quote word-original: get/any word
+    either series [
+        series: series
+    ] [
+        unless series? :word-original [
+            do make error! {Series to ITERATE is none and word is not series}
+        ]
+        series: word-original
+    ]
+    also (
+        while [not tail? series] [
+            set word series
+            do body
+            series: next series
+        ]
+    ) (
+        set/any word :word-original
+    )
+]
+

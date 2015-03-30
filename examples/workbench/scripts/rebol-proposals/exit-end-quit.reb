@@ -17,7 +17,8 @@ quit: func [
 exit: func [
     {Stops evaluation and exits the interpreter, returning a status code.}
 
-    status [integer!] {Varies by platform, see http://en.wikipedia.org/wiki/Exit_status}
+    status [integer!]
+        {Varies by platform, see http://en.wikipedia.org/wiki/Exit_status}
 ] [
     system/contexts/lib/quit/return status
 ]

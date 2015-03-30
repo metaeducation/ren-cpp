@@ -35,6 +35,8 @@ Rebol [
 ;module: does [make error! "Use CONTEXT instead of MODULE"]
 
 
+;-- Should this be USE and if you don't want the behavior do USE/ONLY?
+
 wrap: func [
     "Evaluates a block, wrapping all set-words as locals."
     body [block!] "Block to evaluate"

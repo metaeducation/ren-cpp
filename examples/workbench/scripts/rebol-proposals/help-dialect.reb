@@ -137,7 +137,7 @@ help: function [
     ] [
         item: to-string :arg
         either any-function? get :arg [
-            foreach [a b] [
+            every [a b] [
                 "!" "-ex"
                 "?" "-q"
                 "*" "-mul"
@@ -270,7 +270,7 @@ help: function [
     print-parameters: function [label list /extra] [
         if empty? list [return void]
         print label
-        each param list [
+        every param list [
             print/only [
                 if all [extra word? param/1] [tab]
                 tab to-string param/1

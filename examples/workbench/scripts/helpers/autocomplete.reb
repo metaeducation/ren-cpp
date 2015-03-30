@@ -87,7 +87,7 @@ Rebol [
 try-get-scope-from-path: function [path [path!]] [
     obj: none
 
-    each element path [
+    every element path [
 
         ; only consider paths made up of words...
 
@@ -138,7 +138,7 @@ try-get-scope-from-path: function [path [path!]] [
 
 fake-context-from-function: function [fun [any-function!]] [
     spec: copy []
-    each word words-of :fun [
+    every word words-of :fun [
         if refinement? word [
             append spec to-set-word word
         ]
@@ -215,7 +215,7 @@ autocomplete-helper: function [
             ;
             ; Go from lowest priority to highest priority and try binding,
             ; potentially overriding each time.  This would ideally use
-            ; each/reverse, but that can't be implemented as a mezzanine yet
+            ; every/reverse, but that can't be implemented as a mezzanine yet
             ; due to a bug.
 
             iter: back tail contexts
@@ -276,12 +276,12 @@ autocomplete-helper: function [
     first-candidate-ctx: none
     take-next: false
 
-    each ctx adjusted-contexts [
+    every ctx adjusted-contexts [
 
         words: words-of ctx
         if backward [reverse words]
         
-        each word words [
+        every word words [
             if unset? word [
                 continue
             ]
@@ -294,7 +294,7 @@ autocomplete-helper: function [
             ;
             ; Is there a more efficient COMPARE/PART technique vs. copying?
 
-            if stem <> copy/part spelling (length stem) [
+            if stem != copy/part spelling (length stem) [
                 continue
             ]
 
@@ -321,7 +321,7 @@ autocomplete-helper: function [
             ;     aa => ab => ac => ab => ac => ab => ...
 
             outranked: false
-            each prior-ctx completion-contexts [
+            every prior-ctx completion-contexts [
                 if prior-ctx = ctx [
                     break ;-- no more prior contexts
                 ]

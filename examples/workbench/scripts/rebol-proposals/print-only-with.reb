@@ -32,6 +32,23 @@ Rebol [
     }
 ]
 
+; When caret escaping exists, these will all be words with single-character
+; names (instead of two-character names beginning with caret).  In the
+; meantime we can define them and use them instead of the old-bad-ones
+
+^^: #"^^"
+^-: tab
+^_: space
+^M: #"^M"
+^|: newline
+
+carriage-return: #"^M" ;-- if people want to be verbose about it...
+
+lf: does [do make error! "use ^| for two-character newline variant"]
+sp: does [do make error! "use ^_ for two-character space variant"]
+cr: does [do make error! "use ^M for two-character carriage-return variant"]
+
+
 prin: does [make error! "prin is now accomplished via PRINT/ONLY"]
 
 print: function [
