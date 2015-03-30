@@ -1,0 +1,3 @@
+[submodule "examples/workbench/scripts/rebol-proposals"]
+	path = examples/workbench/scripts/rebol-proposals
+	url = https://github.com/hostilefork/rebol-proposals.git
