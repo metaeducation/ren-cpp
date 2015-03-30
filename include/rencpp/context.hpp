@@ -27,9 +27,9 @@
 namespace ren {
 
 
-///
-/// CONTEXT FOR BINDING
-///
+//
+// CONTEXT FOR BINDING
+//
 
 //
 // Historically the Rebol language used the terms CONTEXT and OBJECT somewhat

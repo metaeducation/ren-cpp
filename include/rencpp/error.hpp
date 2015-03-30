@@ -27,9 +27,9 @@
 namespace ren {
 
 
-///
-/// ERROR VALUE
-///
+//
+// ERROR VALUE
+//
 
 //
 // Ren has its own competing "exception"-like type called ERROR!.  And
@@ -169,9 +169,9 @@ public:
 
 
 
-///
-/// CANCELLATION EXCEPTION
-///
+//
+// CANCELLATION EXCEPTION
+//
 
 //
 // Cancellation of evaluations (such as in the console with ^C) has no
@@ -203,9 +203,9 @@ public:
 
 
 
-///
-/// EXIT COMMAND
-///
+//
+// EXIT COMMAND
+//
 
 //
 // This command corresponds to the desire expressed by C's exit(int), however

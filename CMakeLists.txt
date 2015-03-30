@@ -561,3 +561,5 @@ enable_testing()
 add_subdirectory(external/catch)
 
 add_subdirectory(tests)
+
+add_subdirectory(doxygen)

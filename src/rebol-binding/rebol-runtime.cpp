@@ -29,9 +29,9 @@ extern "C" {
 
 
 
-///
-/// "GENERALIZED APPLY"
-///
+//
+// "GENERALIZED APPLY"
+//
 
 //
 // "Generalized Apply" is at the heart of the working of the binding, yet
@@ -147,9 +147,9 @@ bool Runtime::needsRefcount(REBVAL const & cell) {
 
 
 
-///
-/// REBOL INITIALIZATION
-///
+//
+// REBOL INITIALIZATION
+//
 
 //
 // The code in the initialization is an unwinding of the RL_init code from

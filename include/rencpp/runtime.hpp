@@ -29,9 +29,9 @@
 namespace ren {
 
 
-///
-/// BASE RUNTIME CLASS
-///
+//
+// BASE RUNTIME CLASS
+//
 
 //
 // The runtime class is a singleton, and at the time of writing a bit of

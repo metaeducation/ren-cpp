@@ -42,9 +42,9 @@ extern "C" {
 namespace ren {
 
 
-///
-/// FORWARD DEFINITIONS
-///
+//
+// FORWARD DEFINITIONS
+//
 
 //
 // Abstractly speaking the runtime is a "separate thing" from the basic type
@@ -107,9 +107,9 @@ namespace internal {
 
 
 
-///
-/// CAST EXCEPTION
-///
+//
+// CAST EXCEPTION
+//
 
 //
 // Although we can define most of the exceptions in exceptions.hpp, this one
@@ -150,9 +150,9 @@ QString to_QString(Value const & value);
 
 
 
-///
-/// CELLFUNCTION
-///
+//
+// CELLFUNCTION
+//
 
 //
 // The cellfunction is a particularly styled method on Value, used by the
@@ -181,9 +181,9 @@ using CellFunction = bool (Value::*)(RenCell *) const;
 
 
 
-///
-/// VALUE BASE CLASS
-///
+//
+// VALUE BASE CLASS
+//
 
 //
 // In the encapsulation as written, we pay additional costs for a reference
@@ -752,9 +752,9 @@ inline std::ostream & operator<<(std::ostream & os, Value const & value) {
 
 namespace internal {
 
-///
-/// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
-///
+//
+// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
+//
 
 //
 // Loadable is a "lazy-loading type" distinct from Value, which unlike a

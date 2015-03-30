@@ -6,9 +6,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION AND INITIALIZATION
-///
+//
+// TYPE DETECTION AND INITIALIZATION
+//
 
 bool Value::isContext(REBVAL * init) const {
     if (init) {
@@ -20,9 +20,9 @@ bool Value::isContext(REBVAL * init) const {
 
 
 
-///
-/// CONSTRUCTION
-///
+//
+// CONSTRUCTION
+//
 
 Context::Context (
     internal::Loadable const loadables[],

@@ -30,9 +30,9 @@ using namespace ren;
 extern bool forcingQuit;
 
 
-///
-/// WORKER OBJECT FOR HANDLING SHELL REQUESTS
-///
+//
+// WORKER OBJECT FOR HANDLING SHELL REQUESTS
+//
 
 //
 // We push this item to the worker thread and let it talk to the shell
@@ -472,9 +472,9 @@ void ShellWorker::onStateChanged(QProcess::ProcessState newState) {
 
 
 
-///
-/// SHELL MANAGER OBJECT CALLED FROM EVALUATOR WORKER THREAD
-///
+//
+// SHELL MANAGER OBJECT CALLED FROM EVALUATOR WORKER THREAD
+//
 
 //
 // The evaluator thread wants to be able to block and let the shell process

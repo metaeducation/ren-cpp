@@ -41,9 +41,9 @@
 #include "context.hpp"
 
 
-///
-/// INCLUDE REBOL OR RED RUNTIME INSTANCE
-///
+//
+// INCLUDE REBOL OR RED RUNTIME INSTANCE
+//
 
 //
 // They will define an object derived from ren::Runtime, named ren::runtime
@@ -68,9 +68,9 @@ static_assert(false, "Unsupported runtime defined");
 #endif
 
 
-///
-/// HELPER TOOLS
-///
+//
+// HELPER TOOLS
+//
 
 //
 // Things like the variadic print.  These perhaps should not be automatically

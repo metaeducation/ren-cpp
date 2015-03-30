@@ -39,9 +39,9 @@ using namespace ren;
 extern bool forcingQuit;
 
 
-//#
-//# WORKER OBJECT FOR HANDLING REN EVALUATIONS
-//#
+//
+// WORKER OBJECT FOR HANDLING REN EVALUATIONS
+//
 
 //
 // We push this item to the worker thread and let it do the actual evaluation
@@ -159,9 +159,9 @@ signals:
 
 
 
-//#
-//# CONSOLE CONSTRUCTION
-//#
+//
+// CONSOLE CONSTRUCTION
+//
 
 //
 // The console doesn't inherit from ReplPad, it *contains* it.  This
@@ -781,9 +781,9 @@ void RenConsole::printBanner() {
 
 
 
-//#
-//# REPLPAD HOOKS
-//#
+//
+// REPLPAD HOOKS
+//
 
 //
 // The ReplPad is language-and-evaluator agnostic.  It offers an interface
@@ -884,9 +884,9 @@ QString RenConsole::getPromptString(ReplPad & pad) {
 
 
 
-//#
-//# EVALUATION RESULT HANDLER
-//#
+//
+// EVALUATION RESULT HANDLER
+//
 
 //
 // When the evaluator has finished running, we want to print out the
@@ -978,9 +978,9 @@ void RenConsole::handleResults(
 
 
 
-//#
-//# SYNTAX-SENSITIVE HOOKS
-//#
+//
+// SYNTAX-SENSITIVE HOOKS
+//
 
 //
 // Ideally this would be done with separately sandboxed "Engines", a feature
@@ -1103,9 +1103,9 @@ std::pair<QString, int> RenConsole::autoComplete(
 
 
 
-//#
-//# DESTRUCTOR
-//#
+//
+// DESTRUCTOR
+//
 
 //
 // If we try to destroy a RenConsole, there may be a worker thread still

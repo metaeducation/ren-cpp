@@ -8,9 +8,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION AND INITIALIZATION
-///
+//
+// TYPE DETECTION AND INITIALIZATION
+//
 
 bool Value::isBlock(REBVAL * init) const {
     if (init) {
@@ -67,9 +67,9 @@ bool Value::isAnyBlock() const {
 
 
 
-///
-/// BLOCK CONSTRUCTION
-///
+//
+// BLOCK CONSTRUCTION
+//
 
 
 AnyBlock::AnyBlock (

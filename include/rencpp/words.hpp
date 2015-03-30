@@ -23,9 +23,9 @@
 
 namespace ren {
 
-///
-/// ANYWORD
-///
+//
+// ANYWORD
+//
 
 class AnyWord : public Value {
 protected:
@@ -112,9 +112,9 @@ inline QString AnyWord::spellingOf<QString>() const {
 
 
 
-///
-/// ANYWORD_ SUBTYPE HELPER
-///
+//
+// ANYWORD_ SUBTYPE HELPER
+//
 
 namespace internal {
 
@@ -164,9 +164,9 @@ public:
 
 
 
-///
-/// CONCRETE WORD TYPES
-///
+//
+// CONCRETE WORD TYPES
+//
 
 //
 // For why these are classes and not typedefs:

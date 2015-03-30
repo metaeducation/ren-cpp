@@ -31,9 +31,9 @@
 
 
 
-///
-/// HISTORY RECORDS
-///
+//
+// HISTORY RECORDS
+//
 
 //
 // Destined to be its own file...
@@ -62,9 +62,9 @@ QString ReplPad::HistoryEntry::getInput(ReplPad & pad) const {
     return cursor.selection().toPlainText();
 }
 
-///
-/// CONSOLE CONSTRUCTION
-///
+//
+// CONSOLE CONSTRUCTION
+//
 
 //
 // Right now the console constructor is really mostly about setting up a
@@ -285,9 +285,9 @@ ReplPad::ReplPad (
 
 
 
-///
-/// BASIC CLIENT INTERFACE FOR ADDING MATERIAL TO THE CONSOLE
-///
+//
+// BASIC CLIENT INTERFACE FOR ADDING MATERIAL TO THE CONSOLE
+//
 
 //
 // This API is here to try and be a narrowing of the requirements the
@@ -430,9 +430,9 @@ void ReplPad::setZoom(int delta) {
     }
 }
 
-///
-/// RICH-TEXT CONSOLE BEHAVIOR
-///
+//
+// RICH-TEXT CONSOLE BEHAVIOR
+//
 
 //
 // ReplPad::endCursor()

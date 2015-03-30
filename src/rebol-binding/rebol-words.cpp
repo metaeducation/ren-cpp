@@ -7,9 +7,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION AND INITIALIZATION
-///
+//
+// TYPE DETECTION AND INITIALIZATION
+//
 
 bool Value::isWord(REBVAL * init) const {
     if (init) {
@@ -70,9 +70,9 @@ bool Value::isAnyWord() const {
 
 
 
-///
-/// SPELLING
-///
+//
+// SPELLING
+//
 
 //
 // To get the "formed" version of the word, use to_string.  That will include
@@ -108,9 +108,9 @@ QString AnyWord::spellingOf_QT() const {
 
 
 
-///
-/// CONSTRUCTION
-///
+//
+// CONSTRUCTION
+//
 
 AnyWord::AnyWord (
     char const * spelling,

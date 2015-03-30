@@ -35,9 +35,9 @@ using namespace ren;
 
 
 
-///
-/// WATCH WIDGET ITEM REPRESENTING A SINGLE CELL IN THE WATCH TABLE
-///
+//
+// WATCH WIDGET ITEM REPRESENTING A SINGLE CELL IN THE WATCH TABLE
+//
 
 //
 // Currently no support for editing the *values*, only the labels for the
@@ -86,9 +86,9 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 
 
 
-///
-/// WATCHER CLASS REPRESENTING A SINGLE WATCHED VALUE OR EXPRESSION
-///
+//
+// WATCHER CLASS REPRESENTING A SINGLE WATCHED VALUE OR EXPRESSION
+//
 
 
 WatchList::Watcher::Watcher (
@@ -147,9 +147,9 @@ QString WatchList::Watcher::getValueString() const {
 
 
 
-///
-/// WATCHLIST CONSTRUCTOR
-///
+//
+// WATCHLIST CONSTRUCTOR
+//
 
 WatchList::WatchList(QWidget * parent) :
     QTableWidget (0, 2, parent)
@@ -467,9 +467,9 @@ Value WatchList::watchDialect(
 }
 
 
-///
-/// POPUP CONTEXT MENU
-///
+//
+// POPUP CONTEXT MENU
+//
 
 //
 // Because it's not particularly computationally intensive to create a

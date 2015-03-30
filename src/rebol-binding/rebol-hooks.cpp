@@ -51,9 +51,9 @@ public:
     }
 
 
-///
-/// THREAD INITIALIZATION
-///
+//
+// THREAD INITIALIZATION
+//
 
 //
 // There are some thread-local pieces of state that need to be initialized
@@ -147,9 +147,9 @@ public:
         }
     }
 
-///
-/// ENGINE ALLOCATION AND FREEING
-///
+//
+// ENGINE ALLOCATION AND FREEING
+//
 
     RenResult AllocEngine(RebolEngineHandle * engineOut) {
         if (not (REBOL_IS_ENGINE_HANDLE_INVALID(theEngine)))
@@ -185,9 +185,9 @@ public:
 
 
 
-///
-/// CONTEXT FINDING
-///
+//
+// CONTEXT FINDING
+//
 
 
     RenResult FindContext(
@@ -220,9 +220,9 @@ public:
 
 
 
-///
-/// CONSTRUCT OR APPLY HOOK
-///
+//
+// CONSTRUCT OR APPLY HOOK
+//
 
     //
     // The ConstructOrApply hook was designed to be a primitive that

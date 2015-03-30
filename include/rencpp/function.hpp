@@ -40,9 +40,9 @@ namespace ren {
 
 namespace internal {
 
-///
-/// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
-///
+//
+// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
+//
 
 //
 // While preprocessor macros are to be avoided whenever possible, the
@@ -83,9 +83,9 @@ namespace internal {
 
 
 
-///
-/// FUNCTION TYPE(S?)
-///
+//
+// FUNCTION TYPE(S?)
+//
 
 //
 // In the current implementation, a FunctionGenerator is really just a NATIVE!
@@ -314,9 +314,9 @@ public:
 
 #ifdef REN_RUNTIME
 
-///
-/// EXTENSION FUNCTION TEMPLATE
-///
+//
+// EXTENSION FUNCTION TEMPLATE
+//
 
 //
 // While calling Ren and the runtime from C++ is interesting (such as to

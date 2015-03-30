@@ -44,9 +44,9 @@
 class ReplPad;
 
 
-///
-/// NULL OUTPUT
-///
+//
+// NULL OUTPUT
+//
 
 // http://stackoverflow.com/a/8244052/211160
 
@@ -70,9 +70,9 @@ public:
 
 
 
-///
-/// FAKE STANDARD OUTPUT
-///
+//
+// FAKE STANDARD OUTPUT
+//
 
 class FakeStdoutResources {
 public:
@@ -124,9 +124,9 @@ public:
 
 
 
-///
-/// FAKE STANDARD INPUT
-///
+//
+// FAKE STANDARD INPUT
+//
 
 class FakeStdinBuffer : public QObject, public std::streambuf
 {

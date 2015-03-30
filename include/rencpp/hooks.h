@@ -159,9 +159,9 @@ const struct RedEngineHandle RED_ENGINE_HANDLE_INVALID = {-1};
     ((handle).data == RED_ENGINE_HANDLE_INVALID.data)
 
 
-/**
- ** MAP RED TYPES TO REN EQUIVALENTS
- **/
+/*
+ * MAP RED TYPES TO REN EQUIVALENTS
+ */
 
 typedef RedCell RenCell;
 

@@ -56,9 +56,9 @@ Value::operator bool() const {
 
 #ifdef REN_RUNTIME
 
-///
-/// GENERALIZED APPLY
-///
+//
+// GENERALIZED APPLY
+//
 
 Value Value::apply_(
     internal::Loadable const loadables[],
@@ -182,9 +182,9 @@ void Value::constructOrApplyInitialize(
 
 
 
-///
-/// LOADABLE
-///
+//
+// LOADABLE
+//
 
 internal::Loadable::Loadable (std::string const & source) :
     Loadable (Dont::Initialize)

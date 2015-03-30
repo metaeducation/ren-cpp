@@ -7,9 +7,9 @@
 
 namespace ren {
 
-///
-/// UNSET
-///
+//
+// UNSET
+//
 
 bool Value::isUnset() const {
     return IS_UNSET(&cell);
@@ -29,9 +29,9 @@ Value::Value (unset_t, Engine * engine) noexcept :
 
 
 
-///
-/// NONE
-///
+//
+// NONE
+//
 
 bool Value::isNone() const {
     return IS_NONE(&cell);
@@ -51,9 +51,9 @@ Value::Value (none_t, Engine * engine) noexcept :
 
 
 
-///
-/// LOGIC
-///
+//
+// LOGIC
+//
 
 bool Value::isLogic() const {
     return IS_LOGIC(&cell);
@@ -85,9 +85,9 @@ Logic::operator bool() const {
 
 
 
-///
-/// CHARACTER
-///
+//
+// CHARACTER
+//
 
 bool Value::isCharacter() const {
     return IS_CHAR(&cell);
@@ -148,9 +148,9 @@ Character::operator QChar () const {
 
 
 
-///
-/// INTEGER
-///
+//
+// INTEGER
+//
 
 bool Value::isInteger() const {
     return IS_INTEGER(&cell);
@@ -174,9 +174,9 @@ Integer::operator int() const {
 
 
 
-///
-/// FLOAT
-///
+//
+// FLOAT
+//
 
 bool Value::isFloat() const {
     return IS_DECIMAL(&cell);
@@ -200,9 +200,9 @@ Float::operator double() const {
 
 
 
-///
-/// DATE
-///
+//
+// DATE
+//
 
 bool Value::isDate() const {
     return IS_DATE(&cell);
@@ -210,9 +210,9 @@ bool Value::isDate() const {
 
 
 
-///
-/// IMAGE
-///
+//
+// IMAGE
+//
 
 bool Value::isImage() const {
     return IS_IMAGE(&cell);

@@ -40,9 +40,9 @@
 //     https://github.com/metaeducation/ren-garden/issues/2
 
 
-///
-/// FAKE STANDARD OUTPUT
-///
+//
+// FAKE STANDARD OUTPUT
+//
 
 
 
@@ -95,9 +95,9 @@ int FakeStdoutBuffer::sync() {
 
 
 
-///
-/// FAKE STANDARD INPUT
-///
+//
+// FAKE STANDARD INPUT
+//
 
 FakeStdinBuffer::FakeStdinBuffer (
     ReplPad & repl,

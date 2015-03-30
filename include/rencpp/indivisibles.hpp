@@ -52,9 +52,9 @@
 namespace ren {
 
 
-///
-/// NONE AND UNSET CONSTRUCTION
-///
+//
+// NONE AND UNSET CONSTRUCTION
+//
 
 //
 // It makes sense to be able to create None and Unset *values*, which you
@@ -94,9 +94,9 @@ public:
 
 
 
-///
-/// LOGIC
-///
+//
+// LOGIC
+//
 
 class Logic : public Value {
 protected:
@@ -144,9 +144,9 @@ public:
 
 
 
-///
-/// CHARACTER
-///
+//
+// CHARACTER
+//
 
 class Character : public Value {
 protected:
@@ -195,9 +195,9 @@ public:
 
 
 
-///
-/// INTEGER
-///
+//
+// INTEGER
+//
 
 class Integer : public Value {
 protected:
@@ -216,9 +216,9 @@ public:
 
 
 
-///
-/// FLOAT
-///
+//
+// FLOAT
+//
 
 class Float : public Value {
 protected:
@@ -237,9 +237,9 @@ public:
 
 
 
-///
-/// DATE
-///
+//
+// DATE
+//
 
 //
 // The C and C++ date and time routines all seem about counting since
@@ -269,9 +269,9 @@ public:
 };
 
 
-///
-/// IMAGE
-///
+//
+// IMAGE
+//
 
 //
 // Rebol has a native IMAGE! type, which a few codecs have been written for

@@ -7,9 +7,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION AND INITIALIZATION
-///
+//
+// TYPE DETECTION AND INITIALIZATION
+//
 
 bool Value::isError() const {
     return IS_ERROR(&cell);
@@ -17,9 +17,9 @@ bool Value::isError() const {
 
 
 
-///
-/// CONSTRUCTION
-///
+//
+// CONSTRUCTION
+//
 
 Error::Error (const char * msg, Engine * engine) :
     Value (Dont::Initialize)

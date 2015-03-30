@@ -39,9 +39,9 @@ class ReplPad;
 
 
 
-///
-/// SYNTAX-AWARE INTERFACE
-///
+//
+// SYNTAX-AWARE INTERFACE
+//
 
 //
 // The journey of 1,000 miles begins with a single step.  Rather than tackle
@@ -80,9 +80,9 @@ public:
 
 
 
-///
-/// HOOKS FOR CUSTOMIZING READ-EVAL-PRINT-LOOP "WORKPAD"
-///
+//
+// HOOKS FOR CUSTOMIZING READ-EVAL-PRINT-LOOP "WORKPAD"
+//
 
 //
 // Virtual interface class implementing the hooks offered by ReplPad (but
@@ -103,9 +103,9 @@ public:
 
 
 
-///
-/// READ-EVAL-PRINT-LOOP "WORKPAD"
-///
+//
+// READ-EVAL-PRINT-LOOP "WORKPAD"
+//
 
 //
 // The REPL-Pad (Read-Eval-Print-Loop) is a kind of "command prompt workspace"

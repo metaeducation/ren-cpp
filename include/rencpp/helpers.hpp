@@ -26,9 +26,9 @@
 
 namespace ren {
 
-///
-/// PRINTING HELPER CLASS EXPERIMENT
-///
+//
+// PRINTING HELPER CLASS EXPERIMENT
+//
 
 //
 // One misses Rebol/Red PRINT when doing debugging, so this little printer

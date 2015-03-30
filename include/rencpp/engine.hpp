@@ -29,9 +29,9 @@
 namespace ren {
 
 
-///
-/// ENGINE OBJECT FOR SANDBOXING INTERPRETER STATE
-///
+//
+// ENGINE OBJECT FOR SANDBOXING INTERPRETER STATE
+//
 
 //
 // Each Engine represents a kind of "sandbox", so setting a variable "x"

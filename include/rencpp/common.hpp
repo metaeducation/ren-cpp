@@ -26,9 +26,9 @@
 
 
 
-///
-/// CLASSLIB LIBRAY INCLUSIONS
-///
+//
+// CLASSLIB LIBRAY INCLUSIONS
+//
 
 #if REN_CLASSLIB_QT == 1
 
@@ -48,9 +48,9 @@
 
 
 
-///
-/// UNREACHABLE CODE MACRO
-///
+//
+// UNREACHABLE CODE MACRO
+//
 
 //
 // There are several points where we expect an exception and would like the
@@ -67,9 +67,9 @@
 
 
 
-///
-/// COMPILE-TIME INTEGER SEQUENCES
-///
+//
+// COMPILE-TIME INTEGER SEQUENCES
+//
 
 
 namespace ren {
@@ -91,9 +91,9 @@ struct make_indices<0, Ind...>:
 
 
 
-///
-/// PARAMETER PACKS MANIPULATION
-///
+//
+// PARAMETER PACKS MANIPULATION
+//
 
 //
 // This is a clone of the proposed std::type_at
@@ -113,9 +113,9 @@ struct type_at<0, T, R...>
 
 
 
-///
-/// FUNCTION TRAITS
-///
+//
+// FUNCTION TRAITS
+//
 
 //
 // Enhanced version of Boost function_traits. Here is how:

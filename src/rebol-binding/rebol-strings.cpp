@@ -7,9 +7,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION AND INITIALIZATION
-///
+//
+// TYPE DETECTION AND INITIALIZATION
+//
 
 
 bool Value::isString(REBVAL * init) const {
@@ -43,9 +43,9 @@ bool Value::isAnyString() const {
 
 
 
-///
-/// CONSTRUCTION
-///
+//
+// CONSTRUCTION
+//
 
 AnyString::AnyString (
     char const * spelling,
@@ -154,9 +154,9 @@ AnyString::AnyString (
 
 
 
-///
-/// EXTRACTION
-///
+//
+// EXTRACTION
+//
 
 std::string AnyString::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);

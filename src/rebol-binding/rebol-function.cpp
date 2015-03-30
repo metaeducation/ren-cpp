@@ -17,9 +17,9 @@ namespace ren {
 static_assert(R_RET == 0, "R_RET must be 0 for RenShimPointer to work");
 
 
-///
-/// TYPE DETECTION
-///
+//
+// TYPE DETECTION
+//
 
 //
 // Really, from a user's point of view...shouldn't there only be ANY_FUNCTION?
@@ -37,9 +37,9 @@ bool Value::isFunction() const {
 
 #ifdef REN_RUNTIME
 
-///
-/// FUNCTION FINALIZER FOR EXTENSION
-///
+//
+// FUNCTION FINALIZER FOR EXTENSION
+//
 
 void Function::finishInitSpecial(
     RenEngineHandle engine,

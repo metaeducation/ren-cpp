@@ -84,9 +84,9 @@ jmp_buf *Halt_State = 0;  //!!!!!!!!!! global?
 static void Do_Rebcode(REBVAL *) {;}
 
 
-///
-/// SINGLE-INSTANCE DISPATCH TABLES
-///
+//
+// SINGLE-INSTANCE DISPATCH TABLES
+//
 
 //
 // The MAKE PREP step of building Rebol takes some files that describe the

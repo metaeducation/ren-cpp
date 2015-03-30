@@ -63,10 +63,9 @@ protected:
 
 namespace internal {
 
-
-///
-/// ANYBLOCK_ SUBTYPE HELPER
-///
+//
+// ANYBLOCK_ SUBTYPE HELPER
+//
 
 //
 // BracesT corresponds to the kind of type which is constructed
@@ -168,9 +167,9 @@ public:
 
 
 
-///
-/// CONCRETE BLOCK TYPES
-///
+//
+// CONCRETE BLOCK TYPES
+//
 
 //
 // For why these are classes and not typedefs:

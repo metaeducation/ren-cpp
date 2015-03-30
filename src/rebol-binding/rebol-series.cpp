@@ -9,9 +9,9 @@
 
 namespace ren {
 
-///
-/// TYPE DETECTION
-///
+//
+// TYPE DETECTION
+//
 
 
 bool Value::isSeries() const {
@@ -20,9 +20,9 @@ bool Value::isSeries() const {
 
 
 
-///
-/// ITERATION
-///
+//
+// ITERATION
+//
 
 
 void ren::internal::Series_::operator++() {

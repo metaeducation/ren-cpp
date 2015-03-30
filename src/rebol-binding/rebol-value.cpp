@@ -11,9 +11,9 @@
 
 namespace ren {
 
-///
-/// COMPARISON
-///
+//
+// COMPARISON
+//
 
 bool Value::isEqualTo(Value const & other) const {
     return Compare_Values(
@@ -127,9 +127,9 @@ Value Value::copy(bool deep) const {
 }
 
 
-///
-/// BASIC STRING CONVERSIONS
-///
+//
+// BASIC STRING CONVERSIONS
+//
 
 std::string to_string(Value const & value) {
     const size_t defaultBufLen = 100;
@@ -233,9 +233,9 @@ QString to_QString(Value const & value) {
 #endif
 
 
-///
-/// "LOADABLE" VALUE(S) TYPE
-///
+//
+// "LOADABLE" VALUE(S) TYPE
+//
 
 namespace internal {
 

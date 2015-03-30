@@ -25,9 +25,9 @@
 
 namespace ren {
 
-///
-/// ANYSTRING
-///
+//
+// ANYSTRING
+//
 
 class AnyString : public Series
 {
@@ -162,9 +162,9 @@ inline QString AnyString::spellingOf<QString>() const {
 
 
 
-///
-/// ANYSTRING_ SUBTYPE HELPER
-///
+//
+// ANYSTRING_ SUBTYPE HELPER
+//
 
 namespace internal {
 
@@ -199,9 +199,9 @@ public:
 
 
 
-///
-/// CONCRETE STRING TYPES
-///
+//
+// CONCRETE STRING TYPES
+//
 
 //
 // For why these are classes and not typedefs:
