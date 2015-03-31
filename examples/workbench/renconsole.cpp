@@ -470,7 +470,7 @@ RenConsole::RenConsole (QWidget * parent) :
         "/develop/examples/workbench/scripts/rebol-proposals/",
 
         Block {
-            "%bitwise.reb",
+            "%comparison-operators.reb",
             "%combine.reb",
             "%while-until.reb",
             "%print-only-with.reb",
@@ -483,7 +483,8 @@ RenConsole::RenConsole (QWidget * parent) :
             "%ls-cd-dt-short-names.reb",
             "%loop-dialect.reb",
             "%object-context.reb",
-            "%help-dialect.reb"
+            "%help-dialect.reb",
+            "%math.reb"
         },
 
         *proposalsContext

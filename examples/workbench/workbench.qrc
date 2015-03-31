@@ -11,7 +11,7 @@
         <file>scripts/helpers/autocomplete.reb</file>
         <file>scripts/helpers/edit-buffer.reb</file>
         <file>scripts/helpers/shell.reb</file>
-        <file>scripts/rebol-proposals/bitwise.reb</file>
+        <file>scripts/rebol-proposals/comparison-operators.reb</file>
         <file>scripts/rebol-proposals/combine.reb</file>
         <file>scripts/rebol-proposals/while-until.reb</file>
         <file>scripts/rebol-proposals/print-only-with.reb</file>
@@ -27,5 +27,6 @@
         <file>scripts/rebol-proposals/help-dialect.reb</file>
         <file>images/banner-logo.png</file>
         <file>rendata/copyright.ren</file>
+        <file>scripts/rebol-proposals/math.reb</file>
     </qresource>
 </RCC>

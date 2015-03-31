@@ -87,7 +87,7 @@ Rebol [
 try-get-scope-from-path: function [path [path!]] [
     obj: none
 
-    every element path [
+    for-each element path [
 
         ; only consider paths made up of words...
 
@@ -138,7 +138,7 @@ try-get-scope-from-path: function [path [path!]] [
 
 fake-context-from-function: function [fun [any-function!]] [
     spec: copy []
-    every word words-of :fun [
+    for-each word words-of :fun [
         if refinement? word [
             append spec to-set-word word
         ]
@@ -215,8 +215,8 @@ autocomplete-helper: function [
             ;
             ; Go from lowest priority to highest priority and try binding,
             ; potentially overriding each time.  This would ideally use
-            ; every/reverse, but that can't be implemented as a mezzanine yet
-            ; due to a bug.
+            ; for-each/reverse, but that can't be implemented as a mezzanine
+            ; yet due to a bug.
 
             iter: back tail contexts
             final: false
@@ -276,12 +276,12 @@ autocomplete-helper: function [
     first-candidate-ctx: none
     take-next: false
 
-    every ctx adjusted-contexts [
+    for-each ctx adjusted-contexts [
 
         words: words-of ctx
         if backward [reverse words]
         
-        every word words [
+        for-each word words [
             if unset? word [
                 continue
             ]
@@ -321,7 +321,7 @@ autocomplete-helper: function [
             ;     aa => ab => ac => ab => ac => ab => ...
 
             outranked: false
-            every prior-ctx completion-contexts [
+            for-each prior-ctx completion-contexts [
                 if prior-ctx = ctx [
                     break ;-- no more prior contexts
                 ]

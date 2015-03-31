@@ -46,7 +46,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
     result: make block! 1
     str: make string! (5 * length arg)
 
-    every arg [
+    for-each arg [
         case [
             paren? arg/1 [
                 evaluated: do arg/1
