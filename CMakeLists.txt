@@ -492,6 +492,15 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-frame.o)
 
 
+    # It was bound to happen at some point that the project grew to be 
+    # complex enough to trigger the garbage collector.  There is no way to
+    # work with pointers to garbage collected Rebol objects without some
+    # kind of hook.  Short of doing code injection, we just bring in the 
+    # garbage collection file like the others...
+
+    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/m-gc.o)
+
+
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
     # http://en.wikipedia.org/wiki/Dynamic_loading
