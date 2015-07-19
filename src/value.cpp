@@ -21,7 +21,7 @@
 #include <iostream>
 
 #include "rencpp/value.hpp"
-#include "rencpp/indivisibles.hpp"
+#include "rencpp/atoms.hpp"
 #include "rencpp/context.hpp"
 #include "rencpp/runtime.hpp"
 #include "rencpp/error.hpp"

@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 #include "rencpp/value.hpp"
-#include "rencpp/indivisibles.hpp"
+#include "rencpp/atoms.hpp"
 #include "rencpp/series.hpp"
 #include "rencpp/blocks.hpp" // For Path evaluation in operator[]
 

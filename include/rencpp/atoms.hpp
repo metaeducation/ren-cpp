@@ -2,7 +2,7 @@
 #define RENCPP_INDIVISIBLES_HPP
 
 //
-// indivisibles.hpp
+// atoms.hpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -41,13 +41,6 @@
 // internal to users--which is why Value needs to be a friend.
 //
 
-//
-// Note: Since series act as values themselves, series/value aren't antonyms.
-// This file could be called "atomics" but that is confusing with std::atomic.
-// It's called the deliberately strange "indivisbles" so that the first person
-// who notices it (and hates it enough to want to change it) can do the
-// legwork of giving it a better name.
-//
 
 namespace ren {
 

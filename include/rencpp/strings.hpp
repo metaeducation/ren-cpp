@@ -20,7 +20,7 @@
 //
 
 #include "value.hpp"
-#include "indivisibles.hpp"
+#include "atoms.hpp"
 #include "series.hpp"
 
 namespace ren {

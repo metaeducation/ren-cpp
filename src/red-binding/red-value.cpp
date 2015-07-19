@@ -1,5 +1,5 @@
 #include "rencpp/value.hpp"
-#include "rencpp/indivisibles.hpp"
+#include "rencpp/atoms.hpp"
 #include "rencpp/blocks.hpp"
 #include "rencpp/function.hpp"
 

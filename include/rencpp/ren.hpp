@@ -29,7 +29,7 @@
 //
 
 #include "value.hpp"
-#include "indivisibles.hpp"
+#include "atoms.hpp"
 #include "words.hpp"
 #include "series.hpp"
 #include "strings.hpp"
