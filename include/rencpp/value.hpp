@@ -33,10 +33,8 @@
 
 #include "common.hpp"
 
-
-extern "C" {
 #include "hooks.h"
-}
+
 
 
 namespace ren {

@@ -16,13 +16,10 @@
 
 #include <thread>
 
-extern "C" {
 #include "rebol/src/include/sys-value.h"
 #include "rebol/src/include/sys-state.h"
 
-extern jmp_buf * Halt_State;
 void Init_Task_Context();	// Special REBOL values per task
-}
 
 
 namespace ren {
