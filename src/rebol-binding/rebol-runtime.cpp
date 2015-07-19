@@ -167,7 +167,7 @@ RebolRuntime::RebolRuntime (bool) :
     Runtime (),
     initialized (false)
 {
-    Host_Lib = &Host_Lib_Init_RenCpp; // OS host library (dispatch table)
+    Host_Lib = &Host_Lib_Init; // OS host library (dispatch table)
 
     // We don't want to rewrite the entire host lib here, but we can
     // hook functions in.  It's good to have a debug hook point here
