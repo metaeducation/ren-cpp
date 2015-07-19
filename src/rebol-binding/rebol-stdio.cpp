@@ -106,7 +106,10 @@ extern REBDEV *Devices[];
 
     std::ostream & os = ren::Engine::runFinder().getOutputStream();
 
-    os.write(reinterpret_cast<char*>(req->common.data), req->length);
+    os.write(
+        reinterpret_cast<char*>(req->common.data),
+        static_cast<std::streamsize>(req->length) // Clang build needs cast
+    );
 
     // knowing about a partial write would require using tellp() and comparing
     // which is both unreliable and not available on stdout anyway
@@ -166,7 +169,10 @@ extern REBDEV *Devices[];
     // length for now.  The only way to get the length of that is with
     // strlen, however.
 
-    is.getline(reinterpret_cast<char*>(req->common.data), req->length);
+    is.getline(
+        reinterpret_cast<char*>(req->common.data),
+        static_cast<std::streamsize>(req->length) // Clang needs this cast
+    );
 
     if (is.fail()) {
         req->error = 1020;

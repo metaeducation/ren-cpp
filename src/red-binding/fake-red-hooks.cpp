@@ -180,7 +180,7 @@ public:
             << ")";
     #endif
         assert(bufSize > ss.str().length());
-        std::strcpy(buffer, ss.str().c_str());
+		std::strcpy(static_cast<char*>(buffer), ss.str().c_str());
         *lengthOut = ss.str().length();
 
         return REN_SUCCESS;
