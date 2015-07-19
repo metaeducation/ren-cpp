@@ -16,19 +16,27 @@ namespace ren {
 //
 
 bool Value::isEqualTo(Value const & other) const {
-    return Compare_Values(
-        const_cast<REBVAL *>(&cell),
-        const_cast<REBVAL *>(&other.cell),
-        0 // REBNATIVE(equalq)
-    );
+    // acts like REBNATIVE(equalq)
+
+    REBVAL cell_copy;
+    cell_copy = cell;
+    REBVAL other_copy;
+    other_copy = other.cell;
+
+    // !!! Modifies arguments to coerce them for testing!
+    return Compare_Modify_Values(&cell_copy, &other_copy, 0);
 }
 
 bool Value::isSameAs(Value const & other) const {
-    return Compare_Values(
-        const_cast<REBVAL *>(&cell),
-        const_cast<REBVAL *>(&other.cell),
-        3 // REBNATIVE(sameq)
-    );
+    // acts like REBNATIVE(sameq)
+
+    REBVAL cell_copy;
+    cell_copy = cell;
+    REBVAL other_copy;
+    other_copy = other.cell;
+
+    // !!! Modifies arguments to coerce them for testing
+    return Compare_Modify_Values(&cell_copy, &other_copy, 3);
 }
 
 
