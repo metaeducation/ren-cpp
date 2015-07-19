@@ -299,7 +299,9 @@ public:
             assert(applyOut);
         }
 
-        auto current = reinterpret_cast<volatile char const *>(loadablesPtr);
+        // We don't necessarily have a pointer to an array of REBVALs if
+        // sizeofLoadable != sizeof(REBVAL); so keep "current" as char*
+        auto current = reinterpret_cast<char const *>(loadablesPtr);
 
         // For the initial state of the binding we'll focus on correctness
         // instead of optimization.  That means we'll take the "loadables"
