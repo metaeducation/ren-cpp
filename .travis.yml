@@ -18,7 +18,7 @@ matrix:
     exclude:
         # Don't try 32-bit Clang builds
         - compiler: clang
-          env: REBOL=rebol/rebol OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
+          env: REBOL=metaeducation/ren-c OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
         - compiler: clang
           env: RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
 
@@ -65,8 +65,7 @@ install:
     - if [[ (-z ${RUNTIME+x}) || ("${RUNTIME}" = "rebol") ]]; then
         git clone https://github.com/${REBOL} runtimes/rebol &&
         cp r3 runtimes/rebol/make/r3-make &&
-        make -C runtimes/rebol/make/ make OS_ID=${OS_ID} &&
-        make -C runtimes/rebol/make/ clean prep r3;
+        make -C runtimes/rebol/make/ -f makefile.boot OS_ID=${OS_ID};
       fi
     # Make sure valgrind is installed
     - sudo apt-get install valgrind
