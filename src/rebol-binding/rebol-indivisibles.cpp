@@ -224,11 +224,14 @@ Image::Image (QImage const & image, Engine * engine) {
     // need to convert if this isn't true
     assert(image.format() == QImage::Format_ARGB32);
 
+    REBCNT width = static_cast<REBCNT>(image.width());
+    REBCNT height = static_cast<REBCNT>(image.height());
+
     VAL_SET(&cell, REB_IMAGE);
-    REBSER * img = Make_Image(image.width(), image.height(), FALSE);
+    REBSER * img = Make_Image(width, height, FALSE);
     std::copy(
         image.bits(),
-        image.bits() + (sizeof(char[4]) * image.width() * image.height()),
+        image.bits() + (sizeof(char[4]) * width * height),
         IMG_DATA(img)
     );
     SET_IMAGE(&cell, img);
