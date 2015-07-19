@@ -137,7 +137,7 @@ std::string to_string(Value const & value) {
     // Note .data() method is const on std::string.
     //    http://stackoverflow.com/questions/7518732/
 
-    std::vector<char> buffer (defaultBufLen);
+    std::vector<REBYTE> buffer (defaultBufLen);
 
     size_t numBytes;
 
@@ -175,7 +175,7 @@ std::string to_string(Value const & value) {
             throw std::runtime_error("Unknown error in RenFormAsUtf8");
     }
 
-    auto result = std::string(buffer.data(), numBytes);
+    auto result = std::string(cs_cast(buffer.data()), numBytes);
     return result;
 }
 
@@ -194,7 +194,11 @@ QString to_QString(Value const & value) {
 
     switch (
         RenFormAsUtf8(
-            value.origin, &value.cell, buffer.data(), defaultBufLen, &numBytes
+            value.origin,
+            &value.cell,
+            b_cast(buffer.data()),
+            defaultBufLen,
+            &numBytes
         ))
     {
         case REN_SUCCESS:
@@ -210,7 +214,7 @@ QString to_QString(Value const & value) {
                 RenFormAsUtf8(
                     value.origin,
                     &value.cell,
-                    buffer.data(),
+                    b_cast(buffer.data()),
                     numBytes,
                     &numBytesNew
                 ) != REN_SUCCESS

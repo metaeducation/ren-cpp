@@ -171,13 +171,13 @@ public:
 
     // Characters represent codepoints.  These conversion operators are for
     // convenience, but note that the char and wchar_t may throw if your
-    // codepoint is too high for that; hence codepoint is explicitly long
-    // (minimum range for int would be
+    // codepoint is too high for that; hence codepoint is explicitly an
+    // unsigned long.
 
     explicit operator char () const;
     explicit operator wchar_t () const;
 
-    long codepoint() const;
+    unsigned long codepoint() const;
 
     // How to expose UTF8 encoding?
 

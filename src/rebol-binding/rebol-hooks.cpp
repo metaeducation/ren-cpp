@@ -518,7 +518,7 @@ public:
     RenResult FormAsUtf8(
         RebolEngineHandle engine,
         REBVAL const * value,
-        char * buffer,
+        unsigned char * buffer,
         size_t bufSize,
         size_t * numBytesOut
     ) {
@@ -578,9 +578,8 @@ public:
             result = REN_SUCCESS;
         }
 
-        for (REBCNT index = 0; index < len; index++) {
-            buffer[index] = reinterpret_cast<char*>(SERIES_DATA(utf8))[index];
-        }
+        for (REBCNT index = 0; index < len; index++)
+            buffer[index] = SERIES_DATA(utf8)[index];
 
         return result;
     }
@@ -674,7 +673,7 @@ RenResult RenReleaseCells(
 RenResult RenFormAsUtf8(
     RenEngineHandle engine,
     RenCell const * value,
-    char * buffer,
+    unsigned char * buffer,
     size_t bufSize,
     size_t * lengthOut
 ) {

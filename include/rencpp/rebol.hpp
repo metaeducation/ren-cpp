@@ -44,10 +44,10 @@ private:
 
 private:
     static REBVAL loadAndBindWord(
-        REBSER * context, // may be null, Lib_Context, SysContext, or Get_System(...CTX_USER...)
-        const char * cstrUtf8, // strlen() is # of utf8 bytes, not C chars
-        REBOL_Types kind = REB_WORD, // or REB_SET_WORD, REB_GET_WORD...
-        size_t len = 0 // default to taking the byte length with strlen
+        REBSER * context,
+        unsigned char const * nameUtf8,
+        size_t lenBytes,
+        REBOL_Types kind = REB_WORD // or REB_SET_WORD, REB_GET_WORD...
     );
 
 public:

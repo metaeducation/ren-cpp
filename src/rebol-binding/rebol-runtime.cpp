@@ -183,8 +183,7 @@ RebolRuntime::RebolRuntime (bool) :
             // into exception classes.  Left as an exercise for the reader
 
             throw std::runtime_error(
-                std::string(reinterpret_cast<char const *>(title))
-                + " : " + reinterpret_cast<char const *>(content)
+                std::string(cs_cast(title)) + " : " + cs_cast(content)
             );
         };
 
@@ -212,37 +211,32 @@ RebolRuntime::RebolRuntime (bool) :
 }
 
 
-
 REBVAL RebolRuntime::loadAndBindWord(
     REBSER * context,
-    const char * cstrUtf8,
-    REBOL_Types kind,
-    size_t len
+    unsigned char const * nameUtf8,
+    size_t lenBytes,
+    REBOL_Types kind
 ) {
     REBVAL result;
-
-    // Set_Word sets the fields of an ANY_WORD cell, but doesn't set
-    // the header bits.
-
-    Set_Word(
-        &result,
-        // Make_Word has a misleading name; it just finds the symbol
-        // number (a REBINT) and the rest of this is needed in order
-        // to get to a well formed word.
-        Make_Word(
-            reinterpret_cast<REBYTE*>(const_cast<char*>(cstrUtf8)),
-            len == 0 ? strlen(cstrUtf8) : len
-        ),
-        // Initialize FRAME to null
-        nullptr,
-        0
-    );
 
     // Set the "cell type" and clear the other header flags
     // (SET_TYPE would leave the other header flags alone, but they
     // are still uninitialized data at this point)
 
     VAL_SET(&result, kind);
+
+    // Set_Word sets the fields of an ANY_WORD cell, but doesn't set
+    // the header bits.  Make_Word has a misleading name; it just finds
+    // the symbol number (a REBCNT).  We then turn the unsigned
+    // value into an unsigned, as negative numbers are used to
+    // have special meaning for words that refer to function params
+
+    Set_Word(
+        &result,
+        static_cast<REBINT>(Make_Word(nameUtf8, lenBytes)),
+        nullptr, // FRAME
+        0
+    );
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
@@ -368,7 +362,11 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // We patch apply here (also a good place to see how other such
     // patches could be done...)
 
-    REBVAL applyWord = loadAndBindWord(Lib_Context, "apply");
+    REBYTE apply_name[] = "apply";
+
+    REBVAL applyWord = loadAndBindWord(
+        Lib_Context, apply_name, LEN_BYTES(apply_name)
+    );
 
     REBVAL applyNative = *Get_Var(&applyWord);
 
@@ -413,17 +411,14 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         return R_TOS;
     };
 
-    const char * applySpecStr {
+    const REBYTE applySpecStr[] = {
         "{Generalized apply of a value to reduced arguments.}"
         " value {Value to apply}"
         " block [block!] {Block of args, reduced first (unless /only)}"
         " /only {Use arg values as-is, do not reduce the block}"
     };
 
-    REBSER * applySpec = Scan_Source(
-        reinterpret_cast<REBYTE *>(const_cast<char *>((applySpecStr))),
-        LEN_BYTES(applySpecStr)
-    );
+    REBSER * applySpec = Scan_Source(applySpecStr, LEN_BYTES(applySpecStr));
 
     Make_Native(&applyNative, applySpec, applyFun, REB_NATIVE);
     Set_Var(&applyWord, &applyNative);

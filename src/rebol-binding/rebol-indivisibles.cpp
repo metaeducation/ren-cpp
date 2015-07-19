@@ -132,7 +132,7 @@ Character::operator wchar_t () const {
 }
 
 
-long Character::codepoint() const {
+unsigned long Character::codepoint() const {
     REBUNI uni = VAL_CHAR(&cell);
     // will probably not throw in Red, either
     return uni;
