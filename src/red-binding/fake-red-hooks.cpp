@@ -87,7 +87,7 @@ public:
         print("--->[FakeRed::ConstructOrApply]--->");
 
         if (applicand) {
-            char buffer[256];
+			unsigned char buffer[256];
             size_t length;
             RenFormAsUtf8(engine, applicand, buffer, 256, &length);
             print("Applicand is", buffer);
@@ -102,7 +102,7 @@ public:
             auto & cell = *reinterpret_cast<RenCell const *>(currentPtr);
 
             if (RedRuntime::getDatatypeID(cell) != runtime.TYPE_ALIEN) {
-                char buffer[256];
+				unsigned char buffer[256];
                 size_t length;
                 RenFormAsUtf8(engine, &cell, buffer, 256, &length);
                 print("LOADED:", buffer);
@@ -164,7 +164,7 @@ public:
     RenResult FormAsUtf8(
         RedEngineHandle engine,
         RedCell const * cell,
-        char * buffer,
+		unsigned char * buffer,
         size_t bufSize,
         size_t * lengthOut
     ) {
