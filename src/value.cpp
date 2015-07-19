@@ -18,6 +18,7 @@
 
 #include <ostream>
 #include <vector>
+#include <iostream>
 
 #include "rencpp/value.hpp"
 #include "rencpp/indivisibles.hpp"
@@ -143,9 +144,12 @@ void Value::constructOrApplyInitialize(
             throw load_error {errorOut};
 
     #ifdef REN_RUNTIME
-        case REN_APPLY_ERROR:
+        case REN_APPLY_ERROR: {
+            std::cout << to_string(*applicand);
+
             errorOut.finishInit(engine);
             throw evaluation_error {errorOut};
+        }
 
         case REN_EVALUATION_CANCELLED:
             throw evaluation_cancelled {};

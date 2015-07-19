@@ -19,7 +19,7 @@
 #include "rebol/src/include/sys-value.h"
 #include "rebol/src/include/sys-state.h"
 
-void Init_Task_Context();	// Special REBOL values per task
+void Init_Task_Context();    // Special REBOL values per task
 
 
 namespace ren {
@@ -133,7 +133,7 @@ public:
             // Saved_State is safe.
             Saved_State = Halt_State;
 
-            Init_Task();	// Special REBOL values per task
+            Init_Task();    // Special REBOL values per task
 
             // Pop our error trapping state
 

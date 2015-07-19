@@ -22,7 +22,7 @@
 #include "rencpp/engine.hpp"
 
 
-#define SF_DEV_NULL 31		// local flag to mark NULL device
+#define SF_DEV_NULL 31        // local flag to mark NULL device
 
 
 extern REBDEV *Devices[];
@@ -33,76 +33,76 @@ extern REBDEV *Devices[];
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Quit_IO(REBREQ *dr)
+*/    static DEVICE_CMD Quit_IO(REBREQ *dr)
 /*
 ***********************************************************************/
 {
-	REBDEV *dev = (REBDEV*)dr; // just to keep compiler happy above
+    REBDEV *dev = (REBDEV*)dr; // just to keep compiler happy above
 
     CLR_FLAG(dev->flags, RDF_OPEN);
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Open_IO(REBREQ *req)
+*/    static DEVICE_CMD Open_IO(REBREQ *req)
 /*
 ***********************************************************************/
 {
-	REBDEV *dev;
+    REBDEV *dev;
 
-	dev = Devices[req->device];
+    dev = Devices[req->device];
 
-	// Avoid opening the console twice (compare dev and req flags):
-	if (GET_FLAG(dev->flags, RDF_OPEN)) {
-		// Device was opened earlier as null, so req must have that flag:
+    // Avoid opening the console twice (compare dev and req flags):
+    if (GET_FLAG(dev->flags, RDF_OPEN)) {
+        // Device was opened earlier as null, so req must have that flag:
         if (GET_FLAG(dev->flags, SF_DEV_NULL))
-			SET_FLAG(req->modes, RDM_NULL);
-		SET_FLAG(req->flags, RRF_OPEN);
-		return DR_DONE; // Do not do it again
-	}
+            SET_FLAG(req->modes, RDM_NULL);
+        SET_FLAG(req->flags, RRF_OPEN);
+        return DR_DONE; // Do not do it again
+    }
 
     if (GET_FLAG(req->modes, RDM_NULL))
         SET_FLAG(dev->flags, SF_DEV_NULL);
 
-	SET_FLAG(req->flags, RRF_OPEN);
-	SET_FLAG(dev->flags, RDF_OPEN);
+    SET_FLAG(req->flags, RRF_OPEN);
+    SET_FLAG(dev->flags, RDF_OPEN);
 
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Close_IO(REBREQ *req)
+*/    static DEVICE_CMD Close_IO(REBREQ *req)
 /*
  ***********************************************************************/
 {
-	REBDEV *dev = Devices[req->device];
+    REBDEV *dev = Devices[req->device];
 
-	CLR_FLAG(req->flags, RRF_OPEN);
+    CLR_FLAG(req->flags, RRF_OPEN);
 
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Write_IO(REBREQ *req)
+*/    static DEVICE_CMD Write_IO(REBREQ *req)
 /*
-**		Low level "raw" standard output function.
+**        Low level "raw" standard output function.
 **
-**		Allowed to restrict the write to a max OS buffer size.
+**        Allowed to restrict the write to a max OS buffer size.
 **
-**		Returns the number of chars written.
+**        Returns the number of chars written.
 **
 ***********************************************************************/
 {
-	if (GET_FLAG(req->modes, RDM_NULL)) {
-		req->actual = req->length;
-		return DR_DONE;
-	}
+    if (GET_FLAG(req->modes, RDM_NULL)) {
+        req->actual = req->length;
+        return DR_DONE;
+    }
 
     std::ostream & os = ren::Engine::runFinder().getOutputStream();
 
@@ -134,19 +134,19 @@ extern REBDEV *Devices[];
 
     req->actual = req->length;
 
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Read_IO(REBREQ *req)
+*/    static DEVICE_CMD Read_IO(REBREQ *req)
 /*
-**		Low level "raw" standard input function.
+**        Low level "raw" standard input function.
 **
-**		The request buffer must be long enough to hold result.
+**        The request buffer must be long enough to hold result.
 **
-**		Result is NOT terminated (the actual field has length.)
+**        Result is NOT terminated (the actual field has length.)
 **
 ***********************************************************************/
 {
@@ -154,10 +154,10 @@ extern REBDEV *Devices[];
 
     if (GET_FLAG(req->modes, RDM_NULL)) {
         req->common.data[0] = 0;
-		return DR_DONE;
-	}
+        return DR_DONE;
+    }
 
-	req->actual = 0;
+    req->actual = 0;
 
     std::istream & is = ren::Engine::runFinder().getInputStream();
 
@@ -175,15 +175,15 @@ extern REBDEV *Devices[];
 
     req->actual = LEN_BYTES(req->common.data);
 
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-*/	static DEVICE_CMD Open_Echo(REBREQ *)
+*/    static DEVICE_CMD Open_Echo(REBREQ *)
 /*
-**		Open a file for low-level console echo (output).
+**        Open a file for low-level console echo (output).
 **
 ***********************************************************************/
 {
@@ -193,29 +193,29 @@ extern REBDEV *Devices[];
         " object that does it if you want that feature."
     );
 
-	return DR_DONE;
+    return DR_DONE;
 }
 
 
 /***********************************************************************
 **
-**	Command Dispatch Table (RDC_ enum order)
+**    Command Dispatch Table (RDC_ enum order)
 **
 ***********************************************************************/
 
 static DEVICE_CMD_FUNC Dev_Cmds[RDC_MAX] =
 {
-	0,	// init
-	Quit_IO,
-	Open_IO,
-	Close_IO,
-	Read_IO,
-	Write_IO,
-	0,	// poll
-	0,	// connect
-	0,	// query
-	0,	// modify
-	Open_Echo,	// CREATE used for opening echo file
+    0,    // init
+    Quit_IO,
+    Open_IO,
+    Close_IO,
+    Read_IO,
+    Write_IO,
+    0,    // poll
+    0,    // connect
+    0,    // query
+    0,    // modify
+    Open_Echo,    // CREATE used for opening echo file
 };
 
 DEFINE_DEV(Dev_StdIO, "Standard IO", 1, Dev_Cmds, RDC_MAX, 0);

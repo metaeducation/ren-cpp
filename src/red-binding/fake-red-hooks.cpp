@@ -278,7 +278,7 @@ RenResult RenReleaseCells(
 RenResult RenFormAsUtf8(
     RenEngineHandle engine,
     RenCell const * cell,
-	unsigned char * buffer,
+    unsigned char * buffer,
     size_t bufSize,
     size_t * lengthOut
 ) {
