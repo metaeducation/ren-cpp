@@ -331,6 +331,8 @@ protected:
     //     https://github.com/hostilefork/rencpp/issues/2
     //
 public:
+    bool isAtom() const;
+
     struct unset_t
     {
       struct init {};

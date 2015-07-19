@@ -1,5 +1,5 @@
-#ifndef RENCPP_INDIVISIBLES_HPP
-#define RENCPP_INDIVISIBLES_HPP
+#ifndef RENCPP_ATOMS_HPP
+#define RENCPP_ATOMS_HPP
 
 //
 // atoms.hpp
@@ -45,6 +45,26 @@
 namespace ren {
 
 
+class Atom : public Value {
+protected:
+    friend class Value;
+    Atom (Dont) noexcept : Value (Dont::Initialize) {}
+    inline bool isValid() const { return isAtom(); }
+
+public:
+    // We need to inherit Value's constructors, as an Atom can be
+    // initialized from any of the literal value initialization forms.
+    using Value::Value;
+
+public:
+    // !!! Are there any common things that all atoms are able to do?  There
+    // is some precedent in suggesting that any atom value in Rebol can
+    // be compared against zero by setting all its bits to zero and setting
+    // the header to the type.  That's questionable.
+};
+
+
+
 //
 // NONE AND UNSET CONSTRUCTION
 //
@@ -59,30 +79,32 @@ namespace ren {
 // to be useful in practice.  They really only make sense as instances of
 // the Value base class.
 //
+// !!! Is there anything that might put either or both of these into their
+// own category that is not considered an "Atom"?
 
 constexpr Value::none_t none {Value::none_t::init{}};
 
 constexpr Value::unset_t unset {Value::unset_t::init{}};
 
-class Unset : public Value {
+class Unset : public Atom {
 protected:
     friend class Value;
-    Unset (Dont) noexcept : Value (Dont::Initialize) {}
+    Unset (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isUnset(); }
 
 public:
-    Unset (Engine * engine = nullptr) : Value (unset, engine) {}
+    Unset (Engine * engine = nullptr) : Atom (unset, engine) {}
 };
 
 
-class None : public Value {
+class None : public Atom {
 protected:
     friend class Value;
-    None (Dont) noexcept : Value (Dont::Initialize) {}
+    None (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isNone(); }
 
 public:
-    explicit None (Engine * engine = nullptr) : Value(none, engine) {}
+    explicit None (Engine * engine = nullptr) : Atom (none, engine) {}
 };
 
 
@@ -91,10 +113,10 @@ public:
 // LOGIC
 //
 
-class Logic : public Value {
+class Logic : public Atom {
 protected:
     friend class Value;
-    Logic (Dont) noexcept : Value (Dont::Initialize) {}
+    Logic (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
 public:
@@ -114,7 +136,7 @@ public:
             void *
         >::type = nullptr
     ) :
-        Value (b, engine)
+        Atom (b, engine)
     {
     }
 
@@ -128,7 +150,7 @@ public:
             void *
         >::type = nullptr
     ) :
-        Value (static_cast<bool>(b), engine)
+        Atom (static_cast<bool>(b), engine)
     {
     }
 
@@ -141,21 +163,21 @@ public:
 // CHARACTER
 //
 
-class Character : public Value {
+class Character : public Atom {
 protected:
     friend class Value;
     friend class AnyString;
-    Character (Dont) noexcept : Value (Dont::Initialize) {}
+    Character (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
 
 public:
     Character (char c, Engine * engine = nullptr) :
-        Value (c, engine)
+        Atom (c, engine)
     {
     }
 
     Character (wchar_t wc, Engine * engine = nullptr) :
-        Value (wc, engine)
+        Atom (wc, engine)
     {
     }
 
@@ -192,15 +214,15 @@ public:
 // INTEGER
 //
 
-class Integer : public Value {
+class Integer : public Atom {
 protected:
     friend class Value;
-    Integer (Dont) noexcept : Value (Dont::Initialize) {}
+    Integer (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
 public:
     Integer (int i, Engine * engine = nullptr) :
-        Value (i, engine)
+        Atom (i, engine)
     {
     }
 
@@ -213,15 +235,15 @@ public:
 // FLOAT
 //
 
-class Float : public Value {
+class Float : public Atom {
 protected:
     friend class Value;
-    Float (Dont) noexcept : Value (Dont::Initialize) {}
+    Float (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
 public:
     Float (double d, Engine * engine = nullptr) :
-        Value (d, engine)
+        Atom (d, engine)
     {
     }
 
@@ -248,10 +270,10 @@ public:
 // evaluator.
 //
 
-class Date : public Value {
+class Date : public Atom {
 protected:
     friend class Value;
-    Date (Dont) noexcept : Value (Dont::Initialize) {}
+    Date (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 
 public:
@@ -259,35 +281,6 @@ public:
         std::string const & str,
         Engine * engine = nullptr
     );
-};
-
-
-//
-// IMAGE
-//
-
-//
-// Rebol has a native IMAGE! type, which a few codecs have been written for
-// to save and load.  We don't do much with it in RenCpp at this point
-// unless you are building with the Qt classlib, in which case we need to
-// go back and forth with a QImage.
-//
-// It's not clear if this should be in the standard RenCpp or if it belongs
-// in some kind of extensions module.  In Rebol at least, the IMAGE! was
-// available even in non-GUI builds.
-//
-
-class Image : public Value {
-protected:
-    friend class Value;
-    Image (Dont) noexcept : Value (Dont::Initialize) {}
-    inline bool isValid() const { return isImage(); }
-
-public:
-#if REN_CLASSLIB_QT == 1
-    explicit Image (QImage const & image, Engine * engine = nullptr);
-    operator QImage () const;
-#endif
 };
 
 

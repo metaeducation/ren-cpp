@@ -40,6 +40,11 @@
 #include "engine.hpp"
 #include "context.hpp"
 
+// !!! Even non-GUI builds want to be able to process images.  Yet this
+// probably should be in the category of things done with a plug-in,
+// (once plug-ins can act like fairly natural types)
+#include "image.hpp"
+
 
 //
 // INCLUDE REBOL OR RED RUNTIME INSTANCE
