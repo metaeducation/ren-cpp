@@ -252,6 +252,10 @@ public:
 
         SAVE_SERIES(aggregate);
 
+        // Note: No C++ allocations can happen between here and the POP_STATE
+        // calls as long as the C stack is in control, as setjmp/longjmp will
+        // subvert stack unwinding and just reset the processor state.
+
         PUSH_STATE(state, Halt_State);
         if (SET_JUMP(state)) {
             POP_STATE(state, Halt_State);
@@ -328,7 +332,9 @@ public:
                 // get through transcode which returns [foo bar] and
                 // [[foo bar]] that discern the cases
 
-                auto loadText = reinterpret_cast<REBYTE*>(VAL_HANDLE(cell));
+                auto loadText = reinterpret_cast<REBYTE*>(
+                    VAL_HANDLE_DATA(cell)
+                );
 
                 // CAN Throw_Error! if the input is bad (unmatched parens,
                 // etc...

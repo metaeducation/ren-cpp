@@ -256,8 +256,7 @@ Loadable::Loadable (char const * sourceCstr) :
 {
     // using REB_END as our "alien"
     VAL_SET(&cell, REB_END);
-    VAL_HANDLE(&cell) =
-        reinterpret_cast<ANYFUNC>(const_cast<char *>(sourceCstr));
+    VAL_HANDLE_DATA(&cell) = const_cast<char *>(sourceCstr);
 
     refcountPtr = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
