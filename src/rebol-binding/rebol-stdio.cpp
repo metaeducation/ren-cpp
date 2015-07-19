@@ -63,13 +63,8 @@ extern REBDEV *Devices[];
 		return DR_DONE; // Do not do it again
 	}
 
-	if (!GET_FLAG(req->modes, RDM_NULL)) {
-	}
-    else {
-        int temp = dev->flags;
-        SET_FLAG(temp, SF_DEV_NULL);
-        dev->flags = temp;
-    }
+    if (GET_FLAG(req->modes, RDM_NULL))
+        SET_FLAG(dev->flags, SF_DEV_NULL);
 
 	SET_FLAG(req->flags, RRF_OPEN);
 	SET_FLAG(dev->flags, RDF_OPEN);
