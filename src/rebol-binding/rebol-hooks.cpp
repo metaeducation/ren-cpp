@@ -250,19 +250,8 @@ public:
 
         REBOL_STATE state;
 
-        // Haphazardly copied from c-do.c and Do_String; review needed now
-        // that it is understood better.
-        //
-        //     https://github.com/hostilefork/rencpp/issues/21
-
-        // Unfortunate fact #2, the real Halt_State used by QUIT is a global
-        // shared between Do_String and the exiting function Halt_Code.  And
-        // it's static to c-do.c - that has to be edited to communicate with
-        // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
-        // with a new function, but evaluation interrupts can't.)
-
         bool applying = false;
-        REBSER * aggregate = Make_Block(static_cast<REBCNT>(numLoadables * 2));
+        REBSER * aggregate = Make_Block(numLoadables * 2);
 
         SAVE_SERIES(aggregate);
 
@@ -597,7 +586,7 @@ public:
     }
 
     RenResult ShimRaiseError(REBVAL const * error) {
-        Throw_Error(VAL_SERIES(const_cast<REBVAL *>(error)));
+        Throw_Error(VAL_SERIES(error));
         return REN_SUCCESS; // never happens...
     }
 

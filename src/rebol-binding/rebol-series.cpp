@@ -71,19 +71,18 @@ Value ren::internal::Series_::operator->() const {
 
 
 void ren::internal::Series_::head() {
-    cell.data.series.index = static_cast<REBCNT>(0);
+    cell.data.series.index = 0;
 }
 
 
 void ren::internal::Series_::tail() {
-    cell.data.series.index
-        = static_cast<REBCNT>(cell.data.series.series->tail);
+    cell.data.series.index = cell.data.series.series->tail;
 }
 
 
 size_t Series::length() const {
-    REBINT index = (REBINT)VAL_INDEX(&cell);
-    REBINT tail = (REBINT)VAL_TAIL(&cell);
+    REBCNT index = VAL_INDEX(&cell);
+    REBCNT tail = VAL_TAIL(&cell);
     return tail > index ? tail - index : 0;
 }
 

@@ -435,7 +435,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                *REN_STACK_ARGUMENT(stack, Indices),
+                *REN_STACK_ARGUMENT(stack, static_cast<REBINT>(Indices)),
                 engine
             )...
         );
