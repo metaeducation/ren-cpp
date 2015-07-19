@@ -279,19 +279,18 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // now for exe_path we offer an informative fake path that is (hopefully)
     // harmless.
 
+    REBCHR const * exe_path_const = OS_STR_LIT(
+        "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
+    );
+
+    rebargs.exe_path = new REBCHR[OS_STRLEN(exe_path_const) + 1];
+    OS_STRNCPY(rebargs.exe_path, exe_path_const, OS_STRLEN(exe_path_const) + 1);
+
     rebargs.home_dir = new REBCHR[MAX_PATH];
 
 #ifdef TO_WIN32
-    rebargs.exe_path = reinterpret_cast<REBCHR *>(const_cast<wchar_t *>(
-        L"/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
-    ));
-
-    GetCurrentDirectory(MAX_PATH, reinterpret_cast<TCHAR *>(rebargs.home_dir));
+    GetCurrentDirectory(MAX_PATH, reinterpret_cast<whcar_t *>(rebargs.home_dir));
 #else
-    rebargs.exe_path = reinterpret_cast<REBCHR *>(const_cast<char*>(
-        "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
-    ));
-
     getcwd(reinterpret_cast<char *>(rebargs.home_dir), MAX_PATH);
 #endif
 
