@@ -16,11 +16,18 @@
 # permissions and limitations under the License.
 #
 
+# NOTE: 9 times out of 10 these days, people working on this project want:
 #
-# Comments in this CMakeLists.txt were originally the entirety of the "build
-# documentation".  However, look at doc/build.md for what is developing as the
-# more user-friendly instructions.  These instructions will be pared down
-# so as not to be redundant as that effort stabilizes.
+#    -DCMAKE_BUILD_TYPE=Debug -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+#
+# ...as the CMake build parameters.  So putting these up top.  Qt Creator
+# has a bad habit of losing the cache of this, so we keep needing it.  :-/
+
+#
+# NOTE: Comments in this CMakeLists.txt were originally the entirety of
+# the "build documentation".  However, look at %doc/build.md for what is
+# developing as the more user-friendly instructions.  These instructions
+# will be pared down so as not to be redundant as that effort stabilizes.
 #
 
 #
@@ -392,11 +399,8 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     # strictness down a little so the headers will work.
 
     add_cxx_flags(-Wno-unknown-pragmas)
-    remove_cxx_flag(-pedantic)
+	add_cxx_flags(-Wno-cast-align)
     remove_cxx_flag(-Wold-style-cast)
-    remove_cxx_flag(-Wsign-conversion)
-    remove_cxx_flag(-Wcast-align)
-    remove_cxx_flag(-Wcast-qual)
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         # Rebol's use of setjmp and longjmp triggers several of these warnings,
@@ -421,18 +425,38 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
 
 
     # It's important to make sure you're set to the right platform, as it
-    # affects endianness and other things.
+	# affects endianness and other things.  These flags were largely moved
+	# in Ren/C to being auto-generated, hence they're not set in the
+	# reb-config.h any longer.  Review the ramifications of this.
+
+	add_definitions(-DENDIAN_LITTLE)
 
     if(WIN32)
+		add_definitions(-DTO_WINDOWS)
 
-        add_definitions(-DTO_WIN32)
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			add_definitions(-DTO_WINDOWS_X64)
+		else()
+			add_definitions(-DTO_WINDOWS_X86)
+		endif()
         add_definitions(-DOS_DEFS) # Kill warning about IS_ERROR redefinition.
         add_definitions(-DUNICODE)
+	elseif(APPLE)
+		add_definitions(-DTO_OSX)
 
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			add_definitions(-DTO_OSX_X64)
+		else()
+			add_definitions(-DTO_OSX_X86)
+		endif()
     else()
-
         add_definitions(-DTO_LINUX)
 
+		if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+			add_definitions(-DTO_LINUX_X64)
+		else()
+			add_definitions(-DTO_LINUX_X86)
+		endif()
     endif()
 
 
@@ -453,7 +477,6 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     # them dependent.
     #
     # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib.o)
-    # ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib2.o)
 
 
     # The binding could replace the entirety of the "host", implementing all
