@@ -336,17 +336,10 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     // will be stored in system/options/boot-host, loaded, and evaluated.
 
     REBYTE * startupBin = nullptr;
-    REBINT len = 0; // length of above bin
+    REBCNT len = 0; // length of above bin
 
     if (startupBin) {
-        REBSER spec;
-        spec.data = startupBin;
-        spec.tail = len;
-        spec.rest = 0;
-        spec.info = 0;
-        spec.size = 0;
-
-        REBSER * startup = Decompress(&spec, 0, -1, 10000000, 0);
+        REBSER * startup = Decompress(startupBin, len, 10000000, 0);
 
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
