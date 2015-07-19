@@ -466,41 +466,6 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/dev-stdio.o)
 
 
-    # We cannot use the c-do.c file unmodified from github's rebol/rebol,
-    # due to Halt_State being static.  Though that's a small change, more
-    # radical changes can give us interesting hooks into the evaluator.
-    # So it's worth it to pull that file out and customize it in Rencpp.
-    # But we then have to put the customized version from the Rencpp
-    # sources at the right position in the list so its globals get picked
-    # up by the other Rebol object files
-    #
-    # Note that the license inherited by c-do.cpp is Apache, not Boost.
-
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-do.o)
-
-
-    # There is a nasty issue in Bind_Block_Words, for which a pull request
-    # that may (or may not) fix it has been sent:
-    #
-    #     https://github.com/rebol/rebol/pull/234
-    #
-    # The idea of that being "the fix" is tenuous, but it at least allows one
-    # to COPY an object that has been used for binding...a critical feature
-    # for RenCpp.  We use the forked c-frame here until such time as the
-    # solution is integrated.
-
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/c-frame.o)
-
-
-    # It was bound to happen at some point that the project grew to be 
-    # complex enough to trigger the garbage collector.  There is no way to
-    # work with pointers to garbage collected Rebol objects without some
-    # kind of hook.  Short of doing code injection, we just bring in the 
-    # garbage collection file like the others...
-
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/m-gc.o)
-
-
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
     # http://en.wikipedia.org/wiki/Dynamic_loading
