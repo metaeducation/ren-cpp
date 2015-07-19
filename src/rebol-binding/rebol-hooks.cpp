@@ -7,7 +7,7 @@
 
 #include "rencpp/rebol.hpp"
 
-// REVIEW: hooks should not be throwing exceptions; still some in threadinit
+// !!! hooks should not be throwing exceptions; still some in threadinit
 #include "rencpp/error.hpp"
 
 #include <utility>
@@ -58,7 +58,7 @@ public:
 // on demand from whichever thread calls first.  This means we need to
 // keep a list of which threads have been initialized and which not.
 //
-// REVIEW: what if threads die and don't tell us?  Is there some part of
+// !!! what if threads die and don't tell us?  Is there some part of
 // the puzzle to ensure any thread that communicates with some form of
 // allocation must come back with a free?
 //

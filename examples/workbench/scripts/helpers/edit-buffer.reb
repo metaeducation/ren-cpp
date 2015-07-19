@@ -44,10 +44,11 @@ console-buffer-helper: function [value [block! string!]] [
 
 
     ; Otherwise it's a block, so see if there are any markers
-    ; inside of it.  REVIEW: What if the markers aren't at the top
-    ; level?  combine does permit nested block structure, so this
-    ; should perhaps be done with some kind of FIND/DEEP in a
-    ; perfect world (though that would make all this tricky!)
+	; inside of it.
+
+	; !!! What if the markers aren't at the top level?  combine does permit
+	; nested block structure, so this should perhaps be done with some kind
+	; of FIND/DEEP in a perfect world (that would make all this tricky!)
 
     position: find value '|
     anchor: find value '||

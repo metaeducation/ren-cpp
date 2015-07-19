@@ -95,7 +95,7 @@ namespace internal {
 // Function then Function would have to be written Function<> and be
 // specialized for that.
 //
-// REVIEW: Should we call this Native instead, or should Function represent
+// !!! Should we call this Native instead, or should Function represent
 // ANY-FUNCTION! types and not bother with inventing a separate AnyFunction?
 //
 

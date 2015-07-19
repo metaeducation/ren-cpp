@@ -411,7 +411,7 @@ RenConsole::RenConsole (QWidget * parent) :
                         };
                 }
                 else {
-                    // REVIEW: exception handling if they watch something
+                    // !!! exception handling if they watch something
                     // with no value in the block form?  e.g. watch [x y]
                     // and x gets added as a watch where both undefined,
                     // but y doesn't?
@@ -1126,7 +1126,7 @@ RenConsole::~RenConsole() {
             " so if you can remember what you were doing or reproduce it then"
             " please report it on the issue tracker!"
         );
-        exit(1337); // REVIEW: What exit codes will Ren Garden use?
+        exit(1337); // !!! What exit codes will Ren Garden use?
     }
 }
 

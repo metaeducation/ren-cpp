@@ -35,7 +35,7 @@ Value::Value (unset_t, Engine * engine) noexcept :
 {
     SET_UNSET(&cell);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -57,7 +57,7 @@ Value::Value (none_t, Engine * engine) noexcept :
 {
     SET_NONE(&cell);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -87,7 +87,7 @@ Value::Value (bool someBool, Engine * engine) noexcept :
 {
     SET_LOGIC(&cell, someBool);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -113,7 +113,7 @@ Value::Value (char c, Engine * engine) noexcept :
 {
     SET_CHAR(&cell, c);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -125,7 +125,7 @@ Value::Value (wchar_t wc, Engine * engine) noexcept :
 {
     SET_CHAR(&cell, wc);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -176,7 +176,7 @@ Value::Value (int someInt, Engine * engine) noexcept :
 {
     SET_INTEGER(&cell, someInt);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 
@@ -202,7 +202,7 @@ Value::Value (double someDouble, Engine * engine) noexcept :
 {
     SET_DECIMAL(&cell, someDouble);
 
-    // REVIEW: Should some types not need an engine field?
+    // !!! Should some types not need an engine field?
     if (not engine)
         engine = &Engine::runFinder();
 

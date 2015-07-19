@@ -303,7 +303,7 @@ void WatchList::updateWatcher(int index) {
     // We give visual feedback by selecting the watches that have changed
     // since the last update.
     //
-    // REVIEW: Need to check for value/error change, not just the text
+    // !!! Need to check for value/error change, not just the text
     // changing
 
     QString newText = w.getValueString();

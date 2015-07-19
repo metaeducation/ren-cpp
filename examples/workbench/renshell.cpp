@@ -682,7 +682,7 @@ RenShell::~RenShell () {
             " so if you can remember what you were doing or reproduce it then"
             " please report it on the issue tracker!"
         );
-        exit(1337); // REVIEW: What exit codes will Ren Garden use?
+        exit(1337); // !!! What exit codes will Ren Garden use?
     }
 }
 
