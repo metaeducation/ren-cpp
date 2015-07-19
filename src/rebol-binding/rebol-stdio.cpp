@@ -111,7 +111,7 @@ extern REBDEV *Devices[];
 
     std::ostream & os = ren::Engine::runFinder().getOutputStream();
 
-    os.write(reinterpret_cast<char*>(req->data), req->length);
+    os.write(reinterpret_cast<char*>(req->common.data), req->length);
 
     // knowing about a partial write would require using tellp() and comparing
     // which is both unreliable and not available on stdout anyway
@@ -158,7 +158,7 @@ extern REBDEV *Devices[];
     u32 length = req->length;
 
     if (GET_FLAG(req->modes, RDM_NULL)) {
-		req->data[0] = 0;
+        req->common.data[0] = 0;
 		return DR_DONE;
 	}
 
@@ -171,14 +171,14 @@ extern REBDEV *Devices[];
     // length for now.  The only way to get the length of that is with
     // strlen, however.
 
-    is.getline(reinterpret_cast<char*>(req->data), req->length);
+    is.getline(reinterpret_cast<char*>(req->common.data), req->length);
 
     if (is.fail()) {
         req->error = 1020;
         return DR_ERROR;
     }
 
-    req->actual = strlen(reinterpret_cast<char*>(req->data));
+    req->actual = LEN_BYTES(req->common.data);
 
 	return DR_DONE;
 }
