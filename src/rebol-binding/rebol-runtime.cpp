@@ -217,32 +217,17 @@ REBVAL RebolRuntime::loadAndBindWord(
     size_t lenBytes,
     REBOL_Types kind
 ) {
-    REBVAL result;
+    REBVAL word;
 
-    // Set the "cell type" and clear the other header flags
-    // (SET_TYPE would leave the other header flags alone, but they
-    // are still uninitialized data at this point)
+    // !!! Make_Word has a misleading name; it allocates a symbol number
 
-    VAL_SET(&result, kind);
-
-    // Set_Word sets the fields of an ANY_WORD cell, but doesn't set
-    // the header bits.  Make_Word has a misleading name; it just finds
-    // the symbol number (a REBCNT).  We then turn the unsigned
-    // value into an unsigned, as negative numbers are used to
-    // have special meaning for words that refer to function params
-
-    Set_Word(
-        &result,
-        static_cast<REBINT>(Make_Word(nameUtf8, lenBytes)),
-        nullptr, // FRAME
-        0
-    );
+    Init_Word_Unbound(&word, kind, Make_Word(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
 
     if (context)
-        Bind_Word(context, &result);
+        Bind_Word(context, &word);
 
     // Note that with C++11 move semantics, this is constructed in place;
     // in other words, the caller's REBVAL that they process in the return
@@ -251,7 +236,7 @@ REBVAL RebolRuntime::loadAndBindWord(
     // while not costing more to pass around.  If you want value semantics
     // you just use them.
 
-    return result;
+    return word;
 }
 
 bool RebolRuntime::lazyInitializeIfNecessary() {
