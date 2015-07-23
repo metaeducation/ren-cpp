@@ -118,7 +118,7 @@ void noisyFailureMsgHandler(
 
 
 
-#ifdef TO_WIN32
+#ifdef TO_WINDOWS
 
 int main(int argc, char *argv[]);
 

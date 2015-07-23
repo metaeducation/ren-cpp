@@ -13,7 +13,7 @@ extern "C" {
 #include "rebol/src/include/reb-lib.h"
     extern REBOL_HOST_LIB Host_Lib_Init_RenCpp;
 
-#ifdef TO_WIN32
+#ifdef TO_WINDOWS
     #include <windows.h>
     // The objects file from Rebol linked into RenCpp need a
     // variable named App_Instance for the linkage to work when
@@ -273,7 +273,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     rebargs.home_dir = new REBCHR[MAX_PATH];
 
-#ifdef TO_WIN32
+#ifdef TO_WINDOWS
     GetCurrentDirectory(MAX_PATH, reinterpret_cast<whcar_t *>(rebargs.home_dir));
 #else
     getcwd(reinterpret_cast<char *>(rebargs.home_dir), MAX_PATH);
