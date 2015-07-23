@@ -423,7 +423,7 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    *REN_STACK_ARGUMENT(stack, Indices),
+                    *REN_STACK_ARG(stack, Indices),
                     engine
                 )...
             )
@@ -435,7 +435,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                *REN_STACK_ARGUMENT(stack, static_cast<REBINT>(Indices)),
+                *REN_STACK_ARG(stack, static_cast<REBINT>(Indices)),
                 engine
             )...
         );
@@ -491,18 +491,18 @@ private:
             // The return result is written into a location that is known
             // according to the protocol of the stack
 
-            *REN_STACK_RETURN(stack) = result.cell;
+            *REN_STACK_OUT(stack) = result.cell;
         }
         catch (Error const & e) {
 
             success = false;
-            *REN_STACK_RETURN(stack) = e.cell;
+            *REN_STACK_OUT(stack) = e.cell;
         }
         catch (Value const & e) {
 
             if (e.isError()) {
                 success = false;
-                *REN_STACK_RETURN(stack) = e.cell;
+                *REN_STACK_OUT(stack) = e.cell;
             }
             else {
                 // Come up with more tolerant behavior, but discourage it as
@@ -525,11 +525,11 @@ private:
             // the implementation of a ren::Function
 
             success = false;
-            *REN_STACK_RETURN(stack) = e.error().cell;
+            *REN_STACK_OUT(stack) = e.error().cell;
         }
         catch (load_error const & e) {
             success = false;
-            *REN_STACK_RETURN(stack) = e.error().cell;
+            *REN_STACK_OUT(stack) = e.error().cell;
         }
         catch (exit_command const & e) {
 
@@ -575,9 +575,9 @@ private:
             return RenShimExit(status);
 
         if (not success)
-            return RenShimRaiseError(REN_STACK_RETURN(stack));
+            return RenShimRaiseError(REN_STACK_OUT(stack));
 
-        // Note: trickery!  R_RET is 0 and so is REN_SUCCESS.  Rebol pays
+        // Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
         // attention to it, but we don't know what Red will do.
 
         return REN_SUCCESS;

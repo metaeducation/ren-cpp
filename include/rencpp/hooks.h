@@ -177,10 +177,10 @@ typedef RedEngineHandle RenEngineHandle;
  * as written.
  */
 
-#define REN_STACK_RETURN(stack) \
+#define REN_STACK_OUT(stack) \
     static_cast<RenCell *>((stack), nullptr)
 
-#define REN_STACK_ARGUMENT(stack, index) \
+#define REN_STACK_ARG(stack, index) \
     static_cast<RenCell *>((stack), nullptr)
 
 #define REN_STACK_SHIM(stack) \
@@ -259,10 +259,10 @@ inline int IS_ANY_FUNCTION(REBVAL const * value) {
  * in Red winds up being lighter weight and not wanting to put the whole
  * 128 bit cell on then it might be more useful.
  */
-#define REN_STACK_RETURN(stack) \
-    DSF_RETURN((stack) - DS_Base)
+#define REN_STACK_OUT(stack) \
+    DSF_OUT((stack) - DS_Base)
 
-#define REN_STACK_ARGUMENT(stack, index) \
+#define REN_STACK_ARG(stack, index) \
     DSF_ARGS((stack) - DS_Base, ((index) + 1))
 
 #define REN_STACK_SHIM(stack) \
