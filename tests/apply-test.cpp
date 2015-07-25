@@ -18,29 +18,20 @@ TEST_CASE("apply test", "[rebol] [apply]")
 
     SECTION("set-word failure")
     {
-        bool caught = false;
-        try {
-            SetWord {"w"}(10, 20);
-        }
-        catch (evaluation_error const & e) {
-            caught = true;
-        }
-
-        CHECK(caught);
+        CHECK_THROWS_AS(
+            SetWord {"w"}(10, 20),
+            evaluation_error
+        );
     }
 
     SECTION("none failure")
     {
-        bool caught = false;
-        try {
-            // technical note: explicit none(arg1, arg2...) is now illegal
-            Value value = none;
-            value.apply(10);
-        }
-        catch (evaluation_error const & e) {
-            caught = true;
-        }
+        // technical note: explicit none(arg1, arg2...) is now illegal
+        Value value = none;
 
-        CHECK(caught);
+        CHECK_THROWS_AS(
+            value.apply(10),
+            evaluation_error
+        );
     }
 }

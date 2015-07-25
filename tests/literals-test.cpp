@@ -68,13 +68,9 @@ TEST_CASE("literals construction", "[rebol] [literals]")
 
     SECTION("string construction error")
     {
-        bool caught = false;
-        try {
-            runtime("{Hello");
-        }
-        catch (load_error const & e) {
-            caught = true;
-        }
-        CHECK(caught);
+        CHECK_THROWS_AS(
+            runtime("{Hello"),
+            load_error
+        );
     }
 }

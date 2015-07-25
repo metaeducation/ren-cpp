@@ -29,22 +29,13 @@ TEST_CASE("cast test", "[rebol] [cast]")
     {
         Value value = Integer {20};
 
-        bool caught = false;
-
-        try {
-            // You can't treat the bits of an Integer as Float in the Rebol or
-            // Red world...C++ *could* have a cast operator for it.  See:
-            //
-            //     https://github.com/hostilefork/rencpp/issues/7
-
-            Float illegalFloat = static_cast<Float>(value);
-
-            // that should have thrown an exception...shouldn't get here...
-        }
-        catch (std::bad_cast const & e) {
-            caught = true;
-        }
-
-        CHECK(caught);
+        // You can't treat the bits of an Integer as Float in the Rebol or
+        // Red world...C++ *could* have a cast operator for it.  See:
+        //
+        //     https://github.com/hostilefork/rencpp/issues/7
+        CHECK_THROWS_AS(
+            static_cast<Float>(value),
+            std::bad_cast
+        );
     }
 }
