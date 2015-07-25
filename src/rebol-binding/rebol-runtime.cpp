@@ -345,7 +345,8 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         Lib_Context, apply_name, LEN_BYTES(apply_name)
     );
 
-    REBVAL applyNative = *Get_Var(&applyWord);
+    REBVAL applyNative;
+    GET_VAR_INTO(&applyNative, &applyWord);
 
     if (not IS_NATIVE(&applyNative)) {
 

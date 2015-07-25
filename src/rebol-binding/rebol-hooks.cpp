@@ -375,7 +375,7 @@ public:
             }
             else {
                 // Just an ordinary value cell
-                Append_Val(aggregate, cell);
+                Append_Value(aggregate, cell);
             }
 
             current += sizeofLoadable;
