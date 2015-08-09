@@ -103,6 +103,10 @@ void noisyFailureMsgHandler(
             box.setInformativeText(msg);
             box.setStandardButtons(QMessageBox::Cancel);
             break;
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 5, 0)
+        case QtInfoMsg:
+            return;
+    #endif
         }
 
         int ret = box.exec();
