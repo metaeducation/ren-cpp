@@ -67,11 +67,11 @@ namespace internal {
 //
 
 #define REN_STD_FUNCTION \
-    [](RenCell * stack) -> int {\
+    [](RenCall * call) -> RenResult {\
         static ren::internal::RenShimId id = -1; \
         static ren::internal::RenShimBouncer bouncer = nullptr; \
-        if (stack) \
-            return bouncer(id, stack); \
+        if (call) \
+            return bouncer(id, call); \
         if (id != -1) \
             return REN_SHIM_INITIALIZED; \
         id = ren::internal::shimIdToCapture; \
@@ -359,7 +359,7 @@ using RenShimId = int;
 
 extern RenShimId shimIdToCapture;
 
-using RenShimBouncer = RenResult (*)(RenShimId id, RenCell * stack);
+using RenShimBouncer = RenResult (*)(RenShimId id, RenCall * call);
 
 extern RenShimBouncer shimBouncerToCapture;
 
@@ -413,7 +413,7 @@ private:
     static auto applyFunImpl(
         FunType const & fun,
         RenEngineHandle engine,
-        RenCell * stack,
+        RenCall * call,
         utility::indices<Indices...>
     )
         -> decltype(
@@ -423,7 +423,7 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    *REN_STACK_ARG(stack, Indices),
+                    *REN_CS_ARG(call, Indices),
                     engine
                 )...
             )
@@ -435,7 +435,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                *REN_STACK_ARG(stack, static_cast<REBINT>(Indices)),
+                *REN_CS_ARG(call, static_cast<REBINT>(Indices)),
                 engine
             )...
         );
@@ -443,15 +443,15 @@ private:
 
     template <typename Indices = utility::make_indices<sizeof...(Ts)>>
     static auto applyFun(
-        FunType const & fun, RenEngineHandle engine, RenCell * stack
+        FunType const & fun, RenEngineHandle engine, RenCall * call
     ) ->
-        decltype(applyFunImpl(fun, engine, stack, Indices {}))
+        decltype(applyFunImpl(fun, engine, call, Indices {}))
     {
-        return applyFunImpl(fun, engine, stack, Indices {});
+        return applyFunImpl(fun, engine, call, Indices {});
     }
 
 private:
-    static int bounceShim(internal::RenShimId id, RenCell * stack) {
+    static RenResult bounceShim(internal::RenShimId id, RenCall * call) {
         using internal::extensionTablesMutex;
 
         // The extension table is add-only, but additions can resize,
@@ -483,26 +483,26 @@ private:
             // Our applyFun helper does the magic to recursively forward
             // the Value classes that we generate to the function that
             // interfaces us with the Callable the extension author wrote
-            // (who is blissfully unaware of the stack convention and
+            // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
 
-            auto && result = applyFun(entry.fun, entry.engine, stack);
+            auto && result = applyFun(entry.fun, entry.engine, call);
 
             // The return result is written into a location that is known
-            // according to the protocol of the stack
+            // according to the protocol of the call frame
 
-            *REN_STACK_OUT(stack) = result.cell;
+            *REN_CS_OUT(call) = result.cell;
         }
         catch (Error const & e) {
 
             success = false;
-            *REN_STACK_OUT(stack) = e.cell;
+            *REN_CS_OUT(call) = e.cell;
         }
         catch (Value const & e) {
 
             if (e.isError()) {
                 success = false;
-                *REN_STACK_OUT(stack) = e.cell;
+                *REN_CS_OUT(call) = e.cell;
             }
             else {
                 // Come up with more tolerant behavior, but discourage it as
@@ -525,16 +525,16 @@ private:
             // the implementation of a ren::Function
 
             success = false;
-            *REN_STACK_OUT(stack) = e.error().cell;
+            *REN_CS_OUT(call) = e.error().cell;
         }
         catch (load_error const & e) {
             success = false;
-            *REN_STACK_OUT(stack) = e.error().cell;
+            *REN_CS_OUT(call) = e.error().cell;
         }
         catch (exit_command const & e) {
 
             // If there was an exit_command received, we have to offer the
-            // ability to upper stacks to do a CATCH/QUIT (CATCH/EXIT?)
+            // ability to upper invocations to do a CATCH/QUIT (CATCH/EXIT?)
 
             exiting = true;
             status = e.code();
@@ -575,7 +575,7 @@ private:
             return RenShimExit(status);
 
         if (not success)
-            return RenShimRaiseError(REN_STACK_OUT(stack));
+            return RenShimRaiseError(REN_CS_OUT(call));
 
         // Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
         // attention to it, but we don't know what Red will do.

@@ -42,30 +42,25 @@ extern "C" {
 //
 
 RenResult Generalized_Apply(
-    REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
+    REBVAL* out, REBVAL* applicand, REBSER* args, REBFLG reduce, REBVAL* error
 ) {
 
     if (IS_ANY_FUNCTION(applicand)) {
-
-        // We get args as a series, but Apply_Block expects a RebVal.
-        REBVAL block;
-        VAL_SET(&block, REB_BLOCK);
-        Set_Block(&block, args);
-
-        Apply_Block(applicand, &block, reduce);
-
+        Apply_Block(out, applicand, args, 0, reduce);
     }
     else if (IS_ERROR(applicand)) {
         if (SERIES_LEN(args) - 1 != 0) {
             *error = *applicand;
+            SET_UNSET(out);
             return REN_APPLY_ERROR;
         }
 
         // from REBNATIVE(do) ?  What's the difference?  How return?
         if (IS_THROW(applicand)) {
-            DS_PUSH(applicand);
+            *out = *applicand;
         } else {
             *error = *applicand;
+            SET_UNSET(out);
             return REN_APPLY_ERROR;
         }
     }
@@ -90,8 +85,7 @@ RenResult Generalized_Apply(
                 BIND_DEEP | BIND_SET
             );
 
-            // result is just TOS
-            DS_PUSH(Do_Blk(reboundArgs, 0));
+            DO_BLOCK(out, reboundArgs, 0);
         }
         else {
             // Just put the value at the head of a DO chain...
@@ -99,7 +93,7 @@ RenResult Generalized_Apply(
                 args, 0, reinterpret_cast<REBYTE *>(applicand), 1
             );
 
-            REBCNT index = Do_Next(args, 0, FALSE /* not op! */);
+            REBCNT index = DO_NEXT(out, args, 0);
 
             // If the DO chain didn't end, then consider that an error.  So
             // generalized apply of FOO: with `1 + 2 3` will do the addition,
@@ -110,13 +104,14 @@ RenResult Generalized_Apply(
                 // shouldn't throw exceptions from here...we return a
                 // Rebol error
 
-                REBSER * ser = Make_Error(
+                VAL_SET(error, REB_ERROR);
+                VAL_ERR_NUM(error) = RE_INVALID_ARG;
+                VAL_ERR_OBJECT(error) = Make_Error(
                     RE_INVALID_ARG,
                     BLK_SKIP(args, index),
                     0,
                     0
                 );
-                SET_ERROR(error, RE_INVALID_ARG, ser);
 
                 return REN_APPLY_ERROR;
             }
@@ -281,6 +276,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     Init_Core(&rebargs);
 
+    // Needed to run the SYS_START function
+    int err_num = RL_Start(0, 0, NULL, 0, 0);
+
     GC_Active = TRUE; // Turn on GC
 
     if (rebargs.options & RO_TRACE) {
@@ -331,9 +329,6 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         Set_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
-    if (Init_Mezz(0) != 0)
-        throw std::runtime_error("RebolHooks: Mezzanine startup failure");
-
     // RenCpp is based on "generalized apply", e.g. a notion of APPLY
     // that is willing to evaluate expressions and give them to a set-word!
     // We patch apply here (also a good place to see how other such
@@ -374,19 +369,19 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         );
     }
 
-    REBFUN applyFun = [](REBVAL * ds) -> int {
+    REBFUN applyFun = [](RenCall* call_) -> RenResult {
         REBVAL * applicand = D_ARG(1);
         REBVAL * blk = D_ARG(2);
         REBVAL error;
         bool only = D_REF(3);
         if (
-            // stack volatile
-            Generalized_Apply(applicand, VAL_SERIES(blk), not only, &error)
-            == REN_APPLY_ERROR
+            REN_APPLY_ERROR == Generalized_Apply(
+                D_OUT, applicand, VAL_SERIES(blk), not only, &error
+            )
         ) {
-            Throw_Error(VAL_ERR_OBJECT(&error));
+            Throw(&error, NULL);
         }
-        return R_TOS;
+        return R_OUT;
     };
 
     const REBYTE applySpecStr[] = {

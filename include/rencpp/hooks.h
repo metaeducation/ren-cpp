@@ -51,7 +51,7 @@
  * the hack to use the equal value of R_RETURN and REN_SUCCESS to avoid
  * trying to force Red to have R_XXX return conventions from RenShimPointer
  */
-typedef int RenResult;
+typedef unsigned int RenResult;
 #define REN_SUCCESS 0
 #define REN_CONSTRUCT_ERROR 10
 #define REN_APPLY_ERROR 11
@@ -177,10 +177,10 @@ typedef RedEngineHandle RenEngineHandle;
  * as written.
  */
 
-#define REN_STACK_OUT(stack) \
+#define REN_CS_OUT(stack) \
     static_cast<RenCell *>((stack), nullptr)
 
-#define REN_STACK_ARG(stack, index) \
+#define REN_CS_ARG(stack, index) \
     static_cast<RenCell *>((stack), nullptr)
 
 #define REN_STACK_SHIM(stack) \
@@ -231,7 +231,7 @@ typedef RebolEngineHandle RenEngineHandle;
  * shift it over to the "what should be in Rebol" side of the hooks.
  */
 RenResult Generalized_Apply(
-    REBVAL * applicand, REBSER * args, REBFLG reduce, REBVAL * error
+    REBVAL* out, REBVAL* applicand, REBSER* args, REBFLG reduce, REBVAL* error
 );
 
 
@@ -259,11 +259,13 @@ inline int IS_ANY_FUNCTION(REBVAL const * value) {
  * in Red winds up being lighter weight and not wanting to put the whole
  * 128 bit cell on then it might be more useful.
  */
-#define REN_STACK_OUT(stack) \
-    DSF_OUT((stack) - DS_Base)
+typedef struct Reb_Call RenCall;
 
-#define REN_STACK_ARG(stack, index) \
-    DSF_ARGS((stack) - DS_Base, ((index) + 1))
+#define REN_CS_OUT(stack) \
+    DSF_OUT(stack)
+
+#define REN_CS_ARG(stack, index) \
+    DSF_ARG((stack), ((index) + 1))
 
 #define REN_STACK_SHIM(stack) \
     VAL_FUNC_CODE(DSF_FUNC((stack) - DS_Base))
@@ -275,7 +277,7 @@ CASSERT(0, hooks_h)
 #endif
 
 
-typedef RenResult (* RenShimPointer)(RenCell * stack);
+typedef RenResult (* RenShimPointer)(RenCall * call);
 
 
 /*

@@ -16,9 +16,6 @@
 
 #include <thread>
 
-#include "rebol/src/include/sys-value.h"
-#include "rebol/src/include/sys-state.h"
-
 void Init_Task_Context();    // Special REBOL values per task
 
 
@@ -89,7 +86,7 @@ public:
         #endif
 
             REBOL_STATE state;
-            // Copied from c-do.c and Do_String.
+            const REBVAL *error;
 
             // Unfortunate fact #1: setjmp and longjmp do not play well with
             // C++ or anything requiring stack-unwinding.
@@ -106,39 +103,31 @@ public:
             // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
             // with a new function, but evaluation interrupts can't.)
 
-            PUSH_STATE(state, Halt_State);
-            if (SET_JUMP(state)) {
-                POP_STATE(state, Halt_State);
-                Saved_State = Halt_State;
-                Catch_Error(DS_NEXT); // Stores error value here
-                REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
-                *val = *DS_NEXT;
-                if (VAL_ERR_NUM(val) == RE_QUIT) {
+            PUSH_CATCH_ANY(&error, &state);
+
+        // The first time through the following, 'error' will be NULL, but...
+        // Throw() can longjmp here, 'error' won't be NULL *if* that happens!
+
+            if (error) {
+                if (VAL_ERR_NUM(error) == RE_QUIT) {
                     throw std::runtime_error {"Exit during initialization"};
                 }
-                if (VAL_ERR_NUM(val) == RE_HALT) {
+                if (VAL_ERR_NUM(error) == RE_HALT) {
                     throw std::runtime_error {"Halt during initialization"};
                 }
-                if (IS_ERROR(val))
+                if (IS_ERROR(error))
                     throw std::runtime_error {
-                        to_string(Value {*val, engine})
+                        to_string(Value {*error, engine})
                     };
                 else
                     throw std::runtime_error("!Error thrown in rebol-hooks");
             }
-            SET_STATE(state, Halt_State);
-
-            // Use this handler for both, halt conditions (QUIT, HALT) and error
-            // conditions. As this is a top-level handler, simply overwriting
-            // Saved_State is safe.
-            Saved_State = Halt_State;
 
             Init_Task();    // Special REBOL values per task
 
             // Pop our error trapping state
 
-            POP_STATE(state, Halt_State);
-            Saved_State = Halt_State;
+            DROP_CATCH_SAME_STACKLEVEL_AS_PUSH(&state);
 
             threadsSeen.push_back(std::this_thread::get_id());
         }
@@ -246,6 +235,7 @@ public:
         lazyThreadInitializeIfNeeded(engine);
 
         REBOL_STATE state;
+        const REBVAL * error;
 
         bool applying = false;
         REBSER * aggregate = Make_Block(numLoadables * 2);
@@ -256,25 +246,22 @@ public:
         // calls as long as the C stack is in control, as setjmp/longjmp will
         // subvert stack unwinding and just reset the processor state.
 
-        PUSH_STATE(state, Halt_State);
-        if (SET_JUMP(state)) {
-            POP_STATE(state, Halt_State);
-            Saved_State = Halt_State;
+        PUSH_CATCH_ANY(&error, &state);
 
+    // The first time through the following code 'error' will be NULL, but...
+    // Throw() can longjmp here, so 'error' won't be NULL *if* that happens!
+
+        if (error) {
             UNSAVE_SERIES(aggregate);
 
-            Catch_Error(DS_NEXT); // Stores error value here
-            REBVAL *val = Get_System(SYS_STATE, STATE_LAST_ERROR);
-            *val = *DS_NEXT;
-
-            if (VAL_ERR_NUM(val) == RE_QUIT) {
+            if (VAL_ERR_NUM(error) == RE_QUIT) {
                 // Cancellation to exit to the OS with an error code number,
                 // purposefully requested by the programmer
-                *errorOut = *VAL_ERR_VALUE(DS_NEXT);
+                SET_INTEGER(errorOut, VAL_ERR_STATUS(error));
                 return REN_EVALUATION_EXITED;
             }
 
-            if (VAL_ERR_NUM(val) == RE_HALT) {
+            if (VAL_ERR_NUM(error) == RE_HALT) {
                 // cancellation in middle of interpretation from outside
                 // the evaluation loop (e.g. Escape)
                 return REN_EVALUATION_CANCELLED;
@@ -282,18 +269,12 @@ public:
 
             // Some other generic error; it may have occurred during the
             // construct phase or the apply phase
-            *errorOut = *val;
+            *errorOut = *error;
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
-        SET_STATE(state, Halt_State);
 
-        // Use this handler for both, halt conditions (QUIT, HALT) and error
-        // conditions. As this is a top-level handler, simply overwriting
-        // Saved_State is safe.
-        Saved_State = Halt_State;
-
-        int result = REN_SUCCESS;
+        RenResult result = REN_SUCCESS;
 
         if (applicand) {
             // This is the current rule and the code expects it to be true,
@@ -385,6 +366,7 @@ public:
             applying = true;
             if (applicand) {
                 result = Generalized_Apply(
+                    applyOut,
                     const_cast<REBVAL *>(applicand),
                     const_cast<REBSER *>(aggregate),
                     FALSE,
@@ -392,17 +374,17 @@ public:
                 );
                 // even if there was an error, we need to keep going and
                 // safely clean things up.
-                if (result == REN_SUCCESS)
-                    *applyOut = *DS_TOP;
-                else
-                    SET_UNSET(applyOut);
             }
             else {
                 // Assume that nullptr for applicand means "just do the block
                 // that was in the loadables".  This keeps us from having to
                 // export a version of DO separately.
 
-                *applyOut = *Do_Blk(aggregate, 0); // result is volatile
+                if (!DO_BLOCK(applyOut, aggregate, 0)) {
+                    // !!! applyOut is THROWN(). You can still test for
+                    // THROWN() and it's just as good (albeit a wasteful test
+                    // vs just doing something here).  Is it being handled?
+                }
             }
         }
 
@@ -466,8 +448,7 @@ public:
         // Pop our error trapping state, then unsave the aggregate (must be
         // done in this order)
 
-        POP_STATE(state, Halt_State);
-        Saved_State = Halt_State;
+        DROP_CATCH_SAME_STACKLEVEL_AS_PUSH(&state);
 
         UNSAVE_SERIES(aggregate);
 
@@ -579,19 +560,17 @@ public:
     }
 
     RenResult ShimCancel() {
-        Halt_Code(RE_HALT, 0);
+        Halt();
         UNREACHABLE_CODE();
     }
 
     RenResult ShimExit(int status) {
-        REBVAL value;
-        SET_INTEGER(&value, status);
-        Halt_Code(RE_QUIT, &value);
+        Quit(status);
         UNREACHABLE_CODE();
     }
 
     RenResult ShimRaiseError(REBVAL const * error) {
-        Throw_Error(VAL_SERIES(error));
+        Throw(error, NULL);
         return REN_SUCCESS; // never happens...
     }
 
