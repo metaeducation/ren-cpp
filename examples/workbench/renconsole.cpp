@@ -483,8 +483,7 @@ RenConsole::RenConsole (QWidget * parent) :
             "%ls-cd-dt-short-names.reb",
             "%loop-dialect.reb",
             "%object-context.reb",
-            "%help-dialect.reb",
-            "%math.reb"
+            "%help-dialect.reb"
         },
 
         *proposalsContext
