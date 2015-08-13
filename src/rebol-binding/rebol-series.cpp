@@ -26,12 +26,12 @@ bool Value::isSeries() const {
 
 
 void ren::internal::Series_::operator++() {
-    cell.data.series.index++;
+    cell.data.position.index++;
 }
 
 
 void ren::internal::Series_::operator--() {
-    cell.data.series.index--;
+    cell.data.position.index--;
 }
 
 
@@ -52,10 +52,10 @@ Value ren::internal::Series_::operator*() const {
         // from str_to_char in Rebol source
         SET_CHAR(
             &result.cell,
-            GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.series.index)
+            GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.position.index)
         );
     } else if (isAnyBlock()) {
-        result.cell = *VAL_BLK_SKIP(&cell, cell.data.series.index);
+        result.cell = *VAL_BLK_SKIP(&cell, cell.data.position.index);
     } else {
         // Binary and such, would return an integer
         UNREACHABLE_CODE();
@@ -71,12 +71,12 @@ Value ren::internal::Series_::operator->() const {
 
 
 void ren::internal::Series_::head() {
-    cell.data.series.index = 0;
+    cell.data.position.index = 0;
 }
 
 
 void ren::internal::Series_::tail() {
-    cell.data.series.index = cell.data.series.series->tail;
+    cell.data.position.index = cell.data.position.series->tail;
 }
 
 

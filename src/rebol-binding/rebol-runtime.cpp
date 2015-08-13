@@ -354,7 +354,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         // we can't find "apply" in the Mezzanine, we look for the
         // scrambling in question and tell you that's what the problem is
 
-        if (applyNative.flags.flags.resv == REB_NATIVE) {
+        if (applyNative.flags.bitfields.resv == REB_NATIVE) {
             throw std::runtime_error(
                 "Bit field order swap detected..."
                 " Did you compile Rebol with a different setting for"

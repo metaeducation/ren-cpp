@@ -111,7 +111,10 @@ bool Value::isCharacter() const {
 Value::Value (char c, Engine * engine) noexcept :
     Value (Dont::Initialize)
 {
-    SET_CHAR(&cell, c);
+    if (c < 0)
+        throw std::runtime_error("Non-ASCII char passed to Value::Value()");
+
+    SET_CHAR(&cell, static_cast<REBUNI>(c));
 
     // !!! Should some types not need an engine field?
     if (not engine)
