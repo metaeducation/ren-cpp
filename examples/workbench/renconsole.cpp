@@ -476,7 +476,6 @@ RenConsole::RenConsole (QWidget * parent) :
             "%print-only-with.reb",
             "%charset-generators.reb",
             "%exit-end-quit.reb",
-            "%question-marks.reb",
             "%remold-reform-repend.reb",
             "%to-string-spelling.reb",
             "%find-min-max.reb",
