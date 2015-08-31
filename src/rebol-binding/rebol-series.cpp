@@ -125,6 +125,8 @@ const {
         nullptr // Don't apply
     );
 
+    ASSERT_VALUE_MANAGED(&getPath.cell);
+
     Value result {Dont::Initialize};
 
     // Need to wrap this in a try, and figure out a way to translate the

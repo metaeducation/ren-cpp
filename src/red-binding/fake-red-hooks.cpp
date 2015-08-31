@@ -186,22 +186,20 @@ public:
         return REN_SUCCESS;
     }
 
-    RenResult ShimExit(int status) {
-        // Rebol's exit can be caught by CATCH/EXIT (CATCH/QUIT) if you want
-        // to run a script and trap its attempt to stop.
-        exit(status);
-    }
+	RenResult ShimHalt() {
+		// Done by setting a signal and then checking in the interpreter
+		// loop in Rebol and doing a longjmp; how will Red do it?
+		throw std::runtime_error("ShimCancel...coming soon...");
+	}
 
-    RenResult ShimCancel() {
-        // Done by setting a signal and then checking in the interpreter
-        // loop in Rebol and doing a longjmp; how will Red do it?
-        throw std::runtime_error("ShimCancel...coming soon...");
-    }
+	void ShimInitThrown(RedCell *, RedCell const *, RedCell const *) {
+		// Presumably Red uses a similar technique to Rebol for throw/catch
+		throw std::runtime_error("ShimInitThrown...coming soon...");
+	}
 
-    RenResult ShimRaiseError(RedCell const *) {
-        throw std::runtime_error("ShimRaiseError...coming soon...");
-    }
-
+	RenResult ShimRaiseError(RedCell const *) {
+		throw std::runtime_error("ShimRaiseError...coming soon...");
+	}
 
     ~FakeRedHooks() {
     }
@@ -291,12 +289,13 @@ RenResult RenFormAsUtf8(
     );
 }
 
-RenResult RenShimExit(int status) {
-    return ren::internal::hooks.ShimExit(status);
+
+RenResult RenShimHalt() {
+	return ren::internal::hooks.ShimHalt();
 }
 
-RenResult RenShimCancel() {
-    return ren::internal::hooks.ShimCancel();
+void RenShimInitThrown(RedCell *out, RedCell const *value, RedCell const *name) {
+	return ren::internal::hooks.ShimInitThrown(out, value, name);
 }
 
 RenResult RenShimRaiseError(RenCell const * error) {

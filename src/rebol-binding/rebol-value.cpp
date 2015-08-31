@@ -107,8 +107,7 @@ Value Value::copy(bool deep) const {
     // feels like fixing the above, be my guest...
 
     Context userContext (Dont::Initialize);
-    // This sets REB_OBJECT in the header
-    Set_Object(
+    Val_Init_Object(
         &userContext.cell,
         VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
     );

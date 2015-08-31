@@ -55,11 +55,11 @@ typedef unsigned int RenResult;
 #define REN_SUCCESS 0
 #define REN_CONSTRUCT_ERROR 10
 #define REN_APPLY_ERROR 11
-#define REN_ERROR_NO_SUCH_CONTEXT 12
-#define REN_BUFFER_TOO_SMALL 13
-#define REN_SHIM_INITIALIZED 14
-#define REN_EVALUATION_CANCELLED 15
-#define REN_EVALUATION_EXITED 16
+#define REN_APPLY_THREW 12
+#define REN_ERROR_NO_SUCH_CONTEXT 13
+#define REN_BUFFER_TOO_SMALL 14
+#define REN_SHIM_INITIALIZED 15
+#define REN_EVALUATION_HALTED 16
 #define REN_BAD_ENGINE_HANDLE 17
 
 
@@ -231,7 +231,11 @@ typedef RebolEngineHandle RenEngineHandle;
  * shift it over to the "what should be in Rebol" side of the hooks.
  */
 RenResult Generalized_Apply(
-    REBVAL* out, REBVAL* applicand, REBSER* args, REBFLG reduce, REBVAL* error
+	REBVAL *out,
+	REBVAL *extraOut,
+	const REBVAL *applicand,
+	REBSER *args,
+    REBFLG reduce
 );
 
 
@@ -284,14 +288,16 @@ typedef RenResult (* RenShimPointer)(RenCall * call);
  * If the evaluator is cancelled by a signal from outside, and the exception
  * makes it to the shim, it will be processed by this function in the shim
  */
-RenResult RenShimCancel();
+RenResult RenShimHalt();
 
 
 /*
- * Unlike the C exit() call, RenShimExit call can be "caught" by CATCH/EXIT
- * Should not return if successful, and shouldn't fail... result is ignored.
+ * When a throw happens, it has two RenCells to work with...the thrown value
+ * and a value representing a label.  They can't both fit into a single
+ * RenCell of size for the function's output slot, so some lookaside is
+ * needed.  This initializes a value to indicate both parts of the reult.
  */
-RenResult RenShimExit(int status);
+void RenShimInitThrown(RenCell *out, RenCell const *value, RenCell const *name);
 
 
 /*

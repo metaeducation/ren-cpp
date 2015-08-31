@@ -94,6 +94,32 @@ public slots:
 
             success = true;
         }
+        catch (evaluation_throw const & t) {
+            if (t.name().isWord()) {
+                Word word = static_cast<Word>(t.name());
+                if (word.hasSpelling("exit") || word.hasSpelling("quit")) {
+                    // A programmatic request to quit the system (e.g. QUIT).
+                    // Might be interesting to have some UI to configure it
+                    // not actually exiting the whole GUI app, if you don't
+                    // want it to:
+                    //
+                    // https://github.com/metaeducation/ren-garden/issues/17
+
+                    if (t.value().isUnset() || t.value().isNone()) {
+                        qApp->exit(0);
+                    }
+                    else if (t.value().isInteger()) {
+                        qApp->exit(static_cast<Integer>(t.value()));
+                    }
+                    else {
+                        // Do whatever Rebol does...
+                        qApp->exit(1);
+                    }
+                }
+            }
+
+            throw; // rethrow
+        }
         catch (load_error const & e) {
             // Syntax errors which would trip up RenCpp even if no runtime was
             // loaded, so things like `runtime("print {Foo");`
@@ -105,16 +131,7 @@ public slots:
 
             result = e.error();
         }
-        catch (exit_command const & e) {
-            // A programmatic request to quit the system (e.g. QUIT).  Might
-            // be interesting to have some UI to configure it not actually
-            // exiting the whole GUI app, if you don't want it to:
-            //
-            //    https://github.com/metaeducation/ren-garden/issues/17
-
-            qApp->exit(e.code());
-        }
-        catch (evaluation_cancelled const & e) {
+        catch (evaluation_halt const & e) {
             // Cancellation as with hitting the escape key during an infinite
             // loop.  (Such requests must originate from the GUI thread.)
             // Let returning none for the error mean cancellation.

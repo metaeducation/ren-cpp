@@ -167,14 +167,12 @@ public:
 };
 
 
-
-
 //
-// CANCELLATION EXCEPTION
+// HALTED EXCEPTION
 //
 
 //
-// Cancellation of evaluations (such as in the console with ^C) has no
+// Halting of evaluations (such as in the console with ^C) has no
 // user-facing error object in the ren runtime, because it is "meta" and
 // means "stop evaluating".  There is no way to "catch" it.
 //
@@ -190,50 +188,14 @@ public:
 //
 // https://github.com/hostilefork/rencpp/issues/19
 
-class evaluation_cancelled : public std::exception {
+class evaluation_halt : public std::exception {
 public:
-    evaluation_cancelled ()
+    evaluation_halt ()
     {
     }
 
     char const * what() const noexcept override {
-        return "ren::evaluation_cancelled";
-    }
-};
-
-
-
-//
-// EXIT COMMAND
-//
-
-//
-// This command corresponds to the desire expressed by C's exit(int), however
-// it can be "caught" in Ren runtime by the TRY command when executing nested
-// code.  If your C++ code wraps up a call to the evaluator and you catch
-// this exception, it means the code running either called EXIT or QUIT
-//
-
-class exit_command : public std::exception {
-private:
-    int codeValue;
-    std::string whatString;
-
-public:
-    exit_command (int code) :
-        codeValue (code),
-        whatString ("ren::exit_command("
-                    + std::to_string(code)
-                    + ")")
-    {
-    }
-
-    char const * what() const noexcept override {
-        return whatString.c_str();
-    }
-
-    int code() const noexcept {
-        return codeValue;
+        return "ren::evaluation_halt";
     }
 };
 

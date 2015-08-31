@@ -750,6 +750,65 @@ inline std::ostream & operator<<(std::ostream & os, Value const & value) {
 
 
 
+#ifdef REN_RUNTIME
+//
+// NON-LOCAL-CONTROL REN-STYLE THROW
+//
+
+// In C++, the `throw` keyword is used almost entirely for error conditions.
+// It is not a general-purpose mechanism for non-local control as it is in
+// Rebol and Red.  The default behavior of a C++ `throw` of a Ren value is
+// thus to enforce that value is an ERROR! and act like what it would call
+// a `raise` operation.
+//
+// Hence if you want to mimic a Ren-style THROW in the way it defines the
+// idea, you need to C++-throw an object to represent it.  Throwing something
+// like a BREAK or CONTINUE from C++ code back into Rebol/Red is probably
+// less common than wanting to raise an error, and you'd be needing an
+// object if the Ren THROW were "named" anyway to carry the name value.
+
+class evaluation_throw : public std::exception {
+private:
+    Value thrownValue;
+    Value throwName;
+    std::string whatString;
+
+public:
+    evaluation_throw (Value const &value) :
+        thrownValue (value),
+        throwName (Value::none_t::init{}),
+        whatString (std::string("THROW:") + to_string(value))
+    {
+    }
+
+    evaluation_throw (Value const & value, Value const & name) :
+        thrownValue (value),
+        throwName (name),
+        whatString (
+            std::string("THROW") +
+            + (value.isNone() ? ":" : "/NAME:")
+            + to_string(value)
+            + to_string(name)
+        )
+    {
+    }
+
+    char const * what() const noexcept override {
+        return whatString.c_str();
+    }
+
+    Value value() const noexcept {
+        return thrownValue;
+    }
+
+    Value name() const noexcept {
+        return throwName;
+    }
+};
+#endif
+
+
+
 namespace internal {
 
 //

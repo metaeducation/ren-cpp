@@ -88,7 +88,7 @@ public:
             REBOL_STATE state;
             const REBVAL *error;
 
-            // Unfortunate fact #1: setjmp and longjmp do not play well with
+            // Unfortunate fact: setjmp and longjmp do not play well with
             // C++ or anything requiring stack-unwinding.
             //
             //     http://stackoverflow.com/a/1376099/211160
@@ -97,24 +97,15 @@ public:
             // here, and really everything would need to be written in pure C
             // to be safe.
 
-            // Unfortunate fact #2, the real Halt_State used by QUIT is a global
-            // shared between Do_String and the exiting function Halt_Code.  And
-            // it's static to c-do.c - that has to be edited to communicate with
-            // Rebol about things like QUIT or Ctrl-C.  (Quit could be replaced
-            // with a new function, but evaluation interrupts can't.)
+            PUSH_UNHALTABLE_TRAP(&error, &state);
 
-            PUSH_CATCH_ANY(&error, &state);
-
-        // The first time through the following, 'error' will be NULL, but...
-        // Throw() can longjmp here, 'error' won't be NULL *if* that happens!
+// The first time through the following, 'error' will be NULL, but...
+// `raise Error()` can longjmp here, 'error' won't be NULL *if* that happens!
 
             if (error) {
-                if (VAL_ERR_NUM(error) == RE_QUIT) {
-                    throw std::runtime_error {"Exit during initialization"};
-                }
-                if (VAL_ERR_NUM(error) == RE_HALT) {
+                if (VAL_ERR_NUM(error) == RE_HALT)
                     throw std::runtime_error {"Halt during initialization"};
-                }
+
                 if (IS_ERROR(error))
                     throw std::runtime_error {
                         to_string(Value {*error, engine})
@@ -127,7 +118,7 @@ public:
 
             // Pop our error trapping state
 
-            DROP_CATCH_SAME_STACKLEVEL_AS_PUSH(&state);
+            DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
 
             threadsSeen.push_back(std::this_thread::get_id());
         }
@@ -197,7 +188,7 @@ public:
         // don't expose CTX_ROOT?
 
         if (frame) {
-            SET_OBJECT(contextOut, frame);
+            Val_Init_Object(contextOut, frame);
             return REN_SUCCESS;
         }
 
@@ -230,51 +221,40 @@ public:
         size_t sizeofLoadable,
         REBVAL * constructOutDatatypeIn,
         REBVAL * applyOut,
-        REBVAL * errorOut
+        REBVAL * extraOut
     ) {
         lazyThreadInitializeIfNeeded(engine);
 
         REBOL_STATE state;
         const REBVAL * error;
 
-        bool applying = false;
-        REBSER * aggregate = Make_Block(numLoadables * 2);
-
-        SAVE_SERIES(aggregate);
-
         // Note: No C++ allocations can happen between here and the POP_STATE
         // calls as long as the C stack is in control, as setjmp/longjmp will
         // subvert stack unwinding and just reset the processor state.
 
-        PUSH_CATCH_ANY(&error, &state);
+        PUSH_UNHALTABLE_TRAP(&error, &state);
 
-    // The first time through the following code 'error' will be NULL, but...
-    // Throw() can longjmp here, so 'error' won't be NULL *if* that happens!
+        bool applying = false;
+        bool is_aggregate_managed = false;
+        REBSER * aggregate = Make_Array(numLoadables * 2);
+
+// The first time through the following code 'error' will be NULL, but...
+// `raise Error()` can longjmp here, 'error' won't be NULL *if* that happens!
 
         if (error) {
-            UNSAVE_SERIES(aggregate);
-
-            if (VAL_ERR_NUM(error) == RE_QUIT) {
-                // Cancellation to exit to the OS with an error code number,
-                // purposefully requested by the programmer
-                SET_INTEGER(errorOut, VAL_ERR_STATUS(error));
-                return REN_EVALUATION_EXITED;
-            }
+            if (!is_aggregate_managed)
+                Free_Series(aggregate);
 
             if (VAL_ERR_NUM(error) == RE_HALT) {
                 // cancellation in middle of interpretation from outside
-                // the evaluation loop (e.g. Escape)
-                return REN_EVALUATION_CANCELLED;
+                // the evaluation loop (e.g. Escape).
+                return REN_EVALUATION_HALTED;
             }
 
-            // Some other generic error; it may have occurred during the
-            // construct phase or the apply phase
-            *errorOut = *error;
+            *extraOut = *error;
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
-
-        RenResult result = REN_SUCCESS;
 
         if (applicand) {
             // This is the current rule and the code expects it to be true,
@@ -317,8 +297,9 @@ public:
                     VAL_HANDLE_DATA(cell)
                 );
 
-                // CAN Throw_Error! if the input is bad (unmatched parens,
-                // etc...
+                // CAN raise errors and longjmp backwards on the C stack to
+                // the `if (error)` case above!  These are the errors that
+                // happen if the input is bad (unmatched parens, etc...)
 
                 REBSER * transcoded = Scan_Source(
                     loadText, LEN_BYTES(loadText)
@@ -330,10 +311,12 @@ public:
 
                     REBCNT len = VAL_OBJ_FRAME(context)->tail;
 
-                    Bind_Block(
-                        VAL_OBJ_FRAME(context),
+                    if (len > 0)
+                        ASSERT_VALUE_MANAGED(BLK_HEAD(transcoded));
+
+                    Bind_Values_All_Deep(
                         BLK_HEAD(transcoded),
-                        BIND_ALL | BIND_DEEP
+                        VAL_OBJ_FRAME(context)
                     );
 
                     REBVAL vali;
@@ -353,52 +336,32 @@ public:
                     reinterpret_cast<REBYTE*>(BLK_HEAD(transcoded)),
                     transcoded->tail
                 );
+
+                // transcoded series is managed, can't free it...
             }
             else {
                 // Just an ordinary value cell
+                ASSERT_VALUE_MANAGED(cell);
                 Append_Value(aggregate, cell);
             }
 
             current += sizeofLoadable;
         }
 
-        if (applyOut) {
-            applying = true;
-            if (applicand) {
-                result = Generalized_Apply(
-                    applyOut,
-                    const_cast<REBVAL *>(applicand),
-                    const_cast<REBSER *>(aggregate),
-                    FALSE,
-                    errorOut
-                );
-                // even if there was an error, we need to keep going and
-                // safely clean things up.
-            }
-            else {
-                // Assume that nullptr for applicand means "just do the block
-                // that was in the loadables".  This keeps us from having to
-                // export a version of DO separately.
-
-                if (!DO_BLOCK(applyOut, aggregate, 0)) {
-                    // !!! applyOut is THROWN(). You can still test for
-                    // THROWN() and it's just as good (albeit a wasteful test
-                    // vs just doing something here).  Is it being handled?
-                }
-            }
-        }
+        RenResult result;
 
         if (constructOutDatatypeIn) {
-            applying = false;
-            REBOL_Types resultType = static_cast<REBOL_Types>(
-                VAL_TYPE(constructOutDatatypeIn)
-            );
+            enum Reb_Kind resultType = VAL_TYPE(constructOutDatatypeIn);
             if (ANY_BLOCK(constructOutDatatypeIn)) {
                 // They actually wanted a constructed value, and they wanted
                 // effectively our aggregate...maybe with a different type.
                 // Depending on how much was set in the "datatype in" we may
-                // not have to rewrite the header bits, as Set_Series does.
-                Set_Series(resultType, constructOutDatatypeIn, aggregate);
+                // not have to rewrite the header bits (but Val_Inits do).
+
+                Val_Init_Series(constructOutDatatypeIn, resultType, aggregate);
+
+                // Val_Init makes aggregate a managed series, can't free it
+                is_aggregate_managed = true;
             }
             else if (IS_OBJECT(constructOutDatatypeIn)) {
                 // They want to create a "Context"; so we need to execute
@@ -414,43 +377,93 @@ public:
                 REBSER * frame = Make_Object(nullptr, BLK_HEAD(aggregate));
 
                 // This sets REB_OBJECT in the header, possibly redundantly
-                Set_Object(constructOutDatatypeIn, frame);
+                Val_Init_Object(constructOutDatatypeIn, frame);
             }
             else {
                 // If they didn't want a block, then they better want the type
                 // of the first thing in the block.  And there better be
                 // something in that block.
 
-                REBCNT len = BLK_LEN(aggregate);
+                REBCNT count = SERIES_TAIL(aggregate);
 
-                if (len == 0) {
-                    // Requested construct, but no value came back.
-                    VAL_SET(errorOut, REB_NONE); // improve?
-                    return REN_CONSTRUCT_ERROR;
+                if (count != 1) {
+                    // Requested construct, but a singular item didn't come
+                    // back (either 0 or more than 1 element in aggregate)
+                    Val_Init_Error(
+                        extraOut,
+                        Make_Error(
+                            RE_MISC, // Make error code for this...
+                            0,
+                            0,
+                            0
+                        )
+                    );
+                    result = REN_CONSTRUCT_ERROR;
+                    goto return_result;
                 }
-
-                if (len > 1) {
-                    // Requested construct and more than one value
-                    VAL_SET(errorOut, REB_NONE); // improve?
-                    return REN_CONSTRUCT_ERROR;
-                }
-
-                *constructOutDatatypeIn = *BLK_HEAD(aggregate);
-
-                if (resultType != VAL_TYPE(constructOutDatatypeIn)) {
+                else if (resultType != VAL_TYPE(BLK_HEAD(aggregate))) {
                     // Requested construct and value type was wrong
-                    VAL_SET(errorOut, REB_NONE); // improve?
-                    return REN_CONSTRUCT_ERROR;
+                    Val_Init_Error(
+                        extraOut,
+                        Make_Error(
+                            RE_INVALID_ARG, // Make error code for this...
+                            BLK_HEAD(aggregate),
+                            0,
+                            0
+                        )
+                    );
+                    result = REN_CONSTRUCT_ERROR;
+                    goto return_result;
+                }
+                else {
+                    *constructOutDatatypeIn = *BLK_HEAD(aggregate);
                 }
             }
         }
 
+        if (applyOut) {
+            applying = true;
+
+            if (is_aggregate_managed) {
+                // Must protect from GC before doing an evaluation...
+                SAVE_SERIES(aggregate);
+            }
+
+            if (applicand) {
+                result = Generalized_Apply(
+                    applyOut, extraOut, applicand, aggregate, FALSE
+                );
+            }
+            else {
+                // Assume that nullptr for applicand means "just do the block
+                // that was in the loadables".  This keeps us from having to
+                // export a version of DO separately.
+
+                if (Do_Block_Throws(applyOut, aggregate, 0)) {
+                    TAKE_THROWN_ARG(extraOut, applyOut);
+                    result = REN_APPLY_THREW;
+                }
+                else
+                    result = REN_SUCCESS;
+            }
+
+            if (is_aggregate_managed)
+                UNSAVE_SERIES(aggregate);
+        }
+        else
+            result = REN_SUCCESS;
+
         // Pop our error trapping state, then unsave the aggregate (must be
         // done in this order)
 
-        DROP_CATCH_SAME_STACKLEVEL_AS_PUSH(&state);
+    return_result:
+        // We only free the series if we didn't manage it.  For simplicity
+        // we control this with a boolean flag for now.
+        assert(is_aggregate_managed == SERIES_GET_FLAG(aggregate, SER_MANAGED));
+        if (!is_aggregate_managed)
+            Free_Series(aggregate);
 
-        UNSAVE_SERIES(aggregate);
+        DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
 
         return result;
     }
@@ -532,7 +545,7 @@ public:
         // Who knows, but we've got our own buffer so that's not important.
 
         REBVAL strValue;
-        Set_Series(REB_STRING, &strValue, mo.series);
+        Val_Init_String(&strValue, mo.series);
 
         REBSER * utf8 = Encode_UTF8_Value(&strValue, VAL_LEN(&strValue), 0);
 
@@ -559,19 +572,19 @@ public:
         return result;
     }
 
-    RenResult ShimCancel() {
-        Halt();
-        UNREACHABLE_CODE();
+    RenResult ShimHalt() {
+        Do_Error(TASK_HALT_ERROR);
+        DEAD_END;
     }
 
-    RenResult ShimExit(int status) {
-        Quit(status);
-        UNREACHABLE_CODE();
+    void ShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
+        *out = *name;
+        CONVERT_NAME_TO_THROWN(out, value);
     }
 
     RenResult ShimRaiseError(REBVAL const * error) {
-        Throw(error, NULL);
-        return REN_SUCCESS; // never happens...
+        Do_Error(error);
+        DEAD_END;
     }
 
     ~RebolHooks () {
@@ -614,7 +627,7 @@ RenResult RenConstructOrApply(
     size_t sizeofLoadable,
     REBVAL * constructOutTypeIn,
     REBVAL * applyOut,
-    REBVAL * errorOut
+    REBVAL * extraOut
 ) {
     return ren::internal::hooks.ConstructOrApply(
         engine,
@@ -625,7 +638,7 @@ RenResult RenConstructOrApply(
         sizeofLoadable,
         constructOutTypeIn,
         applyOut,
-        errorOut
+        extraOut
     );
 
 }
@@ -656,14 +669,15 @@ RenResult RenFormAsUtf8(
 }
 
 
-RenResult RenShimCancel() {
-    return ren::internal::hooks.ShimCancel();
+RenResult RenShimHalt() {
+    return ren::internal::hooks.ShimHalt();
 }
 
 
-RenResult RenShimExit(int status) {
-    return ren::internal::hooks.ShimExit(status);
+void RenShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
+    ren::internal::hooks.ShimInitThrown(out, value, name);
 }
+
 
 RenResult RenShimRaiseError(RenCell const * error) {
     return ren::internal::hooks.ShimRaiseError(error);

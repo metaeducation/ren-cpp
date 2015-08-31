@@ -47,7 +47,7 @@ private:
         REBSER * context,
         unsigned char const * nameUtf8,
         size_t lenBytes,
-        REBOL_Types kind = REB_WORD // or REB_SET_WORD, REB_GET_WORD...
+        enum Reb_Kind kind = REB_WORD // or REB_SET_WORD, REB_GET_WORD...
     );
 
 public:

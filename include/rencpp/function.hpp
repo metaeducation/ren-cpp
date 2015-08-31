@@ -469,15 +469,11 @@ private:
         // here...as well as make decisions about any non-ren::Error
         // exceptions the C++ code has thrown.
 
-        bool success = true;
-        bool cancelling = false;
-        bool exiting = false;
-
         // Only initialized if `success and exiting`, and we don't really need
         // to initialize it and would rather not; but Clang complains as it
         // cannot prove it's always initialized when used.  Revisit.
 
-        int status = 0x0BADBAD0;
+		RenResult result;
 
         try {
             // Our applyFun helper does the magic to recursively forward
@@ -486,33 +482,28 @@ private:
             // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
 
-            auto && result = applyFun(entry.fun, entry.engine, call);
+			auto && out = applyFun(entry.fun, entry.engine, call);
 
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-            *REN_CS_OUT(call) = result.cell;
+			*REN_CS_OUT(call) = out.cell;
+			result = REN_SUCCESS;
         }
         catch (Error const & e) {
-
-            success = false;
             *REN_CS_OUT(call) = e.cell;
+			result = REN_APPLY_ERROR;
         }
         catch (Value const & e) {
-
-            if (e.isError()) {
-                success = false;
-                *REN_CS_OUT(call) = e.cell;
-            }
-            else {
-                // Come up with more tolerant behavior, but discourage it as
-                // throwing values in C++ is not the same as Rebol/Red THROW
-                // because we are using it to "raise errors".
-
+			// In C++ `throw` is an error mechanism, and using it for general
+			// non-localized control (as Rebol uses THROW) is considered abuse
+			if (not e.isError())
                 throw std::runtime_error {
                     "Non-isError() ren::Value thrown from ren::Function"
                 };
-            }
+
+			*REN_CS_OUT(call) = e.cell;
+			result = REN_APPLY_ERROR;
         }
         catch (evaluation_error const & e) {
             // Ren runtime code throws non-std::exception errors, and so
@@ -524,23 +515,31 @@ private:
             // code (hence having std::exception expectations) or just as
             // the implementation of a ren::Function
 
-            success = false;
             *REN_CS_OUT(call) = e.error().cell;
+			result = REN_APPLY_ERROR;
         }
+		catch (evaluation_throw const & t) {
+			// We have to fabricate a THROWN() name label with the actual
+			// thrown value stored aside.  Making pointer reference
+			// temporaries is needed to suppress a compiler warning:
+			//
+			//    http://stackoverflow.com/a/2281928/211160
+
+			const REBVAL & thrown_value = t.value().cell;
+			const REBVAL & thrown_name = t.name().cell;
+			RenShimInitThrown(
+				REN_CS_OUT(call),
+				&thrown_value,
+				&thrown_name
+			);
+			result = REN_APPLY_THREW;
+		}
         catch (load_error const & e) {
-            success = false;
             *REN_CS_OUT(call) = e.error().cell;
+			result = REN_CONSTRUCT_ERROR;
         }
-        catch (exit_command const & e) {
-
-            // If there was an exit_command received, we have to offer the
-            // ability to upper invocations to do a CATCH/QUIT (CATCH/EXIT?)
-
-            exiting = true;
-            status = e.code();
-        }
-        catch (evaluation_cancelled const & e) {
-            cancelling = true;
+        catch (evaluation_halt const & e) {
+			result = REN_EVALUATION_HALTED;
         }
         catch (std::exception const & e) {
 
@@ -568,19 +567,23 @@ private:
         // should be safe (which is what Rebol will do if we call RenShimError
         // or RenShimExit).
 
-        if (cancelling)
-            return RenShimCancel();
+		switch (result) {
+		case REN_SUCCESS:
+		case REN_APPLY_THREW:
+			// Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
+			// attention to it, but we don't know what Red will do.
+			return REN_SUCCESS;
 
-        if (exiting)
-            return RenShimExit(status);
+		case REN_EVALUATION_HALTED:
+			return RenShimHalt();
 
-        if (not success)
+		case REN_APPLY_ERROR:
+		case REN_CONSTRUCT_ERROR:
             return RenShimRaiseError(REN_CS_OUT(call));
 
-        // Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
-        // attention to it, but we don't know what Red will do.
-
-        return REN_SUCCESS;
+		default:
+			UNREACHABLE_CODE();
+		}
     }
 
 public:

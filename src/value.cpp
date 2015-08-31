@@ -121,7 +121,7 @@ void Value::constructOrApplyInitialize(
     Value * constructOutTypeIn,
     Value * applyOut
 ) {
-    Error errorOut {Value::Dont::Initialize};
+    Value extraOut {Value::Dont::Initialize};
 
     auto result = ::RenConstructOrApply(
         engine,
@@ -132,7 +132,7 @@ void Value::constructOrApplyInitialize(
         sizeof(internal::Loadable),
         constructOutTypeIn ? &constructOutTypeIn->cell : nullptr,
         applyOut ? &applyOut->cell : nullptr,
-        &errorOut.cell
+        &extraOut.cell
     );
 
     switch (result) {
@@ -140,31 +140,26 @@ void Value::constructOrApplyInitialize(
             break;
 
         case REN_CONSTRUCT_ERROR:
-            errorOut.finishInit(engine);
-            throw load_error {errorOut};
+            extraOut.finishInit(engine);
+            assert(extraOut.isError());
+            throw load_error {static_cast<Error>(extraOut)};
 
     #ifdef REN_RUNTIME
         case REN_APPLY_ERROR: {
-            std::cout << to_string(*applicand);
-
-            errorOut.finishInit(engine);
-            throw evaluation_error {errorOut};
+            extraOut->finishInit(engine);
+            assert(extraOut->isError());
+            throw evaluation_error {static_cast<Error>(extraOut)};
         }
 
-        case REN_EVALUATION_CANCELLED:
-            throw evaluation_cancelled {};
-
-        case REN_EVALUATION_EXITED: {
-            // Special case: the error's cell isn't an error, but rather an
-            // Integer (rare, which is why Error gets the in-place cell write)
-
-            Integer status (Value::Dont::Initialize);
-            status.cell = errorOut.cell;
-            status.finishInit(engine);
-
-            throw exit_command {status};
-        }
+		case REN_EVALUATION_HALTED:
+			throw evaluation_halt {};
     #endif
+
+		case REN_APPLY_THREW: {
+			applyOut->finishInit(engine);
+            extraOut.finishInit(engine);
+            throw evaluation_throw {extraOut, *applyOut};
+		}
 
         default:
             throw std::runtime_error("Unknown error in RenConstructOrApply");

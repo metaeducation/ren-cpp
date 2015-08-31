@@ -42,85 +42,109 @@ extern "C" {
 //
 
 RenResult Generalized_Apply(
-    REBVAL* out, REBVAL* applicand, REBSER* args, REBFLG reduce, REBVAL* error
+	REBVAL *out,
+    REBVAL *extraOut,
+	const REBVAL *applicand,
+	REBSER *args,
+	REBFLG reduce
 ) {
-
     if (IS_ANY_FUNCTION(applicand)) {
-        Apply_Block(out, applicand, args, 0, reduce);
+		if (Apply_Block_Throws(out, applicand, args, 0, reduce)) {
+            TAKE_THROWN_ARG(extraOut, out);
+			return REN_APPLY_THREW;
+		}
+		return REN_SUCCESS;
     }
-    else if (IS_ERROR(applicand)) {
-        if (SERIES_LEN(args) - 1 != 0) {
-            *error = *applicand;
-            SET_UNSET(out);
-            return REN_APPLY_ERROR;
-        }
 
-        // from REBNATIVE(do) ?  What's the difference?  How return?
-        if (IS_THROW(applicand)) {
-            *out = *applicand;
-        } else {
-            *error = *applicand;
-            SET_UNSET(out);
-            return REN_APPLY_ERROR;
-        }
-    }
-    else {
-        assert(not reduce); // To be added?
+	if (IS_ERROR(applicand)) {
+		if (SERIES_TAIL(args) != 0) {
+			// If you try to "apply" an error with an arguments block, that
+			// will give you an error about the apply (not the error itself)
 
-        // If it's an object (context) then "apply" means run the code
-        // but bind it inside the object.  Suggestion by @WiseGenius:
-        //
-        // http://chat.stackoverflow.com/transcript/message/20530463#20530463
-
-        if (IS_OBJECT(applicand)) {
-            REBSER * reboundArgs = Clone_Block(args);
-
-            // This says it takes a "REBVAL" for block, but doesn't mean
-            // it wants a value that is a block.  It wants the value
-            // pointer at the head of the block!!  :-/
-
-            Bind_Block(
-                VAL_OBJ_FRAME(applicand),
-                BLK_HEAD(reboundArgs),
-                BIND_DEEP | BIND_SET
-            );
-
-            DO_BLOCK(out, reboundArgs, 0);
-        }
-        else {
-            // Just put the value at the head of a DO chain...
-            Insert_Series(
-                args, 0, reinterpret_cast<REBYTE *>(applicand), 1
-            );
-
-            REBCNT index = DO_NEXT(out, args, 0);
-
-            // If the DO chain didn't end, then consider that an error.  So
-            // generalized apply of FOO: with `1 + 2 3` will do the addition,
-            // satisfy FOO, but have a 3 left over unused.  If FOO: were a
-            // function being APPLY'd, you'd say that was too many arguments
-
-            if (index != SERIES_TAIL(args)) {
-                // shouldn't throw exceptions from here...we return a
-                // Rebol error
-
-                VAL_SET(error, REB_ERROR);
-                VAL_ERR_NUM(error) = RE_INVALID_ARG;
-                VAL_ERR_OBJECT(error) = Make_Error(
+            Val_Init_Error(
+                extraOut,
+                Make_Error(
                     RE_INVALID_ARG,
-                    BLK_SKIP(args, index),
+                    BLK_HEAD(args),
                     0,
                     0
-                );
-
-                return REN_APPLY_ERROR;
-            }
-
-            Remove_Series(args, 0, 1);
+                )
+			);
+			return REN_APPLY_ERROR;
         }
+
+		*out = *applicand;
+		return REN_APPLY_ERROR;
     }
 
-    // Result on top of stack
+	assert(not reduce); // To be added?
+
+	// If it's an object (context) then "apply" means run the code
+	// but bind it inside the object.  Suggestion by @WiseGenius:
+	//
+	// http://chat.stackoverflow.com/transcript/message/20530463#20530463
+
+	if (IS_OBJECT(applicand)) {
+		REBSER * reboundArgs = Copy_Array_Deep_Managed(args);
+
+        // Note this takes a C array of valueS terminated by a REB_END.
+		Bind_Values_Set_Forward_Shallow(
+			BLK_HEAD(reboundArgs),
+			VAL_OBJ_FRAME(applicand)
+		);
+
+		if (Do_Block_Throws(out, reboundArgs, 0)) {
+            TAKE_THROWN_ARG(extraOut, out);
+			return REN_APPLY_THREW;
+		}
+
+		return REN_SUCCESS;
+    }
+
+	// Just put the value at the head of a DO chain...
+	Insert_Series(
+		args, 0, reinterpret_cast<const REBYTE *>(applicand), 1
+	);
+
+	REBCNT index = Do_Next_May_Throw(out, args, 0);
+
+    // The only way you can get an END_FLAG on something if you pass in
+    // a 0 index is if the series is empty.  Otherwise, it should
+    // either finish an evaluation or raise an error if it couldn't
+    // fulfill its arguments.  Given that we have just constructed a
+    // series that is *not* empty, we shouldn't get END_FLAG.
+
+    assert(index != END_FLAG);
+
+	if (index == THROWN_FLAG) {
+        TAKE_THROWN_ARG(extraOut, out);
+		return REN_APPLY_THREW;
+	}
+
+	// If the DO chain didn't end, then consider that an error.  So
+	// generalized apply of FOO: with `1 + 2 3` will do the addition,
+	// satisfy FOO, but have a 3 left over unused.  If FOO: were a
+	// function being APPLY'd, you'd say that was too many arguments
+
+	if (index != SERIES_TAIL(args)) {
+		// shouldn't throw exceptions from here...we return a
+		// Rebol error
+
+		Val_Init_Error(
+            extraOut,
+			Make_Error(
+                RE_MISC,
+                0,
+				0,
+				0
+			)
+		);
+
+		return REN_APPLY_ERROR;
+	}
+
+	Remove_Series(args, 0, 1);
+
     return REN_SUCCESS;
 }
 
@@ -210,13 +234,13 @@ REBVAL RebolRuntime::loadAndBindWord(
     REBSER * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,
-    REBOL_Types kind
+    enum Reb_Kind kind
 ) {
     REBVAL word;
 
     // !!! Make_Word has a misleading name; it allocates a symbol number
 
-    Init_Word_Unbound(&word, kind, Make_Word(nameUtf8, lenBytes));
+	Val_Init_Word_Unbound(&word, kind, Make_Word(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
@@ -326,7 +350,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
 
-        Set_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
+		Val_Init_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
     // RenCpp is based on "generalized apply", e.g. a notion of APPLY
@@ -372,15 +396,28 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     REBFUN applyFun = [](RenCall* call_) -> RenResult {
         REBVAL * applicand = D_ARG(1);
         REBVAL * blk = D_ARG(2);
-        REBVAL error;
         bool only = D_REF(3);
-        if (
-            REN_APPLY_ERROR == Generalized_Apply(
-                D_OUT, applicand, VAL_SERIES(blk), not only, &error
-            )
-        ) {
-            Throw(&error, NULL);
-        }
+
+		REBVAL throwName;
+		RenResult result = Generalized_Apply(
+		   D_OUT, &throwName, applicand, VAL_SERIES(blk), not only
+		);
+
+		switch (result) {
+			case REN_APPLY_ERROR:
+				Do_Error(D_OUT);
+
+			case REN_APPLY_THREW:
+				CONVERT_NAME_TO_THROWN(D_OUT, &throwName);
+				break;
+
+			case REN_SUCCESS:
+				break;
+
+			default:
+				UNREACHABLE_CODE();
+		}
+
         return R_OUT;
     };
 
