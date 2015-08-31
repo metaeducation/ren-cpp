@@ -63,5 +63,23 @@ AnyString::AnyString(
 }
 
 
+#if REN_CLASSLIB_QT == 1
+
+AnyString::AnyString (
+    QString const & spelling,
+    internal::CellFunction cellfun,
+    Engine * engine
+)
+    : Series(Dont::Initialize)
+{
+    throw std::runtime_error("AnyString::AnyString coming soon...");
+
+    UNUSED(spelling);
+    UNUSED(cellfun);
+    UNUSED(engine);
+}
+
+#endif
+
 
 } // end namespace ren

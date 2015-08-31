@@ -525,8 +525,8 @@ private:
 			//
 			//    http://stackoverflow.com/a/2281928/211160
 
-			const REBVAL & thrown_value = t.value().cell;
-			const REBVAL & thrown_name = t.name().cell;
+            const RenCell & thrown_value = t.value().cell;
+            const RenCell & thrown_name = t.name().cell;
 			RenShimInitThrown(
 				REN_CS_OUT(call),
 				&thrown_value,
