@@ -6,7 +6,7 @@
 
 #include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 
 extern "C" {
 #include "rebol/src/include/reb-ext.h"

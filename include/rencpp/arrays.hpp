@@ -2,7 +2,7 @@
 #define RENCPP_BLOCKS_HPP
 
 //
-// blocks.hpp
+// arrays.hpp
 // This file is part of RenCpp
 // Copyright (C) 2015 HostileFork.com
 //
@@ -24,16 +24,16 @@
 
 namespace ren {
 
-class AnyBlock : public Series {
+class AnyArray : public Series {
 protected:
     friend class Value;
-    AnyBlock (Dont) noexcept : Series (Dont::Initialize) {}
-    inline bool isValid() const { return isAnyBlock(); }
+    AnyArray (Dont) noexcept : Series (Dont::Initialize) {}
+    inline bool isValid() const { return isAnyArray(); }
 
 protected:
     //
-    // Provide a helper to the derived classes to construct AnyBlock
-    // instances through the binding.  But you can't construct an "AnyBlock"
+    // Provide a helper to the derived classes to construct AnyArray
+    // instances through the binding.  But you can't construct an "AnyArray"
     // instance without a block type... it's abstract!  No such thing.
     //
     // For the curious: empty constructor has to result in an empty block.
@@ -42,7 +42,7 @@ protected:
     //     http://stackoverflow.com/a/9020606/211160
     //
 
-    AnyBlock (
+    AnyArray (
         internal::Loadable const loadables[],
         size_t numLoadables,
         internal::CellFunction cellfun,
@@ -50,7 +50,7 @@ protected:
         Engine * engine
     );
 
-    AnyBlock (
+    AnyArray (
         Value const values[],
         size_t numValues,
         internal::CellFunction cellfun,
@@ -64,7 +64,7 @@ protected:
 namespace internal {
 
 //
-// ANYBLOCK_ SUBTYPE HELPER
+// ANYARRAY_ SUBTYPE HELPER
 //
 
 //
@@ -95,36 +95,36 @@ namespace internal {
 //
 
 template <class C, CellFunction F, typename BracesT=void>
-class AnyBlock_ : public AnyBlock {
+class AnyArray_ : public AnyArray {
 protected:
     friend class Value;
-    AnyBlock_ (Dont) : AnyBlock (Dont::Initialize) {}
+    AnyArray_ (Dont) : AnyArray (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
-    AnyBlock_ (
+    AnyArray_ (
         Value const values[],
         size_t numValues,
         internal::ContextWrapper const & wrapper
     ) :
-        AnyBlock (values, numValues, F, &wrapper.context, nullptr)
+        AnyArray (values, numValues, F, &wrapper.context, nullptr)
     {
     }
 
-    AnyBlock_ (
+    AnyArray_ (
         Value const values[],
         size_t numValues,
         Engine * engine
     ) :
-        AnyBlock (values, numValues, F, nullptr, engine)
+        AnyArray (values, numValues, F, nullptr, engine)
     {
     }
 
-    AnyBlock_ (
+    AnyArray_ (
         std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         internal::ContextWrapper const & wrapper
     ) :
-        AnyBlock (
+        AnyArray (
             loadables.begin(),
             loadables.size(),
             F,
@@ -134,21 +134,21 @@ public:
     {
     }
 
-    AnyBlock_ (Context const & context) :
-        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
+    AnyArray_ (Context const & context) :
+        AnyArray (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
     {
     }
 
-    AnyBlock_ (
+    AnyArray_ (
         std::initializer_list<BlockLoadable<BracesT>> const & loadables,
         Engine * engine = nullptr
     ) :
-        AnyBlock (loadables.begin(), loadables.size(), F, nullptr, engine)
+        AnyArray (loadables.begin(), loadables.size(), F, nullptr, engine)
     {
     }
 
-    AnyBlock_ (Engine * engine = nullptr) :
-        AnyBlock (static_cast<Loadable *>(nullptr), 0, F, nullptr, engine)
+    AnyArray_ (Engine * engine = nullptr) :
+        AnyArray (static_cast<Loadable *>(nullptr), 0, F, nullptr, engine)
     {
     }
 
@@ -178,27 +178,27 @@ public:
 //
 
 
-class Block : public internal::AnyBlock_<Block, &Value::isBlock, Block>
+class Block : public internal::AnyArray_<Block, &Value::isBlock, Block>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<Block, &Value::isBlock, Block>::AnyBlock_;
+    using internal::AnyArray_<Block, &Value::isBlock, Block>::AnyArray_;
 };
 
 
-class Paren : public internal::AnyBlock_<Paren, &Value::isParen>
+class Paren : public internal::AnyArray_<Paren, &Value::isParen>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<Paren, &Value::isParen>::AnyBlock_;
+    using internal::AnyArray_<Paren, &Value::isParen>::AnyArray_;
 };
 
 
-class Path : public internal::AnyBlock_<Path, &Value::isPath>
+class Path : public internal::AnyArray_<Path, &Value::isPath>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<Path, &Value::isPath>::AnyBlock_;
+    using internal::AnyArray_<Path, &Value::isPath>::AnyArray_;
 
 public:
     template <typename... Ts>
@@ -208,11 +208,11 @@ public:
 };
 
 
-class SetPath : public internal::AnyBlock_<SetPath, &Value::isSetPath>
+class SetPath : public internal::AnyArray_<SetPath, &Value::isSetPath>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<SetPath, &Value::isSetPath>::AnyBlock_;
+    using internal::AnyArray_<SetPath, &Value::isSetPath>::AnyArray_;
 
 public:
     template <typename... Ts>
@@ -222,11 +222,11 @@ public:
 };
 
 
-class GetPath : public internal::AnyBlock_<GetPath, &Value::isGetPath>
+class GetPath : public internal::AnyArray_<GetPath, &Value::isGetPath>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<GetPath, &Value::isGetPath>::AnyBlock_;
+    using internal::AnyArray_<GetPath, &Value::isGetPath>::AnyArray_;
 
     // As with GetWord, it can be convenient to think of "using" a GetPath
     // as calling a function with no arguments.
@@ -240,11 +240,11 @@ public:
 };
 
 
-class LitPath : public internal::AnyBlock_<LitPath, &Value::isLitPath>
+class LitPath : public internal::AnyArray_<LitPath, &Value::isLitPath>
 {
 public:
     friend class Value;
-    using internal::AnyBlock_<LitPath, &Value::isLitPath>::AnyBlock_;
+    using internal::AnyArray_<LitPath, &Value::isLitPath>::AnyArray_;
 };
 
 

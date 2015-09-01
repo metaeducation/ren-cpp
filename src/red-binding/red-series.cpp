@@ -1,6 +1,6 @@
 #include "rencpp/value.hpp"
 #include "rencpp/atoms.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 #include "rencpp/function.hpp"
 
 #include "rencpp/red.hpp"
@@ -12,7 +12,7 @@ namespace ren {
 
 
 bool Value::isSeries() const {
-    return isAnyBlock() or isAnyString();
+    return isAnyArray() or isAnyString();
 }
 
 
@@ -57,7 +57,7 @@ Value ren::internal::Series_::operator*() const {
             &result.cell,
             GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.series.index)
         );
-    } else if (isAnyBlock()) {
+    } else if (isAnyArray()) {
         result.cell = *VAL_BLK_SKIP(&cell, cell.data.series.index);
     } else {
         // Binary and such, would return an integer

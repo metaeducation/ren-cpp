@@ -1,6 +1,6 @@
 #include "rencpp/value.hpp"
 #include "rencpp/atoms.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 #include "rencpp/function.hpp"
 
 #include "rencpp/red.hpp"

@@ -31,7 +31,7 @@
 
 #include "value.hpp"
 #include "atoms.hpp"
-#include "blocks.hpp"
+#include "arrays.hpp"
 #include "error.hpp"
 
 #include "engine.hpp"

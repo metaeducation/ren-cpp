@@ -58,7 +58,7 @@ public:
     using Finder = std::function<Context (Engine *)>;
 
 private:
-    friend class AnyBlock;
+    friend class AnyArray;
     friend class AnyString;
     friend class AnyWord;
     friend class Runtime;
@@ -89,7 +89,7 @@ public:
     static Context current(Engine * engine = nullptr);
 
 
-    // Patterned after AnyBlock; you can construct a context from the same
+    // Patterned after AnyArray; you can construct a context from the same
     // data that can be used to make a block.
 protected:
     Context (

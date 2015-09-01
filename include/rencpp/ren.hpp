@@ -33,7 +33,7 @@
 #include "words.hpp"
 #include "series.hpp"
 #include "strings.hpp"
-#include "blocks.hpp"
+#include "arrays.hpp"
 #include "error.hpp"
 #include "function.hpp"
 #include "runtime.hpp"

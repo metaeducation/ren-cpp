@@ -1,7 +1,7 @@
 #include <stdexcept>
 
 #include "rencpp/value.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 #include "rencpp/context.hpp"
 
 #include "rencpp/rebol.hpp"
@@ -60,7 +60,7 @@ bool Value::isLitPath(REBVAL * init) const {
     return IS_LIT_PATH(&cell);
 }
 
-bool Value::isAnyBlock() const {
+bool Value::isAnyArray() const {
     return IS_BLOCK(&cell) or IS_PAREN(&cell) or IS_PATH(&cell)
         or IS_SET_PATH(&cell) or IS_GET_PATH(&cell) or IS_LIT_PATH(&cell);
 }
@@ -72,14 +72,14 @@ bool Value::isAnyBlock() const {
 //
 
 
-AnyBlock::AnyBlock (
+AnyArray::AnyArray (
     internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
     Context const * contextPtr,
     Engine * engine
 ) :
-    AnyBlock (Dont::Initialize)
+    AnyArray (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
 
@@ -99,14 +99,14 @@ AnyBlock::AnyBlock (
 
 // TBD: Finish version where you can use values directly as an array
 /*
-AnyBlock::AnyBlock (
+AnyArray::AnyArray (
     Value const values[],
     size_t numValues,
     internal::CellFunction cellfun,
     Context const * contextPtr,
     Engine * engine
 ) :
-    AnyBlock (Dont::Initialize)
+    AnyArray (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
 

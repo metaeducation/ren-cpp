@@ -460,7 +460,7 @@ public:
 
     bool isLitPath(RenCell * = nullptr) const;
 
-    bool isAnyBlock() const;
+    bool isAnyArray() const;
 
     bool isAnyString() const;
 

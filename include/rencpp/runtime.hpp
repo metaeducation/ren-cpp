@@ -23,7 +23,7 @@
 
 #include "common.hpp"
 #include "value.hpp"
-#include "blocks.hpp"
+#include "arrays.hpp"
 
 
 namespace ren {
@@ -51,7 +51,7 @@ namespace ren {
 
 class Runtime {
 protected:
-    friend class AnyBlock;
+    friend class AnyArray;
     friend class Value;
     friend class AnyString;
     friend class AnyWord;

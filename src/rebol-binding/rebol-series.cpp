@@ -4,7 +4,7 @@
 #include "rencpp/value.hpp"
 #include "rencpp/atoms.hpp"
 #include "rencpp/series.hpp"
-#include "rencpp/blocks.hpp" // For Path evaluation in operator[]
+#include "rencpp/arrays.hpp" // For Path evaluation in operator[]
 
 
 namespace ren {
@@ -15,7 +15,7 @@ namespace ren {
 
 
 bool Value::isSeries() const {
-    return isAnyBlock() or isAnyString() /* or isBinary()*/;
+    return isAnyArray() or isAnyString() /* or isBinary()*/;
 }
 
 
@@ -54,7 +54,7 @@ Value ren::internal::Series_::operator*() const {
             &result.cell,
             GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.position.index)
         );
-    } else if (isAnyBlock()) {
+    } else if (isAnyArray()) {
         result.cell = *VAL_BLK_SKIP(&cell, cell.data.position.index);
     } else {
         // Binary and such, would return an integer

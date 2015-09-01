@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "rencpp/value.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 #include "rencpp/context.hpp"
 
 #include "rencpp/rebol.hpp" // ren::internal::nodes

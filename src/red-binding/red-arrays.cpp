@@ -1,5 +1,5 @@
 #include "rencpp/value.hpp"
-#include "rencpp/blocks.hpp"
+#include "rencpp/arrays.hpp"
 
 #include "rencpp/red.hpp"
 
@@ -67,7 +67,7 @@ bool Value::isLitPath(RedCell * init) const {
 }
 
 
-bool Value::isAnyBlock() const {
+bool Value::isAnyArray() const {
     switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_BLOCK:
         case RedRuntime::TYPE_PAREN:
@@ -88,7 +88,7 @@ bool Value::isAnyBlock() const {
 /// CONSTRUCTION
 ///
 
-AnyBlock::AnyBlock (
+AnyArray::AnyArray (
     internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
@@ -97,7 +97,7 @@ AnyBlock::AnyBlock (
 ) :
     Series (Dont::Initialize)
 {
-    throw std::runtime_error("AnyBlock::AnyBlock coming soon...");
+    throw std::runtime_error("AnyArray::AnyArray coming soon...");
 
     UNUSED(loadables);
     UNUSED(numLoadables);

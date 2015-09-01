@@ -57,7 +57,7 @@ public:
 
 private:
     friend class Value;
-    friend class AnyBlock;
+    friend class AnyArray;
     friend class AnyString;
     friend class AnyWord;
     friend class Context;
