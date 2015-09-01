@@ -547,13 +547,15 @@ public:
         REBVAL strValue;
         Val_Init_String(&strValue, mo.series);
 
-        REBSER * utf8 = Encode_UTF8_Value(&strValue, VAL_LEN(&strValue), 0);
+        REBSER * utf8_series = Make_UTF8_From_Any_String(
+            &strValue, VAL_LEN(&strValue), 0
+        );
 
 
         // Okay that should be the UTF8 data.  Let's copy it into the buffer
         // the caller sent us.
 
-        REBCNT len = SERIES_LEN(utf8) - 1;
+        REBCNT len = SERIES_LEN(utf8_series) - 1;
         *numBytesOut = static_cast<size_t>(len);
 
         RenResult result;
@@ -567,7 +569,9 @@ public:
         }
 
         for (REBCNT index = 0; index < len; index++)
-            buffer[index] = SERIES_DATA(utf8)[index];
+            buffer[index] = SERIES_DATA(utf8_series)[index];
+
+        Free_Series(utf8_series);
 
         return result;
     }
