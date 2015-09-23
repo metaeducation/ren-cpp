@@ -241,22 +241,6 @@ RenResult Generalized_Apply(
 
 
 /*
- * The mechanical question of whether something is a function, or a closure,
- * or a native, or an action is generally not something the user needs
- * to distinguish in the type system.  (There's a lot of code that handles
- * functions which could just as easily work with a closure, but this
- * technical mistake of exposing it as a distinct type prevents it.)
- */
-inline int IS_ANY_FUNCTION(REBVAL const * value) {
-    return IS_FUNCTION(value)
-        || IS_NATIVE(value)
-        || IS_CLOSURE(value)
-        || IS_ACTION(value);
-}
-
-
-
-/*
  * Here we have our definitions for how to find the relevant values on the
  * stack.  Because Rebol uses 1 based calculations, we have to add 1.  The
  * shim accessor here gets the actual pointer out vs. returning the whole
@@ -305,7 +289,7 @@ void RenShimInitThrown(RenCell *out, RenCell const *value, RenCell const *name);
  * Like RenShimExit but when an error happens.  In Rebol, at least, the return
  * value will be ignored because the routine longjmps as an "exception"
  */
-RenResult RenShimRaiseError(RenCell const * error);
+RenResult RenShimFail(RenCell const * error);
 
 
 /*

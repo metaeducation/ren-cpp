@@ -197,7 +197,7 @@ public:
 		throw std::runtime_error("ShimInitThrown...coming soon...");
 	}
 
-	RenResult ShimRaiseError(RedCell const *) {
+	RenResult ShimFail(RedCell const *) {
 		throw std::runtime_error("ShimRaiseError...coming soon...");
 	}
 
@@ -298,8 +298,8 @@ void RenShimInitThrown(RedCell *out, RedCell const *value, RedCell const *name) 
 	return ren::internal::hooks.ShimInitThrown(out, value, name);
 }
 
-RenResult RenShimRaiseError(RenCell const * error) {
-    return ren::internal::hooks.ShimRaiseError(error);
+RenResult RenShimFail(RenCell const * error) {
+	return ren::internal::hooks.ShimFail(error);
 }
 
 #endif

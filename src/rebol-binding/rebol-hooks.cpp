@@ -577,7 +577,7 @@ public:
     }
 
     RenResult ShimHalt() {
-        Do_Error(TASK_HALT_ERROR);
+        raise Error_Is(TASK_HALT_ERROR);
         DEAD_END;
     }
 
@@ -586,8 +586,8 @@ public:
         CONVERT_NAME_TO_THROWN(out, value);
     }
 
-    RenResult ShimRaiseError(REBVAL const * error) {
-        Do_Error(error);
+    RenResult ShimFail(REBVAL const * error) {
+        raise Error_Is(error);
         DEAD_END;
     }
 
@@ -683,6 +683,6 @@ void RenShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
 }
 
 
-RenResult RenShimRaiseError(RenCell const * error) {
-    return ren::internal::hooks.ShimRaiseError(error);
+RenResult RenShimFail(RenCell const * error) {
+    return ren::internal::hooks.ShimFail(error);
 }

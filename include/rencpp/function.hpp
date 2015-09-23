@@ -579,7 +579,7 @@ private:
 
 		case REN_APPLY_ERROR:
 		case REN_CONSTRUCT_ERROR:
-            return RenShimRaiseError(REN_CS_OUT(call));
+			return RenShimFail(REN_CS_OUT(call));
 
 		default:
 			UNREACHABLE_CODE();

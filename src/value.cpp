@@ -153,13 +153,13 @@ void Value::constructOrApplyInitialize(
 
 		case REN_EVALUATION_HALTED:
 			throw evaluation_halt {};
-    #endif
 
 		case REN_APPLY_THREW: {
 			applyOut->finishInit(engine);
             extraOut.finishInit(engine);
             throw evaluation_throw {extraOut, *applyOut};
 		}
+    #endif
 
         default:
             throw std::runtime_error("Unknown error in RenConstructOrApply");

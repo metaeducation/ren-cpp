@@ -48,8 +48,8 @@ RenResult Generalized_Apply(
 	REBSER *args,
 	REBFLG reduce
 ) {
-    if (IS_ANY_FUNCTION(applicand)) {
-		if (Apply_Block_Throws(out, applicand, args, 0, reduce)) {
+    if (ANY_FUNC(applicand)) {
+        if (Apply_Block_Throws(out, applicand, args, 0, reduce, NULL)) {
             TAKE_THROWN_ARG(extraOut, out);
 			return REN_APPLY_THREW;
 		}
@@ -405,7 +405,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
 		switch (result) {
 			case REN_APPLY_ERROR:
-				Do_Error(D_OUT);
+                raise Error_Is(D_OUT);
 
 			case REN_APPLY_THREW:
 				CONVERT_NAME_TO_THROWN(D_OUT, &throwName);
