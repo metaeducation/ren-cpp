@@ -545,7 +545,11 @@ public:
         // Who knows, but we've got our own buffer so that's not important.
 
         REBVAL strValue;
-        Val_Init_String(&strValue, mo.series);
+        // Don't use Val_Init_String here because it does MANAGE_SERIES, and
+        // we are using the internal mold buffer here...
+        VAL_SET(&strValue, REB_STRING);
+        VAL_INDEX(&strValue) = 0;
+        VAL_SERIES(&strValue) = mo.series;
 
         REBSER * utf8_series = Make_UTF8_From_Any_String(
             &strValue, VAL_LEN(&strValue), 0
@@ -555,7 +559,7 @@ public:
         // Okay that should be the UTF8 data.  Let's copy it into the buffer
         // the caller sent us.
 
-        REBCNT len = SERIES_LEN(utf8_series) - 1;
+        REBCNT len = SERIES_LEN(utf8_series);
         *numBytesOut = static_cast<size_t>(len);
 
         RenResult result;

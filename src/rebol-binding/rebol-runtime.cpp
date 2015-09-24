@@ -21,7 +21,12 @@ extern "C" {
     // here. It does not serve any other purpose.
     HINSTANCE App_Instance = 0;
 #endif
+
+// Saphirion additions with commands for running https
+extern void Init_Core_Ext(void);
+extern void Shutdown_Core_Ext(void);
 }
+
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096  // from host-lib.c, generally lacking in Posix
@@ -300,6 +305,8 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     Init_Core(&rebargs);
 
+    Init_Core_Ext(); // adds to a table used by RL_Start, must be called before
+
     // Needed to run the SYS_START function
     int err_num = RL_Start(0, 0, NULL, 0, 0);
 
@@ -451,9 +458,15 @@ void RebolRuntime::cancel() {
 
 
 RebolRuntime::~RebolRuntime () {
-    OS_QUIT_DEVICES(0);
+    if (initialized) {
+        OS_QUIT_DEVICES(0);
 
-    delete [] rebargs.home_dir; // needs to last during Rebol run
+        delete [] rebargs.home_dir; // needs to last during Rebol run
+
+        Shutdown_Core_Ext();
+
+        Shutdown_Core();
+    }
 }
 
 } // end namespace ren
