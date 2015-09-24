@@ -48,10 +48,9 @@
 
 /*
  * Return codes used by the binding.  They start at 10 at present due to
- * the hack to use the equal value of R_RETURN and REN_SUCCESS to avoid
+ * the hack to use the equal value of R_OUT and REN_SUCCESS to avoid
  * trying to force Red to have R_XXX return conventions from RenShimPointer
  */
-typedef unsigned int RenResult;
 #define REN_SUCCESS 0
 #define REN_CONSTRUCT_ERROR 10
 #define REN_APPLY_ERROR 11
@@ -70,8 +69,15 @@ typedef unsigned int RenResult;
 #define REN_RUNTIME_RED 304
 #define REN_RUNTIME_REBOL 1020
 
+#if defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
 
-#if defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
+/*
+ * See notes about RenResult being a standardized-size REBCNT in the Rebol
+ * definitions, and how that is currently shared with the C function shim
+ * prototype for speaking the stack protocol...which may not apply to Red.
+ */
+typedef int RenResult;
+
 /*
  * RedCell
  *
@@ -188,13 +194,22 @@ typedef RedEngineHandle RenEngineHandle;
 
 typedef void* RenCall; // TBD
 
-#elif (not defined(REN_RUNTIME)) or (REN_RUNTIME == REN_RUNTIME_REBOL)
+#elif (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 /*
  * While Red has no C headers for us to include (being written in Red and
  * Red/System), Rebol does.
  */
 #include "rebol/src/include/sys-core.h"
+
+/*
+ * The RenResult does double duty as the result code from functions and the
+ * Rebol NATIVE! function return type, so it has to match the latter.  Rebol
+ * uses fixed size types to get <stdint.h>-style compatibility.  This may
+ * have to be adapted for Red, which also may have an entirely different
+ * prototype needed for shims speaking the stack protocol.
+ */
+typedef REBCNT RenResult;
 
 
 /*
