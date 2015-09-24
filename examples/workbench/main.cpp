@@ -124,7 +124,7 @@ void noisyFailureMsgHandler(
 
 #ifdef TO_WINDOWS
 
-int main(int argc, char *argv[]);
+int main_core(int argc, char *argv[]);
 
 #include <memory>
 #include <vector>
@@ -173,7 +173,7 @@ public:
 int CALLBACK WinMain(HINSTANCE /* hInstance */, HINSTANCE /* hPrevInstance */, LPSTR /* lpCmdLine */, int /* nCmdShow */)
 {
     Win32CommandLineConverter cmd_line;
-    return main(cmd_line.argc(), cmd_line.argv());
+    return main_core(cmd_line.argc(), cmd_line.argv());
 }
 
 #endif
@@ -298,7 +298,7 @@ void PreQApplicationInitForPacking() {
 
 #endif
 
-int main(int argc, char *argv[])
+int main_core(int argc, char *argv[])
 {
     // Sometimes you use Q_INIT_RESOURCE, don't think it's applicable ATM
     // Q_INIT_RESOURCE(ren-garden);
@@ -334,4 +334,13 @@ int main(int argc, char *argv[])
     MainWindow mainWin;
     mainWin.show();
     return app.exec();
+}
+
+
+//
+// ISO C++ forbids you from calling the actual main() yourself, and our
+// arg converter wishes to call it...so we need another function.
+//
+int main(int argc, char *argv[]) {
+    return main_core(argc, argv);
 }
