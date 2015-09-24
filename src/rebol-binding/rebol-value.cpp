@@ -254,7 +254,7 @@ QString to_QString(Value const & value) {
 
         case REN_BUFFER_TOO_SMALL: {
             assert(numBytes > defaultBufLen);
-            buffer.resize(numBytes);
+            buffer.resize(static_cast<int>(numBytes));
 
             size_t numBytesNew;
             if (
@@ -276,7 +276,7 @@ QString to_QString(Value const & value) {
             throw std::runtime_error("Unknown error in RenFormAsUtf8");
     }
 
-    buffer.truncate(numBytes);
+    buffer.truncate(static_cast<int>(numBytes));
     auto result = QString {buffer};
     return result;
 }
