@@ -242,8 +242,7 @@ public:
 // `raise Error()` can longjmp here, 'error' won't be NULL *if* that happens!
 
         if (error) {
-            if (!is_aggregate_managed)
-                Free_Series(aggregate);
+            // do not need to free series... it is done automatically
 
             if (VAL_ERR_NUM(error) == RE_HALT) {
                 // cancellation in middle of interpretation from outside
@@ -424,10 +423,19 @@ public:
         if (applyOut) {
             applying = true;
 
-            if (is_aggregate_managed) {
-                // Must protect from GC before doing an evaluation...
-                SAVE_SERIES(aggregate);
+            if (!is_aggregate_managed) {
+                // DO and its bretheren are not currently specifically written
+                // to not call Val_Init_Block or otherwise on the passed in
+                // values (for instance, to put them into a backtrace).  So
+                // they would manage the series if we did not do so here.
+                // Review this implementation detail for GC performance...
+
+                MANAGE_SERIES(aggregate);
+                is_aggregate_managed = TRUE;
             }
+
+            // Series now managed, protect from GC
+            SAVE_SERIES(aggregate);
 
             if (applicand) {
                 result = Generalized_Apply(
@@ -447,8 +455,7 @@ public:
                     result = REN_SUCCESS;
             }
 
-            if (is_aggregate_managed)
-                UNSAVE_SERIES(aggregate);
+            UNSAVE_SERIES(aggregate);
         }
         else
             result = REN_SUCCESS;
