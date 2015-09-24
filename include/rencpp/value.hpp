@@ -777,20 +777,20 @@ public:
     evaluation_throw (Value const &value) :
         thrownValue (value),
         throwName (Value::none_t::init{}),
-        whatString (std::string("THROW:") + to_string(value))
+        whatString (std::string("THROW: ") + to_string(value))
     {
     }
 
     evaluation_throw (Value const & value, Value const & name) :
         thrownValue (value),
-        throwName (name),
-        whatString (
-            std::string("THROW") +
-            + (value.isNone() ? ":" : "/NAME:")
-            + to_string(value)
-            + to_string(name)
-        )
+        throwName (name)
     {
+        if (name.isNone())
+            whatString = std::string("THROW: ") + to_string(thrownValue);
+        else {
+            whatString = std::string("THROW/NAME: ")
+                + to_string(thrownValue) + " " + to_string(throwName);
+        }
     }
 
     char const * what() const noexcept override {

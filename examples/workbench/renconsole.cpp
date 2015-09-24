@@ -115,10 +115,19 @@ public slots:
                         // Do whatever Rebol does...
                         qApp->exit(1);
                     }
+
+                    // We have submitted our quit message but will have to
+                    // get back to the message pump... go ahead and return
+                    // none...
+                    result = none;
+                    success = true;
                 }
             }
 
-            throw; // rethrow
+            if (!success) {
+                std::string message = std::string("No CATCH for: ") + t.what();
+                result = Error {message.c_str()};
+            }
         }
         catch (load_error const & e) {
             // Syntax errors which would trip up RenCpp even if no runtime was
