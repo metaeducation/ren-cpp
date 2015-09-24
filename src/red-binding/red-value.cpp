@@ -34,12 +34,6 @@ bool Value::isSameAs(Value const & other) const {
 ///
 
 void Value::finishInit(RenEngineHandle engine) {
-    if (needsRefcount()) {
-        refcountPtr = new RefcountType (1);
-    } else {
-        refcountPtr = nullptr;
-    }
-
     origin = engine;
 }
 

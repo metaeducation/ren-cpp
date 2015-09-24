@@ -16,19 +16,14 @@
 
 #include <thread>
 
-void Init_Task_Context();    // Special REBOL values per task
-
+extern "C" void Queue_Mark_Host_Deep(void);
 
 namespace ren {
 
 namespace internal {
 
-#ifndef NDEBUG
-    std::unordered_map<
-        decltype(RebolEngineHandle::data),
-        std::unordered_map<REBSER const *, unsigned int>
-    > nodes;
-#endif
+std::mutex linkMutex;
+ren::Value * head;
 
 class RebolHooks {
 
@@ -46,85 +41,6 @@ public:
 
 
 //
-// THREAD INITIALIZATION
-//
-
-//
-// There are some thread-local pieces of state that need to be initialized
-// or Rebol will complain.  However, we also want to be able to initialize
-// on demand from whichever thread calls first.  This means we need to
-// keep a list of which threads have been initialized and which not.
-//
-// !!! what if threads die and don't tell us?  Is there some part of
-// the puzzle to ensure any thread that communicates with some form of
-// allocation must come back with a free?
-//
-
-    std::vector<std::thread::id> threadsSeen;
-
-    void lazyThreadInitializeIfNeeded(RebolEngineHandle engine) {
-        if (
-            std::find(
-                threadsSeen.begin(),
-                threadsSeen.end(),
-                std::this_thread::get_id()
-            )
-            == std::end(threadsSeen)
-        ) {
-            // A misguided check in Rebol worries about the state of the CPU
-            // stack.  If you've somehow hopped around so that the state
-            // of the CPU stack it saw at its moment of initialization is
-            // such that it is no longer at that same depth, it crashes
-            // mysteriously even though nothing is actually wrong.  We beat
-            // the CHECK_STACK by making up either a really big pointer or a
-            // really small one for it to check against.  :-)
-
-        #ifdef OS_STACK_GROWS_UP
-            Stack_Limit = static_cast<void*>(-1);
-        #else
-            Stack_Limit = 0;
-        #endif
-
-            REBOL_STATE state;
-            const REBVAL *error;
-
-            // Unfortunate fact: setjmp and longjmp do not play well with
-            // C++ or anything requiring stack-unwinding.
-            //
-            //     http://stackoverflow.com/a/1376099/211160
-            //
-            // This means an error has a good chance of skipping destructors
-            // here, and really everything would need to be written in pure C
-            // to be safe.
-
-            PUSH_UNHALTABLE_TRAP(&error, &state);
-
-// The first time through the following, 'error' will be NULL, but...
-// `raise Error()` can longjmp here, 'error' won't be NULL *if* that happens!
-
-            if (error) {
-                if (VAL_ERR_NUM(error) == RE_HALT)
-                    throw std::runtime_error {"Halt during initialization"};
-
-                if (IS_ERROR(error))
-                    throw std::runtime_error {
-                        to_string(Value {*error, engine})
-                    };
-                else
-                    throw std::runtime_error("!Error thrown in rebol-hooks");
-            }
-
-            Init_Task();    // Special REBOL values per task
-
-            // Pop our error trapping state
-
-            DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
-
-            threadsSeen.push_back(std::this_thread::get_id());
-        }
-    }
-
-//
 // ENGINE ALLOCATION AND FREEING
 //
 
@@ -136,12 +52,13 @@ public:
                 " in the binding.  So only one engine may be allocated"
             );
 
+        theEngine.data = 1020;
+
         runtime.lazyInitializeIfNecessary();
 
-        // The root initialization initializes its thread-locals
-        threadsSeen.push_back(std::this_thread::get_id());
+        assert(not GC_Mark_Hook);
+        GC_Mark_Hook = &::Queue_Mark_Host_Deep;
 
-        theEngine.data = 1020;
         *engineOut = theEngine;
 
         return REN_SUCCESS;
@@ -154,6 +71,9 @@ public:
 
         if (REBOL_IS_ENGINE_HANDLE_INVALID(engine))
             return REN_BAD_ENGINE_HANDLE;
+
+        assert(GC_Mark_Hook == &::Queue_Mark_Host_Deep);
+        GC_Mark_Hook = nullptr;
 
         theEngine = REBOL_ENGINE_HANDLE_INVALID;
 
@@ -172,8 +92,6 @@ public:
         char const * name,
         RenCell * contextOut
     ) {
-        lazyThreadInitializeIfNeeded(engine);
-
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
@@ -223,7 +141,7 @@ public:
         REBVAL * applyOut,
         REBVAL * extraOut
     ) {
-        lazyThreadInitializeIfNeeded(engine);
+        assert(engine.data == 1020);
 
         REBOL_STATE state;
         const REBVAL * error;
@@ -475,40 +393,6 @@ public:
         return result;
     }
 
-    RenResult ReleaseCells(
-        RebolEngineHandle engine,
-        REBVAL const * valuesPtr,
-        size_t numValues,
-        size_t sizeofValue
-    ) {
-        lazyThreadInitializeIfNeeded(engine);
-
-        auto current = reinterpret_cast<char const *>(valuesPtr);
-        for (size_t index = 0; index < numValues; index++) {
-            auto cell = const_cast<REBVAL *>(
-                reinterpret_cast<REBVAL const *>(current)
-            );
-
-        #ifndef NDEBUG
-            assert(ANY_SERIES(cell));
-            auto it = nodes[engine.data].find(VAL_SERIES(cell));
-            assert(it != nodes[engine.data].end());
-
-            it->second--;
-            if (it->second == 0) {
-                size_t numErased = nodes[engine.data].erase(VAL_SERIES(cell));
-                assert(numErased == 1);
-                if (nodes[engine.data].empty())
-                    nodes.erase(engine.data);
-            }
-        #endif
-
-            current += sizeofValue;
-        }
-
-        return REN_SUCCESS;
-    }
-
 
     RenResult FormAsUtf8(
         RebolEngineHandle engine,
@@ -517,20 +401,7 @@ public:
         size_t bufSize,
         size_t * numBytesOut
     ) {
-        lazyThreadInitializeIfNeeded(engine);
-
-#ifndef NDEBUG
-        if (ANY_SERIES(value)) {
-            auto it = nodes.find(engine.data);
-            assert(it != nodes.end());
-            assert(
-                it->second.find(reinterpret_cast<REBSER const *>(
-                    VAL_SERIES(value))
-                )
-                != it->second.end()
-            );
-        }
-#endif
+        assert(engine.data == 1020);
 
         // First we mold with the "FORM" settings and get a STRING!
         // series out of that.
@@ -602,8 +473,20 @@ public:
         DEAD_END;
     }
 
+    void Queue_Mark_Host_Deep() {
+        // This lock on GC does not suddenly make Rebol thread safe, but just
+
+        std::lock_guard<std::mutex> lock(internal::linkMutex);
+
+        ren::Value * temp = ren::internal::head;
+        while (temp) {
+            Queue_Mark_Value_Deep(&temp->cell);
+            temp = temp->next;
+        }
+    }
+
     ~RebolHooks () {
-        assert(nodes.empty());
+        assert(not head);
     }
 };
 
@@ -612,6 +495,15 @@ RebolHooks hooks;
 } // end namespace internal
 
 } // end namespace ren
+
+
+//
+// Hacked in for handling the garbage collection...this is an ordinary C
+// function that we register in GC_Mark_Hook
+//
+void Queue_Mark_Host_Deep(void) {
+    return ren::internal::hooks.Queue_Mark_Host_Deep();
+}
 
 
 RenResult RenAllocEngine(RebolEngineHandle * engineOut) {
@@ -656,18 +548,6 @@ RenResult RenConstructOrApply(
         extraOut
     );
 
-}
-
-
-RenResult RenReleaseCells(
-    RebolEngineHandle engine,
-    REBVAL const * valuesPtr,
-    size_t numValues,
-    size_t sizeofValue
-) {
-    return ren::internal::hooks.ReleaseCells(
-        engine, valuesPtr, numValues, sizeofValue
-    );
 }
 
 

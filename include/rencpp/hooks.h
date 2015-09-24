@@ -280,7 +280,7 @@ RenResult RenShimHalt();
  * When a throw happens, it has two RenCells to work with...the thrown value
  * and a value representing a label.  They can't both fit into a single
  * RenCell of size for the function's output slot, so some lookaside is
- * needed.  This initializes a value to indicate both parts of the reult.
+ * needed.  This initializes a value to indicate both parts of the result.
  */
 void RenShimInitThrown(RenCell *out, RenCell const *value, RenCell const *name);
 
@@ -342,25 +342,6 @@ RenResult RenConstructOrApply(
     RenCell * constructOutDatatypeIn,
     RenCell * applyOut,
     RenCell * errorOut
-);
-
-
-/*
- * Every cell that needs it has to be released by the reference counting.
- * There should be only one release per cell returned by RedConstructOrApply.
- * This applies to any cells that came back via constructOut or applyOut.
- *
- * In case you have an array of cells to release for some reason at once,
- * the API takes a number of cells.  Again, the size in bytes skipped can
- * vary in case the cells are at the head of a block of data of a certain
- * additional size needed by the binding.
- */
-
-RenResult RenReleaseCells(
-    RenEngineHandle engine,
-    RenCell const * valuesCell,
-    size_t numValues,
-    size_t sizeofValue
 );
 
 

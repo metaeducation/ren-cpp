@@ -219,17 +219,18 @@ protected:
 #endif
 
     //
-    // We must reference count many types.  Note that this reference count
-    // does not introduce problems of cycles, because we never put references
-    // to ren::Values into a ren::Series.
+    // We need to be able to enumerate through value cells being held in live
+    // C++ objects on the stack or heap, in case they contain something the
+    // garbage collector needs to see.  Rather than maintain a tracking
+    // structure separately, they are kept in a doubly linked list...which
+    // makes insertions and removals efficient.
     //
-    // Reference counts aren't copy constructible (by design), which means
-    // hat when a series value gets wrapped we do a `new` on the atomic.  On
-    // the plus side: copying that value around won't make any more of them,
-    // and non-series values don't have them at all.
+    // (The larger size of the C++ wrapped values makes them poor for storing
+    // en-masse in collections such as std::Vector<ren::Value>.  So...don't
+    // do that.  Use a ren::Series, which is about half the size.)
     //
-    using RefcountType = std::atomic<unsigned int>;
-    RefcountType * refcountPtr;
+    Value * next;
+    Value * prev;
 
     //
     // While "adding a few more bytes here and there" in Red and Rebol culture
@@ -281,7 +282,7 @@ protected:
     Value (Dont);
 
     void finishInit(RenEngineHandle engine);
-
+    void uninitialize();
 
     //
     // The value-from-cell constructor does not check the bits, and all cell
@@ -480,50 +481,19 @@ public:
 
     bool isError() const;
 
-protected:
-    bool needsRefcount() const;
-
-private:
-    inline void releaseRefIfNecessary() {
-        // refcount is nullptr if it's not a refcountable type, or if it was
-        // a refcountable type and we used the move constructor to empty it
-        if (refcountPtr) {
-            if (0 == --(*refcountPtr)) {
-                delete refcountPtr;
-                if (
-                    ::RenReleaseCells(origin, &this->cell, 1, sizeof(Value))
-                    != REN_SUCCESS
-                ) {
-                    throw std::runtime_error(
-                        "Refcounting problem reported by the Ren binding hook"
-                    );
-                }
-            }
-        }
-    }
-
 public:
     //
     // Copy construction must make a new copy of the 128 bits in the cell, as
-    // well as add to the refcount (if it exists)
-    //
-    // Wondering what might happen if while you are initializing, another
-    // thread decrements the refcount and it goes to zero before you can
-    // finish?  Don't worry - you know at least one reference on this thread
-    // will be keeping it alive (the one that you are copying!)
+    // well as add to the tracking (if it is necessary)
     //
     Value (Value const & other) noexcept :
         cell (other.cell),
-        refcountPtr (other.refcountPtr),
-        origin (other.origin)
+        next (nullptr), // for debug, for now...
+        prev (nullptr)
     {
-        if (refcountPtr)
-            (*refcountPtr)++;
+        finishInit(other.origin);
     }
 
-    //
-    // Move construction only has to copy the bits; it can take the other's
-    // refcount pointer without doing an atomic increment.
     //
     // User-defined move constructors should not throw exceptions.  We
     // trust the C++ type system here.  You can move a String into an
@@ -531,35 +501,27 @@ public:
     //
     Value (Value && other) noexcept :
         cell (other.cell),
-        refcountPtr (other.refcountPtr),
-        origin (other.origin)
+        next (nullptr), // for debug, for now...
+        prev (nullptr)
     {
         // Technically speaking, we don't have to null out the other's
-        // refcount and runtime handle.  But it's worth it for the safety,
+        // runtime handle.  But it's worth it for the safety,
         // because sometimes values that have been moved *do* get used on
         // accident after the move.
 
-        other.refcountPtr = nullptr;
-        other.origin = REN_ENGINE_HANDLE_INVALID;
+        finishInit(other.origin);
+        other.uninitialize();
     }
 
     Value & operator=(Value const & other) noexcept {
-        // we're about to overwrite the content, so release the reference
-        // on the content we had
-        releaseRefIfNecessary();
-
+        uninitialize();
         cell = other.cell;
-        refcountPtr = other.refcountPtr;
-        if (refcountPtr) {
-            (*refcountPtr)++;
-        }
+        finishInit(other.origin);
         return *this;
     }
 
 public:
-    ~Value () {
-        releaseRefIfNecessary();
-    }
+    ~Value ();
 
 
     // Although C++ assignment and moving of values around is really just
@@ -713,7 +675,7 @@ public:
         if (not result.isValid())
             return false;
 
-        // No need to finishInit() initialization.
+        result.finishInit(origin);
 
         return result.hasSpelling(spelling);
     }

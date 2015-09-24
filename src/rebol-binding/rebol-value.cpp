@@ -50,22 +50,62 @@ bool Value::isSameAs(Value const & other) const {
 //
 
 void Value::finishInit(RenEngineHandle engine) {
-    if (needsRefcount()) {
-        refcountPtr = new RefcountType (1);
-
-    #ifndef NDEBUG
-        REBSER * series = VAL_SERIES(&cell);
-        auto it = internal::nodes[engine.data].find(series);
-        if (it == internal::nodes[engine.data].end())
-            internal::nodes[engine.data].emplace(series, 1);
-        else
-            it->second++;
-    #endif
-    }
-    else
-        refcountPtr = nullptr;
+    // Safe to test this before potentially put into a list...these had to be
+    // initialized to nullptr instead of left as-is in order to be safe for
+    // freeing in case the destructor got called when finishInit never did...
+    assert(not next and not prev);
 
     origin = engine;
+
+    if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
+        // Types with no GC-aware members do not need to be put into the list
+        // While the pointers are there anyway and it saves no memory, it does
+        // save time when a GC runs...as well as the cost of any sync
+        return;
+    }
+
+    // !!! Placeholder for a less-global locking strategy (list per type, or
+    // maybe hashed out somehow for less contention?)
+    std::lock_guard<std::mutex> lock(internal::linkMutex);
+
+    if (internal::head) {
+        assert(this != internal::head);
+        internal::head->prev = this;
+        next = internal::head;
+    } // else leave next null
+
+    // prev is already null
+
+    internal::head = this; // update head
+}
+
+
+void Value::uninitialize() {
+    origin = REN_ENGINE_HANDLE_INVALID;
+
+    if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
+        // We can avoid taking the mutex if the type isn't listed
+        assert(not next and not prev);
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(internal::linkMutex);
+
+    if (internal::head == this) {
+        assert(not prev);
+        internal::head = next;
+    }
+    else if (prev) // possible to be false if finishInit never called...
+        prev->next = next;
+
+    if (next) next->prev = prev;
+
+    next = prev = nullptr;
+}
+
+
+Value::~Value() {
+    uninitialize();
 }
 
 
@@ -257,7 +297,8 @@ Loadable::Loadable (char const * sourceCstr) :
     VAL_SET(&cell, REB_END);
     VAL_HANDLE_DATA(&cell) = const_cast<char *>(sourceCstr);
 
-    refcountPtr = nullptr;
+    next = nullptr;
+    prev = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
 }
 

@@ -57,8 +57,6 @@ protected:
     friend class AnyWord;
     friend class Engine;
 
-    static bool needsRefcount(RenCell const & cell);
-
     static Value evaluate(
         internal::Loadable const loadables[],
         size_t numLoadables,

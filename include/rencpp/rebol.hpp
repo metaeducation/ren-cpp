@@ -19,6 +19,7 @@
 // See http://rencpp.hostilefork.com for more information on this project
 //
 
+#include <mutex>
 #include "runtime.hpp"
 
 #ifndef NDEBUG
@@ -70,14 +71,11 @@ public:
 
 extern RebolRuntime runtime;
 
-#ifndef NDEBUG
 namespace internal {
-    extern std::unordered_map<
-        decltype(RebolEngineHandle::data),
-        std::unordered_map<REBSER const *, unsigned int>
-    > nodes;
+    // Placeholder for better solution: mutex for management of linked list
+    extern std::mutex linkMutex;
+    extern ren::Value * head;
 }
-#endif
 
 } // end namespace ren
 

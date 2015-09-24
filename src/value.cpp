@@ -30,18 +30,14 @@
 namespace ren {
 
 
-bool Value::needsRefcount() const {
-    return Runtime::needsRefcount(cell);
-}
-
-
 
 // Even if asked not to initialize, we can't leave the type in a state where
-// it cannot be safely freed.  A bad refcount pointer combined with bad data
+// it cannot be safely freed.  Bad traversal pointers combined with bad data
 // would be a problem.  Review this issue.
 
 Value::Value (Dont) :
-    refcountPtr {nullptr}
+    next (nullptr),
+    prev (nullptr)
 {
 }
 
@@ -166,7 +162,7 @@ void Value::constructOrApplyInitialize(
     }
 
     // It used to be required that we finalize the values before throwing
-    // errors because (for instance) the refcount could be initialized.
+    // errors because (for instance) the tracking could be initialized.
     // That had to be changed because a Dont::Initialize was could construct
     // a type that could not survive an exception being thrown.  So we will
     // keep this finalization here just in case, because it should be safe now

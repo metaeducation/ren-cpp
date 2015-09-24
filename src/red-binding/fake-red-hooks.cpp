@@ -148,19 +148,6 @@ public:
         return REN_SUCCESS;
     }
 
-    RenResult ReleaseCells(
-        RedEngineHandle engine,
-        RedCell const * valuesCell,
-        size_t numValues,
-        size_t sizeofValue
-    ) {
-        UNUSED(engine);
-        UNUSED(valuesCell);
-        UNUSED(numValues);
-        UNUSED(sizeofValue);
-        return REN_SUCCESS;
-    }
-
     RenResult FormAsUtf8(
         RedEngineHandle engine,
         RedCell const * cell,
@@ -258,18 +245,6 @@ RenResult RenConstructOrApply(
         errorOut
     );
 
-}
-
-
-RenResult RenReleaseCells(
-    RenEngineHandle handle,
-    RenCell const * valuesCell,
-    size_t numValues,
-    size_t sizeofValue
-) {
-    return ren::internal::hooks.ReleaseCells(
-        handle, valuesCell, numValues, sizeofValue
-    );
 }
 
 

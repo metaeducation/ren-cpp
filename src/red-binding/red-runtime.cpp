@@ -25,7 +25,7 @@ internal::Loadable::Loadable (char const * sourceCstr) :
         0,
         const_cast<char *>(sourceCstr)
     );
-    refcountPtr = nullptr;
+    next = prev = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
 }
 
@@ -33,65 +33,6 @@ internal::Loadable::Loadable (char const * sourceCstr) :
 RedRuntime::DatatypeID RedRuntime::getDatatypeID(RedCell const & cell) {
     // extract the lowest byte
     return static_cast<RedRuntime::DatatypeID>(cell.header & 0xFF);
-}
-
-
-bool Runtime::needsRefcount(RenCell const & cell) {
-    //
-    // ANY-WORD! is currently not ever GC'd.  Ideally they would be, as this
-    // means the symbol table will just grow indefinitely and hold words you're
-    // not still using.
-    //
-    // Changing this entry in the table is what would be required to indicate
-    // a held-onto Word.  Although a lighter approach might be taken to just
-    // link all the words into a chain as symbol refcounting may be more rare,
-    // and have a callback hook from the runtime to ask for the list?
-    //
-    bool needsRefcountTable[] = {
-        false, // TYPE_VALUE a.k.a TYPE_ALIEN
-        false, // TYPE_DATATYPE
-        false, // TYPE_UNSET
-        false, // TYPE_NONE
-        false, // TYPE_LOGIC
-        true, // TYPE_BLOCK
-        true, // TYPE_STRING
-        false, // TYPE_INTEGER
-        false, // TYPE_SYMBOL (???)
-        true, // TYPE_CONTEXT (???)
-        false, // TYPE_WORD
-        false, // TYPE_SET_WORD
-        false, // TYPE_LIT_WORD
-        false, // TYPE_GET_WORD
-        false, // TYPE_REFINEMENT
-        false, // TYPE_CHAR
-        false, // TYPE_NATIVE
-        false, // TYPE_ACTION
-        false, // TYPE_OP
-        true, // TYPE_FUNCTION
-        true, // TYPE_PATH
-        true, // TYPE_LIT_PATH
-        true, // TYPE_SET_PATH
-        true, // TYPE_GET_PATH
-        true, // TYPE_PAREN
-        true, // TYPE_ROUTINE
-        true, // TYPE_ISSUE
-        true, // TYPE_FILE
-        true, // TYPE_URL
-        true, // TYPE_BITSET
-        false, // TYPE_POINT
-        true, // TYPE_OBJECT
-        false, // TYPE_FLOAT
-        true, // TYPE_BINARY
-
-        true, // TYPE_TYPESET
-        true, // TYPE_ERROR
-
-        true, // TYPE_CLOSURE
-
-        true, // TYPE_PORT
-    };
-
-    return needsRefcountTable[RedRuntime::getDatatypeID(cell)];
 }
 
 
