@@ -55,6 +55,10 @@ void Value::finishInit(RenEngineHandle engine) {
     // freeing in case the destructor got called when finishInit never did...
     assert(not next and not prev);
 
+    // For the immediate moment, we have only one engine, but taking note
+    // when that engine isn't being threaded through the values is a good
+    // catch of problems for when there's more than one...
+    assert(engine.data == 1020);
     origin = engine;
 
     if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {

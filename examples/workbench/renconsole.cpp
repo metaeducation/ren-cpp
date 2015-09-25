@@ -487,6 +487,16 @@ RenConsole::RenConsole (QWidget * parent) :
 
     proposalsContext = userContext.copy(false);
 
+    // !!! On MinGW 4.9.1 under Windows, there is an issue where if you pass
+    // the result from dereferencing a std::optional<Context> through perfect
+    // forwarding (as in the constructor below) it will attempt to std::move
+    // the variable.  The "RenPackage" was an experiment in the first place,
+    // and after looking into this enough to believe it to be more likely
+    // a compiler bug than an issue in Ren/C++ class design a workaround is
+    // the best choice for the moment.  So we force to a reference to prevent
+    // the choice of && from *proposalsContext;
+    Context const & proposalsRef = *proposalsContext;
+
     proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
         ":/scripts/rebol-proposals/",
@@ -511,7 +521,7 @@ RenConsole::RenConsole (QWidget * parent) :
             "%help-dialect.reb"
         },
 
-        *proposalsContext
+        proposalsRef
     );
 
     (*proposalsContext)(
@@ -544,6 +554,9 @@ RenConsole::RenConsole (QWidget * parent) :
 
     helpersContext = proposalsContext->copy();
 
+    // !!! See notes above on MinGW 4.9.1 workaround
+    Context const & helpersRef = *helpersContext;
+
     helpersPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
         ":/scripts/helpers/",
@@ -559,7 +572,7 @@ RenConsole::RenConsole (QWidget * parent) :
             "%autocomplete.reb"
         },
 
-        *helpersContext
+        helpersRef
     );
 
     // The shell relies on the helpers, so we couldn't initialize it until

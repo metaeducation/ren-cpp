@@ -298,7 +298,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     Init_Core_Ext(); // adds to a table used by RL_Start, must be called before
 
     // Needed to run the SYS_START function
-    int err_num = RL_Start(0, 0, NULL, 0, 0);
+    int err_num = RL_START(0, 0, NULL, 0, 0);
 
     GC_Active = TRUE; // Turn on GC
 
