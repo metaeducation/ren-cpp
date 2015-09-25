@@ -152,7 +152,11 @@ public:
 
         PUSH_UNHALTABLE_TRAP(&error, &state);
 
-        bool applying = false;
+        // longjmp could "clobber" this variable if it were not volatile, and
+        // code inside of the `if (error)` depends on possible modification
+        // between the setjmp (PUSH_UNHALTABLE_TRAP) and the longjmp
+        volatile bool applying = false;
+
         bool is_aggregate_managed = false;
         REBSER * aggregate = Make_Array(numLoadables * 2);
 
