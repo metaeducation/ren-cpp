@@ -27,10 +27,10 @@
 
 #include <QTabWidget>
 #include <QMutex>
-#include <QThread>
 
 #include "rencpp/ren.hpp"
 
+#include "evaluator.h"
 #include "replpad.h"
 #include "renshell.h"
 #include "renpackage.h"
@@ -44,7 +44,7 @@ class RenConsole :
     Q_OBJECT
 
 public:
-    RenConsole (QWidget * parent = nullptr);
+    RenConsole (EvaluatorWorker * worker, QWidget * parent = nullptr);
     ~RenConsole () override;
 
 private:
@@ -116,7 +116,6 @@ protected:
 
 private:
     ReplPad * evaluatingRepl;
-    QThread workerThread;
     NulOStream nulOstream;
 
 private:

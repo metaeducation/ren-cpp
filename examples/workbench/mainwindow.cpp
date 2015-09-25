@@ -36,6 +36,9 @@ MainWindow::MainWindow() :
     fading (false),
     fadeTimer (nullptr)
 {
+    setWindowTitle(tr("Ren Garden"));
+    setUnifiedTitleAndToolBarOnMac(true);
+
     // Registration of ren::Value to allow them to be proxied across threads as
     // parameters to Qt signals and slots.  See notes here on the importance
     // of being consistent about using namespaces, as it is string based:
@@ -48,8 +51,46 @@ MainWindow::MainWindow() :
 
     qRegisterMetaType<ren::Value>("ren::Value");
 
+    // Rebol's design is not multithreaded, and features have not been vetted
+    // to work in a multithreaded environment...even if both are taking turns
+    // calling the evaluator from the top-level.  While that works fine for
+    // general expressions, if something calls out and makes a network
+    // call on one thread--the other may not be able to pick it up.
+    //
+    // For this reason, even though currently some Ren Garden features will
+    // make calls from the GUI...we want to be sure that initialization
+    // is done on the thread we will ultimately use as a worker.
 
-    console = new RenConsole;
+    worker = new EvaluatorWorker;
+    worker->moveToThread(&workerThread);
+    connect(
+        &workerThread, &QThread::finished,
+        worker, &QObject::deleteLater,
+        Qt::DirectConnection
+    );
+    connect(
+        this, &MainWindow::initializeEvaluator,
+        worker, &EvaluatorWorker::initialize,
+        Qt::QueuedConnection
+    );
+    connect(
+        worker, &EvaluatorWorker::initializeDone,
+        this, &MainWindow::finishInitializing,
+        Qt::QueuedConnection
+    );
+    workerThread.start();
+
+    // Don't run any code that might use Ren/C++ values until we've given the
+    // evaluator thread dibs on potentially thread-sensitive initialization
+
+    emit initializeEvaluator();
+
+    // Note: MainWindow is still invisible at this point
+}
+
+
+void MainWindow::finishInitializing() {
+    console = new RenConsole (worker);
     setCentralWidget(console);
     console->show();
 
@@ -109,8 +150,6 @@ MainWindow::MainWindow() :
     addDockWidget(Qt::TopDockWidgetArea, dockValueExplorer);
     dockValueExplorer->hide();
 
-    readSettings();
-
     createActions();
     createMenus();
     createStatusBar();
@@ -141,8 +180,9 @@ MainWindow::MainWindow() :
         Qt::DirectConnection
     );
 
-    setWindowTitle(tr("Ren Garden"));
-    setUnifiedTitleAndToolBarOnMac(true);
+    readSettings();
+
+    show();
 }
 
 
@@ -482,4 +522,21 @@ void MainWindow::onShowDockRequested(WatchList * watchList) {
 void MainWindow::onHideDockRequested(WatchList * watchList) {
     dockWatch->setWidget(watchList);
     dockWatch->hide();
+}
+
+
+MainWindow::~MainWindow() {
+    workerThread.quit();
+    if ((not workerThread.wait(1000)) and (not forcingQuit)) {
+        // How to print to console about quitting
+        QMessageBox::information(
+            nullptr,
+            "Ren Garden Terminated Abnormally",
+            "A cancel request was sent to the evaluator but the thread it was"
+            " running didn't exit in a timely manner.  This should not happen,"
+            " so if you can remember what you were doing or reproduce it then"
+            " please report it on the issue tracker!"
+        );
+        exit(1337); // !!! What exit codes will Ren Garden use?
+    }
 }

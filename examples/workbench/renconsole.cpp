@@ -35,154 +35,9 @@ using namespace ren;
 #include "fakestdio.h"
 #include "watchlist.h"
 #include "renpackage.h"
+#include "evaluator.h"
 
 extern bool forcingQuit;
-
-
-//
-// WORKER OBJECT FOR HANDLING REN EVALUATIONS
-//
-
-//
-// We push this item to the worker thread and let it do the actual evaluation
-// while we keep monitoring the GUI for an interrupt
-//
-// http://doc.qt.io/qt-5/qthread.html#details
-//
-// Ultimately it should be the case that the GUI never calls an "open coded"
-// arbitrary evaluation of user code in the runtime.  Short things
-// might be okay if you are *certain* the evaluator is not currently running.
-//
-
-class EvaluatorWorker : public QObject
-{
-    Q_OBJECT
-
-public slots:
-    void doWork(
-        ren::Value const & dialectValue,
-        ren::Value const & contextValue,
-        QString const & input,
-        bool meta
-    ) {
-        // See notes on MainWindow about qRegisterMetaType about why dialect
-        // and context are passed as ren::Value instead of ren::Function and
-        // ren::Context (also why it needs the ren:: prefix for slots)
-
-        Function dialect = static_cast<Function>(dialectValue);
-        Context context = static_cast<Context>(contextValue);
-
-        Value result;
-        bool success = false;
-
-        try {
-            // We *always* generate a block to pass to the dialect.  This
-            // is Ren Garden, not "arbitrary shell"... so if you want to
-            // pass an arbitrary string you must type it in as {49+3hfa} in
-            // a properly loadable string.
-
-            auto loaded = context.create<Block>(input.toUtf8().constData());
-
-            if (meta) {
-                if (not runtime("find words-of quote", dialect, "/meta"))
-                    throw Error {"current dialect has no /meta refinement"};
-
-                result = context(Path {dialect, "meta"}, loaded);
-            }
-            else
-                result = context(dialect, loaded);
-
-            success = true;
-        }
-        catch (evaluation_throw const & t) {
-            if (t.name().isWord()) {
-                Word word = static_cast<Word>(t.name());
-                if (word.hasSpelling("exit") || word.hasSpelling("quit")) {
-                    // A programmatic request to quit the system (e.g. QUIT).
-                    // Might be interesting to have some UI to configure it
-                    // not actually exiting the whole GUI app, if you don't
-                    // want it to:
-                    //
-                    // https://github.com/metaeducation/ren-garden/issues/17
-
-                    if (t.value().isUnset() || t.value().isNone()) {
-                        qApp->exit(0);
-                    }
-                    else if (t.value().isInteger()) {
-                        qApp->exit(static_cast<Integer>(t.value()));
-                    }
-                    else {
-                        // Do whatever Rebol does...
-                        qApp->exit(1);
-                    }
-
-                    // We have submitted our quit message but will have to
-                    // get back to the message pump... go ahead and return
-                    // none...
-                    result = none;
-                    success = true;
-                }
-            }
-
-            if (!success) {
-                std::string message = std::string("No CATCH for: ") + t.what();
-                result = Error {message.c_str()};
-            }
-        }
-        catch (load_error const & e) {
-            // Syntax errors which would trip up RenCpp even if no runtime was
-            // loaded, so things like `runtime("print {Foo");`
-
-            result = e.error();
-        }
-        catch (evaluation_error const & e) {
-            // Evaluation errors, like `first 100`
-
-            result = e.error();
-        }
-        catch (evaluation_halt const & e) {
-            // Cancellation as with hitting the escape key during an infinite
-            // loop.  (Such requests must originate from the GUI thread.)
-            // Let returning none for the error mean cancellation.
-
-            result = none;
-        }
-        catch (std::exception const & e) {
-            QMessageBox::information(
-                nullptr,
-                e.what(),
-                "A C++ std::exception was thrown during evaluation.  That"
-                " means that somewhere in the chain a function was"
-                " called that was implemented as a C++ extension that"
-                " threw it.  We're gracefully catching it and not crashing,"
-                " BUT please report the issue to the bug tracker.  (Unless"
-                " you're extending Ren Garden and it's your bug, in which"
-                " case...fix it yourself!  :-P)"
-            );
-        }
-        catch (...) {
-            QMessageBox::information(
-                nullptr,
-                "Mystery C++ datatype thrown",
-                "A C++ exception was thrown during evaluation, which was *not*"
-                " derived from std::exception.  This is considered poor"
-                " practice...you're not supposed to write things like"
-                " `throw 10;`.  Because it doesn't have a what() method we"
-                " can't tell you much about what went wrong.  We're gracefully"
-                " catching it and not crashing...but please report this!"
-            );
-        }
-
-        emit resultReady(success, result);
-    }
-
-signals:
-    void resultReady(
-        bool success,
-        ren::Value const & result // namespace ren:: needed for signal!
-    );
-};
-
 
 
 //
@@ -196,7 +51,7 @@ signals:
 // (such as a QWebView) for the UI.
 //
 
-RenConsole::RenConsole (QWidget * parent) :
+RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     QTabWidget (parent),
     helpersContext (),
     userContext (static_cast<Context>(runtime("system/contexts/user"))),
@@ -214,13 +69,6 @@ RenConsole::RenConsole (QWidget * parent) :
     //
     //   http://doc.qt.io/qt-5/qthread.html#details
 
-    EvaluatorWorker * worker = new EvaluatorWorker;
-    worker->moveToThread(&workerThread);
-    connect(
-        &workerThread, &QThread::finished,
-        worker, &QObject::deleteLater,
-        Qt::DirectConnection
-    );
     connect(
         this, &RenConsole::operate,
         worker, &EvaluatorWorker::doWork,
@@ -234,8 +82,6 @@ RenConsole::RenConsole (QWidget * parent) :
         // make it look like it's working.
         Qt::QueuedConnection
     );
-    workerThread.start();
-
 
     // Define the console dialect.  Debugging in lambdas is not so good in
     // GDB right now, as it won't show locals if the lambda is in a
@@ -1152,19 +998,6 @@ std::pair<QString, int> RenConsole::autoComplete(
 
 RenConsole::~RenConsole() {
     runtime.cancel();
-    workerThread.quit();
-    if ((not workerThread.wait(1000)) and (not forcingQuit)) {
-        // How to print to console about quitting
-        QMessageBox::information(
-            nullptr,
-            "Ren Garden Terminated Abnormally",
-            "A cancel request was sent to the evaluator but the thread it was"
-            " running didn't exit in a timely manner.  This should not happen,"
-            " so if you can remember what you were doing or reproduce it then"
-            " please report it on the issue tracker!"
-        );
-        exit(1337); // !!! What exit codes will Ren Garden use?
-    }
 }
 
 
@@ -1175,10 +1008,3 @@ void RenConsole::setUseProposals(bool useProposals) {
     command += useProposals ? "proposals" : "user";
     getTabInfo(repl()).context(command.c_str());
 }
-
-
-
-// This bit is necessary because we're defining a Q_OBJECT class in a .cpp
-// file instead of a header file (Worker)
-
-#include "renconsole.moc"

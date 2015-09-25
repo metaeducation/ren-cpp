@@ -24,6 +24,9 @@
 
 
 #include <QMainWindow>
+#include <QThread>
+
+#include "evaluator.h"
 
 class RenConsole;
 class WatchList;
@@ -40,6 +43,7 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow();
+    ~MainWindow();
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -68,6 +72,8 @@ private:
     qreal opacity;
     bool fading;
     QTimer * fadeTimer;
+
+    EvaluatorWorker *worker;
 
     void onFadeOutToQuit(bool active);
 
@@ -111,9 +117,17 @@ private:
     QMenu * helpMenu;
     QAction * aboutAct;
 
+private:
+    QThread workerThread;
+
 private slots:
     void onShowDockRequested(WatchList * watchList);
     void onHideDockRequested(WatchList * watchList);
+
+    void finishInitializing();
+
+signals:
+    void initializeEvaluator();
 };
 
 #endif

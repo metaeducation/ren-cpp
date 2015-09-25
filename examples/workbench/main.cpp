@@ -129,6 +129,7 @@ int main_core(int argc, char *argv[]);
 #include <memory>
 #include <vector>
 #include <windows.h>
+#include <shellapi.h>
 
 //
 // http://stackoverflow.com/a/9555595/211160
@@ -298,6 +299,9 @@ void PreQApplicationInitForPacking() {
 
 #endif
 
+#include "rencpp/ren.hpp"
+using namespace ren;
+
 int main_core(int argc, char *argv[])
 {
     // Sometimes you use Q_INIT_RESOURCE, don't think it's applicable ATM
@@ -332,7 +336,12 @@ int main_core(int argc, char *argv[])
     app.installTranslator(&rengardenTranslator);
 
     MainWindow mainWin;
-    mainWin.show();
+    // We do not call `mainWin.show()` immediately because we need to start
+    // the evaluator thread, then once the evaluator has been initialized
+    // on the worker (and has first dibs for thread affinity purposes) we
+    // can apply the configuration settings to the GUI-thread widgets that
+    // also use Ren/C++
+
     return app.exec();
 }
 

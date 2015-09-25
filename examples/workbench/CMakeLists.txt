@@ -99,6 +99,7 @@ add_executable(
     mainwindow.cpp
     replpad.cpp
     fakestdio.cpp
+    evaluator.cpp
     renconsole.cpp
     watchlist.cpp
     renshell.cpp
@@ -110,6 +111,7 @@ add_executable(
     # the file browser
 
     mainwindow.h
+    evaluator.h
     renconsole.h
     replpad.h
     fakestdio.h
