@@ -15,10 +15,13 @@ extern "C" {
 
 #ifdef TO_WINDOWS
     #include <windows.h>
-    // The objects file from Rebol linked into RenCpp need a
-    // variable named App_Instance for the linkage to work when
-    // built for Windows. Therefore, we provided this variable
-    // here. It does not serve any other purpose.
+
+	// The object files from Rebol linked into Ren/C++ need a variable named
+	// App_Instance when built for Windows.  This is used by the host code
+	// to create an invisible HWND which handles events via its message
+	// queue.  We thus have to initialize it if we want things like devices
+	// and http/https to work, so we use GetModuleHandle(NULL).
+	//
     HINSTANCE App_Instance = 0;
 #endif
 
@@ -257,12 +260,15 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     if (initialized)
         return false;
 
-    #ifdef OS_STACK_GROWS_UP
-        Stack_Limit = static_cast<void*>(-1);
-    #else
-        Stack_Limit = 0;
-    #endif
+#ifdef OS_STACK_GROWS_UP
+	Stack_Limit = static_cast<void*>(-1);
+#else
+	Stack_Limit = 0;
+#endif
 
+#ifdef TO_WINDOWS
+	App_Instance = GetModuleHandle(NULL);
+#endif
 
     // Parse_Args has a memory leak; it uses OS_Get_Current_Dir which
     // mallocs a string which is never freed.  We hold onto the REBARGS
