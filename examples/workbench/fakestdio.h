@@ -1,5 +1,5 @@
-#ifndef FAKESTDIO_H
-#define FAKESTDIO_H
+#ifndef RENGARDEN_FAKESTDIO_H
+#define RENGARDEN_FAKESTDIO_H
 
 //
 // fakestdio.h

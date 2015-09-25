@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef RENGARDEN_MAINWINDOW_H
+#define RENGARDEN_MAINWINDOW_H
 
 //
 // mainwindow.h

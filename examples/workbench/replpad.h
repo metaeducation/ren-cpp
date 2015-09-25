@@ -1,5 +1,5 @@
-#ifndef REPLPAD_H
-#define REPLPAD_H
+#ifndef RENGARDEN_REPLPAD_H
+#define RENGARDEN_REPLPAD_H
 
 //
 // replpad.h

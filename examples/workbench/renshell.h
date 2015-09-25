@@ -1,5 +1,5 @@
-#ifndef RENSHELL_H
-#define RENSHELL_H
+#ifndef RENGARDEN_RENSHELL_H
+#define RENGARDEN_RENSHELL_H
 
 //
 // renshell.h

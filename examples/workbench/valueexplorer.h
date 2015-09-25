@@ -1,5 +1,5 @@
-#ifndef VALUEEXPLORER_H
-#define VALUEEXPLORER_H
+#ifndef RENGARDEN_VALUEEXPLORER_H
+#define RENGARDEN_VALUEEXPLORER_H
 
 //
 // valueexplorer.h

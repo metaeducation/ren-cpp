@@ -1,5 +1,8 @@
+#ifndef RENGARDEN_RENCONSOLE_H
+#define RENGARDEN_RENCONSOLE_H
+
 //
-// renconsole.cpp
+// renconsole.h
 // This file is part of Ren Garden
 // Copyright (C) 2015 MetÆducation
 //
@@ -18,9 +21,6 @@
 //
 // See http://ren-garden.metaeducation.com for more information on this project
 //
-
-#ifndef RENCONSOLE_H
-#define RENCONSOLE_H
 
 #include <memory>
 #include <unordered_map>

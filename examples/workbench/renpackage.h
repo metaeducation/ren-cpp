@@ -1,3 +1,6 @@
+#ifndef RENGARDEN_RENPACKAGE_H
+#define RENGARDEN_RENPACKAGE_H
+
 //
 // renpackage.h
 // This file is part of Ren Garden
@@ -18,9 +21,6 @@
 //
 // See http://ren-garden.metaeducation.com for more information on this project
 //
-
-#ifndef RENPACKAGE_H
-#define RENPACKAGE_H
 
 #include <QtNetwork/QNetworkAccessManager>
 

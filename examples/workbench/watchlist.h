@@ -1,5 +1,5 @@
-#ifndef WATCHLIST_H
-#define WATCHLIST_H
+#ifndef RENGARDEN_WATCHLIST_H
+#define RENGARDEN_WATCHLIST_H
 
 //
 // watchlist.h
