@@ -188,10 +188,10 @@ template <class T> inline constexpr typename std::remove_reference<T>::type&& co
 # define TR2_OPTIONAL_ASSERTED_EXPRESSION(CHECK, EXPR) (EXPR)
 #else
 # define TR2_OPTIONAL_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
-  inline void fail(const char* expr, const char* file, unsigned line)
+  inline void fail(const char* expr, const char* file, int line)
   {
   # if defined __clang__ || defined __GNU_LIBRARY__
-    __assert(expr, file, line);
+	__assert(expr, file, line);
   # elif defined __GNUC__
     _assert(expr, file, line);
   # else

@@ -68,13 +68,49 @@
 
 
 //
-// COMPILE-TIME INTEGER SEQUENCES
+// STD::OPTIONAL or STD::EXPERIMENTAL::OPTIONAL replacement
 //
+// Ren/C++ was conceived to run on C++11 compilers.  During its development,
+// the "UNSET!" Rebol type was altered from being an ordinary value type to
+// a transitional mechanic.  It no longer could be held in places like blocks,
+// so for instance `[10 20 #[unset!]]` would be illegal.
+//
+// Conceptually this made it somewhat suggest that what had been "UNSET!"
+// was now a bit like the disengaged state of a `std::optional<Value>`.  Yet
+// `std::optional` is not in C++11, was delayed from being included in C++14,
+// and pushed off to C++17.
+//
+// To deal with the lack of ubiquitous availability of an approved optional
+// implementation, Ren/C++ uses `ren::optional`.  The %include/ directory
+// of the distribution contains a copy of the draft spec from the committee
+// obtained from:
+//
+//    https://github.com/akrzemi1/Optional
+//
+// When the time is right (or if someone's purposes require it sooner),
+// `ren::optional` can be re-using'd as `std::optional` and it should work.
+//
+
+#include "optional/optional.hpp"
+
+namespace ren {
+    template<typename T>
+    using optional = std::experimental::optional<T>;
+
+    constexpr std::experimental::nullopt_t nullopt{
+        std::experimental::nullopt_t::init{}
+    };
+}
+
 
 
 namespace ren {
 
 namespace utility {
+
+//
+// COMPILE-TIME INTEGER SEQUENCES
+//
 
 template <std::size_t... Ind>
 struct indices {};

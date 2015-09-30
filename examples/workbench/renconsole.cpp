@@ -21,10 +21,6 @@
 
 #include <vector>
 
-#include "optional/optional.hpp"
-using std::experimental::optional;
-using std::experimental::nullopt;
-
 #include <QtWidgets>
 
 #include "rencpp/ren.hpp"
