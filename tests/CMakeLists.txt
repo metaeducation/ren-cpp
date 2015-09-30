@@ -1,6 +1,6 @@
 # This is an input file for the CMake makefile generator
 
-# See notes in root directory, where this is added via add_subdirectory
+# See notes in root directory, where this is added via `add_subdirectory()`
 
 
 #
@@ -17,14 +17,13 @@
 include_directories(${CATCH_INCLUDE_DIR})
 
 # These rigid warnings are too strict for building with Catch.
-remove_cxx_flag("-Wctor-dtor-privacy")
-remove_cxx_flag("-Wredundant-decls")
-remove_cxx_flag("-Wswitch-default")
+
+try_remove_cxx_flag("-Wctor-dtor-privacy")
+try_remove_cxx_flag("-Wredundant-decls")
+try_remove_cxx_flag("-Wswitch-default")
 
 
-#
 # These tests do not require an evaluator, and simply test Ren values
-#
 
 set(
     VALUE_TESTS
@@ -39,12 +38,10 @@ set(
     iterator-test.cpp
 )
 
-#
+
 # These tests should work with any evaluator, assuming there is one
-#
 
 if(DEFINED RUNTIME)
-
     set(
         EVALUATOR_TESTS
 
@@ -52,14 +49,11 @@ if(DEFINED RUNTIME)
         context-test.cpp
         function-test.cpp
     )
-
 endif()
 
 
-#
 # These tests can call methods on the runtime object that are specific to
 # the evaluator in use.
-#
 
 if(RUNTIME STREQUAL "red")
 
@@ -72,9 +66,7 @@ elseif(RUNTIME STREQUAL "rebol")
 endif()
 
 
-#
 # Make one big executable...
-#
 
 add_executable(
     test-rencpp
