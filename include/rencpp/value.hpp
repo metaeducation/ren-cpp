@@ -490,7 +490,7 @@ public:
 public:
     bool isBlock(RenCell * = nullptr) const;
 
-    bool isParen(RenCell * = nullptr) const;
+	bool isGroup(RenCell * = nullptr) const;
 
     bool isPath(RenCell * = nullptr) const;
 

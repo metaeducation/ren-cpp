@@ -229,6 +229,10 @@ public:
 };
 
 
+// REFINEMENT! is targeted for being subsumed into PATH!, with an optimization
+// that allows for 1-element paths to fit inside a REBSER with no data
+// allocation.  They look like paths and should act like them!
+
 class Refinement : public internal::AnyWord_<Refinement, &Value::isRefinement>
 {
 public:

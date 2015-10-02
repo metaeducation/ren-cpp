@@ -186,11 +186,11 @@ public:
 };
 
 
-class Paren : public internal::AnyArray_<Paren, &Value::isParen>
+class Group : public internal::AnyArray_<Group, &Value::isGroup>
 {
 public:
     friend class Value;
-    using internal::AnyArray_<Paren, &Value::isParen>::AnyArray_;
+	using internal::AnyArray_<Group, &Value::isGroup>::AnyArray_;
 };
 
 

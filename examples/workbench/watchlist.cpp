@@ -429,7 +429,7 @@ optional<Value> WatchList::watchDialect(
     // Because there's no use adding it to the watch list if it will
     // never be evaluated again (a regular watch may become good...)
 
-    if (arg.isWord() or arg.isPath() or arg.isParen()) {
+	if (arg.isWord() or arg.isPath() or arg.isGroup()) {
 
         Watcher * watcherUnique = new Watcher {arg, recalculates, label};
 

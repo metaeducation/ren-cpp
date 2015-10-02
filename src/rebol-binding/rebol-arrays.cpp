@@ -20,7 +20,7 @@ bool Value::isBlock(REBVAL * init) const {
     return IS_BLOCK(&cell);
 }
 
-bool Value::isParen(REBVAL * init) const {
+bool Value::isGroup(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_PAREN);
         return true;

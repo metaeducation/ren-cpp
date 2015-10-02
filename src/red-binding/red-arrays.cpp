@@ -22,7 +22,7 @@ bool Value::isBlock(RedCell * init) const {
 }
 
 
-bool Value::isParen(RedCell * init) const {
+bool Value::isGroup(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_PAREN;
         return true;
