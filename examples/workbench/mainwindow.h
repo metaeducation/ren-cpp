@@ -126,6 +126,8 @@ private slots:
 
     void finishInitializing();
 
+    void cppExceptionNotice(char const * what);
+
 signals:
     void initializeEvaluator();
 };

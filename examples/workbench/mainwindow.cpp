@@ -78,6 +78,11 @@ MainWindow::MainWindow() :
         this, &MainWindow::finishInitializing,
         Qt::QueuedConnection
     );
+    connect(
+        worker, &EvaluatorWorker::caughtNonRebolException,
+        this, &MainWindow::cppExceptionNotice,
+        Qt::QueuedConnection
+    );
     workerThread.start();
 
     // Don't run any code that might use Ren/C++ values until we've given the
@@ -522,6 +527,35 @@ void MainWindow::onShowDockRequested(WatchList * watchList) {
 void MainWindow::onHideDockRequested(WatchList * watchList) {
     dockWatch->setWidget(watchList);
     dockWatch->hide();
+}
+
+
+void MainWindow::cppExceptionNotice(char const * what) {
+    if (what) {
+        QMessageBox::information(
+            nullptr,
+            what,
+            "A C++ std::exception was thrown during evaluation.  That"
+            " means that somewhere in the chain a function was"
+            " called that was implemented as a C++ extension that"
+            " threw it.  We're gracefully catching it and not crashing,"
+            " BUT please report the issue to the bug tracker.  (Unless"
+            " you're extending Ren Garden and it's your bug, in which"
+            " case...fix it yourself!  :-P)"
+        );
+    }
+    else {
+        QMessageBox::information(
+            nullptr,
+            "Mystery C++ datatype thrown",
+            "A C++ exception was thrown during evaluation, which was *not*"
+            " derived from std::exception.  This is considered poor"
+            " practice...you're not supposed to write things like"
+            " `throw 10;`.  Because it doesn't have a what() method we"
+            " can't tell you much about what went wrong.  We're gracefully"
+            " catching it and not crashing...but please report this!"
+        );
+    }
 }
 
 

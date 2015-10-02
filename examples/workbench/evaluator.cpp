@@ -128,29 +128,17 @@ void EvaluatorWorker::doWork(
         result = none;
     }
     catch (std::exception const & e) {
-        QMessageBox::information(
-            nullptr,
-            e.what(),
-            "A C++ std::exception was thrown during evaluation.  That"
-            " means that somewhere in the chain a function was"
-            " called that was implemented as a C++ extension that"
-            " threw it.  We're gracefully catching it and not crashing,"
-            " BUT please report the issue to the bug tracker.  (Unless"
-            " you're extending Ren Garden and it's your bug, in which"
-            " case...fix it yourself!  :-P)"
-        );
+        const char * what = e.what();
+        emit caughtNonRebolException(what);
+
+        // !!! MainWindow will show a dialog box.  Should we make up an error?
+        result = nullopt;
     }
     catch (...) {
-        QMessageBox::information(
-            nullptr,
-            "Mystery C++ datatype thrown",
-            "A C++ exception was thrown during evaluation, which was *not*"
-            " derived from std::exception.  This is considered poor"
-            " practice...you're not supposed to write things like"
-            " `throw 10;`.  Because it doesn't have a what() method we"
-            " can't tell you much about what went wrong.  We're gracefully"
-            " catching it and not crashing...but please report this!"
-        );
+        // !!! MainWindow will show a dialog box.  Should we make up an error?
+        result = nullopt;
+
+        emit caughtNonRebolException(nullptr);
     }
 
     emit resultReady(success, result);

@@ -71,6 +71,8 @@ signals:
     );
 
     void initializeDone();
+
+    void caughtNonRebolException(char const * what);
 };
 
 #endif
