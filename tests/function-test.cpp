@@ -42,5 +42,5 @@ TEST_CASE("function test", "[rebol] [function]")
     //     http://stackoverflow.com/questions/27641809/
     //
 
-    CHECK(static_cast<Integer>(runtime("10 +", addFive, 100)) == 115);
+    CHECK(static_cast<Integer>(*runtime("10 +", addFive, 100)) == 115);
 }

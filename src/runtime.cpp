@@ -22,7 +22,7 @@
 
 namespace ren {
 
-Value Runtime::evaluate(
+optional<Value> Runtime::evaluate(
     internal::Loadable const loadables[],
     size_t numLoadables,
     Context const * contextPtr,
@@ -32,7 +32,7 @@ Value Runtime::evaluate(
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
-    Value::constructOrApplyInitialize(
+    if (Value::constructOrApplyInitialize(
         context.getEngine(),
         &context,
         nullptr, // no applicand
@@ -40,9 +40,11 @@ Value Runtime::evaluate(
         numLoadables,
         nullptr, // don't construct
         &result // do apply
-    );
+    )) {
+        return result;
+    }
 
-    return result;
+    return nullopt;
 }
 
 }

@@ -50,12 +50,11 @@ extern bool forcingQuit;
 RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     QTabWidget (parent),
     helpersContext (),
-    userContext (static_cast<Context>(runtime("system/contexts/user"))),
-    libContext (static_cast<Context>(runtime("system/contexts/lib"))),
+    userContext (static_cast<Context>(*runtime("system/contexts/user"))),
+    libContext (static_cast<Context>(*runtime("system/contexts/lib"))),
     shell (),
     bannerPrinted (false),
     evaluatingRepl (nullptr),
-    target (none),
     proposalsContext (), // we will copy it from userContext when ready...
     useProposals (true)
 {
@@ -91,7 +90,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
         REN_STD_FUNCTION,
 
-        [this](Value const & arg, Value const & meta) -> Value
+        [this](Value const & arg, Value const & meta) -> optional<Value>
         {
             if (not meta) {
                 // the case that the unmodified CONSOLE make *some* exceptions
@@ -108,7 +107,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // refinement and a parameter of 'banner.
 
                 if (arg.isFunction()) {
-                    Value wordsOf = runtime("words-of quote", arg);
+                    Value wordsOf = *runtime("words-of quote", arg);
 
                     Block blk = static_cast<Block>(wordsOf);
 
@@ -135,7 +134,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                     getTabInfo(repl()).dialect = static_cast<Function>(arg);
 
-                    return unset;
+                    return nullopt;
                 }
 
                 // Passing in an object means it will use that object as the
@@ -143,7 +142,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                 if (arg.isContext()) {
                     getTabInfo(repl()).context = static_cast<Context>(arg);
-                    return unset;
+                    return nullopt;
                 }
 
                 // Passing a string and having it set the status bar is not
@@ -152,7 +151,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                 if (arg.isString()) {
                     emit reportStatus(to_QString(arg));
-                    return unset;
+                    return nullopt;
                 }
 
                 // Displaying images is not something stdin/stdout is suited
@@ -161,7 +160,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                 if (arg.isImage()) {
                     repl().appendImage(static_cast<Image>(arg), true);
-                    return unset;
+                    return nullopt;
                 }
 
                 throw Error {"More CONSOLE features soon!"};
@@ -175,7 +174,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     if (not bannerPrinted) {
                         printBanner();
                         bannerPrinted = true;
-                        return none;
+                        return {none};
                     }
                 }
 
@@ -183,15 +182,15 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // do not support, so don't raise an error if you don't
                 // know what it is... just return none.
 
-                return none;
+                return {none};
             }
 
             if (arg.isBlock()) {
                 auto blk = static_cast<Block>(arg);
 
                 if (blk[1].isEqualTo<Word>("target")) {
-                    target = blk[2].apply();
-                    return unset;
+                    target = static_cast<AnyString>(*blk[2].apply());
+                    return nullopt;
                 }
 
                 if (blk[1].isEqualTo<Word>("buffer")) {
@@ -200,7 +199,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     // location of the anchor point for the desired selection
                     // and the location of the end point
 
-                    auto triple = static_cast<Block>((*helpersContext)(
+                    auto triple = static_cast<Block>(*(*helpersContext)(
                         "console-buffer-helper", blk[2]
                     ));
 
@@ -211,13 +210,13 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     pendingPosition = static_cast<Integer>(triple[2]) - 1;
                     pendingAnchor = static_cast<Integer>(triple[3]) - 1;
 
-                    return unset;
+                    return nullopt;
                 }
 
                 if (blk[1].isEqualTo<Word>("tab")) {
                     if (blk[2].isTag()) {
                         getTabInfo(repl()).label = static_cast<Tag>(blk[2]);
-                        return unset;
+                        return nullopt;
                     }
                 }
 
@@ -253,7 +252,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
         REN_STD_FUNCTION,
 
-        [this](Value const & arg, Value const & useResult) -> Value {
+        [this](Value const & arg, Value const & useResult) -> optional<Value> {
 
             WatchList & watchList = *getTabInfo(repl()).watchList;
 
@@ -284,13 +283,13 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     // and x gets added as a watch where both undefined,
                     // but y doesn't?
 
-                    Value watchResult
+                    optional<Value> watchResult
                         = watchList.watchDialect(
                             item, nextRecalculates, nextLabel
                         );
                     nextRecalculates = true;
                     nextLabel = nullopt;
-                    if (not watchResult.isUnset())
+                    if (watchResult != nullopt)
                         runtime("append", aggregate, watchResult);
                 }
             }
@@ -753,7 +752,7 @@ QString RenConsole::getPromptString(ReplPad & pad) {
     auto dialect = getTabInfo(pad).dialect;
 
     if (runtime("find words-of quote", dialect, "/meta"))
-        customPrompt = to_QString(runtime(
+        customPrompt = to_QString(*runtime(
             Path {dialect, "meta"}, LitWord {"prompt"}
         ));
     else
@@ -775,7 +774,7 @@ QString RenConsole::getPromptString(ReplPad & pad) {
 
 void RenConsole::handleResults(
     bool success,
-    Value const & result
+    optional<Value> const & result
 ) {
     assert(evaluatingRepl);
 
@@ -795,12 +794,12 @@ void RenConsole::handleResults(
         // that error is unset then assume a cancellation).  Formed errors
         // have an implicit newline on the end implicitly
 
-        if (result)
-            evaluatingRepl->appendText(to_QString(result));
-        else
+        if (result == nullopt)
             evaluatingRepl->appendText("[Escape]\n");
+        else
+            evaluatingRepl->appendText(to_QString(*result));
     }
-    else if (not result.isUnset()) {
+    else if (result != nullopt) {
         // If we evaluated and it wasn't unset, print an eval result ==
 
         evaluatingRepl->pushFormat(repl().promptFormatNormal);
@@ -813,16 +812,16 @@ void RenConsole::handleResults(
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
-        if (result.isFunction()) {
+        if (result->isFunction()) {
             evaluatingRepl->appendText("#[function! (");
             evaluatingRepl->appendText(
-                to_QString(runtime("words-of quote", result))
+                to_QString(*runtime("words-of quote", result))
             );
             evaluatingRepl->appendText(") [...]]");
         }
         else {
             evaluatingRepl->appendText(
-                to_QString(runtime("mold/all quote", result))
+                to_QString(*runtime("mold/all quote", result))
             );
         }
 
@@ -945,7 +944,7 @@ std::pair<QString, int> RenConsole::autoComplete(
     optional<Block> completion;
 
     try {
-        completion = static_cast<Block>((*helpersContext)(
+        completion = static_cast<Block>(*(*helpersContext)(
             backward
                 ? "autocomplete-helper/backward"
                 : "autocomplete-helper",
@@ -957,7 +956,7 @@ std::pair<QString, int> RenConsole::autoComplete(
         // We send even if it's unset, to clear the panel.  Is that a
         // good idea or not?
 
-        emit exploreValue((*proposalsContext)(":help"), (*completion)[3]);
+        emit exploreValue(*(*proposalsContext)(":help"), (*completion)[3]);
 
         return std::pair<QString, int> {
             static_cast<String>((*completion)[1]),

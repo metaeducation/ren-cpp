@@ -152,7 +152,7 @@ public:
     }
 
 public:
-    static Value evaluate(
+    static optional<Value> evaluate(
         std::initializer_list<internal::BlockLoadable<Block>> loadables,
         Engine & engine
     );

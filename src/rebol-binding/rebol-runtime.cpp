@@ -61,7 +61,8 @@ RenResult Generalized_Apply(
             TAKE_THROWN_ARG(extraOut, out);
 			return REN_APPLY_THREW;
 		}
-		return REN_SUCCESS;
+        // May be REB_UNSET (optional<> signaled by tryFinishInit)
+        return REN_SUCCESS;
     }
 
 	if (IS_ERROR(applicand)) {
@@ -106,7 +107,8 @@ RenResult Generalized_Apply(
 			return REN_APPLY_THREW;
 		}
 
-		return REN_SUCCESS;
+        // May be REB_UNSET (optional<> signaled by tryFinishInit)
+        return REN_SUCCESS;
     }
 
 	// Just put the value at the head of a DO chain...
@@ -153,6 +155,7 @@ RenResult Generalized_Apply(
 
 	Remove_Series(args, 0, 1);
 
+    // May be REB_UNSET (optional<> signaled by tryFinishInit)
     return REN_SUCCESS;
 }
 

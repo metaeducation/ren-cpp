@@ -13,13 +13,13 @@ TEST_CASE("literals construction", "[rebol] [literals]")
     SECTION("default")
     {
         Value value;
-        CHECK(value.isUnset());
+        CHECK(value.isNone());
     }
 
-    SECTION("unset")
+    SECTION("none")
     {
-        Value value = unset;
-        CHECK(value.isUnset());
+        Value value = none;
+        CHECK(value.isNone());
     }
 
     SECTION("logic")

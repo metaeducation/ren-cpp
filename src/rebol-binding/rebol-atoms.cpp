@@ -22,27 +22,6 @@ bool Value::isAtom() const {
 }
 
 
-//
-// UNSET
-//
-
-bool Value::isUnset() const {
-    return IS_UNSET(&cell);
-}
-
-Value::Value (unset_t, Engine * engine) noexcept :
-    Value (Dont::Initialize)
-{
-    SET_UNSET(&cell);
-
-    // !!! Should some types not need an engine field?
-    if (not engine)
-        engine = &Engine::runFinder();
-
-    finishInit(engine->getHandle());
-}
-
-
 
 //
 // NONE

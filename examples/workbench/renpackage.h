@@ -55,7 +55,7 @@ public:
         QString rcPrefix,
         QString urlPrefix,
         ren::Block const & spec,
-        std::experimental::optional<ren::Context> context
+		ren::optional<ren::Context> context
     );
 
     virtual ~RenPackage ();
@@ -71,7 +71,7 @@ private slots:
 
 private:
     // If data-only, the loaded data for each file, which can be indexed
-    std::experimental::optional<ren::Block> data;
+	ren::optional<ren::Block> data;
 public:
     ren::Value getData(ren::Filename const & filename) const {
         return (*data)[filename];

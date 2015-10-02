@@ -23,7 +23,7 @@ int main(int, char **) {
         "to end"
     };
 
-    auto result = runtime("parse", data, rule);
+    auto result = static_cast<Logic>(*runtime("parse", data, rule));
 
     if (result)
         std::cout << "Success and target was " << variable() << "\n";

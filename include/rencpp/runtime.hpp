@@ -57,7 +57,7 @@ protected:
     friend class AnyWord;
     friend class Engine;
 
-    static Value evaluate(
+    static optional<Value> evaluate(
         internal::Loadable const loadables[],
         size_t numLoadables,
         Context const * contextPtr,
@@ -65,14 +65,14 @@ protected:
     );
 
 public:
-    static Value evaluate(
+    static optional<Value> evaluate(
         std::initializer_list<internal::Loadable> loadables,
         Engine * engine = nullptr
     ) {
         return evaluate(loadables.begin(), loadables.size(), nullptr, engine);
     }
 
-    static Value evaluate(
+    static optional<Value> evaluate(
         std::initializer_list<internal::BlockLoadable<Block>> loadables,
         internal::ContextWrapper const & wrapper
     ) {
@@ -93,7 +93,7 @@ public:
     }*/
 
     template <typename... Ts>
-    inline Value operator()(Ts const &... args) const {
+    inline optional<Value> operator()(Ts const &... args) const {
         return evaluate({args...}, static_cast<Engine *>(nullptr));
     }
 

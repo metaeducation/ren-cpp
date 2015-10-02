@@ -52,7 +52,7 @@ void EvaluatorWorker::doWork(
     Function dialect = static_cast<Function>(dialectValue);
     Context context = static_cast<Context>(contextValue);
 
-    Value result;
+	optional<Value> result;
     bool success = false;
 
     try {
@@ -75,8 +75,8 @@ void EvaluatorWorker::doWork(
         success = true;
     }
     catch (evaluation_throw const & t) {
-        if (t.name().isWord()) {
-            Word word = static_cast<Word>(t.name());
+		if (t.name() != nullopt && t.name()->isWord()) {
+			Word word = static_cast<Word>(*t.name());
             if (word.hasSpelling("exit") || word.hasSpelling("quit")) {
                 // A programmatic request to quit the system (e.g. QUIT).
                 // Might be interesting to have some UI to configure it
@@ -85,11 +85,11 @@ void EvaluatorWorker::doWork(
                 //
                 // https://github.com/metaeducation/ren-garden/issues/17
 
-                if (t.value().isUnset() || t.value().isNone()) {
+                if (t.value() == nullopt || t.value()->isNone()) {
                     qApp->exit(0);
                 }
-                else if (t.value().isInteger()) {
-                    qApp->exit(static_cast<Integer>(t.value()));
+                else if (t.value()->isInteger()) {
+                    qApp->exit(static_cast<Integer>(*t.value()));
                 }
                 else {
                     // Do whatever Rebol does...
@@ -99,7 +99,7 @@ void EvaluatorWorker::doWork(
                 // We have submitted our quit message but will have to
                 // get back to the message pump... go ahead and return
                 // none...
-                result = none;
+				result = nullopt;
                 success = true;
             }
         }
@@ -125,7 +125,7 @@ void EvaluatorWorker::doWork(
         // loop.  (Such requests must originate from the GUI thread.)
         // Let returning none for the error mean cancellation.
 
-        result = none;
+		result = nullopt;
     }
     catch (std::exception const & e) {
         const char * what = e.what();

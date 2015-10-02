@@ -15,24 +15,6 @@ inline RedEngineHandle ensureEngine(Engine * engine) {
 }
 
 
-///
-/// UNSET
-///
-
-bool Value::isUnset() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_UNSET;
-}
-
-
-Value::Value (unset_t, Engine * engine) noexcept :
-    Value (
-        RedRuntime::makeCell4I(RedRuntime::TYPE_UNSET, 0, 0, 0),
-        ensureEngine(engine)
-    )
-{
-}
-
-
 
 ///
 /// NONE

@@ -139,6 +139,11 @@ public:
 // you can call them explicitly as e.g. ren::to_string(...), if you do
 // `using std::to_string;` and then use the unqualified `to_string(...)`,
 // it will notice that the argument is a ren:: type and pick these versions
+//
+// Note that there is no `to_string(optional<Value>)`.  This is intentional,
+// because it's more common to have special handling for a non-value case
+// than not.  So silently compiling situations that could print "no value"
+// (or whatever) undermines the benefit of compile-time safety C++ offers.
 
 std::string to_string (Value const & value);
 
@@ -256,7 +261,7 @@ protected:
 
     //
     // There is a default constructor, and it initializes the RenCell to be
-    // a constructed value of type UNSET!
+    // a constructed value of type NONE!
     //
     // BUT as an implementation performance detail, if the default constructor
     // is bothering to initialize the 128 bits, what if a derived class
@@ -281,7 +286,13 @@ protected:
     enum class Dont {Initialize};
     Value (Dont);
 
-    void finishInit(RenEngineHandle engine);
+    bool tryFinishInit(RenEngineHandle engine);
+
+    inline void finishInit(RenEngineHandle engine) {
+        if (!tryFinishInit(engine))
+            throw std::runtime_error {"put meaningful error here"};
+    }
+
     void uninitialize();
 
     //
@@ -308,9 +319,12 @@ protected:
             std::is_base_of<Value, T>::value
         >::type
     >
-    static T construct_(RenCell const & cell, RenEngineHandle engine) noexcept {
-        T result (Dont::Initialize); // Do NOT use {} construction!
-        // If you use {} then if T is a series type, due to Value's privileged
+    static T fromCell_(
+        RenCell const & cell, RenEngineHandle engine
+    ) noexcept {
+        // Do NOT use {} construction!
+        T result (Dont::Initialize);
+        // If you use {} then if T is an array type, due to Value's privileged
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
@@ -319,44 +333,48 @@ protected:
         return result;
     }
 
+    template<
+        class T,
+        typename = typename std::enable_if<
+            std::is_base_of<Value, utility::extract_optional_t<T>>::value
+        >::type
+    >
+    static optional<utility::extract_optional_t<T>> fromCell_(
+        RenCell const & cell, RenEngineHandle engine
+    ) noexcept {
+        // Do NOT use {} construction!
+        utility::extract_optional_t<T> result (Dont::Initialize);
+        // If you use {} then if T is a series type, due to Value's privileged
+        // access to the Dont constructor, it will make a block with an
+        // uninitialized value *in the block*!  :-/
 
-    //
-    // At first the only user-facing constructor that was exposed directly
-    // from Value was the default constructor, used to make an UNSET!
-    //
-    //     ren::Value something;
-    //
-    // But support for other construction types directly as Value has been
-    // incorporated.  For the rationale, see:
-    //
-    //     https://github.com/hostilefork/rencpp/issues/2
-    //
-public:
-    bool isAtom() const;
-
-    struct unset_t
-    {
-      struct init {};
-      constexpr unset_t(init) {}
-    };
-
-    Value (unset_t, Engine * engine = nullptr) noexcept;
-
-    bool isUnset() const;
-
-    // Default constructor; same as unset.
-
-    Value (Engine * engine = nullptr) noexcept :
-        Value(unset_t::init{}, engine)
-    {}
+        result.cell = cell;
+        if (!result.tryFinishInit(engine))
+            return nullopt;
+        return result;
+    }
 
 
 public:
+    static void toCell_(
+        RenCell & cell, Value const & value
+    ) noexcept {
+        cell = value.cell;
+    }
+
+    static void toCell_(
+        RenCell & cell, optional<Value> const & value
+    ) noexcept;
+
+
+public:
     //
-    // Constructing from nullptr is ugly, but it's nice to be able to just
-    // assign from "none".
+    // Though technically possible to just assign from the none class as
+    // `ren::None{}`, it is slightly nicer to be able to use `ren::none`.
     //
-    // https://github.com/hostilefork/rencpp/issues/3
+    //     https://github.com/hostilefork/rencpp/issues/3
+    //
+    // It is probably also more efficient (though this hasn't been verified)
     //
 
     bool isNone() const;
@@ -372,13 +390,34 @@ public:
     Value (none_t, Engine * engine = nullptr) noexcept;
 
 
+    //
+    // At first the only user-facing constructor that was exposed directly
+    // from Value was the default constructor.  It was used to make ren::Unset
+    // before that class was eliminated to embrace std::optional for the
+    // purpose...now it makes a NONE!:
+    //
+    //     ren::Value something; // will be a NONE! value
+    //
+    // But support for other construction types directly as Value has been
+    // incorporated.  For the rationale, see:
+    //
+    //     https://github.com/hostilefork/rencpp/issues/2
+    //
+public:
+    bool isAtom() const;
+
+    // Default constructor; same as none.
+
+    Value (Engine * engine = nullptr) noexcept :
+        Value(none_t::init{}, engine)
+    {}
+
+
 public:
     //
     // We *explicitly* coerce to operator bool.  This only does the conversion
     // automatically under contexts like if(); the C++11 replacement for
-    // "safe bool idiom" of if (!!x).  As with UNSET! in Rebol/Red, it will
-    // throw an exception if you try to use it on a value that turns out
-    // to be UNSET!
+    // "safe bool idiom" of if (!!x).
     //
     // http://stackoverflow.com/questions/6242768/
     //
@@ -521,7 +560,9 @@ public:
     }
 
 public:
-    ~Value ();
+	~Value () {
+		uninitialize();
+	}
 
 
     // Although C++ assignment and moving of values around is really just
@@ -597,7 +638,7 @@ public:
     //
 #ifdef REN_RUNTIME
 protected:
-    Value apply_(
+    optional<Value> apply_(
         internal::Loadable const loadables[],
         size_t numLoadables,
         Context const * contextPtr = nullptr,
@@ -605,18 +646,18 @@ protected:
     ) const;
 
 public:
-    Value apply(
+    optional<Value> apply(
         std::initializer_list<internal::Loadable> loadables,
         internal::ContextWrapper const & wrapper
     ) const;
 
-    Value apply(
+    optional<Value> apply(
         std::initializer_list<internal::Loadable> loadables,
         Engine * engine = nullptr
     ) const;
 
     template <typename... Ts>
-    inline Value apply(Ts const &... args) const {
+    inline optional<Value> apply(Ts const &... args) const {
         return apply({ args... });
     }
 #endif
@@ -695,7 +736,7 @@ protected:
     friend class Runtime;
     friend class Engine;
 
-    static void constructOrApplyInitialize(
+    static bool constructOrApplyInitialize(
         RenEngineHandle engine,
         Context const * context,
         Value const * applicand,
@@ -710,6 +751,12 @@ inline std::ostream & operator<<(std::ostream & os, Value const & value) {
     return os << to_string(value);
 }
 
+inline std::ostream & operator<<(
+    std::ostream & os,
+    optional<Value> const & value
+) {
+    return value == nullopt ? os : os << to_string(*value);
+}
 
 
 #ifdef REN_RUNTIME
@@ -731,27 +778,35 @@ inline std::ostream & operator<<(std::ostream & os, Value const & value) {
 
 class evaluation_throw : public std::exception {
 private:
-    Value thrownValue;
-    Value throwName;
+	optional<Value> thrownValue; // throw might not have a value, e.g. return
+    optional<Value> throwName;
     std::string whatString;
 
 public:
-    evaluation_throw (Value const &value) :
-        thrownValue (value),
-        throwName (Value::none_t::init{}),
-        whatString (std::string("THROW: ") + to_string(value))
-    {
-    }
-
-    evaluation_throw (Value const & value, Value const & name) :
+    evaluation_throw (
+		optional<Value> const & value,
+        optional<Value> const & name = nullopt
+    ) :
         thrownValue (value),
         throwName (name)
     {
-        if (name.isNone())
-            whatString = std::string("THROW: ") + to_string(thrownValue);
-        else {
-            whatString = std::string("THROW/NAME: ")
-                + to_string(thrownValue) + " " + to_string(throwName);
+		if (name == nullopt) {
+			whatString = std::string("THROW:");
+			whatString += " ";
+			if (thrownValue == nullopt)
+				whatString += "(no value)";
+			else
+				whatString += to_string(*thrownValue);
+		}
+		else {
+			whatString = std::string("THROW/NAME:");
+			whatString += " ";
+			if (thrownValue == nullopt)
+				whatString += "(no value)";
+			else
+				whatString += to_string(*thrownValue);
+			whatString += " ";
+			whatString += to_string(*throwName);
         }
     }
 
@@ -759,11 +814,11 @@ public:
         return whatString.c_str();
     }
 
-    Value value() const noexcept {
+	optional<Value> const & value() const noexcept {
         return thrownValue;
     }
 
-    Value name() const noexcept {
+    optional<Value> const & name() const noexcept {
         return throwName;
     }
 };
@@ -818,6 +873,11 @@ public:
         Value (value)
     {
     }
+
+    // !!! Review implications of when optional<Value> is a specialization
+    // that is the same size under the hood as Value...could it be moved
+    // efficiently?  For now encode unsetness in the runtime-specific info.
+    Loadable (optional<Value> const & value);
 
     Loadable (char const * source);
 

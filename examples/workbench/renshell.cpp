@@ -527,21 +527,21 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
 
         REN_STD_FUNCTION,
 
-        [this, worker](Value const & arg, Value const & meta)
-            -> Value
+        [this, worker](optional<Value> const & arg, Value const & meta)
+            -> optional<Value>
         {
-            if (arg.isUnset()) {
+            if (arg == nullopt) {
                 // Uses the "unset quoted" trick, same as HELP, to fake up the
                 // ability to have one less arity when used at the end of an
                 // evaluation.  Only sensible for interactive commands!
 
                 runtime("console quote", shellFunction);
-                return unset;
+                return nullopt;
             }
 
             if (meta) {
-                if (arg.isEqualTo<Word>("running?"))
-                    return worker->hasProcess();
+                if (arg->isEqualTo<Word>("running?"))
+                    return {worker->hasProcess()};
 
                 // How about "kill", or maybe "on" and "off"...?
 
@@ -552,7 +552,7 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
                 // out of that (because this will consume NAME from the meta
                 // dialect, as written)
 
-                if (arg.isEqualTo<LitWord>("prompt")) {
+                if (arg->isEqualTo<LitWord>("prompt")) {
                 
                     // Currently the GUI is the one asking for the prompt.
                     // Like many situations where the GUI is doing an
@@ -579,17 +579,17 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
 
                 // Meta protocol may ask you for things you don't know about,
                 // so gracefully ignore them.
-                if (arg.isLitWord())
-                    return none;
+                if (arg->isLitWord())
+                    return {none};
 
-                if (not arg.isBlock())
+                if (not arg->isBlock())
                     throw Error {"Unknown meta command"};
 
-                auto blk = static_cast<Block>(arg);
+                auto blk = static_cast<Block>(*arg);
 
                 if (blk[1].isEqualTo<Word>("test")) {
                     testMode = blk[2].isEqualTo<Word>("on");
-                    return unset;
+                    return nullopt;
                 };
 
                 throw Error {"Unknown meta command"};
@@ -605,14 +605,14 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
             // see ren-garden.reb (it's built in as part of the resource file)
 
             auto commands = static_cast<Block>(
-                this->helpers("shell-dialect-to-strings", arg, windows)
+                *this->helpers("shell-dialect-to-strings", arg, windows)
             );
 
             if (testMode) {
                 for (auto str : commands)
                     print(str);
 
-                return unset;
+                return nullopt;
             }
 
             std::vector<int> results;
@@ -642,10 +642,10 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
                 // of evaluative result on every command, so we transform 0
                 // to unset
 
-                return unset;
+                return nullopt;
             }
 
-            return results.back();
+            return {results.back()};
         }
     );
 }

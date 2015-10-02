@@ -151,7 +151,7 @@ public:
     // code in this context"
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+    inline optional<Value> operator()(Ts &&... args) const {
         return apply({std::forward<Ts>(args)...}, internal::ContextWrapper {*this});
     }
 

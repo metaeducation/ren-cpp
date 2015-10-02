@@ -36,13 +36,13 @@ ValueExplorer::ValueExplorer (QWidget * parent) :
 
 
 void ValueExplorer::setValue(
-    ren::Value const & helpFunction,
-    ren::Value const & value
+    Value const & helpFunction,
+    optional<Value> const & value
 ) {
     if (not this->isVisible())
         return;
 
-    if (value.isUnset()) {
+    if (value == nullopt) {
         document()->setPlainText("");
     }
     else {

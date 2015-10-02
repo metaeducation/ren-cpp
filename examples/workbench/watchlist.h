@@ -43,9 +43,9 @@ public:
 
         ren::Value watch;
         bool recalculates;
-        ren::Value value;
-        ren::Value error;
-        std::experimental::optional<ren::Tag> label;
+        ren::optional<ren::Value> value;
+        ren::optional<ren::Error> error;
+        ren::optional<ren::Tag> label;
         bool frozen;
 
     public:
@@ -54,7 +54,7 @@ public:
         Watcher (
             ren::Value const & watch,
             bool recalculates,
-            std::experimental::optional<ren::Tag> const & label
+            ren::optional<ren::Tag> const & label
         );
 
         // Evaluates and returns error if there was one, or none
@@ -117,10 +117,10 @@ protected:
 
 public:
     // aaaand... magic! :-)
-    ren::Value watchDialect(
+    ren::optional<ren::Value> watchDialect(
         ren::Value const & arg,
         bool recalculates,
-        std::experimental::optional<ren::Tag> const & label
+        ren::optional<ren::Tag> const & label
     );
 };
 

@@ -202,7 +202,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+    inline optional<Value> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
@@ -217,7 +217,9 @@ public:
 public:
     template <typename... Ts>
     inline Value operator()(Ts &&... args) const {
-        return apply(std::forward<Ts>(args)...);
+        // An expression like `x/y/z: (...)` cannot give back a non set
+        // result, it would generate an error first.
+        return *apply(std::forward<Ts>(args)...);
     }
 };
 
@@ -233,7 +235,7 @@ public:
 #ifdef REN_RUNTIME
 public:
     template <typename... Ts>
-    inline Value operator()() const {
+    inline optional<Value> operator()() const {
         return apply();
     }
 #endif

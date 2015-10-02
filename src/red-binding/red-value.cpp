@@ -33,8 +33,17 @@ bool Value::isSameAs(Value const & other) const {
 /// INITIALIZATION FINISHER
 ///
 
-void Value::finishInit(RenEngineHandle engine) {
+bool Value::tryFinishInit(RenEngineHandle engine) {
+    // This needs to add tracking needed to protect from GC, see Rebol binding.
     origin = engine;
+    return RedRuntime::getDatatypeID(this->cell) != RedRuntime::TYPE_UNSET;
+}
+
+
+void Value::uninitialize() {
+    // This needs to remove the protections from GC, see Rebol binding.
+    // !!! Ultimately Rebol and Red are probably similar enough in needs that
+    // the tracking might be moved to the common code.
 }
 
 
@@ -47,10 +56,7 @@ std::string to_string(Value const & value) {
 
     // placeholder implementation...
 
-    if (value.isUnset()) {
-        return "#[unset!]";
-    }
-    else if (value.isNone()) {
+    if (value.isNone()) {
         return "#[none!]";
     }
     else if (value.isLogic()) {

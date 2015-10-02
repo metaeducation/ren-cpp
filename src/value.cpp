@@ -44,9 +44,6 @@ Value::Value (Dont) :
 
 
 Value::operator bool() const {
-    if (isUnset())
-        throw has_no_value();
-
     return not (isNone() or isFalse());
 }
 
@@ -57,7 +54,7 @@ Value::operator bool() const {
 // GENERALIZED APPLY
 //
 
-Value Value::apply_(
+optional<Value> Value::apply_(
     internal::Loadable const loadables[],
     size_t numLoadables,
     Context const * contextPtr,
@@ -67,7 +64,7 @@ Value Value::apply_(
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
-    constructOrApplyInitialize(
+    if (constructOrApplyInitialize(
         context.getEngine(),
         &context,
         this, // no applicand
@@ -75,13 +72,15 @@ Value Value::apply_(
         numLoadables,
         nullptr, // don't construct
         &result // do apply
-    );
+    )) {
+        return result;
+    }
 
-    return result;
+    return nullopt;
 }
 
 
-Value Value::apply(
+optional<Value> Value::apply(
     std::initializer_list<internal::Loadable> loadables,
     internal::ContextWrapper const & wrapper
 ) const {
@@ -96,7 +95,7 @@ Value Value::apply(
 }
 
 
-Value Value::apply(
+optional<Value> Value::apply(
     std::initializer_list<internal::Loadable> loadables,
     Engine * engine
 ) const {
@@ -108,7 +107,7 @@ Value Value::apply(
 #endif
 
 
-void Value::constructOrApplyInitialize(
+bool Value::constructOrApplyInitialize(
     RenEngineHandle engine,
     Context const * context,
     Value const * applicand,
@@ -151,9 +150,12 @@ void Value::constructOrApplyInitialize(
 			throw evaluation_halt {};
 
 		case REN_APPLY_THREW: {
-			applyOut->finishInit(engine);
-            extraOut.finishInit(engine);
-            throw evaluation_throw {extraOut, *applyOut};
+            bool hasName = applyOut->tryFinishInit(engine);
+            bool hasValue = extraOut->tryFinishInit(engine);
+            throw evaluation_throw {
+                hasValue ? optional<Value>{extraOut} : nullopt,
+                hasName ? optional<Value>{*applyOut} : nullopt
+            };
 		}
     #endif
 
@@ -171,8 +173,16 @@ void Value::constructOrApplyInitialize(
     if (constructOutTypeIn)
         constructOutTypeIn->finishInit(engine);
 
-    if (applyOut)
-        applyOut->finishInit(engine);
+    if (applyOut) {
+        // `tryFinishInit()` will give back false if the cell was not a value
+        // (e.g. an "unset") which cues a caller requesting a value that they
+        // should make a `nullopt` for the `optional<Value>` instead of
+        // considering the bits "good".
+        return applyOut->tryFinishInit(engine);
+    }
+
+    // No apply requested, so same as not set
+    return false;
 }
 
 

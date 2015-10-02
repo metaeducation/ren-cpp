@@ -65,7 +65,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // delete everything, consider it to be "unlabeling"
 
             if (contents.isEmpty())
-                w.label = std::experimental::nullopt;
+				w.label = nullopt;
             else
                 w.label = Tag {contents};
 
@@ -94,7 +94,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 WatchList::Watcher::Watcher (
     Value const & watch,
     bool recalculates,
-    std::experimental::optional<Tag> const & label
+	optional<Tag> const & label
 ) :
     watch (watch),
     recalculates (recalculates),
@@ -109,18 +109,20 @@ void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (recalculates and (not frozen)))
             value = watch.apply();
-        error = none;
+		error = nullopt;
     }
     catch (evaluation_error const & e) {
-        value = unset;
+		value = nullopt;
         error = e.error();
     }
     catch (std::exception const & e) {
-        assert(false);
-        error = none;
+        std::string message {"C++ exception: "};
+        message += e.what();
+        error = Error {message.c_str()};
     }
     catch (...) {
         assert(false);
+        error = Error {"C++ non-std::exception"};
     }
 }
 
@@ -140,9 +142,11 @@ QString WatchList::Watcher::getWatchString() const {
 
 
 QString WatchList::Watcher::getValueString() const {
-    if (error)
-        return to_QString(error);
-    return to_QString(runtime("mold/all quote", value));
+	if (error != nullopt)
+		return to_QString(*error);
+	if (value == nullopt)
+		return "...no value...";
+	return to_QString(*runtime("mold/all quote", value));
 }
 
 
@@ -336,10 +340,10 @@ void WatchList::updateAllWatchers() {
 }
 
 
-Value WatchList::watchDialect(
+optional<Value> WatchList::watchDialect(
     Value const & arg,
     bool recalculates,
-    std::experimental::optional<Tag> const & label
+	optional<Tag> const & label
 ) {
     if (arg.isInteger()) {
         int signedIndex = static_cast<Integer>(arg);
@@ -356,17 +360,15 @@ Value WatchList::watchDialect(
         if (index > this->watchers.size())
             throw Error {"No such watchlist item index"};
 
-        Value watchValue = watchers[index - 1]->value;
-        Value watchError = watchers[index - 1]->error;
+		optional<Value> watchValue = watchers[index - 1]->value;
+		optional<Error> watchError = watchers[index - 1]->error;
         if (removal) {
             emit removeWatcherRequested(index);
             return watchValue;
         }
 
-        if (watchError.isError())
+		if (watchError != nullopt)
             throw watchError;
-        else
-            assert(watchError.isNone());
 
         return watchValue;
     }
@@ -403,7 +405,7 @@ Value WatchList::watchDialect(
     }
 #else
     logicIndex = static_cast<Integer>(
-        runtime(
+		*runtime(
             "case", Block {
             "    find [off no false] quote", arg, "[0]"
             "    find [on yes true] quote", arg, "[1]"
@@ -418,7 +420,7 @@ Value WatchList::watchDialect(
             emit showDockRequested(this);
         else
             emit hideDockRequested(this);
-        return unset;
+		return nullopt;
     }
 
     // With those words out of the way, we should be able to take
@@ -444,10 +446,10 @@ Value WatchList::watchDialect(
         // need to handle that with try blocks...because we don't want to
         // quietly give back an unset if the operation failed.
 
-        if (w.error)
-            throw w.error;
+        if (w.error != nullopt)
+            throw *w.error;
 
-        return w.value.apply();
+		return w.value;
     }
 
     if (arg.isTag()) {

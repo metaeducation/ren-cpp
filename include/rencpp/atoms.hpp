@@ -66,36 +66,25 @@ public:
 
 
 //
-// NONE AND UNSET CONSTRUCTION
+// NONE CONSTRUCTION
 //
 
 //
-// It makes sense to be able to create None and Unset *values*, which you
-// can do with Value construction.  But why would you need a static type
-// for the None and Unset *classes* in C++?  Do you need to statically
-// check to make sure someone actually passed you a None?  :-/
+// It makes sense to be able to create a None *value*, which you can do with
+// Value construction.  But why would you need a static type for the None
+// class in C++?  Do you need to statically check to make sure someone
+// actually passed you a None?  :-/
 //
-// For completeness they are included for the moment, but are very unlikely
-// to be useful in practice.  They really only make sense as instances of
-// the Value base class.
+// (To put this another way: you would rarely make a parameter to a function
+// in Rebol that could only be NONE!, as it carries no information.  Usually
+// it would be part of a typeset such that NONE! was being expressed as an
+// alternative to some other option.)
 //
-// !!! Is there anything that might put either or both of these into their
-// own category that is not considered an "Atom"?
+// For completeness a None `class` is included for the moment, but you would
+// probably never find much of a reason to use it.
+//
 
 constexpr Value::none_t none {Value::none_t::init{}};
-
-constexpr Value::unset_t unset {Value::unset_t::init{}};
-
-class Unset : public Atom {
-protected:
-    friend class Value;
-    Unset (Dont) noexcept : Atom (Dont::Initialize) {}
-    inline bool isValid() const { return isUnset(); }
-
-public:
-    Unset (Engine * engine = nullptr) : Atom (unset, engine) {}
-};
-
 
 class None : public Atom {
 protected:

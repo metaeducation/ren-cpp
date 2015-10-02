@@ -182,7 +182,7 @@ public:
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+    inline optional<Value> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
@@ -197,7 +197,9 @@ public:
 public:
     template <typename... Ts>
     inline Value operator()(Ts &&... args) const {
-        return apply(std::forward<Ts>(args)...);
+        // An expression like `x: (...)` cannot evaluate to not being set,
+        // because it would generate an error.
+        return *apply(std::forward<Ts>(args)...);
     }
 };
 
@@ -212,7 +214,7 @@ public:
     // shorthand for treating it something like a zero-parameter function
 public:
 #ifdef REN_RUNTIME
-    inline Value operator()() const {
+    inline optional<Value> operator()() const {
         return apply();
     }
 #endif

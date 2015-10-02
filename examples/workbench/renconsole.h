@@ -58,7 +58,7 @@ private:
     ) override;
 
 private:
-    std::experimental::optional<ren::Context> helpersContext;
+	ren::optional<ren::Context> helpersContext;
     ren::Context userContext;
     ren::Context libContext;
     std::unique_ptr<RenShell> shell;
@@ -81,7 +81,7 @@ public:
 private:
     struct TabInfo {
         ren::Function dialect; // what dialect processor tab is running
-        std::experimental::optional<ren::Tag> label; // label of the tab
+		ren::optional<ren::Tag> label; // label of the tab
         ren::Context context;
         WatchList * watchList;
     };
@@ -103,7 +103,7 @@ signals:
 
     void exploreValue(
         ren::Value const & helpFunction,
-        ren::Value const & value
+		ren::optional<ren::Value> const & value
     );
 
 protected:
@@ -126,7 +126,7 @@ private:
 private:
     // Experimental facility for writing the shell's output to a string
 
-    ren::Value target;
+	ren::optional<ren::AnyString> target;
 
     // You can set up a value that represents what the pending console
     // buffer will be.  It is evaluated after the command is done to
@@ -140,7 +140,7 @@ private:
 public slots:
     void handleResults(
         bool success,
-        ren::Value const & result
+		ren::optional<ren::Value> const & result
     );
 signals:
     // keep terminology from Qt sample
@@ -160,7 +160,7 @@ protected:
     // scratch attempt to make MODULE!" and then compare the implemenations.
 private:
     QSharedPointer<RenPackage> proposalsPackage;
-    std::experimental::optional<ren::Context> proposalsContext;
+	ren::optional<ren::Context> proposalsContext;
     QSharedPointer<RenPackage> helpersPackage;
     QSharedPointer<RenPackage> rendataPackage;
 

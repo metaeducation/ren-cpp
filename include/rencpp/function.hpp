@@ -160,7 +160,13 @@ public:
         Fun && fun,
         utility::indices<Ind...>
     ) {
-        using Ret = Unset;
+		// Handling `return void` serves the purpose of removing the need for
+		// a return statement, but it also has to be a way of returning the
+		// "correct" value.  In Rebol and Red the default return value is
+		// no value, which does not have a concrete type...it's the disengaged
+		// state of an `optional<Value>`.
+
+		using Ret = optional<Value>;
 
         using Gen = internal::FunctionGenerator<
             Ret,
@@ -175,7 +181,7 @@ public:
                 Ret(utility::argument_type<Fun, Ind>...)
             >([&fun](utility::argument_type<Fun, Ind>&&... args){
                 fun(std::forward<utility::argument_type<Fun, Ind>>(args)...);
-                return Unset{};
+				return nullopt;
             })
         };
     }
@@ -305,7 +311,7 @@ public:
     // but it really only makes sense for a few value types.
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+	inline optional<Value> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 #endif
@@ -418,7 +424,7 @@ private:
     )
         -> decltype(
             fun(
-                Value::construct_<
+				Value::fromCell_<
                     typename std::decay<
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
@@ -430,7 +436,7 @@ private:
         )
     {
         return fun(
-            Value::construct_<
+			Value::fromCell_<
                 typename std::decay<
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
@@ -487,23 +493,50 @@ private:
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-			*REN_CS_OUT(call) = out.cell;
+			Value::toCell_(*REN_CS_OUT(call), out); // out may be optional
 			result = REN_SUCCESS;
+        }
+        catch (bad_optional_access const & e) {
+            throw std::runtime_error {
+                "C++ code dereferenced empty optional, no further details"
+                " (try setting a breakpoint in optional.hpp)"
+            };
         }
         catch (Error const & e) {
             *REN_CS_OUT(call) = e.cell;
 			result = REN_APPLY_ERROR;
         }
-        catch (Value const & e) {
+        catch (optional<Error> const & e) {
+            if (e == nullopt)
+                throw std::runtime_error {
+                    "ren::nullopt optional<Error> thrown from ren::Function"
+                };
+            *REN_CS_OUT(call) = e->cell;
+            result = REN_APPLY_ERROR;
+        }
+        catch (Value const & v) {
 			// In C++ `throw` is an error mechanism, and using it for general
 			// non-localized control (as Rebol uses THROW) is considered abuse
-			if (not e.isError())
+            if (not v.isError())
                 throw std::runtime_error {
-                    "Non-isError() ren::Value thrown from ren::Function"
+                    "Non-isError() Value thrown from ren::Function"
                 };
 
-			*REN_CS_OUT(call) = e.cell;
+            *REN_CS_OUT(call) = v.cell;
 			result = REN_APPLY_ERROR;
+        }
+        catch (optional<Value> const & v) {
+            if (v == nullopt)
+                throw std::runtime_error {
+                    "ren::nullopt optional<Value> thrown from ren::Function"
+                };
+            if (not v->isError())
+                throw std::runtime_error {
+                    "Non-isError() optional<Value> thrown from ren::Function"
+                };
+
+            *REN_CS_OUT(call) = v->cell;
+            result = REN_APPLY_ERROR;
         }
         catch (evaluation_error const & e) {
             // Ren runtime code throws non-std::exception errors, and so
@@ -525,12 +558,15 @@ private:
 			//
 			//    http://stackoverflow.com/a/2281928/211160
 
-            const RenCell & thrown_value = t.value().cell;
-            const RenCell & thrown_name = t.name().cell;
+            const RenCell * thrown_value =
+                t.value() == nullopt ? nullptr : &t.value()->cell;
+			const RenCell * thrown_name =
+				t.name() == nullopt ? nullptr : &t.name()->cell;
+
 			RenShimInitThrown(
 				REN_CS_OUT(call),
-				&thrown_value,
-				&thrown_name
+				thrown_value,
+				thrown_name
 			);
 			result = REN_APPLY_THREW;
 		}

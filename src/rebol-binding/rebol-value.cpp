@@ -49,11 +49,18 @@ bool Value::isSameAs(Value const & other) const {
 // series that have been handed back.
 //
 
-void Value::finishInit(RenEngineHandle engine) {
+bool Value::tryFinishInit(RenEngineHandle engine) {
     // Safe to test this before potentially put into a list...these had to be
     // initialized to nullptr instead of left as-is in order to be safe for
     // freeing in case the destructor got called when finishInit never did...
     assert(not next and not prev);
+
+	// We no longer allow Value to hold a REB_UNSET (unless the specialization
+	// using std::optional<Value> represents unsets using that, which would
+	// happen sometime later down the line when that optimization makes sense)
+	// finishInit() is an inline wrapper that throws if this happens.
+	if (IS_UNSET(&cell))
+		return false;
 
     // For the immediate moment, we have only one engine, but taking note
     // when that engine isn't being threaded through the values is a good
@@ -65,7 +72,7 @@ void Value::finishInit(RenEngineHandle engine) {
         // Types with no GC-aware members do not need to be put into the list
         // While the pointers are there anyway and it saves no memory, it does
         // save time when a GC runs...as well as the cost of any sync
-        return;
+		return true;
     }
 
     // !!! Placeholder for a less-global locking strategy (list per type, or
@@ -81,6 +88,8 @@ void Value::finishInit(RenEngineHandle engine) {
     // prev is already null
 
     internal::head = this; // update head
+
+	return true;
 }
 
 
@@ -108,8 +117,13 @@ void Value::uninitialize() {
 }
 
 
-Value::~Value() {
-    uninitialize();
+void Value::toCell_(
+	RenCell & cell, optional<Value> const & value
+) noexcept {
+	if (value == nullopt)
+		SET_UNSET(&cell);
+	else
+		cell = value->cell;
 }
 
 
@@ -304,6 +318,22 @@ Loadable::Loadable (char const * sourceCstr) :
     next = nullptr;
     prev = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
+}
+
+
+Loadable::Loadable (optional<Value> const & value) :
+	Value (Value::Dont::Initialize)
+{
+	if (value == nullopt)
+		SET_UNSET(&cell);
+	else
+		cell = value->cell;
+
+	// We trust that the source value we copied from will stay alive and
+	// prevent garbage collection... (review this idea)
+	next = nullptr;
+	prev = nullptr;
+	origin = REN_ENGINE_HANDLE_INVALID;
 }
 
 

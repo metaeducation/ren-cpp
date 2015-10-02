@@ -39,7 +39,7 @@ RenPackage::RenPackage (
     QString rcPrefix,
     QString /*urlPrefix*/,
     Block const & scripts,
-    std::experimental::optional<ren::Context> context
+	ren::optional<ren::Context> context
 ) {
     if (not context) {
         data = Block {};

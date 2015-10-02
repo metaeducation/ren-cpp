@@ -146,16 +146,16 @@ public:
         REBOL_STATE state;
         const REBVAL * error;
 
-        // Note: No C++ allocations can happen between here and the POP_STATE
-        // calls as long as the C stack is in control, as setjmp/longjmp will
-        // subvert stack unwinding and just reset the processor state.
-
-        PUSH_UNHALTABLE_TRAP(&error, &state);
-
         // longjmp could "clobber" this variable if it were not volatile, and
         // code inside of the `if (error)` depends on possible modification
         // between the setjmp (PUSH_UNHALTABLE_TRAP) and the longjmp
         volatile bool applying = false;
+
+        PUSH_UNHALTABLE_TRAP(&error, &state);
+
+        // Note: No C++ allocations can happen between here and the POP_STATE
+        // calls as long as the C stack is in control, as setjmp/longjmp will
+        // subvert stack unwinding and just reset the processor state.
 
         bool is_aggregate_managed = false;
         REBSER * aggregate = Make_Array(numLoadables * 2);
@@ -373,8 +373,10 @@ public:
                     TAKE_THROWN_ARG(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }
-                else
-                    result = REN_SUCCESS;
+				else {
+					// May be REB_UNSET (optional<> signaled by tryFinishInit)
+					result = REN_SUCCESS;
+				}
             }
 
             UNSAVE_SERIES(aggregate);
@@ -468,8 +470,15 @@ public:
     }
 
     void ShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
-        *out = *name;
-        CONVERT_NAME_TO_THROWN(out, value);
+		if (name)
+			*out = *name;
+		else
+			SET_UNSET(out);
+
+		if (value)
+			CONVERT_NAME_TO_THROWN(out, value);
+		else
+			CONVERT_NAME_TO_THROWN(out, UNSET_VALUE);
     }
 
     RenResult ShimFail(REBVAL const * error) {

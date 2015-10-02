@@ -47,9 +47,16 @@ MainWindow::MainWindow() :
     //
     // Note that only values that are *default constructible* may be registered
     // in this way, which rules out all the other RenCpp types, unless they
-    // are embedded in a container of some kind (like optional<>)
+    // are embedded in an optional.  There is no way to automatically
+    // instantiate a generic template e.g. Q_DECLARE_METATYPE_TEMPLATE_1ARG,
+    // as that is an internal macro:
+    //
+    //     https://bugreports.qt.io/browse/QTBUG-35848
 
     qRegisterMetaType<ren::Value>("ren::Value");
+
+    qRegisterMetaType<ren::optional<ren::Value>>("ren::optional<ren::Value>");
+    // !!! register ren::optional<> for all value types, or add on-demand?
 
     // Rebol's design is not multithreaded, and features have not been vetted
     // to work in a multithreaded environment...even if both are taking turns
