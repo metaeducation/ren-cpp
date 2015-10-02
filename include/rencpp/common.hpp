@@ -68,39 +68,151 @@
 
 
 //
-// STD::OPTIONAL or STD::EXPERIMENTAL::OPTIONAL replacement
+// REN::OPTIONAL (std::(experimental)::optional, compact_optional?)
 //
-// Ren/C++ was conceived to run on C++11 compilers.  During its development,
-// the "UNSET!" Rebol type was altered from being an ordinary value type to
-// a transitional mechanic.  It no longer could be held in places like blocks,
-// so for instance `[10 20 #[unset!]]` would be illegal.
+// In the middle of Ren/C++'s design timeline, the "UNSET!" Rebol type was
+// altered from being an "ordinary" value type.  It became an "optional" state
+// that happened only during expression evaluation.  Though it still "exists"
+// as a cell state (in the sense of an implementation detail for efficiency)
+// it could no longer be persisted in places like blocks.  So there was no
+// such thing as `[10 20 #[unset!]]`...for instance.
 //
-// Conceptually this made it somewhat suggest that what had been "UNSET!"
-// was now a bit like the disengaged state of a `std::optional<Value>`.  Yet
-// `std::optional` is not in C++11, was delayed from being included in C++14,
-// and pushed off to C++17.
+// Conceptually this made it so that what had been `ren::Unset` was now more
+// like the disengaged state of a `std::optional<AnyType>`.  The transition
+// brought semantic benefit and clarity to the binding.  But `std::optional`
+// is not in C++11, was delayed from being included in C++14, and pushed to
+// a library called "Fundamentals-TS".  And Ren/C++ still was targeting
+// the goal of working in stock C++11 compilers.
 //
 // To deal with the lack of ubiquitous availability of an approved optional
-// implementation, Ren/C++ uses `ren::optional`.  The %include/ directory
-// of the distribution contains a copy of the draft spec from the committee
-// obtained from:
+// implementation, class methods target optional under the ren namespace as
+// `ren::optional`.  At time of writing, this aliases an implementation in
+// the %include/ directory of the distribution.  That is a direct snapshot
+// of the draft spec which was borrowed by the C++ standards committee:
 //
-//    https://github.com/akrzemi1/Optional
+//      https://github.com/akrzemi1/Optional
 //
-// When the time is right (or if someone's purposes require it sooner),
-// `ren::optional` can be re-using'd as `std::optional` and it should work.
+// `ren::optional` could be re-aliased to `std::optional` on compilers
+// that provide the library.  However, the fully generic optional adds extra
+// storage use (vs. reserving a value in the contained type).  Since both
+// Rebol and Red can encode "unsetness" in a cell header, the correct answer
+// is to use something like Andrzej Krzemienski's other `compact_optional`:
+//
+//     https://akrzemi1.wordpress.com/2015/07/15/efficient-optional-values/
+//
+// Because this optional may not have quite the same interface as
+// `std::optional`, it makes sense to have the system use `ren::optional`.
+// Over the long term this class will match the storage efficiency of its
+// contained `ren::AnyType` (currently using a generic optional just in
+// order to ensure the mechanics are working).
+//
+// It may be--however--that `std::optional<AnyType>` could have a template
+// specialization which gave the benefits of `compact_optional`:
+//
+//      http://blog.hostilefork.com/template-specialize-optional-or-not/
+//
+// Were such a specialization to be provided, then `ren::optional` would
+// be able to be equivalent to (and compatible with) `std::optional`,
+// even if its implementation was like `compact_optional` under the hood.
 //
 
 #include "optional/optional.hpp"
 
 namespace ren {
+
+using nullopt_t = std::experimental::nullopt_t;
+
+constexpr ren::nullopt_t nullopt{
+    std::experimental::nullopt_t::init{}
+};
+
+//
+// There is a `bad_optional_access` exception thrown when disengaged optionals
+// are dereferenced.  However, this exception has no parameters.  There's no
+// awareness of a name or line number to identify where the problem happened:
+//
+//      optional<Value> foo;
+//
+//      if (*foo)
+//          std::cout << "The exception won't/can't indicate foo."; }
+//
+// One solution for getting better errors would be to use a level of indirect
+// through a WORD!.  Unlike a C++ variable, a word has a name which can be
+// indicated at runtime:
+//
+//      /* pending feature--binding and expandability settings */
+//      Object context {ren::Object::Expandable};
+//      Word foo {"foo-word", context, ren::Bind::Add};
+//
+//      if (foo.get())
+//          std::cout << "Exception *can* indicate foo-word";
+//
+// However, in the early migration of optional there are a lot of instances
+// of calling `static_cast<Type>(*runtime("code here"))`.  This assumes that
+// the code will return a result of Type, and does the dereference.  Both
+// are points of failure that do a C++ `throw`, and *can* be caught and
+// delivered "gracefully".  The message won't be all that different from
+// getting `** Script Error: ...` but there will be no trace or variable
+// name to help find it.
+//
+// To help with debugging bad optional dereferences, the debug build wraps
+// optional with methods that `assert()` instead of `throw`.  This also helps
+// to emphasize that bad optional dereferencing should not be used as a
+// "feature", as the error will be uninformative to the user.
+//
+
+using bad_optional_access = std::experimental::bad_optional_access;
+
+#ifndef NDEBUG
     template<typename T>
     using optional = std::experimental::optional<T>;
+#else
+    template<typename T>
+    class optional : public std::experimental::optional<T> {
+    public:
+        using std::experimental::optional::optional;
 
-    constexpr std::experimental::nullopt_t nullopt{
-        std::experimental::nullopt_t::init{}
+        // Assertions inserted in debug builds for localizing errors easily
+
+        constexpr T* operator->() const {
+            assert(*this != nullptr);
+            return optional::operator->();
+        }
+
+        constexpr T& operator*() const {
+            assert(*this != nullptr);
+            return optional::operator*();
+        }
+
+        constexpr T& value() const {
+            assert(*this != nullptr);
+            return optional::value();
+        }
     };
-}
+#endif
+
+namespace utility {
+
+// It can be desirable to do SFINAE against an optional and extract its
+// type, this helper class does that:
+//
+//      http://stackoverflow.com/questions/32859415/
+
+template <typename T>
+struct extract_optional;
+
+template <typename T>
+struct extract_optional<std::experimental::optional<T>>
+{
+    using type = T;
+};
+
+template <typename T>
+using extract_optional_t = typename extract_optional<T>::type;
+
+} // end namespace ren::utility
+
+} // end namespace ren
 
 
 
