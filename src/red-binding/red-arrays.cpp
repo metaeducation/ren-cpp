@@ -13,7 +13,7 @@ namespace ren {
 /// TYPE CHECKING AND INITIALIZATION
 ///
 
-bool Value::isBlock(RedCell * init) const {
+bool AnyValue::isBlock(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_BLOCK;
         return true;
@@ -22,7 +22,7 @@ bool Value::isBlock(RedCell * init) const {
 }
 
 
-bool Value::isGroup(RedCell * init) const {
+bool AnyValue::isGroup(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_PAREN;
         return true;
@@ -31,7 +31,7 @@ bool Value::isGroup(RedCell * init) const {
 }
 
 
-bool Value::isPath(RedCell * init) const {
+bool AnyValue::isPath(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_PATH;
         return true;
@@ -40,7 +40,7 @@ bool Value::isPath(RedCell * init) const {
 }
 
 
-bool Value::isGetPath(RedCell * init) const {
+bool AnyValue::isGetPath(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_GET_PATH;
         return true;
@@ -49,7 +49,7 @@ bool Value::isGetPath(RedCell * init) const {
 }
 
 
-bool Value::isSetPath(RedCell * init) const {
+bool AnyValue::isSetPath(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_SET_PATH;
         return true;
@@ -58,7 +58,7 @@ bool Value::isSetPath(RedCell * init) const {
 }
 
 
-bool Value::isLitPath(RedCell * init) const {
+bool AnyValue::isLitPath(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_LIT_PATH;
         return true;
@@ -67,7 +67,7 @@ bool Value::isLitPath(RedCell * init) const {
 }
 
 
-bool Value::isAnyArray() const {
+bool AnyValue::isAnyArray() const {
     switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_BLOCK:
         case RedRuntime::TYPE_PAREN:

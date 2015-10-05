@@ -11,7 +11,7 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool Value::isWord(REBVAL * init) const {
+bool AnyValue::isWord(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_WORD);
         return true;
@@ -19,7 +19,7 @@ bool Value::isWord(REBVAL * init) const {
     return IS_WORD(&cell);
 }
 
-bool Value::isSetWord(REBVAL * init) const {
+bool AnyValue::isSetWord(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_SET_WORD);
         return true;
@@ -27,7 +27,7 @@ bool Value::isSetWord(REBVAL * init) const {
     return IS_SET_WORD(&cell);
 }
 
-bool Value::isGetWord(REBVAL * init) const {
+bool AnyValue::isGetWord(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_GET_WORD);
         return true;
@@ -35,7 +35,7 @@ bool Value::isGetWord(REBVAL * init) const {
     return IS_GET_WORD(&cell);
 }
 
-bool Value::isLitWord(REBVAL * init) const {
+bool AnyValue::isLitWord(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_LIT_WORD);
         return true;
@@ -43,7 +43,7 @@ bool Value::isLitWord(REBVAL * init) const {
     return IS_LIT_WORD(&cell);
 }
 
-bool Value::isRefinement(REBVAL * init) const {
+bool AnyValue::isRefinement(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_REFINEMENT);
         return true;
@@ -51,7 +51,7 @@ bool Value::isRefinement(REBVAL * init) const {
     return IS_REFINEMENT(&cell);
 }
 
-bool Value::isIssue(REBVAL * init) const {
+bool AnyValue::isIssue(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_ISSUE);
         return true;
@@ -59,7 +59,7 @@ bool Value::isIssue(REBVAL * init) const {
     return IS_ISSUE(&cell);
 }
 
-bool Value::isAnyWord() const {
+bool AnyValue::isAnyWord() const {
     return IS_WORD(&cell)
         or IS_SET_WORD(&cell)
         or IS_GET_WORD(&cell)
@@ -118,7 +118,7 @@ AnyWord::AnyWord (
     Context const * contextPtr,
     Engine * engine
 ) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
 
@@ -172,7 +172,7 @@ AnyWord::AnyWord (
     Context const * contextPtr,
     Engine * engine
 ) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     (this->*cellfun)(&this->cell);
 

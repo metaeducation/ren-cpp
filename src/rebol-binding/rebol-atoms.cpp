@@ -7,7 +7,7 @@
 
 namespace ren {
 
-bool Value::isAtom() const {
+bool AnyValue::isAtom() const {
     // Will be more efficient when atom makes it formally into the
     // Rebol base typesets.
     return (
@@ -27,12 +27,12 @@ bool Value::isAtom() const {
 // NONE
 //
 
-bool Value::isNone() const {
+bool AnyValue::isNone() const {
     return IS_NONE(&cell);
 }
 
-Value::Value (none_t, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (none_t, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     SET_NONE(&cell);
 
@@ -49,20 +49,20 @@ Value::Value (none_t, Engine * engine) noexcept :
 // LOGIC
 //
 
-bool Value::isLogic() const {
+bool AnyValue::isLogic() const {
     return IS_LOGIC(&cell);
 }
 
-bool Value::isTrue() const {
+bool AnyValue::isTrue() const {
     return isLogic() && VAL_LOGIC(&cell);
 }
 
-bool Value::isFalse() const {
+bool AnyValue::isFalse() const {
     return isLogic() && !VAL_LOGIC(&cell);
 }
 
-Value::Value (bool someBool, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     SET_LOGIC(&cell, someBool);
 
@@ -83,15 +83,15 @@ Logic::operator bool() const {
 // CHARACTER
 //
 
-bool Value::isCharacter() const {
+bool AnyValue::isCharacter() const {
     return IS_CHAR(&cell);
 }
 
-Value::Value (char c, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (char c, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     if (c < 0)
-        throw std::runtime_error("Non-ASCII char passed to Value::Value()");
+        throw std::runtime_error("Non-ASCII char passed to AnyValue::AnyValue()");
 
     SET_CHAR(&cell, static_cast<REBUNI>(c));
 
@@ -102,8 +102,8 @@ Value::Value (char c, Engine * engine) noexcept :
     finishInit(engine->getHandle());
 }
 
-Value::Value (wchar_t wc, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     SET_CHAR(&cell, wc);
 
@@ -149,12 +149,12 @@ Character::operator QChar () const {
 // INTEGER
 //
 
-bool Value::isInteger() const {
+bool AnyValue::isInteger() const {
     return IS_INTEGER(&cell);
 }
 
-Value::Value (int someInt, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     SET_INTEGER(&cell, someInt);
 
@@ -175,12 +175,12 @@ Integer::operator int() const {
 // FLOAT
 //
 
-bool Value::isFloat() const {
+bool AnyValue::isFloat() const {
     return IS_DECIMAL(&cell);
 }
 
-Value::Value (double someDouble, Engine * engine) noexcept :
-    Value (Dont::Initialize)
+AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
+    AnyValue (Dont::Initialize)
 {
     SET_DECIMAL(&cell, someDouble);
 
@@ -201,7 +201,7 @@ Float::operator double() const {
 // DATE
 //
 
-bool Value::isDate() const {
+bool AnyValue::isDate() const {
     return IS_DATE(&cell);
 }
 

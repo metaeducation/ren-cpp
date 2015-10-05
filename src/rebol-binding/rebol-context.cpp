@@ -10,7 +10,7 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool Value::isContext(REBVAL * init) const {
+bool AnyValue::isContext(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_OBJECT);
         return true;
@@ -30,7 +30,7 @@ Context::Context (
     Context const * contextPtr,
     Engine * engine
 ) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     isContext(&cell); // CellFunction; writes type signature into cell
 
@@ -55,12 +55,12 @@ Context::Context (
 /*
 
 Context::Context (
-    Value const values[],
+    AnyValue const values[],
     size_t numValues,
     Context const * contextPtr,
     Engine * engine
 ) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     VAL_SET(&cell, REB_OBJECT);
 

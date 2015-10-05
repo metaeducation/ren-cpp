@@ -15,7 +15,7 @@ namespace ren {
 // COMPARISON
 //
 
-bool Value::isEqualTo(Value const & other) const {
+bool AnyValue::isEqualTo(AnyValue const & other) const {
     // acts like REBNATIVE(equalq)
 
     REBVAL cell_copy;
@@ -27,7 +27,7 @@ bool Value::isEqualTo(Value const & other) const {
     return Compare_Modify_Values(&cell_copy, &other_copy, 0);
 }
 
-bool Value::isSameAs(Value const & other) const {
+bool AnyValue::isSameAs(AnyValue const & other) const {
     // acts like REBNATIVE(sameq)
 
     REBVAL cell_copy;
@@ -49,14 +49,14 @@ bool Value::isSameAs(Value const & other) const {
 // series that have been handed back.
 //
 
-bool Value::tryFinishInit(RenEngineHandle engine) {
+bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     // Safe to test this before potentially put into a list...these had to be
     // initialized to nullptr instead of left as-is in order to be safe for
     // freeing in case the destructor got called when finishInit never did...
     assert(not next and not prev);
 
-	// We no longer allow Value to hold a REB_UNSET (unless the specialization
-	// using std::optional<Value> represents unsets using that, which would
+	// We no longer allow AnyValue to hold a REB_UNSET (unless the specialization
+	// using std::optional<AnyValue> represents unsets using that, which would
 	// happen sometime later down the line when that optimization makes sense)
 	// finishInit() is an inline wrapper that throws if this happens.
 	if (IS_UNSET(&cell))
@@ -93,7 +93,7 @@ bool Value::tryFinishInit(RenEngineHandle engine) {
 }
 
 
-void Value::uninitialize() {
+void AnyValue::uninitialize() {
     origin = REN_ENGINE_HANDLE_INVALID;
 
     if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
@@ -117,8 +117,8 @@ void Value::uninitialize() {
 }
 
 
-void Value::toCell_(
-	RenCell & cell, optional<Value> const & value
+void AnyValue::toCell_(
+	RenCell & cell, optional<AnyValue> const & value
 ) noexcept {
 	if (value == nullopt)
 		SET_UNSET(&cell);
@@ -127,7 +127,7 @@ void Value::toCell_(
 }
 
 
-Value Value::copy(bool deep) const {
+AnyValue AnyValue::copy(bool deep) const {
 
     // It seems the only way to call an action is to put the arguments it
     // expects onto the stack :-/  For instance in the dispatch of A_COPY
@@ -139,7 +139,7 @@ Value Value::copy(bool deep) const {
   /*
     auto saved_DS_TOP = DS_TOP;
 
-    Value result (Dont::Initialize);
+    AnyValue result (Dont::Initialize);
 
     DS_PUSH(&cell); // value
     DS_PUSH_NONE; // /part
@@ -176,7 +176,7 @@ Value Value::copy(bool deep) const {
         *this
     }};
 
-    Value result (Dont::Initialize);
+    AnyValue result (Dont::Initialize);
 
     constructOrApplyInitialize(
         origin,
@@ -196,7 +196,7 @@ Value Value::copy(bool deep) const {
 // BASIC STRING CONVERSIONS
 //
 
-std::string to_string(Value const & value) {
+std::string to_string(AnyValue const & value) {
     const size_t defaultBufLen = 100;
 
     // Note .data() method is const on std::string.
@@ -247,7 +247,7 @@ std::string to_string(Value const & value) {
 
 #if REN_CLASSLIB_QT == 1
 
-QString to_QString(Value const & value) {
+QString to_QString(AnyValue const & value) {
     const size_t defaultBufLen = 100;
 
     QByteArray buffer (defaultBufLen, Qt::Uninitialized);
@@ -309,7 +309,7 @@ QString to_QString(Value const & value) {
 namespace internal {
 
 Loadable::Loadable (char const * sourceCstr) :
-    Value (Value::Dont::Initialize)
+    AnyValue (AnyValue::Dont::Initialize)
 {
     // using REB_END as our "alien"
     VAL_SET(&cell, REB_END);
@@ -321,8 +321,8 @@ Loadable::Loadable (char const * sourceCstr) :
 }
 
 
-Loadable::Loadable (optional<Value> const & value) :
-	Value (Value::Dont::Initialize)
+Loadable::Loadable (optional<AnyValue> const & value) :
+	AnyValue (AnyValue::Dont::Initialize)
 {
 	if (value == nullopt)
 		SET_UNSET(&cell);

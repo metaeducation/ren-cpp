@@ -12,7 +12,7 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool Value::isBlock(REBVAL * init) const {
+bool AnyValue::isBlock(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_BLOCK);
         return true;
@@ -20,7 +20,7 @@ bool Value::isBlock(REBVAL * init) const {
     return IS_BLOCK(&cell);
 }
 
-bool Value::isGroup(REBVAL * init) const {
+bool AnyValue::isGroup(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_PAREN);
         return true;
@@ -28,7 +28,7 @@ bool Value::isGroup(REBVAL * init) const {
     return IS_PAREN(&cell);
 }
 
-bool Value::isPath(REBVAL * init) const {
+bool AnyValue::isPath(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_PATH);
         return true;
@@ -36,7 +36,7 @@ bool Value::isPath(REBVAL * init) const {
     return IS_PATH(&cell);
 }
 
-bool Value::isGetPath(REBVAL * init) const {
+bool AnyValue::isGetPath(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_GET_PATH);
         return true;
@@ -44,7 +44,7 @@ bool Value::isGetPath(REBVAL * init) const {
     return IS_GET_PATH(&cell);
 }
 
-bool Value::isSetPath(REBVAL * init) const {
+bool AnyValue::isSetPath(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_SET_PATH);
         return true;
@@ -52,7 +52,7 @@ bool Value::isSetPath(REBVAL * init) const {
     return IS_SET_PATH(&cell);
 }
 
-bool Value::isLitPath(REBVAL * init) const {
+bool AnyValue::isLitPath(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_LIT_PATH);
         return true;
@@ -60,7 +60,7 @@ bool Value::isLitPath(REBVAL * init) const {
     return IS_LIT_PATH(&cell);
 }
 
-bool Value::isAnyArray() const {
+bool AnyValue::isAnyArray() const {
     return IS_BLOCK(&cell) or IS_PAREN(&cell) or IS_PATH(&cell)
         or IS_SET_PATH(&cell) or IS_GET_PATH(&cell) or IS_LIT_PATH(&cell);
 }
@@ -100,7 +100,7 @@ AnyArray::AnyArray (
 // TBD: Finish version where you can use values directly as an array
 /*
 AnyArray::AnyArray (
-    Value const values[],
+    AnyValue const values[],
     size_t numValues,
     internal::CellFunction cellfun,
     Context const * contextPtr,

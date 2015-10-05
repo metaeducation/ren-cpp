@@ -11,7 +11,7 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool Value::isError() const {
+bool AnyValue::isError() const {
     return IS_ERROR(&cell);
 }
 
@@ -22,7 +22,7 @@ bool Value::isError() const {
 //
 
 Error::Error (const char * msg, Engine * engine) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     VAL_SET(&this->cell, REB_ERROR);
 

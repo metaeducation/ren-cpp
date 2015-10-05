@@ -9,7 +9,7 @@ using namespace ren;
 TEST_CASE("assign test", "[rebol] [assign]")
 {
     Integer someInt {10};
-    Value someValue;
+    AnyValue someValue;
 
     someValue = someInt;
 

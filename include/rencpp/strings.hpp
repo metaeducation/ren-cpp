@@ -32,7 +32,7 @@ namespace ren {
 class AnyString : public Series
 {
 protected:
-    friend class Value;
+    friend class AnyValue;
     AnyString (Dont) noexcept : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyString(); }
 
@@ -171,7 +171,7 @@ namespace internal {
 template <class C, CellFunction F>
 class AnyString_ : public AnyString {
 protected:
-    friend class Value;
+    friend class AnyValue;
     AnyString_ (Dont) noexcept : AnyString (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
@@ -209,11 +209,11 @@ public:
 //     https://github.com/hostilefork/rencpp/issues/49
 //
 
-class String : public internal::AnyString_<String, &Value::isString>
+class String : public internal::AnyString_<String, &AnyValue::isString>
 {
 protected:
     String (Dont) noexcept : AnyString_ (Dont::Initialize) {}
-    friend class Value;
+    friend class AnyValue;
 
     // Only String allows you to use implicit construction from string
     // classes, because trying otherwise for the other string classes
@@ -250,17 +250,17 @@ public:
 };
 
 
-class Tag : public internal::AnyString_<Tag, &Value::isTag> {
+class Tag : public internal::AnyString_<Tag, &AnyValue::isTag> {
 public:
-    friend class Value;
-    using AnyString_<Tag, &Value::isTag>::AnyString_;
+    friend class AnyValue;
+    using AnyString_<Tag, &AnyValue::isTag>::AnyString_;
 };
 
 
-class Filename : public internal::AnyString_<Filename, &Value::isFilename> {
+class Filename : public internal::AnyString_<Filename, &AnyValue::isFilename> {
 public:
-    friend class Value;
-    using AnyString_<Filename, &Value::isFilename>::AnyString_;
+    friend class AnyValue;
+    using AnyString_<Filename, &AnyValue::isFilename>::AnyString_;
 };
 
 } // end namespace ren

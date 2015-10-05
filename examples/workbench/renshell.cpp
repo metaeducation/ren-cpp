@@ -527,8 +527,8 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
 
         REN_STD_FUNCTION,
 
-        [this, worker](optional<Value> const & arg, Value const & meta)
-            -> optional<Value>
+        [this, worker](optional<AnyValue> const & arg, AnyValue const & meta)
+            -> optional<AnyValue>
         {
             if (arg == nullopt) {
                 // Uses the "unset quoted" trick, same as HELP, to fake up the

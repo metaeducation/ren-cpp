@@ -27,10 +27,10 @@ namespace ren {
 // ANYWORD
 //
 
-class AnyWord : public Value {
+class AnyWord : public AnyValue {
 protected:
-    friend class Value;
-    AnyWord (Dont) : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    AnyWord (Dont) : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isAnyWord(); }
 
 protected:
@@ -122,7 +122,7 @@ namespace internal {
 template <class C, CellFunction F>
 class AnyWord_ : public AnyWord {
 protected:
-    friend class Value;
+    friend class AnyValue;
     AnyWord_ (Dont) : AnyWord (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
@@ -174,29 +174,29 @@ public:
 //     https://github.com/hostilefork/rencpp/issues/49
 //
 
-class Word : public internal::AnyWord_<Word, &Value::isWord>
+class Word : public internal::AnyWord_<Word, &AnyValue::isWord>
 {
 public:
-    friend class Value;
-    using AnyWord_<Word, &Value::isWord>::AnyWord_;
+    friend class AnyValue;
+    using AnyWord_<Word, &AnyValue::isWord>::AnyWord_;
 
 public:
     template <typename... Ts>
-    inline optional<Value> operator()(Ts &&... args) const {
+    inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
 
 
-class SetWord : public internal::AnyWord_<SetWord, &Value::isSetWord>
+class SetWord : public internal::AnyWord_<SetWord, &AnyValue::isSetWord>
 {
 public:
-    friend class Value;
-    using AnyWord_<SetWord, &Value::isSetWord>::AnyWord_;
+    friend class AnyValue;
+    using AnyWord_<SetWord, &AnyValue::isSetWord>::AnyWord_;
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+    inline AnyValue operator()(Ts &&... args) const {
         // An expression like `x: (...)` cannot evaluate to not being set,
         // because it would generate an error.
         return *apply(std::forward<Ts>(args)...);
@@ -204,28 +204,28 @@ public:
 };
 
 
-class GetWord : public internal::AnyWord_<GetWord, &Value::isGetWord>
+class GetWord : public internal::AnyWord_<GetWord, &AnyValue::isGetWord>
 {
 public:
-    friend class Value;
-    using AnyWord_<GetWord, &Value::isGetWord>::AnyWord_;
+    friend class AnyValue;
+    using AnyWord_<GetWord, &AnyValue::isGetWord>::AnyWord_;
 
     // A get-word! does not take any parameters, but it's nice to have a
     // shorthand for treating it something like a zero-parameter function
 public:
 #ifdef REN_RUNTIME
-    inline optional<Value> operator()() const {
+    inline optional<AnyValue> operator()() const {
         return apply();
     }
 #endif
 };
 
 
-class LitWord : public internal::AnyWord_<LitWord, &Value::isLitWord>
+class LitWord : public internal::AnyWord_<LitWord, &AnyValue::isLitWord>
 {
 public:
-    friend class Value;
-    using AnyWord_<LitWord, &Value::isLitWord>::AnyWord_;
+    friend class AnyValue;
+    using AnyWord_<LitWord, &AnyValue::isLitWord>::AnyWord_;
 };
 
 
@@ -233,11 +233,11 @@ public:
 // that allows for 1-element paths to fit inside a REBSER with no data
 // allocation.  They look like paths and should act like them!
 
-class Refinement : public internal::AnyWord_<Refinement, &Value::isRefinement>
+class Refinement : public internal::AnyWord_<Refinement, &AnyValue::isRefinement>
 {
 public:
-    friend class Value;
-    using AnyWord_<Refinement, &Value::isRefinement>::AnyWord_;
+    friend class AnyValue;
+    using AnyWord_<Refinement, &AnyValue::isRefinement>::AnyWord_;
 };
 
 } // end namespace ren

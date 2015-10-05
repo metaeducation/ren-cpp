@@ -26,7 +26,7 @@ namespace ren {
 
 class AnyArray : public Series {
 protected:
-    friend class Value;
+    friend class AnyValue;
     AnyArray (Dont) noexcept : Series (Dont::Initialize) {}
     inline bool isValid() const { return isAnyArray(); }
 
@@ -51,7 +51,7 @@ protected:
     );
 
     AnyArray (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         internal::CellFunction cellfun,
         Context const * contextPtr,
@@ -97,13 +97,13 @@ namespace internal {
 template <class C, CellFunction F, typename BracesT=void>
 class AnyArray_ : public AnyArray {
 protected:
-    friend class Value;
+    friend class AnyValue;
     AnyArray_ (Dont) : AnyArray (Dont::Initialize) {}
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
     AnyArray_ (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         internal::ContextWrapper const & wrapper
     ) :
@@ -112,7 +112,7 @@ public:
     }
 
     AnyArray_ (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         Engine * engine
     ) :
@@ -157,7 +157,7 @@ public:
     // any "parameters"
 #ifdef REN_RUNTIME
 public:
-    inline Value operator()() const {
+    inline AnyValue operator()() const {
         return apply();
     }
 #endif
@@ -178,45 +178,45 @@ public:
 //
 
 
-class Block : public internal::AnyArray_<Block, &Value::isBlock, Block>
+class Block : public internal::AnyArray_<Block, &AnyValue::isBlock, Block>
 {
 public:
-    friend class Value;
-    using internal::AnyArray_<Block, &Value::isBlock, Block>::AnyArray_;
+    friend class AnyValue;
+    using internal::AnyArray_<Block, &AnyValue::isBlock, Block>::AnyArray_;
 };
 
 
-class Group : public internal::AnyArray_<Group, &Value::isGroup>
+class Group : public internal::AnyArray_<Group, &AnyValue::isGroup>
 {
 public:
-    friend class Value;
-	using internal::AnyArray_<Group, &Value::isGroup>::AnyArray_;
+    friend class AnyValue;
+	using internal::AnyArray_<Group, &AnyValue::isGroup>::AnyArray_;
 };
 
 
-class Path : public internal::AnyArray_<Path, &Value::isPath>
+class Path : public internal::AnyArray_<Path, &AnyValue::isPath>
 {
 public:
-    friend class Value;
-    using internal::AnyArray_<Path, &Value::isPath>::AnyArray_;
+    friend class AnyValue;
+    using internal::AnyArray_<Path, &AnyValue::isPath>::AnyArray_;
 
 public:
     template <typename... Ts>
-    inline optional<Value> operator()(Ts &&... args) const {
+    inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 };
 
 
-class SetPath : public internal::AnyArray_<SetPath, &Value::isSetPath>
+class SetPath : public internal::AnyArray_<SetPath, &AnyValue::isSetPath>
 {
 public:
-    friend class Value;
-    using internal::AnyArray_<SetPath, &Value::isSetPath>::AnyArray_;
+    friend class AnyValue;
+    using internal::AnyArray_<SetPath, &AnyValue::isSetPath>::AnyArray_;
 
 public:
     template <typename... Ts>
-    inline Value operator()(Ts &&... args) const {
+    inline AnyValue operator()(Ts &&... args) const {
         // An expression like `x/y/z: (...)` cannot give back a non set
         // result, it would generate an error first.
         return *apply(std::forward<Ts>(args)...);
@@ -224,29 +224,29 @@ public:
 };
 
 
-class GetPath : public internal::AnyArray_<GetPath, &Value::isGetPath>
+class GetPath : public internal::AnyArray_<GetPath, &AnyValue::isGetPath>
 {
 public:
-    friend class Value;
-    using internal::AnyArray_<GetPath, &Value::isGetPath>::AnyArray_;
+    friend class AnyValue;
+    using internal::AnyArray_<GetPath, &AnyValue::isGetPath>::AnyArray_;
 
     // As with GetWord, it can be convenient to think of "using" a GetPath
     // as calling a function with no arguments.
 #ifdef REN_RUNTIME
 public:
     template <typename... Ts>
-    inline optional<Value> operator()() const {
+    inline optional<AnyValue> operator()() const {
         return apply();
     }
 #endif
 };
 
 
-class LitPath : public internal::AnyArray_<LitPath, &Value::isLitPath>
+class LitPath : public internal::AnyArray_<LitPath, &AnyValue::isLitPath>
 {
 public:
-    friend class Value;
-    using internal::AnyArray_<LitPath, &Value::isLitPath>::AnyArray_;
+    friend class AnyValue;
+    using internal::AnyArray_<LitPath, &AnyValue::isLitPath>::AnyArray_;
 };
 
 

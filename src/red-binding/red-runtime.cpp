@@ -18,7 +18,7 @@ Runtime & runtimeRef = runtime;
 
 
 internal::Loadable::Loadable (char const * sourceCstr) :
-    Value (Value::Dont::Initialize)
+    AnyValue (AnyValue::Dont::Initialize)
 {
     cell = RedRuntime::makeCell2I1P(
         RedRuntime::TYPE_ALIEN,

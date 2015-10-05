@@ -15,7 +15,7 @@ using namespace ren;
 int main(int, char **) {
     auto variable = Word {"foo"};
 
-    optional<Value> result = runtime(
+    optional<AnyValue> result = runtime(
         "data: {Hello [Ren C++ Binding] World!}"
 
         "rule:", Block {

@@ -92,7 +92,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 
 
 WatchList::Watcher::Watcher (
-    Value const & watch,
+    AnyValue const & watch,
     bool recalculates,
 	optional<Tag> const & label
 ) :
@@ -340,8 +340,8 @@ void WatchList::updateAllWatchers() {
 }
 
 
-optional<Value> WatchList::watchDialect(
-    Value const & arg,
+optional<AnyValue> WatchList::watchDialect(
+    AnyValue const & arg,
     bool recalculates,
 	optional<Tag> const & label
 ) {
@@ -360,7 +360,7 @@ optional<Value> WatchList::watchDialect(
         if (index > this->watchers.size())
             throw Error {"No such watchlist item index"};
 
-		optional<Value> watchValue = watchers[index - 1]->value;
+		optional<AnyValue> watchValue = watchers[index - 1]->value;
 		optional<Error> watchError = watchers[index - 1]->error;
         if (removal) {
             emit removeWatcherRequested(index);

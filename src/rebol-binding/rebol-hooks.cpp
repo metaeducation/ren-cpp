@@ -23,7 +23,7 @@ namespace ren {
 namespace internal {
 
 std::mutex linkMutex;
-ren::Value * head;
+ren::AnyValue * head;
 
 class RebolHooks {
 
@@ -491,7 +491,7 @@ public:
 
         std::lock_guard<std::mutex> lock(internal::linkMutex);
 
-        ren::Value * temp = ren::internal::head;
+        ren::AnyValue * temp = ren::internal::head;
         while (temp) {
             Queue_Mark_Value_Deep(&temp->cell);
             temp = temp->next;

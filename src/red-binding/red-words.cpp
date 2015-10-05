@@ -13,7 +13,7 @@ namespace ren {
 /// TYPE CHECKING AND INITIALIZATION
 ///
 
-bool Value::isWord(RedCell * init) const {
+bool AnyValue::isWord(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_WORD;
         return true;
@@ -22,7 +22,7 @@ bool Value::isWord(RedCell * init) const {
 }
 
 
-bool Value::isSetWord(RedCell * init) const {
+bool AnyValue::isSetWord(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_SET_WORD;
         return true;
@@ -31,7 +31,7 @@ bool Value::isSetWord(RedCell * init) const {
 }
 
 
-bool Value::isGetWord(RedCell * init) const {
+bool AnyValue::isGetWord(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_GET_WORD;
         return true;
@@ -40,7 +40,7 @@ bool Value::isGetWord(RedCell * init) const {
 }
 
 
-bool Value::isLitWord(RedCell * init) const {
+bool AnyValue::isLitWord(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_LIT_WORD;
         return true;
@@ -49,7 +49,7 @@ bool Value::isLitWord(RedCell * init) const {
 }
 
 
-bool Value::isRefinement(RedCell * init) const {
+bool AnyValue::isRefinement(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_REFINEMENT;
         return true;
@@ -58,7 +58,7 @@ bool Value::isRefinement(RedCell * init) const {
 }
 
 
-bool Value::isIssue(RedCell * init) const {
+bool AnyValue::isIssue(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_ISSUE;
         return true;
@@ -67,7 +67,7 @@ bool Value::isIssue(RedCell * init) const {
 }
 
 
-bool Value::isAnyWord() const {
+bool AnyValue::isAnyWord() const {
     switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_WORD:
         case RedRuntime::TYPE_SET_WORD:

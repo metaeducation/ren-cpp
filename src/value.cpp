@@ -35,7 +35,7 @@ namespace ren {
 // it cannot be safely freed.  Bad traversal pointers combined with bad data
 // would be a problem.  Review this issue.
 
-Value::Value (Dont) :
+AnyValue::AnyValue (Dont) :
     next (nullptr),
     prev (nullptr)
 {
@@ -43,7 +43,7 @@ Value::Value (Dont) :
 
 
 
-Value::operator bool() const {
+AnyValue::operator bool() const {
     return not (isNone() or isFalse());
 }
 
@@ -54,13 +54,13 @@ Value::operator bool() const {
 // GENERALIZED APPLY
 //
 
-optional<Value> Value::apply_(
+optional<AnyValue> AnyValue::apply_(
     internal::Loadable const loadables[],
     size_t numLoadables,
     Context const * contextPtr,
     Engine * engine
 ) const {
-    Value result (Dont::Initialize);
+    AnyValue result (Dont::Initialize);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
@@ -80,12 +80,12 @@ optional<Value> Value::apply_(
 }
 
 
-optional<Value> Value::apply(
+optional<AnyValue> AnyValue::apply(
     std::initializer_list<internal::Loadable> loadables,
     internal::ContextWrapper const & wrapper
 ) const {
     // This one has to be in the implementation file because it appears in
-    // Value, using Loadable, which is derived from Value...
+    // AnyValue, using Loadable, which is derived from AnyValue...
     return apply_(
         loadables.begin(),
         loadables.size(),
@@ -95,28 +95,28 @@ optional<Value> Value::apply(
 }
 
 
-optional<Value> Value::apply(
+optional<AnyValue> AnyValue::apply(
     std::initializer_list<internal::Loadable> loadables,
     Engine * engine
 ) const {
     // This one has to be in the implementation file because it appears in
-    // Value, using Loadable, which is derived from Value...
+    // AnyValue, using Loadable, which is derived from AnyValue...
     return apply_(loadables.begin(), loadables.size(), nullptr, engine);
 }
 
 #endif
 
 
-bool Value::constructOrApplyInitialize(
+bool AnyValue::constructOrApplyInitialize(
     RenEngineHandle engine,
     Context const * context,
-    Value const * applicand,
+    AnyValue const * applicand,
     internal::Loadable const loadables[],
     size_t numLoadables,
-    Value * constructOutTypeIn,
-    Value * applyOut
+    AnyValue * constructOutTypeIn,
+    AnyValue * applyOut
 ) {
-    Value extraOut {Value::Dont::Initialize};
+    AnyValue extraOut {AnyValue::Dont::Initialize};
 
     auto result = ::RenConstructOrApply(
         engine,
@@ -153,8 +153,8 @@ bool Value::constructOrApplyInitialize(
             bool hasName = applyOut->tryFinishInit(engine);
             bool hasValue = extraOut->tryFinishInit(engine);
             throw evaluation_throw {
-                hasValue ? optional<Value>{extraOut} : nullopt,
-                hasName ? optional<Value>{*applyOut} : nullopt
+                hasValue ? optional<AnyValue>{extraOut} : nullopt,
+                hasName ? optional<AnyValue>{*applyOut} : nullopt
             };
 		}
     #endif
@@ -176,7 +176,7 @@ bool Value::constructOrApplyInitialize(
     if (applyOut) {
         // `tryFinishInit()` will give back false if the cell was not a value
         // (e.g. an "unset") which cues a caller requesting a value that they
-        // should make a `nullopt` for the `optional<Value>` instead of
+        // should make a `nullopt` for the `optional<AnyValue>` instead of
         // considering the bits "good".
         return applyOut->tryFinishInit(engine);
     }

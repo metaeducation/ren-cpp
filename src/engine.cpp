@@ -49,7 +49,7 @@ std::istream & Engine::getInputStream() {
 }
 
 
-optional<Value> Engine::evaluate(
+optional<AnyValue> Engine::evaluate(
     std::initializer_list<internal::BlockLoadable<Block>> loadables,
     Engine & engine
 ) {

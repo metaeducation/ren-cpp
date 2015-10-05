@@ -40,19 +40,19 @@ void EvaluatorWorker::initialize() {
 
 
 void EvaluatorWorker::doWork(
-    ren::Value const & dialectValue,
-    ren::Value const & contextValue,
+    ren::AnyValue const & dialectValue,
+    ren::AnyValue const & contextValue,
     QString const & input,
     bool meta
 ) {
     // See notes on MainWindow about qRegisterMetaType about why dialect
-    // and context are passed as ren::Value instead of ren::Function and
+    // and context are passed as ren::AnyValue instead of ren::Function and
     // ren::Context (also why it needs the ren:: prefix for slots)
 
     Function dialect = static_cast<Function>(dialectValue);
     Context context = static_cast<Context>(contextValue);
 
-	optional<Value> result;
+	optional<AnyValue> result;
     bool success = false;
 
     try {

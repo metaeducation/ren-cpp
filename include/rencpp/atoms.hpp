@@ -22,39 +22,39 @@
 #include "value.hpp"
 
 //
-// These classes inherit from Value, without inheriting Value's constructors.
-// Since they inherited from Value you can pass them places that are
-// expecting a Value.  However, a static_cast<> must be used if you want
+// These classes inherit from AnyValue, without inheriting its constructors.
+// Since they inherited from AnyValue you can pass them places that are
+// expecting a AnyValue.  However, a static_cast<> must be used if you want
 // to go the other way (which may throw an exception on a bad cast).
 //
 // At minimum, each derived class must provide these methods:
 //
 // protected:
-//    friend class Value;
-//    Foo (Dont) : Value (Dont::Initialize) {}
+//    friend class AnyValue;
+//    Foo (Dont) : AnyValue (Dont::Initialize) {}
 //    inline bool isValid() const { return ...; }
 //
-// These are needed by the base class casting operator in Value, which has
+// These are needed by the base class casting operator in AnyValue, which has
 // to be able to ask if the result of a cast is a valid instance for the
 // specific or general type.  We're trying not to pay for virtual dispatch
 // here, which is why it's so weird...and we don't want to expose this
-// internal to users--which is why Value needs to be a friend.
+// internal to users--which is why AnyValue needs to be a friend.
 //
 
 
 namespace ren {
 
 
-class Atom : public Value {
+class Atom : public AnyValue {
 protected:
-    friend class Value;
-    Atom (Dont) noexcept : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Atom (Dont) noexcept : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isAtom(); }
 
 public:
-    // We need to inherit Value's constructors, as an Atom can be
+    // We need to inherit AnyValue's constructors, as an Atom can be
     // initialized from any of the literal value initialization forms.
-    using Value::Value;
+    using AnyValue::AnyValue;
 
 public:
     // !!! Are there any common things that all atoms are able to do?  There
@@ -71,7 +71,7 @@ public:
 
 //
 // It makes sense to be able to create a None *value*, which you can do with
-// Value construction.  But why would you need a static type for the None
+// AnyValue construction.  But why would you need a static type for the None
 // class in C++?  Do you need to statically check to make sure someone
 // actually passed you a None?  :-/
 //
@@ -84,11 +84,11 @@ public:
 // probably never find much of a reason to use it.
 //
 
-constexpr Value::none_t none {Value::none_t::init{}};
+constexpr AnyValue::none_t none {AnyValue::none_t::init{}};
 
 class None : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     None (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isNone(); }
 
@@ -104,7 +104,7 @@ public:
 
 class Logic : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     Logic (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isLogic(); }
 
@@ -154,7 +154,7 @@ public:
 
 class Character : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     friend class AnyString;
     Character (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isCharacter(); }
@@ -191,7 +191,7 @@ public:
 
 public:
     // Because Characters have a unique iteration in AnyString types, the
-    // -> override mentioned in Value applies to them too.  See note there.
+    // -> override mentioned in AnyValue applies to them too.  See note there.
 
     Character const * operator->() const { return this; }
     Character * operator->() { return this; }
@@ -205,7 +205,7 @@ public:
 
 class Integer : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     Integer (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isInteger(); }
 
@@ -226,7 +226,7 @@ public:
 
 class Float : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     Float (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isFloat(); }
 
@@ -261,7 +261,7 @@ public:
 
 class Date : public Atom {
 protected:
-    friend class Value;
+    friend class AnyValue;
     Date (Dont) noexcept : Atom (Dont::Initialize) {}
     inline bool isValid() const { return isDate(); }
 

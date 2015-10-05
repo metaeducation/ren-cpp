@@ -43,12 +43,12 @@ namespace ren {
 // behavior.  This is under review.
 //
 // !!! Is an image an "atom"?  It is a sort of container, in the same sense
-// that a string is.  We'll keep it a Value for now.
+// that a string is.  We'll keep it a AnyValue for now.
 
-class Image : public Value {
+class Image : public AnyValue {
 protected:
-    friend class Value;
-    Image (Dont) noexcept : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Image (Dont) noexcept : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isImage(); }
 
 public:

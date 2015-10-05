@@ -64,7 +64,7 @@ namespace ren {
 // throw errors if they were ever non-null.
 //
 
-class Value;
+class AnyValue;
 
 class Context;
 
@@ -111,7 +111,7 @@ namespace internal {
 
 //
 // Although we can define most of the exceptions in exceptions.hpp, this one
-// is thrown by Value itself in templated code and needs to be here
+// is thrown by AnyValue itself in templated code and needs to be here
 //
 
 class bad_value_cast : public std::bad_cast {
@@ -131,7 +131,7 @@ public:
 
 
 
-// All ren::Value types can be converted to a string, which under the hood
+// All ren::AnyValue types can be converted to a string, which under the hood
 // invokes TO-STRING.  (It invokes the modified specification, which is
 // an adaptation of what used to be called FORM).
 //
@@ -140,15 +140,15 @@ public:
 // `using std::to_string;` and then use the unqualified `to_string(...)`,
 // it will notice that the argument is a ren:: type and pick these versions
 //
-// Note that there is no `to_string(optional<Value>)`.  This is intentional,
+// Note that there is no `to_string(optional<AnyValue>)`.  This is intentional,
 // because it's more common to have special handling for a non-value case
 // than not.  So silently compiling situations that could print "no value"
 // (or whatever) undermines the benefit of compile-time safety C++ offers.
 
-std::string to_string (Value const & value);
+std::string to_string (AnyValue const & value);
 
 #if REN_CLASSLIB_QT == 1
-QString to_QString(Value const & value);
+QString to_QString(AnyValue const & value);
 #endif
 
 
@@ -158,7 +158,7 @@ QString to_QString(Value const & value);
 //
 
 //
-// The cellfunction is a particularly styled method on Value, used by the
+// The cellfunction is a particularly styled method on AnyValue, used by the
 // "subtype helpers" to identify types.  This pointer takes the place of having
 // to expose an enumerated type in the interface for the cell itself.
 //
@@ -178,7 +178,7 @@ QString to_QString(Value const & value);
 
 namespace internal {
 
-using CellFunction = bool (Value::*)(RenCell *) const;
+using CellFunction = bool (AnyValue::*)(RenCell *) const;
 
 }
 
@@ -198,13 +198,13 @@ using CellFunction = bool (Value::*)(RenCell *) const;
 // one value that needs the overhead in the binding.
 //
 
-class Value {
+class AnyValue {
     // Function needs access to the spec block's series cell in its creation.
     // Series_ wants to be able to just tweak the index of the cell
     // as it enumerates and leave the rest alone.  Etc.
     // There may be more "crossovers" of this form.  It's a tradeoff between
     // making cell public, using some kind of pimpl idiom or opaque type,
-    // or making all Value's derived classes friends of value.
+    // or making all AnyValue's derived classes friends of value.
 protected:
     friend class ren::internal::Loadable; // for string class constructors
     friend class Series; // temporary - needs to write path cell in operator[]
@@ -231,18 +231,18 @@ protected:
     // makes insertions and removals efficient.
     //
     // (The larger size of the C++ wrapped values makes them poor for storing
-    // en-masse in collections such as std::Vector<ren::Value>.  So...don't
+    // en-masse in collections such as std::Vector<ren::AnyValue>.  So...don't
     // do that.  Use a ren::Series, which is about half the size.)
     //
-    Value * next;
-    Value * prev;
+    AnyValue * next;
+    AnyValue * prev;
 
     //
     // While "adding a few more bytes here and there" in Red and Rebol culture
     // is something that is considered a problem, this is a binding layer.  It
     // does not store a reference for each value in a series...if your series
     // is a million elements long and you hold a reference to that... you
-    // aren't paying for the added storage of a Value for each element.
+    // aren't paying for the added storage of a AnyValue for each element.
     //
     // Perhaps a raw cell based interface has applications, but really, isn't
     // the right "raw cell based interface" just to program in Red/System?
@@ -269,7 +269,7 @@ protected:
     // the code uses code that would mean taking addresses of
     // temporaries and such, so it needs to construct the base class somehow.
     //
-    //     DerivedType (...) : Value(Dont::Initiailize)
+    //     DerivedType (...) : AnyValue(Dont::Initiailize)
     //     {
     //        // derived class code that can cope with that
     //     }
@@ -284,7 +284,7 @@ protected:
 
 protected:
     enum class Dont {Initialize};
-    Value (Dont);
+    AnyValue (Dont);
 
     bool tryFinishInit(RenEngineHandle engine);
 
@@ -308,7 +308,7 @@ protected:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    explicit Value (RenCell const & cell, RenEngineHandle engine) noexcept {
+    explicit AnyValue (RenCell const & cell, RenEngineHandle engine) noexcept {
         this->cell = cell;
         finishInit(engine);
     }
@@ -316,7 +316,7 @@ protected:
     template<
         class T,
         typename = typename std::enable_if<
-            std::is_base_of<Value, T>::value
+            std::is_base_of<AnyValue, T>::value
         >::type
     >
     static T fromCell_(
@@ -324,7 +324,7 @@ protected:
     ) noexcept {
         // Do NOT use {} construction!
         T result (Dont::Initialize);
-        // If you use {} then if T is an array type, due to Value's privileged
+        // If you use {} then if T is an array type, due to AnyValue's privileged
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
@@ -336,7 +336,7 @@ protected:
     template<
         class T,
         typename = typename std::enable_if<
-            std::is_base_of<Value, utility::extract_optional_t<T>>::value
+            std::is_base_of<AnyValue, utility::extract_optional_t<T>>::value
         >::type
     >
     static optional<utility::extract_optional_t<T>> fromCell_(
@@ -344,7 +344,7 @@ protected:
     ) noexcept {
         // Do NOT use {} construction!
         utility::extract_optional_t<T> result (Dont::Initialize);
-        // If you use {} then if T is a series type, due to Value's privileged
+        // If you use {} then if T is a series type, due to AnyValue's privileged
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
@@ -357,13 +357,13 @@ protected:
 
 public:
     static void toCell_(
-        RenCell & cell, Value const & value
+        RenCell & cell, AnyValue const & value
     ) noexcept {
         cell = value.cell;
     }
 
     static void toCell_(
-        RenCell & cell, optional<Value> const & value
+        RenCell & cell, optional<AnyValue> const & value
     ) noexcept;
 
 
@@ -379,7 +379,7 @@ public:
 
     bool isNone() const;
 
-    Value (std::nullptr_t) = delete; // vetoed!
+    AnyValue (std::nullptr_t) = delete; // vetoed!
 
     struct none_t
     {
@@ -387,18 +387,18 @@ public:
       constexpr none_t(init) {}
     };
 
-    Value (none_t, Engine * engine = nullptr) noexcept;
+    AnyValue (none_t, Engine * engine = nullptr) noexcept;
 
 
     //
     // At first the only user-facing constructor that was exposed directly
-    // from Value was the default constructor.  It was used to make ren::Unset
+    // from AnyValue was the default constructor.  It was used to make ren::Unset
     // before that class was eliminated to embrace std::optional for the
     // purpose...now it makes a NONE!:
     //
-    //     ren::Value something; // will be a NONE! value
+    //     ren::AnyValue something; // will be a NONE! value
     //
-    // But support for other construction types directly as Value has been
+    // But support for other construction types directly as AnyValue has been
     // incorporated.  For the rationale, see:
     //
     //     https://github.com/hostilefork/rencpp/issues/2
@@ -408,8 +408,8 @@ public:
 
     // Default constructor; same as none.
 
-    Value (Engine * engine = nullptr) noexcept :
-        Value(none_t::init{}, engine)
+    AnyValue (Engine * engine = nullptr) noexcept :
+        AnyValue(none_t::init{}, engine)
     {}
 
 
@@ -421,7 +421,7 @@ public:
     //
     // http://stackoverflow.com/questions/6242768/
     //
-    Value (bool b, Engine * engine = nullptr) noexcept;
+    AnyValue (bool b, Engine * engine = nullptr) noexcept;
 
     bool isLogic() const;
 
@@ -440,18 +440,18 @@ public:
     //
 
     template <typename T>
-    Value (const T *, Engine * = nullptr); // never define this!
+    AnyValue (const T *, Engine * = nullptr); // never define this!
 
 
 public:
-    Value (char c, Engine * engine = nullptr) noexcept;
-    Value (wchar_t wc, Engine * engine = nullptr) noexcept;
+    AnyValue (char c, Engine * engine = nullptr) noexcept;
+    AnyValue (wchar_t wc, Engine * engine = nullptr) noexcept;
 
     bool isCharacter() const;
 
 
 public:
-    Value (int i, Engine * engine = nullptr) noexcept;
+    AnyValue (int i, Engine * engine = nullptr) noexcept;
 
     bool isInteger() const;
 
@@ -459,7 +459,7 @@ public:
 public:
     // Literals are double by default unless you suffix with "f"
     //     http://stackoverflow.com/a/4353788/211160
-    Value (double d, Engine * engine = nullptr) noexcept;
+    AnyValue (double d, Engine * engine = nullptr) noexcept;
 
     bool isFloat() const;
 
@@ -525,7 +525,7 @@ public:
     // Copy construction must make a new copy of the 128 bits in the cell, as
     // well as add to the tracking (if it is necessary)
     //
-    Value (Value const & other) noexcept :
+    AnyValue (AnyValue const & other) noexcept :
         cell (other.cell),
         next (nullptr), // for debug, for now...
         prev (nullptr)
@@ -538,7 +538,7 @@ public:
     // trust the C++ type system here.  You can move a String into an
     // AnySeries but not vice-versa.
     //
-    Value (Value && other) noexcept :
+    AnyValue (AnyValue && other) noexcept :
         cell (other.cell),
         next (nullptr), // for debug, for now...
         prev (nullptr)
@@ -552,7 +552,7 @@ public:
         other.uninitialize();
     }
 
-    Value & operator=(Value const & other) noexcept {
+    AnyValue & operator=(AnyValue const & other) noexcept {
         uninitialize();
         cell = other.cell;
         finishInit(other.origin);
@@ -560,7 +560,7 @@ public:
     }
 
 public:
-	~Value () {
+	~AnyValue () {
 		uninitialize();
 	}
 
@@ -569,14 +569,14 @@ public:
     // effectively references, there is a copy method which corresponds to
     // the COPY command.
 public:
-    Value copy(bool deep = true) const;
+    AnyValue copy(bool deep = true) const;
 
 
 public:
-    friend std::string to_string (Value const & value);
+    friend std::string to_string (AnyValue const & value);
 
 #if REN_CLASSLIB_QT == 1
-    friend QString to_QString(Value const & value);
+    friend QString to_QString(AnyValue const & value);
 #endif
 
 
@@ -598,21 +598,21 @@ public:
     // it reads more literately as `isEqualTo`.
     //
 public:
-    bool isEqualTo(Value const & other) const;
+    bool isEqualTo(AnyValue const & other) const;
 
-    bool isSameAs(Value const & other) const;
+    bool isSameAs(AnyValue const & other) const;
 
 
 public:
-    // Making Value support -> is kind of wacky; it acts as a pointer to
+    // Making AnyValue support -> is kind of wacky; it acts as a pointer to
     // itself.  But in the iterator model there aren't a lot of answers
     // for supporting the syntax.  It's true that conceptionally a series
     // does "point to" a value, so series->someValueMethod is interesting.
     //
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3723.html
 
-    Value const * operator->() const { return this; }
-    Value * operator->() { return this; }
+    AnyValue const * operator->() const { return this; }
+    AnyValue * operator->() { return this; }
 
 
     // The strategy is that ren::Values are not evaluated by default when
@@ -638,7 +638,7 @@ public:
     //
 #ifdef REN_RUNTIME
 protected:
-    optional<Value> apply_(
+    optional<AnyValue> apply_(
         internal::Loadable const loadables[],
         size_t numLoadables,
         Context const * contextPtr = nullptr,
@@ -646,18 +646,18 @@ protected:
     ) const;
 
 public:
-    optional<Value> apply(
+    optional<AnyValue> apply(
         std::initializer_list<internal::Loadable> loadables,
         internal::ContextWrapper const & wrapper
     ) const;
 
-    optional<Value> apply(
+    optional<AnyValue> apply(
         std::initializer_list<internal::Loadable> loadables,
         Engine * engine = nullptr
     ) const;
 
     template <typename... Ts>
-    inline optional<Value> apply(Ts const &... args) const {
+    inline optional<AnyValue> apply(Ts const &... args) const {
         return apply({ args... });
     }
 #endif
@@ -678,8 +678,8 @@ public:
     template <
         class T,
         typename = typename std::enable_if<
-            std::is_base_of<Value, T>::value
-            and not std::is_same<Value, T>::value
+            std::is_base_of<AnyValue, T>::value
+            and not std::is_same<AnyValue, T>::value
         >::type
     >
     explicit operator T () const
@@ -727,7 +727,7 @@ protected:
     // This hook might not be used by all value types to construct (and a
     // runtime may not be available to "apply" vs. merely construct).  Yet
     // because of its generality, it may be used by any implementation to
-    // construct values... hence it makes sense to put it in Value and
+    // construct values... hence it makes sense to put it in AnyValue and
     // hence protectedly available to all subclasses.  It wraps the
     // "universal hook" in hooks.h to be safely used, with errors converted
     // to exceptions and finishInit() called on the "out" parameters
@@ -739,21 +739,21 @@ protected:
     static bool constructOrApplyInitialize(
         RenEngineHandle engine,
         Context const * context,
-        Value const * applicand,
+        AnyValue const * applicand,
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Value * constructOutTypeIn,
-        Value * applyOut
+        AnyValue * constructOutTypeIn,
+        AnyValue * applyOut
     );
 };
 
-inline std::ostream & operator<<(std::ostream & os, Value const & value) {
+inline std::ostream & operator<<(std::ostream & os, AnyValue const & value) {
     return os << to_string(value);
 }
 
 inline std::ostream & operator<<(
     std::ostream & os,
-    optional<Value> const & value
+    optional<AnyValue> const & value
 ) {
     return value == nullopt ? os : os << to_string(*value);
 }
@@ -778,14 +778,14 @@ inline std::ostream & operator<<(
 
 class evaluation_throw : public std::exception {
 private:
-	optional<Value> thrownValue; // throw might not have a value, e.g. return
-    optional<Value> throwName;
+	optional<AnyValue> thrownValue; // throw might not have a value, e.g. return
+    optional<AnyValue> throwName;
     std::string whatString;
 
 public:
     evaluation_throw (
-		optional<Value> const & value,
-        optional<Value> const & name = nullopt
+		optional<AnyValue> const & value,
+        optional<AnyValue> const & name = nullopt
     ) :
         thrownValue (value),
         throwName (name)
@@ -814,11 +814,11 @@ public:
         return whatString.c_str();
     }
 
-	optional<Value> const & value() const noexcept {
+	optional<AnyValue> const & value() const noexcept {
         return thrownValue;
     }
 
-    optional<Value> const & name() const noexcept {
+    optional<AnyValue> const & name() const noexcept {
         return throwName;
     }
 };
@@ -833,8 +833,8 @@ namespace internal {
 //
 
 //
-// Loadable is a "lazy-loading type" distinct from Value, which unlike a
-// ren::Value can be implicitly constructed from a string and loaded as a
+// Loadable is a "lazy-loading type" distinct from AnyValue, which unlike a
+// ren::AnyValue can be implicitly constructed from a string and loaded as a
 // series of values.  It's lazy so that it won't wind up being forced to
 // interpret "foo baz bar" immediately as [foo baz bar], but to be able
 // to decide if the programmer intent was to compose it together to form
@@ -846,38 +846,38 @@ namespace internal {
 //
 //     https://github.com/hostilefork/rencpp/issues/1
 //
-// Loadable does not publicly inherit from Value, and is not currently
+// Loadable does not publicly inherit from AnyValue, and is not currently
 // intended to be a user-facing type (hence internal:: namespace).  They
 // are implicitly constructed only.
 //
 
-class Loadable : protected Value {
+class Loadable : protected AnyValue {
 private:
-    friend class Value;
+    friend class AnyValue;
 
     // These constructors *must* be public, although we really don't want
     // users of the binding instantiating loadables explicitly.
 public:
-    using Value::Value;
+    using AnyValue::AnyValue;
 
     // Constructor inheritance does not inherit move or copy constructors
 
     Loadable () = delete;
 
-    Loadable (Value const & value) :
-        Value (value)
+    Loadable (AnyValue const & value) :
+        AnyValue (value)
     {
     }
 
-    Loadable (Value && value) :
-        Value (value)
+    Loadable (AnyValue && value) :
+        AnyValue (value)
     {
     }
 
-    // !!! Review implications of when optional<Value> is a specialization
-    // that is the same size under the hood as Value...could it be moved
+    // !!! Review implications of when optional<AnyValue> is a specialization
+    // that is the same size under the hood as AnyValue...could it be moved
     // efficiently?  For now encode unsetness in the runtime-specific info.
-    Loadable (optional<Value> const & value);
+    Loadable (optional<AnyValue> const & value);
 
     Loadable (char const * source);
 
@@ -914,7 +914,7 @@ public:
 template <typename BracesT>
 class BlockLoadable : public Loadable {
 private:
-    friend class Value;
+    friend class AnyValue;
 
 public:
     using Loadable::Loadable;

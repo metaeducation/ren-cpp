@@ -429,7 +429,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     const REBYTE applySpecStr[] = {
         "{Generalized apply of a value to reduced arguments.}"
-        " value {Value to apply}"
+        " value {AnyValue to apply}"
         " block [block!] {Block of args, reduced first (unless /only)}"
         " /only {Use arg values as-is, do not reduce the block}"
     };

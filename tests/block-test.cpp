@@ -23,7 +23,7 @@ TEST_CASE("block test", "[rebol] [block]")
         // This is a tricky case
 
         Block singleton {"foo"};
-        Value singletonAsValue = singleton;
+        AnyValue singletonAsValue = singleton;
 
         static_cast<Block>(singletonAsValue);
 

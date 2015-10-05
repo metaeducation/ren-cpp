@@ -44,14 +44,14 @@ namespace ren {
 
 class Engine;
 
-class Context : public Value {
+class Context : public AnyValue {
 protected:
-    friend class Value;
-    Context (Dont) noexcept : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Context (Dont) noexcept : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isContext(); }
 public:
     Context copy(bool deep = true) {
-        return static_cast<Context>(Value::copy(deep));
+        return static_cast<Context>(AnyValue::copy(deep));
     }
 
 public:
@@ -100,7 +100,7 @@ protected:
     );
 
     Context (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         Context const * contextPtr,
         Engine * engine
@@ -109,7 +109,7 @@ protected:
 
 public:
     Context (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         Context const & context
     ) :
@@ -118,7 +118,7 @@ public:
     }
 
     Context (
-        Value const values[],
+        AnyValue const values[],
         size_t numValues,
         Engine * engine
     ) :
@@ -151,7 +151,7 @@ public:
     // code in this context"
 public:
     template <typename... Ts>
-    inline optional<Value> operator()(Ts &&... args) const {
+    inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply({std::forward<Ts>(args)...}, internal::ContextWrapper {*this});
     }
 

@@ -73,10 +73,10 @@ namespace ren {
 // in the typical C++ execution stack.
 //
 
-class Error : public Value {
+class Error : public AnyValue {
 protected:
-    friend class Value;
-    Error (Dont) : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Error (Dont) : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isError(); }
 
 public:

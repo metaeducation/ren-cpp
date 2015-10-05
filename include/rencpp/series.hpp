@@ -28,10 +28,10 @@ namespace internal {
 // This class is necessary because we can't define a Series::iterator class
 // to wrap a Series inside of a Series--it would be an incomplete definition
 
-class Series_ : public Value {
+class Series_ : public AnyValue {
 protected:
-    friend class Value;
-    Series_ (Dont) noexcept : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Series_ (Dont) noexcept : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
 public:
@@ -48,8 +48,8 @@ public:
     void operator++(int);
     void operator--(int);
 
-    Value operator*() const;
-    Value operator->() const; // see notes on Value::operator->
+    AnyValue operator*() const;
+    AnyValue operator->() const; // see notes on AnyValue::operator->
 
     void head();
     void tail();
@@ -60,7 +60,7 @@ public:
 
 class Series : public ren::internal::Series_ {
 protected:
-    friend class Value;
+    friend class AnyValue;
     Series (Dont) noexcept : Series_ (Dont::Initialize) {}
     inline bool isValid() const { return isSeries(); }
 
@@ -109,8 +109,8 @@ public:
         bool operator!=(iterator const & other) const
             { return not state.isSameAs(other.state); }
 
-        Value operator * () const { return *state; }
-        Value operator-> () const { return state.operator->(); }
+        AnyValue operator * () const { return *state; }
+        AnyValue operator-> () const { return state.operator->(); }
     };
 
     iterator begin() const {
@@ -131,12 +131,12 @@ public:
     // All series can be accessed by index, but there is no general rule
     // about any other way to index into them.  But if you have a base
     // class series and don't know what it is, you need to be able to use
-    // the broader indexing method on it.  So this takes any Value, with
+    // the broader indexing method on it.  So this takes any AnyValue, with
     // risk of giving you a runtime error for a bad combination.
 
     // Note: Rebol/Red use 1-based indexing with a "zero-hole" by default
 
-    Value operator[](Value const & index) const;
+    AnyValue operator[](AnyValue const & index) const;
 };
 
 } // end namespace ren

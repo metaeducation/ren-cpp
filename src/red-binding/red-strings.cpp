@@ -11,7 +11,7 @@ namespace ren {
 /// TYPE CHECKING AND INITIALIZATION
 ///
 
-bool Value::isString(RedCell * init) const {
+bool AnyValue::isString(RedCell * init) const {
     if (init) {
         init->header = RedRuntime::TYPE_STRING;
         return true;
@@ -20,17 +20,17 @@ bool Value::isString(RedCell * init) const {
 }
 
 
-bool Value::isTag(RenCell *) const {
+bool AnyValue::isTag(RenCell *) const {
     throw std::runtime_error("tag not implemented");
 }
 
 
-bool Value::isFilename(RenCell *) const {
+bool AnyValue::isFilename(RenCell *) const {
     throw std::runtime_error("file not implemented");
 }
 
 
-bool Value::isAnyString() const {
+bool AnyValue::isAnyString() const {
     switch (RedRuntime::getDatatypeID(this->cell)) {
         case RedRuntime::TYPE_STRING:
         case RedRuntime::TYPE_FILE:

@@ -22,17 +22,17 @@
 
 namespace ren {
 
-optional<Value> Runtime::evaluate(
+optional<AnyValue> Runtime::evaluate(
     internal::Loadable const loadables[],
     size_t numLoadables,
     Context const * contextPtr,
     Engine * engine
 ) {
-    Value result (Value::Dont::Initialize);
+    AnyValue result (AnyValue::Dont::Initialize);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
-    if (Value::constructOrApplyInitialize(
+    if (AnyValue::constructOrApplyInitialize(
         context.getEngine(),
         &context,
         nullptr, // no applicand

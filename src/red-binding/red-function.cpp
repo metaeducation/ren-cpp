@@ -9,7 +9,7 @@
 namespace ren {
 
 
-bool Value::isFunction() const {
+bool AnyValue::isFunction() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FUNCTION;
 }
 
@@ -20,7 +20,7 @@ void Function::finishInitSpecial(
 ) {
     throw std::runtime_error("No way to make RedCell from C++ function yet.");
 
-    Value::finishInit(engine);
+    AnyValue::finishInit(engine);
 }
 
 

@@ -12,7 +12,7 @@ namespace ren {
 //
 
 
-bool Value::isString(REBVAL * init) const {
+bool AnyValue::isString(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_STRING);
         return true;
@@ -20,7 +20,7 @@ bool Value::isString(REBVAL * init) const {
     return IS_STRING(&cell);
 }
 
-bool Value::isTag(REBVAL * init) const {
+bool AnyValue::isTag(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_TAG);
         return true;
@@ -28,7 +28,7 @@ bool Value::isTag(REBVAL * init) const {
     return IS_TAG(&cell);
 }
 
-bool Value::isFilename(REBVAL * init) const {
+bool AnyValue::isFilename(REBVAL * init) const {
     if (init) {
         VAL_SET(init, REB_FILE);
         return true;
@@ -36,7 +36,7 @@ bool Value::isFilename(REBVAL * init) const {
     return IS_FILE(&cell);
 }
 
-bool Value::isAnyString() const {
+bool AnyValue::isAnyString() const {
     return IS_STRING(&cell) or IS_TAG(&cell)
         or IS_FILE(&cell) or IS_URL(&cell);
 }

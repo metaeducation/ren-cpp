@@ -99,10 +99,10 @@ namespace internal {
 // ANY-FUNCTION! types and not bother with inventing a separate AnyFunction?
 //
 
-class Function : public Value {
+class Function : public AnyValue {
 protected:
-    friend class Value;
-    Function (Dont) : Value (Dont::Initialize) {}
+    friend class AnyValue;
+    Function (Dont) : AnyValue (Dont::Initialize) {}
     inline bool isValid() const { return isFunction(); }
 
 #ifdef REN_RUNTIME
@@ -164,9 +164,9 @@ public:
 		// a return statement, but it also has to be a way of returning the
 		// "correct" value.  In Rebol and Red the default return value is
 		// no value, which does not have a concrete type...it's the disengaged
-		// state of an `optional<Value>`.
+		// state of an `optional<AnyValue>`.
 
-		using Ret = optional<Value>;
+		using Ret = optional<AnyValue>;
 
         using Gen = internal::FunctionGenerator<
             Ret,
@@ -311,7 +311,7 @@ public:
     // but it really only makes sense for a few value types.
 public:
     template <typename... Ts>
-	inline optional<Value> operator()(Ts &&... args) const {
+	inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 #endif
@@ -424,7 +424,7 @@ private:
     )
         -> decltype(
             fun(
-				Value::fromCell_<
+				AnyValue::fromCell_<
                     typename std::decay<
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
@@ -436,7 +436,7 @@ private:
         )
     {
         return fun(
-			Value::fromCell_<
+			AnyValue::fromCell_<
                 typename std::decay<
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
@@ -483,7 +483,7 @@ private:
 
         try {
             // Our applyFun helper does the magic to recursively forward
-            // the Value classes that we generate to the function that
+            // the AnyValue classes that we generate to the function that
             // interfaces us with the Callable the extension author wrote
             // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
@@ -493,7 +493,7 @@ private:
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-			Value::toCell_(*REN_CS_OUT(call), out); // out may be optional
+			AnyValue::toCell_(*REN_CS_OUT(call), out); // out may be optional
 			result = REN_SUCCESS;
         }
         catch (bad_optional_access const & e) {
@@ -514,7 +514,7 @@ private:
             *REN_CS_OUT(call) = e->cell;
             result = REN_APPLY_ERROR;
         }
-        catch (Value const & v) {
+        catch (AnyValue const & v) {
 			// In C++ `throw` is an error mechanism, and using it for general
 			// non-localized control (as Rebol uses THROW) is considered abuse
             if (not v.isError())
@@ -525,14 +525,14 @@ private:
             *REN_CS_OUT(call) = v.cell;
 			result = REN_APPLY_ERROR;
         }
-        catch (optional<Value> const & v) {
+        catch (optional<AnyValue> const & v) {
             if (v == nullopt)
                 throw std::runtime_error {
-                    "ren::nullopt optional<Value> thrown from ren::Function"
+                    "ren::nullopt optional<AnyValue> thrown from ren::Function"
                 };
             if (not v->isError())
                 throw std::runtime_error {
-                    "Non-isError() optional<Value> thrown from ren::Function"
+                    "Non-isError() optional<AnyValue> thrown from ren::Function"
                 };
 
             *REN_CS_OUT(call) = v->cell;

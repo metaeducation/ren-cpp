@@ -14,7 +14,7 @@ namespace ren {
 //
 
 
-bool Value::isSeries() const {
+bool AnyValue::isSeries() const {
     return isAnyArray() or isAnyString() /* or isBinary()*/;
 }
 
@@ -45,8 +45,8 @@ void ren::internal::Series_::operator--(int) {
 }
 
 
-Value ren::internal::Series_::operator*() const {
-    Value result {Dont::Initialize};
+AnyValue ren::internal::Series_::operator*() const {
+    AnyValue result {Dont::Initialize};
 
     if (isAnyString()) {
         // from str_to_char in Rebol source
@@ -65,7 +65,7 @@ Value ren::internal::Series_::operator*() const {
 }
 
 
-Value ren::internal::Series_::operator->() const {
+AnyValue ren::internal::Series_::operator->() const {
     return *(*this);
 }
 
@@ -87,7 +87,7 @@ size_t Series::length() const {
 }
 
 
-Value Series::operator[](Value const & index)
+AnyValue Series::operator[](AnyValue const & index)
 const {
     // See notes on semantic questions about SELECT vs PICK for the meaning
     // of operator[] here, and why we go with "whatever path selection does"
@@ -108,8 +108,8 @@ const {
     // necessary anywhere else, and would involve some kind of tracking map.
     // So we do what building a path would do here.
 
-    Value getPath {Dont::Initialize};
-    Value::isGetPath(&getPath.cell);
+    AnyValue getPath {Dont::Initialize};
+    AnyValue::isGetPath(&getPath.cell);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index
@@ -127,7 +127,7 @@ const {
 
     ASSERT_VALUE_MANAGED(&getPath.cell);
 
-    Value result {Dont::Initialize};
+    AnyValue result {Dont::Initialize};
 
     // Need to wrap this in a try, and figure out a way to translate the
     // errors based on whether you have REN_RUNTIME or not

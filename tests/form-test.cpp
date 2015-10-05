@@ -10,9 +10,9 @@ using namespace ren;
 
 TEST_CASE("form test", "[rebol] [form]")
 {
-    CHECK(to_string(Value {10}) == "10");
-    CHECK(to_string(Value {1.5}) == "1.5");
-    CHECK(to_string(Value {true}) == "true");
+    CHECK(to_string(AnyValue {10}) == "10");
+    CHECK(to_string(AnyValue {1.5}) == "1.5");
+    CHECK(to_string(AnyValue {true}) == "true");
 
     // The only type willing to implicitly cast to a std::string is
     // ren::String; all others must be explicit with to_string which

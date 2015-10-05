@@ -36,8 +36,8 @@ ValueExplorer::ValueExplorer (QWidget * parent) :
 
 
 void ValueExplorer::setValue(
-    Value const & helpFunction,
-    optional<Value> const & value
+    AnyValue const & helpFunction,
+    optional<AnyValue> const & value
 ) {
     if (not this->isVisible())
         return;

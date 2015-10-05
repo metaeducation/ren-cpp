@@ -41,9 +41,9 @@ public:
     class Watcher {
         friend class WatchList;
 
-        ren::Value watch;
+        ren::AnyValue watch;
         bool recalculates;
-        ren::optional<ren::Value> value;
+        ren::optional<ren::AnyValue> value;
         ren::optional<ren::Error> error;
         ren::optional<ren::Tag> label;
         bool frozen;
@@ -52,7 +52,7 @@ public:
         // Construct will also evaluate to capture at the time of the watch
         // being added (particularly important if it's a cell)
         Watcher (
-            ren::Value const & watch,
+            ren::AnyValue const & watch,
             bool recalculates,
             ren::optional<ren::Tag> const & label
         );
@@ -75,9 +75,9 @@ protected slots:
 
 signals:
     void watchCalled(
-        ren::Value vars,
+        ren::AnyValue vars,
         bool recalculates,
-        ren::Value label
+        ren::AnyValue label
     );
 
     void showDockRequested(WatchList * watchList);
@@ -117,8 +117,8 @@ protected:
 
 public:
     // aaaand... magic! :-)
-    ren::optional<ren::Value> watchDialect(
-        ren::Value const & arg,
+    ren::optional<ren::AnyValue> watchDialect(
+        ren::AnyValue const & arg,
         bool recalculates,
         ren::optional<ren::Tag> const & label
     );

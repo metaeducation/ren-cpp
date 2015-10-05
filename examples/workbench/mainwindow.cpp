@@ -39,7 +39,7 @@ MainWindow::MainWindow() :
     setWindowTitle(tr("Ren Garden"));
     setUnifiedTitleAndToolBarOnMac(true);
 
-    // Registration of ren::Value to allow them to be proxied across threads as
+    // Registration of ren::AnyValue to allow them to be proxied across threads as
     // parameters to Qt signals and slots.  See notes here on the importance
     // of being consistent about using namespaces, as it is string based:
     //
@@ -53,9 +53,9 @@ MainWindow::MainWindow() :
     //
     //     https://bugreports.qt.io/browse/QTBUG-35848
 
-    qRegisterMetaType<ren::Value>("ren::Value");
+    qRegisterMetaType<ren::AnyValue>("ren::AnyValue");
 
-    qRegisterMetaType<ren::optional<ren::Value>>("ren::optional<ren::Value>");
+    qRegisterMetaType<ren::optional<ren::AnyValue>>("ren::optional<ren::AnyValue>");
     // !!! register ren::optional<> for all value types, or add on-demand?
 
     // Rebol's design is not multithreaded, and features have not been vetted

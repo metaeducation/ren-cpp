@@ -74,7 +74,7 @@ extern RebolRuntime runtime;
 namespace internal {
     // Placeholder for better solution: mutex for management of linked list
     extern std::mutex linkMutex;
-    extern ren::Value * head;
+    extern ren::AnyValue * head;
 }
 
 } // end namespace ren

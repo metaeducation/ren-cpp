@@ -90,7 +90,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
         REN_STD_FUNCTION,
 
-        [this](Value const & arg, Value const & meta) -> optional<Value>
+        [this](AnyValue const & arg, AnyValue const & meta) -> optional<AnyValue>
         {
             if (not meta) {
                 // the case that the unmodified CONSOLE make *some* exceptions
@@ -107,7 +107,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // refinement and a parameter of 'banner.
 
                 if (arg.isFunction()) {
-                    Value wordsOf = *runtime("words-of quote", arg);
+                    AnyValue wordsOf = *runtime("words-of quote", arg);
 
                     Block blk = static_cast<Block>(wordsOf);
 
@@ -252,7 +252,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
         REN_STD_FUNCTION,
 
-        [this](Value const & arg, Value const & useResult) -> optional<Value> {
+        [this](AnyValue const & arg, AnyValue const & useResult) -> optional<AnyValue> {
 
             WatchList & watchList = *getTabInfo(repl()).watchList;
 
@@ -264,7 +264,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
             optional<Tag> nextLabel;
             bool nextRecalculates = true;
 
-            for (Value item : static_cast<Block>(arg)) {
+            for (AnyValue item : static_cast<Block>(arg)) {
                 if (item.isTag()) {
                     nextLabel = static_cast<Tag>(item);
                 }
@@ -283,7 +283,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     // and x gets added as a watch where both undefined,
                     // but y doesn't?
 
-                    optional<Value> watchResult
+                    optional<AnyValue> watchResult
                         = watchList.watchDialect(
                             item, nextRecalculates, nextLabel
                         );
@@ -774,7 +774,7 @@ QString RenConsole::getPromptString(ReplPad & pad) {
 
 void RenConsole::handleResults(
     bool success,
-    optional<Value> const & result
+    optional<AnyValue> const & result
 ) {
     assert(evaluatingRepl);
 

@@ -12,19 +12,19 @@ TEST_CASE("literals construction", "[rebol] [literals]")
 {
     SECTION("default")
     {
-        Value value;
+        AnyValue value;
         CHECK(value.isNone());
     }
 
     SECTION("none")
     {
-        Value value = none;
+        AnyValue value = none;
         CHECK(value.isNone());
     }
 
     SECTION("logic")
     {
-        Value value = false;
+        AnyValue value = false;
         CHECK(value.isLogic());
 
         // https://github.com/hostilefork/rencpp/issues/24
@@ -47,14 +47,14 @@ TEST_CASE("literals construction", "[rebol] [literals]")
 
     SECTION("integer")
     {
-        Value value = 1;
+        AnyValue value = 1;
         CHECK(value.isInteger());
     }
 
 
     SECTION("float construction")
     {
-        Value value = 10.20;
+        AnyValue value = 10.20;
         CHECK(value.isFloat());
     }
 

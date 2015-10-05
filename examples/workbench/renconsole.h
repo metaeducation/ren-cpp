@@ -102,8 +102,8 @@ signals:
     void hideDockRequested(WatchList * watchList);
 
     void exploreValue(
-        ren::Value const & helpFunction,
-		ren::optional<ren::Value> const & value
+        ren::AnyValue const & helpFunction,
+		ren::optional<ren::AnyValue> const & value
     );
 
 protected:
@@ -119,7 +119,7 @@ private:
     NulOStream nulOstream;
 
 private:
-    ren::Value consoleFunction;
+    ren::AnyValue consoleFunction;
 
     void escape(ReplPad & pad) override;
 
@@ -140,13 +140,13 @@ private:
 public slots:
     void handleResults(
         bool success,
-		ren::optional<ren::Value> const & result
+		ren::optional<ren::AnyValue> const & result
     );
 signals:
     // keep terminology from Qt sample
     void operate(
-        ren::Value const & dialectValue,
-        ren::Value const & contextValue,
+        ren::AnyValue const & dialectValue,
+        ren::AnyValue const & contextValue,
         QString const & input,
         bool meta
     );

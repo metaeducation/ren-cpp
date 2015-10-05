@@ -131,7 +131,7 @@ constexpr ren::nullopt_t nullopt{
 // are dereferenced.  However, this exception has no parameters.  There's no
 // awareness of a name or line number to identify where the problem happened:
 //
-//      optional<Value> foo;
+//      optional<AnyValue> foo;
 //
 //      if (*foo)
 //          std::cout << "The exception won't/can't indicate foo."; }

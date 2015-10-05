@@ -73,7 +73,7 @@ private:
     // If data-only, the loaded data for each file, which can be indexed
 	ren::optional<ren::Block> data;
 public:
-    ren::Value getData(ren::Filename const & filename) const {
+    ren::AnyValue getData(ren::Filename const & filename) const {
         return (*data)[filename];
     }
 };

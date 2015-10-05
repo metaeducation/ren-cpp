@@ -15,17 +15,17 @@ namespace ren {
 /// COMPARISONS
 ///
 
-bool Value::isEqualTo(Value const & other) const {
+bool AnyValue::isEqualTo(AnyValue const & other) const {
     UNUSED(other);
 
-    throw std::runtime_error("Value::isEqualTo coming soon...");
+    throw std::runtime_error("AnyValue::isEqualTo coming soon...");
 }
 
 
-bool Value::isSameAs(Value const & other) const {
+bool AnyValue::isSameAs(AnyValue const & other) const {
     UNUSED(other);
 
-    throw std::runtime_error("Value::isSameAs coming soon...");
+    throw std::runtime_error("AnyValue::isSameAs coming soon...");
 }
 
 
@@ -33,14 +33,14 @@ bool Value::isSameAs(Value const & other) const {
 /// INITIALIZATION FINISHER
 ///
 
-bool Value::tryFinishInit(RenEngineHandle engine) {
+bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     // This needs to add tracking needed to protect from GC, see Rebol binding.
     origin = engine;
     return RedRuntime::getDatatypeID(this->cell) != RedRuntime::TYPE_UNSET;
 }
 
 
-void Value::uninitialize() {
+void AnyValue::uninitialize() {
     // This needs to remove the protections from GC, see Rebol binding.
     // !!! Ultimately Rebol and Red are probably similar enough in needs that
     // the tracking might be moved to the common code.
@@ -52,7 +52,7 @@ void Value::uninitialize() {
 /// STRING CONVERSIONS
 ///
 
-std::string to_string(Value const & value) {
+std::string to_string(AnyValue const & value) {
 
     // placeholder implementation...
 

@@ -56,7 +56,7 @@ public:
     using Finder = std::function<Engine&()>;
 
 private:
-    friend class Value;
+    friend class AnyValue;
     friend class AnyArray;
     friend class AnyString;
     friend class AnyWord;
@@ -152,13 +152,13 @@ public:
     }
 
 public:
-    static optional<Value> evaluate(
+    static optional<AnyValue> evaluate(
         std::initializer_list<internal::BlockLoadable<Block>> loadables,
         Engine & engine
     );
 
     template <typename... Ts>
-    Value operator()(Ts... args) {
+    AnyValue operator()(Ts... args) {
         return evaluate({args...}, *this);
     }
 };

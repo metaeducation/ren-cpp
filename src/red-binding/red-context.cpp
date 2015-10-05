@@ -14,7 +14,7 @@ namespace ren {
 ///
 ///
 
-bool Value::isContext(RenCell *) const {
+bool AnyValue::isContext(RenCell *) const {
     throw std::runtime_error("context not implemented");
 }
 
@@ -30,7 +30,7 @@ Context::Context (
     Context const * contextPtr,
     Engine * engine
 ) :
-    Value (Dont::Initialize)
+    AnyValue (Dont::Initialize)
 {
     throw std::runtime_error("Context::Context coming soon...");
 

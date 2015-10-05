@@ -53,7 +53,7 @@ private:
 
 private:
     ren::Context helpers;
-    ren::Value shellFunction;
+    ren::AnyValue shellFunction;
     bool testMode;
 public:
     ren::Function getShellDialectFunction() {

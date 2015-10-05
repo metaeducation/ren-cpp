@@ -20,13 +20,13 @@ inline RedEngineHandle ensureEngine(Engine * engine) {
 /// NONE
 ///
 
-bool Value::isNone() const {
+bool AnyValue::isNone() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_NONE;
 }
 
 
-Value::Value (none_t, Engine * engine) noexcept  :
-    Value (
+AnyValue::AnyValue (none_t, Engine * engine) noexcept  :
+    AnyValue (
         RedRuntime::makeCell4I(RedRuntime::TYPE_NONE, 0, 0, 0),
         ensureEngine(engine)
     )
@@ -39,23 +39,23 @@ Value::Value (none_t, Engine * engine) noexcept  :
 /// LOGIC
 ///
 
-bool Value::isLogic() const {
+bool AnyValue::isLogic() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LOGIC;
 }
 
 
-bool Value::isTrue() const {
+bool AnyValue::isTrue() const {
     return isLogic() and cell.data1;
 }
 
 
-bool Value::isFalse() const {
+bool AnyValue::isFalse() const {
     return isLogic() and not cell.data1;
 }
 
 
-Value::Value (bool b, Engine * engine) noexcept :
-    Value (
+AnyValue::AnyValue (bool b, Engine * engine) noexcept :
+    AnyValue (
         RedRuntime::makeCell4I(RedRuntime::TYPE_LOGIC, b, 0, 0),
         ensureEngine(engine)
     )
@@ -73,7 +73,7 @@ Logic::operator bool () const {
 /// CHARACTER
 ///
 
-bool Value::isCharacter() const {
+bool AnyValue::isCharacter() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_CHAR;
 }
 
@@ -93,13 +93,13 @@ Character::operator wchar_t() const {
 /// INTEGER
 ///
 
-bool Value::isInteger() const {
+bool AnyValue::isInteger() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_INTEGER;
 }
 
 
-Value::Value (int i, Engine * engine) noexcept :
-    Value (
+AnyValue::AnyValue (int i, Engine * engine) noexcept :
+    AnyValue (
         RedRuntime::makeCell4I(RedRuntime::TYPE_INTEGER, 0, i, 0),
         ensureEngine(engine)
     )
@@ -117,13 +117,13 @@ Integer::operator int () const {
 /// FLOAT
 ///
 
-bool Value::isFloat() const {
+bool AnyValue::isFloat() const {
     return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FLOAT;
 }
 
 
-Value::Value (double d, Engine * engine) noexcept :
-    Value (
+AnyValue::AnyValue (double d, Engine * engine) noexcept :
+    AnyValue (
         RedRuntime::makeCell2I1D(RedRuntime::TYPE_FLOAT, 0, d),
         ensureEngine(engine)
     )

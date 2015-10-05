@@ -14,7 +14,7 @@ namespace ren {
 ///
 
 
-bool Value::isError() const {
+bool AnyValue::isError() const {
     throw std::runtime_error("errors not implemented");
 }
 

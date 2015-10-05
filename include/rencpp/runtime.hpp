@@ -52,12 +52,12 @@ namespace ren {
 class Runtime {
 protected:
     friend class AnyArray;
-    friend class Value;
+    friend class AnyValue;
     friend class AnyString;
     friend class AnyWord;
     friend class Engine;
 
-    static optional<Value> evaluate(
+    static optional<AnyValue> evaluate(
         internal::Loadable const loadables[],
         size_t numLoadables,
         Context const * contextPtr,
@@ -65,14 +65,14 @@ protected:
     );
 
 public:
-    static optional<Value> evaluate(
+    static optional<AnyValue> evaluate(
         std::initializer_list<internal::Loadable> loadables,
         Engine * engine = nullptr
     ) {
         return evaluate(loadables.begin(), loadables.size(), nullptr, engine);
     }
 
-    static optional<Value> evaluate(
+    static optional<AnyValue> evaluate(
         std::initializer_list<internal::BlockLoadable<Block>> loadables,
         internal::ContextWrapper const & wrapper
     ) {
@@ -88,12 +88,12 @@ public:
     // investigate what it is about the static method that has this problem
 
     /*template <typename... Ts>
-    static inline Value evaluate(Ts const &... args) {
+    static inline AnyValue evaluate(Ts const &... args) {
         return evaluate({args...}, static_cast<Engine *>(nullptr));
     }*/
 
     template <typename... Ts>
-    inline optional<Value> operator()(Ts const &... args) const {
+    inline optional<AnyValue> operator()(Ts const &... args) const {
         return evaluate({args...}, static_cast<Engine *>(nullptr));
     }
 

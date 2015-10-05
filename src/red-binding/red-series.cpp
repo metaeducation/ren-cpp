@@ -11,7 +11,7 @@ namespace ren {
 
 
 
-bool Value::isSeries() const {
+bool AnyValue::isSeries() const {
     return isAnyArray() or isAnyString();
 }
 
@@ -45,11 +45,11 @@ void ren::internal::Series_::operator--(int) {
 }
 
 
-Value ren::internal::Series_::operator*() const {
+AnyValue ren::internal::Series_::operator*() const {
     throw std::runtime_error("Series_::operator*() coming soon...");
 
 /*
-    Value result {Dont::Initialize};
+    AnyValue result {Dont::Initialize};
 
     if (isAnyString()) {
         // from str_to_char in Rebol source
@@ -68,7 +68,7 @@ Value ren::internal::Series_::operator*() const {
 }
 
 
-Value ren::internal::Series_::operator->() const {
+AnyValue ren::internal::Series_::operator->() const {
     return *(*this);
 }
 
@@ -95,7 +95,7 @@ size_t Series::length() const {
 }
 
 
-Value Series::operator[](Value const & index) const {
+AnyValue Series::operator[](AnyValue const & index) const {
     if (not index.isInteger())
         throw std::runtime_error("operator[] currently integers only...");
 
