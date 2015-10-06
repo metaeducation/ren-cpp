@@ -55,18 +55,21 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     // freeing in case the destructor got called when finishInit never did...
     assert(not next and not prev);
 
-	// We no longer allow AnyValue to hold a REB_UNSET (unless the specialization
-	// using std::optional<AnyValue> represents unsets using that, which would
-	// happen sometime later down the line when that optimization makes sense)
-	// finishInit() is an inline wrapper that throws if this happens.
-	if (IS_UNSET(&cell))
-		return false;
-
     // For the immediate moment, we have only one engine, but taking note
     // when that engine isn't being threaded through the values is a good
     // catch of problems for when there's more than one...
     assert(engine.data == 1020);
     origin = engine;
+
+    // We shouldn't be able to get any REB_END values made in Ren/C++
+    assert(NOT_END(&cell));
+
+    // We no longer allow AnyValue to hold a REB_UNSET (unless specialization
+	// using std::optional<AnyValue> represents unsets using that, which would
+	// happen sometime later down the line when that optimization makes sense)
+	// finishInit() is an inline wrapper that throws if this happens.
+	if (IS_UNSET(&cell))
+		return false;
 
     if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
         // Types with no GC-aware members do not need to be put into the list
@@ -94,13 +97,17 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
 
 
 void AnyValue::uninitialize() {
-    origin = REN_ENGINE_HANDLE_INVALID;
 
-    if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
-        // We can avoid taking the mutex if the type isn't listed
-        assert(not next and not prev);
-        return;
-    }
+    // !!! We could avoid taking the mutex if the type wasn't tracked, but we
+    // do not pay for initialization of the cell bits.  So this check could
+    // touch uninitialized memory in the destructor case:
+    //
+    //     FLAGIT_64(VAL_TYPE(&temp->cell)) & TS_NO_GC
+    //
+    // The cell bits would need to be initialized at least to REB_END or
+    // similar.  Or some other way of marking the next and prev with magic
+    // numbers to distinguish from the nullptr/nullptr case that may be
+    // the sole linked in element in the chain.
 
     std::lock_guard<std::mutex> lock(internal::linkMutex);
 
@@ -114,6 +121,8 @@ void AnyValue::uninitialize() {
     if (next) next->prev = prev;
 
     next = prev = nullptr;
+
+    origin = REN_ENGINE_HANDLE_INVALID;
 }
 
 

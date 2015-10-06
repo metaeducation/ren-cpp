@@ -56,6 +56,10 @@ RenResult Generalized_Apply(
 	REBSER *args,
 	REBFLG reduce
 ) {
+    // `out` will be protected during the apply
+    ASSERT_VALUE_MANAGED(applicand);
+    ASSERT_SERIES_MANAGED(args);
+
     if (ANY_FUNC(applicand)) {
         if (Apply_Block_Throws(out, applicand, args, 0, reduce, NULL)) {
             TAKE_THROWN_ARG(extraOut, out);
@@ -95,6 +99,7 @@ RenResult Generalized_Apply(
 
 	if (IS_OBJECT(applicand)) {
 		REBSER * reboundArgs = Copy_Array_Deep_Managed(args);
+        SAVE_SERIES(reboundArgs);
 
         // Note this takes a C array of valueS terminated by a REB_END.
 		Bind_Values_Set_Forward_Shallow(
@@ -103,10 +108,12 @@ RenResult Generalized_Apply(
 		);
 
 		if (Do_Block_Throws(out, reboundArgs, 0)) {
+            UNSAVE_SERIES(reboundArgs);
             TAKE_THROWN_ARG(extraOut, out);
 			return REN_APPLY_THREW;
 		}
 
+        UNSAVE_SERIES(reboundArgs);
         // May be REB_UNSET (optional<> signaled by tryFinishInit)
         return REN_SUCCESS;
     }
@@ -460,11 +467,13 @@ RebolRuntime::~RebolRuntime () {
     if (initialized) {
         OS_QUIT_DEVICES(0);
 
-        delete [] rebargs.home_dir; // needs to last during Rebol run
-
         Shutdown_Core_Ext();
 
         Shutdown_Core();
+
+        // needs to last during Rebol run
+        delete [] rebargs.exe_path;
+        delete [] rebargs.home_dir;
     }
 }
 

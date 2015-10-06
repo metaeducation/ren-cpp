@@ -72,6 +72,30 @@ public:
         if (REBOL_IS_ENGINE_HANDLE_INVALID(engine))
             return REN_BAD_ENGINE_HANDLE;
 
+        // Any values that have been allocated globally or statically will
+        // still exist.  There isn't anyway to guarantee they will have
+        // their destructors run before the shutdown of the runtime...which
+        // means trouble.  Considering them to be leaks is unfriendly, so
+        // the better thing to do is to clear them out.
+        if (head) {
+            AnyValue *temp = head;
+            while (temp) {
+                AnyValue *next = temp->next;
+
+                // clearing out the origin and next/prev will make the
+                // destructor treat the value as uninitialized.
+                temp->origin.data = REN_BAD_ENGINE_HANDLE;
+                temp->next = temp->prev = nullptr;
+
+                // !!! Should there be a OPT_VALUE_FREE bit that is checked by
+                // higher level interfaces like this on every usage, or is it
+                // better to crash on accessing the bad cells?
+                memset(&temp->cell, 0xAE, sizeof(REBVAL));
+
+                temp = next;
+            }
+        }
+
         assert(GC_Mark_Hook == &::Queue_Mark_Host_Deep);
         GC_Mark_Hook = nullptr;
 
@@ -488,18 +512,22 @@ public:
 
     void Queue_Mark_Host_Deep() {
         // This lock on GC does not suddenly make Rebol thread safe, but just
+        // ensures that if any other threads are using values that they
+        // do not come and go until after the lock is released.
 
         std::lock_guard<std::mutex> lock(internal::linkMutex);
 
         ren::AnyValue * temp = ren::internal::head;
         while (temp) {
+            assert(FLAGIT_64(VAL_TYPE(&temp->cell)) & TS_GC);
             Queue_Mark_Value_Deep(&temp->cell);
             temp = temp->next;
         }
     }
 
     ~RebolHooks () {
-        assert(not head);
+        // The runtime may be shutdown already, so don't do anything here
+        // using REBVALs or REBSERs.  Put that in engine shutdown.
     }
 };
 
