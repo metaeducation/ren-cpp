@@ -351,7 +351,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     REBCNT len = 0; // length of above bin
 
     if (startupBin) {
-        REBSER * startup = Decompress(startupBin, len, 10000000, 0);
+        REBSER * startup = Decompress(startupBin, len, -1, FALSE, FALSE);
 
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
