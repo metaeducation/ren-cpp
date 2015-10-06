@@ -1026,8 +1026,9 @@ constexpr optional<X&> make_optional(reference_wrapper<X> v)
 namespace std
 {
   template <typename T> 
-  struct hash<std::experimental::optional<T>>
+  class hash<std::experimental::optional<T>>
   {
+  public:
     typedef typename hash<T>::result_type result_type;
     typedef std::experimental::optional<T> argument_type;
     
@@ -1037,8 +1038,9 @@ namespace std
   };
   
   template <typename T> 
-  struct hash<std::experimental::optional<T&>>
+  class hash<std::experimental::optional<T&>>
   {
+  public:
     typedef typename hash<T>::result_type result_type;
     typedef std::experimental::optional<T&> argument_type;
     
