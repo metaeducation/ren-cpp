@@ -176,6 +176,11 @@ protected:
     inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
+    explicit AnyString_ (Engine * engine = nullptr) :
+        AnyString ("", F, engine)
+    {
+    }
+
     explicit AnyString_ (char const * cstr, Engine * engine = nullptr) :
         AnyString (cstr, F, engine)
     {

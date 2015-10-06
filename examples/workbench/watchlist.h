@@ -119,7 +119,6 @@ public:
     // aaaand... magic! :-)
     ren::optional<ren::AnyValue> watchDialect(
         ren::AnyValue const & arg,
-        bool recalculates,
         ren::optional<ren::Tag> const & label
     );
 };

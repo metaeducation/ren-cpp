@@ -107,8 +107,16 @@ WatchList::Watcher::Watcher (
 
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
-        if (firstTime or (recalculates and (not frozen)))
-            value = watch.apply();
+        if (firstTime or (recalculates and (not frozen))) {
+            if (watch.isBlock()) {
+                // !!! Review apply logic, right now blocks "don't have
+                // evaluator behavior" so you have to DO them.  Should
+                // that be something that watch() or watch.apply() can do?
+
+                value = runtime("do", watch);
+            } else
+                value = watch.apply();
+        }
 		error = nullopt;
     }
     catch (evaluation_error const & e) {
@@ -145,7 +153,7 @@ QString WatchList::Watcher::getValueString() const {
 	if (error != nullopt)
 		return to_QString(*error);
 	if (value == nullopt)
-		return "...no value...";
+        return "no value";
 	return to_QString(*runtime("mold/all quote", value));
 }
 
@@ -218,7 +226,7 @@ void WatchList::pushWatcher(Watcher * watcherUnique) {
     int count = rowCount();
     insertRow(count);
 
-    updateWatcher(count + 1);
+    // updateWatcher(count + 1);
 
     emit showDockRequested(this);
 }
@@ -288,8 +296,10 @@ void WatchList::updateWatcher(int index) {
         valueItem->setForeground(Qt::darkGreen);
     else if (w.error)
         valueItem->setForeground(Qt::darkRed);
-    else
+    else if (w.value)
         valueItem->setForeground(Qt::black);
+    else
+        valueItem->setForeground(Qt::lightGray); // "no value"
 
     if (w.frozen) {
         nameItem->setBackground(Qt::gray);
@@ -342,9 +352,66 @@ void WatchList::updateAllWatchers() {
 
 optional<AnyValue> WatchList::watchDialect(
     AnyValue const & arg,
-    bool recalculates,
-	optional<Tag> const & label
+    optional<Tag> const & label
 ) {
+    // `watch on` turns on the watchlist panel, `watch off` turns it off.
+    // Since we quote the argument we have to look up the legal words.
+    //
+    // Let's use the evaluator for this trick.  :-)  Have it give us back
+    // -1, 0, or 1... -1 meaning "word is not a logic synonym"
+
+    int logicIndex = -1;
+
+#ifdef GARDEN_CPP_WAY
+    // If we were doing it the C++ way, this might be how we'd say it...
+    if (arg.isWord()) {
+        static std::vector<QString> logicWords[2] =
+            {{"off", "no", "false"}, {"on", "yes", "true"}};
+
+        auto word = static_cast<Word>(arg);
+        auto spelling = word.spellingOf<QString>();
+        for (int index = 0; index < 2; index++) {
+            if (
+                logicWords[index].end()
+                != std::find(
+                    logicWords[index].begin(),
+                    logicWords[index].end(),
+                    spelling
+                )
+            ) {
+                logicIndex = index;
+                break;
+            }
+        }
+    }
+
+    if (arg.isLogic()) {
+        logicIndex = static_cast<bool>(arg);
+    }
+#else
+    // Here's an interesting example of just calling out
+    logicIndex = static_cast<Integer>(
+        *runtime(
+            "case", Block {
+                "find [off no false] quote", arg, "[0]"
+                "find [on yes true] quote", arg, "[1]"
+                "true [-1]"
+            }
+        )
+    );
+#endif
+
+    if (logicIndex != -1) {
+        if (logicIndex)
+            emit showDockRequested(this);
+        else
+            emit hideDockRequested(this);
+        return nullopt;
+    }
+
+    // `watch 10` means fetch info about watch 10.  `watch -10` means fetch
+    // info and also delete that watch
+    //
     if (arg.isInteger()) {
         int signedIndex = static_cast<Integer>(arg);
         if (signedIndex == 0)
@@ -373,85 +440,6 @@ optional<AnyValue> WatchList::watchDialect(
         return watchValue;
     }
 
-    // Let's use the evaluator for this trick.  :-)  Have it give us back
-    // -1, 0, or 1... -1 meaning "word is not a logic synonym"
-
-    int logicIndex = -1;
-
-#ifdef GARDEN_CPP_WAY
-    if (arg.isWord()) {
-        static std::vector<QString> logicWords[2] =
-            {{"off", "no", "false"}, {"on", "yes", "true"}};
-
-        auto word = static_cast<Word>(arg);
-        auto spelling = word.spellingOf<QString>();
-        for (int index = 0; index < 2; index++) {
-            if (
-                logicWords[index].end()
-                != std::find(
-                    logicWords[index].begin(),
-                    logicWords[index].end(),
-                    spelling
-                )
-            ) {
-                logicIndex = index;
-                break;
-            }
-        }
-    }
-
-    if (arg.isLogic()) {
-        logicIndex = static_cast<bool>(arg);
-    }
-#else
-    logicIndex = static_cast<Integer>(
-		*runtime(
-            "case", Block {
-            "    find [off no false] quote", arg, "[0]"
-            "    find [on yes true] quote", arg, "[1]"
-            "    true [-1]"
-            }
-        )
-    );
-#endif
-
-    if (logicIndex != -1) {
-        if (logicIndex)
-            emit showDockRequested(this);
-        else
-            emit hideDockRequested(this);
-		return nullopt;
-    }
-
-    // With those words out of the way, we should be able to take
-    // for granted the creation of a Watcher for words.  Then we
-    // can throw an error up to the console on a /cell request.
-    // Because there's no use adding it to the watch list if it will
-    // never be evaluated again (a regular watch may become good...)
-
-	if (arg.isWord() or arg.isPath() or arg.isGroup()) {
-
-        Watcher * watcherUnique = new Watcher {arg, recalculates, label};
-
-        // we append to end instead of inserting at the top because
-        // it keeps the numbering more consistent.  But some people might
-        // desire it added at the top and consider it better that way?
-
-        emit pushWatcherRequested(watcherUnique);
-
-        Watcher & w = *watcherUnique; // signal handler took ownership
-
-        // it might not seem we need to technically invoke the error here,
-        // but if there was an error and people are scripting then they
-        // need to handle that with try blocks...because we don't want to
-        // quietly give back an unset if the operation failed.
-
-        if (w.error != nullopt)
-            throw *w.error;
-
-		return w.value;
-    }
-
     if (arg.isTag()) {
         for (auto & watcherPtr : watchers) {
             Watcher & w = *watcherPtr;
@@ -465,7 +453,64 @@ optional<AnyValue> WatchList::watchDialect(
         throw Error {"unknown tag name in watch list"};
     }
 
-    throw Error {"unexpected type passed to watch dialect"};
+    // With those words out of the way, we should be able to take for granted
+    // we are adding a watcher.
+
+    Watcher * watcherUnique = nullptr;
+
+    if (arg.isBlock() || arg.isGroup()) {
+        // By default a block will have its expression evaluated each time,
+        // while a group will be evaluated just once and the resulting
+        // value monitored.  This can be ticked on or off in the watchlist
+        // but it makes it easy to express the intent at the prompt.
+
+        watcherUnique = new Watcher {arg, arg.isBlock(), label};
+    }
+    else if (arg.isWord()) {
+        // If they ask for a word, assume they really meant they wanted
+        // a get-word.  e.g. `watch x` when x is a single arity function
+        // will not call x every time.  To get an evaluation you have to
+        // use a block like `watch [x]`.
+
+        watcherUnique = new Watcher {
+            GetWord {static_cast<Word>(arg)}, true, label
+        };
+    }
+    else if (arg.isPath()) {
+        // !!! Path should probably be turned to GetPath also, but that
+        // means decisions need to be made on these arrays.  Should all
+        // watches where the specification of the watch is an array be
+        // deep copied?  Also, is Rebol going to allow "aliasing" of
+        // arrays so that any one can be seen as just a view of another?
+        // This question ties in pretty deeply to "lit bits" in the
+        // evaluator; if the literalness itself deep copies or not.
+
+        watcherUnique = new Watcher {arg, true, label};
+    }
+    else if (arg.isGetWord() or arg.isGetPath()) {
+        watcherUnique = new Watcher {arg, true, label};
+    }
+
+    if (not watcherUnique)
+        throw Error {"unexpected type passed to watch dialect"};
+
+    // we append to end instead of inserting at the top because
+    // it keeps the numbering more consistent.  But some people might
+    // desire it added at the top and consider it better that way?
+
+    emit pushWatcherRequested(watcherUnique);
+
+    Watcher & w = *watcherUnique; // signal handler took ownership
+
+    // it might not seem we need to technically invoke the error here,
+    // but if there was an error and people are scripting then they
+    // need to handle that with try blocks...because we don't want to
+    // quietly give back an unset if the operation failed.
+
+    if (w.error != nullopt)
+        throw *w.error;
+
+    return w.value;
 }
 
 

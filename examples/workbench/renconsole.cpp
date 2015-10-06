@@ -245,55 +245,80 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     // as well.
 
     auto watchFunction = Function::construct(
-        "{WATCH dialect for monitoring and un-monitoring in the Ren Workbench}"
-        ":arg [word! path! block! paren! integer! tag!]"
-        "    {word to watch or other legal parameter, see documentation)}"
-        "/result {watch the result of the evaluation (not the expression)}",
+        "{WATCH dialect for monitoring and un-monitoring in the workbench} "
+        ":arg [word! get-word! path! get-path! block! group! integer! tag!] "
+            "{word to watch or other legal parameter, see documentation)} "
+        "/dialect {Interpret as instruction to WATCH vs. raw value} ",
 
         REN_STD_FUNCTION,
 
-        [this](AnyValue const & arg, AnyValue const & useResult) -> optional<AnyValue> {
-
+        [this](
+            AnyValue const & argOriginal, AnyValue const & dialect
+        )
+            -> optional<AnyValue>
+        {
             WatchList & watchList = *getTabInfo(repl()).watchList;
 
-            if (not arg.isBlock())
-                return watchList.watchDialect(arg, not useResult, nullopt);
+            AnyValue arg = argOriginal;
 
-            Block aggregate {};
+            optional<Tag> label;
 
-            optional<Tag> nextLabel;
-            bool nextRecalculates = true;
+            if (arg.isBlock() || arg.isGroup()) {
+                // If it's a block or a group, then if the first item is a
+                // tag we steal as a label.  `watch (<before> first foo)`
 
-            for (AnyValue item : static_cast<Block>(arg)) {
-                if (item.isTag()) {
-                    nextLabel = static_cast<Tag>(item);
-                }
-                else if (item.isRefinement()) {
-                    if (item.isEqualTo<Refinement>("result")) {
-                        nextRecalculates = false;
-                    }
-                    else
+                auto array = static_cast<AnyArray>(arg);
+
+                if (not array.isEmpty() && array[1].isTag())
+                    label = static_cast<Tag>(array[1]);
+            }
+
+            if (dialect) {
+                // If you use /DIALECT then expressions will be fetched and
+                // handled as a dialect... e.g. `watch/dialect (3 - 4)` means
+                // the same as literally typing `watch -1` to remove watch
+                // number one.  This is not the default; if an expression is
+                // evaluated it is assumed you want to watch the result of
+                // that expression and not treat it as a "WATCH directive"
+                //
+                // (It may seem useless to want to watch the literal value of
+                // -1, but maybe you are just taking notes on a number and
+                // need a place to have it "written down" for you.)
+
+                if (
+                    arg.isWord() or arg.isGetWord()
+                    or arg.isPath() or arg.isGetPath()
+                    or arg.isGroup()
+                ) {
+                    optional<AnyValue> result = arg.apply();
+                    if (result == nullopt)
                         throw Error {
-                            "only /result refinement is supported in blocks"
+                            "No expression result to use as watch dialect"
                         };
-                }
-                else {
-                    // !!! exception handling if they watch something
-                    // with no value in the block form?  e.g. watch [x y]
-                    // and x gets added as a watch where both undefined,
-                    // but y doesn't?
 
-                    optional<AnyValue> watchResult
-                        = watchList.watchDialect(
-                            item, nextRecalculates, nextLabel
-                        );
-                    nextRecalculates = true;
-                    nextLabel = nullopt;
-                    if (watchResult != nullopt)
-                        runtime("append", aggregate, watchResult);
+                    arg = *result;
+
+                    if (arg.isBlock() || arg.isGroup()) {
+                        // If we already captured a label from the first
+                        // element being a tag then don't override it with the
+                        // watch dialect interpretation.
+                        //
+                        //    foo: [<this-tag-loses> x + 1]
+                        //    watch/dialect (<this-tag-wins> foo)
+                        //
+                        // Not likely to happen, but...there has to be a rule.
+
+                        if (label != nullopt) {
+                            auto array = static_cast<AnyArray>(arg);
+
+                            if (not array.isEmpty() && array[1].isTag())
+                                label = static_cast<Tag>(array[1]);
+                        }
+                    }
                 }
             }
-            return aggregate;
+
+            return watchList.watchDialect(arg, label);
         }
     );
 

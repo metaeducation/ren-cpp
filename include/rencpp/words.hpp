@@ -50,6 +50,9 @@ protected:
     );
 #endif
 
+    // Copy from any other AnyWord, preserve binding but change type
+    explicit AnyWord (AnyWord const & other, internal::CellFunction cellfun);
+
 
 protected:
     explicit AnyWord (
@@ -158,6 +161,14 @@ public:
     }
 
 #endif
+
+    template<class C2, CellFunction F2>
+    explicit AnyWord_ (
+        internal::AnyWord_<C2, F2> const & other
+    ) :
+        AnyWord (other, F)
+    {
+    }
 };
 
 } // end namespace internal

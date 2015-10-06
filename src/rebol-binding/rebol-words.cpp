@@ -219,4 +219,12 @@ AnyWord::AnyWord (
 #endif
 
 
+AnyWord::AnyWord (AnyWord const & other, internal::CellFunction cellfun) :
+    AnyValue (Dont::Initialize)
+{
+    this->cell = other.cell;
+    (this->*cellfun)(&this->cell);
+    finishInit(other.origin);
+}
+
 } // end namespace ren
