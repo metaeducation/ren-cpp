@@ -36,6 +36,9 @@ protected:
     AnyString (Dont) noexcept : AnySeries (Dont::Initialize) {}
     static bool isValid(RenCell const & cell);
 
+    // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
+    //    http://stackoverflow.com/questions/32983193/
+public:
     friend class String;
     static void initString(RenCell & cell);
     friend class Tag;

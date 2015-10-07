@@ -32,6 +32,9 @@ protected:
     AnyArray (Dont) noexcept : AnySeries (Dont::Initialize) {}
     static bool isValid(RenCell const & cell);
 
+    // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
+    //    http://stackoverflow.com/questions/32983193/
+public:
     friend class Block;
     static void initBlock(RenCell & cell);
     friend class Group;
