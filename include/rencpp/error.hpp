@@ -77,7 +77,7 @@ class Error : public AnyValue {
 protected:
     friend class AnyValue;
     Error (Dont) : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isError(); }
+    static bool isValid(RenCell const & cell);
 
 public:
     Error (const char * msg, Engine * engine = nullptr);

@@ -30,7 +30,7 @@ static_assert(R_OUT == 0, "R_OUT must be 0 for RenShimPointer to work");
 // some users want of their own functions.
 //
 
-bool AnyValue::isFunction() const {
+bool Function::isValid(RenCell const & cell) {
     return ANY_FUNC(&cell);
 }
 

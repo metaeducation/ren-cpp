@@ -9,8 +9,8 @@
 namespace ren {
 
 
-bool AnyValue::isFunction() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FUNCTION;
+bool Function::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_FUNCTION;
 }
 
 void Function::finishInitSpecial(

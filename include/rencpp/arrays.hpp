@@ -24,11 +24,26 @@
 
 namespace ren {
 
-class AnyArray : public Series {
+class Block;
+
+class AnyArray : public AnySeries {
 protected:
     friend class AnyValue;
-    AnyArray (Dont) noexcept : Series (Dont::Initialize) {}
-    inline bool isValid() const { return isAnyArray(); }
+    AnyArray (Dont) noexcept : AnySeries (Dont::Initialize) {}
+    static bool isValid(RenCell const & cell);
+
+    friend class Block;
+    static void initBlock(RenCell & cell);
+    friend class Group;
+    static void initGroup(RenCell & cell);
+    friend class Path;
+    static void initPath(RenCell & cell);
+    friend class GetPath;
+    static void initGetPath(RenCell & cell);
+    friend class SetPath;
+    static void initSetPath(RenCell & cell);
+    friend class LitPath;
+    static void initLitPath(RenCell & cell);
 
 protected:
     //
@@ -99,7 +114,6 @@ class AnyArray_ : public AnyArray {
 protected:
     friend class AnyValue;
     AnyArray_ (Dont) : AnyArray (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
     AnyArray_ (
@@ -178,27 +192,42 @@ public:
 //
 
 
-class Block : public internal::AnyArray_<Block, &AnyValue::isBlock, Block>
+class Block
+    : public internal::AnyArray_<Block, &AnyArray::initBlock, Block>
 {
+    using AnyArray::initBlock;
+
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using internal::AnyArray_<Block, &AnyValue::isBlock, Block>::AnyArray_;
+    using internal::AnyArray_<Block, &AnyArray::initBlock, Block>::AnyArray_;
 };
 
 
-class Group : public internal::AnyArray_<Group, &AnyValue::isGroup>
+class Group
+    : public internal::AnyArray_<Group, &AnyArray::initGroup>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-	using internal::AnyArray_<Group, &AnyValue::isGroup>::AnyArray_;
+    using internal::AnyArray_<Group, &AnyArray::initGroup>::AnyArray_;
 };
 
 
-class Path : public internal::AnyArray_<Path, &AnyValue::isPath>
+class Path
+    : public internal::AnyArray_<Path, &AnyArray::initPath>
 {
+protected:
+    static void initCell(RenCell & cell);
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using internal::AnyArray_<Path, &AnyValue::isPath>::AnyArray_;
+    using internal::AnyArray_<Path, &AnyArray::initPath>::AnyArray_;
 
 public:
     template <typename... Ts>
@@ -208,11 +237,16 @@ public:
 };
 
 
-class SetPath : public internal::AnyArray_<SetPath, &AnyValue::isSetPath>
+class SetPath
+    : public internal::AnyArray_<SetPath, &AnyArray::initSetPath>
 {
+protected:
+    static void initCell(RenCell & cell);
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using internal::AnyArray_<SetPath, &AnyValue::isSetPath>::AnyArray_;
+    using internal::AnyArray_<SetPath, &AnyArray::initSetPath>::AnyArray_;
 
 public:
     template <typename... Ts>
@@ -224,11 +258,16 @@ public:
 };
 
 
-class GetPath : public internal::AnyArray_<GetPath, &AnyValue::isGetPath>
+class GetPath
+    : public internal::AnyArray_<GetPath, &AnyArray::initGetPath>
 {
+protected:
+    static void initCell(RenCell & cell);
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using internal::AnyArray_<GetPath, &AnyValue::isGetPath>::AnyArray_;
+    using internal::AnyArray_<GetPath, &AnyArray::initGetPath>::AnyArray_;
 
     // As with GetWord, it can be convenient to think of "using" a GetPath
     // as calling a function with no arguments.
@@ -242,11 +281,16 @@ public:
 };
 
 
-class LitPath : public internal::AnyArray_<LitPath, &AnyValue::isLitPath>
+class LitPath
+    : public internal::AnyArray_<LitPath, &AnyArray::initLitPath>
 {
+protected:
+    static void initCell(RenCell & cell);
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using internal::AnyArray_<LitPath, &AnyValue::isLitPath>::AnyArray_;
+    using internal::AnyArray_<LitPath, &AnyArray::initLitPath>::AnyArray_;
 };
 
 

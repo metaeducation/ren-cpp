@@ -7,31 +7,29 @@
 
 namespace ren {
 
-///
-/// TYPE CHECKING AND INITIALIZATION
-///
+//
+// TYPE CHECKING
+//
 
-bool AnyValue::isString(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_STRING;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_STRING;
+bool String::isValid(RedCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_STRING;
 }
 
 
-bool AnyValue::isTag(RenCell *) const {
+bool Tag::isValid(RedCell const & cell) {
+    UNUSED(cell);
     throw std::runtime_error("tag not implemented");
 }
 
 
-bool AnyValue::isFilename(RenCell *) const {
+bool Filename::isValid(RedCell const & cell) {
+    UNUSED(cell);
     throw std::runtime_error("file not implemented");
 }
 
 
-bool AnyValue::isAnyString() const {
-    switch (RedRuntime::getDatatypeID(this->cell)) {
+bool AnyString::isValid(RedCell const & cell) {
+    switch (RedRuntime::getDatatypeID(cell)) {
         case RedRuntime::TYPE_STRING:
         case RedRuntime::TYPE_FILE:
         case RedRuntime::TYPE_URL:
@@ -43,6 +41,26 @@ bool AnyValue::isAnyString() const {
 }
 
 
+//
+// TYPE FORMAT INITIALIZATION
+//
+
+void AnyString::initString(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_STRING;
+}
+
+
+void AnyString::initTag(RedCell & cell) {
+    UNUSED(cell);
+    throw std::runtime_error("tag not implemented");
+}
+
+
+void AnyString::initFilename(RedCell & cell) {
+    UNUSED(cell);
+    throw std::runtime_error("file not implemented");
+}
+
 
 ///
 /// CONSTRUCTION
@@ -53,7 +71,7 @@ AnyString::AnyString(
     internal::CellFunction cellfun,
     Engine * engine
 ) :
-    Series (Dont::Initialize)
+    AnySeries (Dont::Initialize)
 {
     throw std::runtime_error("AnyString::AnyString coming soon...");
 
@@ -70,7 +88,7 @@ AnyString::AnyString (
     internal::CellFunction cellfun,
     Engine * engine
 )
-    : Series(Dont::Initialize)
+    : AnySeries(Dont::Initialize)
 {
     throw std::runtime_error("AnyString::AnyString coming soon...");
 

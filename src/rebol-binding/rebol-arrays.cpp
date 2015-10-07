@@ -9,62 +9,66 @@
 namespace ren {
 
 //
-// TYPE DETECTION AND INITIALIZATION
+// TYPE DETECTION
 //
 
-bool AnyValue::isBlock(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_BLOCK);
-        return true;
-    }
+bool Block::isValid(RenCell const & cell) {
     return IS_BLOCK(&cell);
 }
 
-bool AnyValue::isGroup(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_PAREN);
-        return true;
-    }
+bool Group::isValid(RenCell const & cell) {
     return IS_PAREN(&cell);
 }
 
-bool AnyValue::isPath(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_PATH);
-        return true;
-    }
+bool Path::isValid(RenCell const & cell) {
     return IS_PATH(&cell);
 }
 
-bool AnyValue::isGetPath(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_GET_PATH);
-        return true;
-    }
+bool GetPath::isValid(RenCell const & cell) {
     return IS_GET_PATH(&cell);
 }
 
-bool AnyValue::isSetPath(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_SET_PATH);
-        return true;
-    }
+bool SetPath::isValid(RenCell const & cell) {
     return IS_SET_PATH(&cell);
 }
 
-bool AnyValue::isLitPath(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_LIT_PATH);
-        return true;
-    }
+bool LitPath::isValid(RenCell const & cell) {
     return IS_LIT_PATH(&cell);
 }
 
-bool AnyValue::isAnyArray() const {
+bool AnyArray::isValid(RenCell const & cell) {
     return IS_BLOCK(&cell) or IS_PAREN(&cell) or IS_PATH(&cell)
         or IS_SET_PATH(&cell) or IS_GET_PATH(&cell) or IS_LIT_PATH(&cell);
 }
 
+
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyArray::initBlock(RenCell & cell) {
+    VAL_SET(&cell, REB_BLOCK);
+}
+
+void AnyArray::initGroup(RenCell & cell) {
+    VAL_SET(&cell, REB_PAREN);
+}
+
+void AnyArray::initPath(RenCell & cell) {
+    VAL_SET(&cell, REB_PATH);
+}
+
+void AnyArray::initGetPath(RenCell & cell) {
+    VAL_SET(&cell, REB_GET_PATH);
+}
+
+void AnyArray::initSetPath(RenCell & cell) {
+    VAL_SET(&cell, REB_SET_PATH);
+}
+
+void AnyArray::initLitPath(RenCell & cell) {
+    VAL_SET(&cell, REB_LIT_PATH);
+}
 
 
 //
@@ -81,7 +85,7 @@ AnyArray::AnyArray (
 ) :
     AnyArray (Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(this->cell);
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);
 
@@ -108,7 +112,7 @@ AnyArray::AnyArray (
 ) :
     AnyArray (Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(this->cell);
 
 
     Context context = contextPtr ? *contextPtr : Context::current(engine);

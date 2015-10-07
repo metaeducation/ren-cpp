@@ -9,66 +9,37 @@
 namespace ren {
 
 
-///
-/// TYPE CHECKING AND INITIALIZATION
-///
+//
+// TYPE CHECKING
+//
 
-bool AnyValue::isWord(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_WORD;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_WORD;
+bool Word::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_WORD;
 }
 
 
-bool AnyValue::isSetWord(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_SET_WORD;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_SET_WORD;
+bool SetWord::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_SET_WORD;
 }
 
 
-bool AnyValue::isGetWord(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_GET_WORD;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_GET_WORD;
+bool GetWord::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_GET_WORD;
 }
 
 
-bool AnyValue::isLitWord(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_LIT_WORD;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LIT_WORD;
+bool LitWord::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LIT_WORD;
 }
 
 
-bool AnyValue::isRefinement(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_REFINEMENT;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_REFINEMENT;
+bool Refinement::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_REFINEMENT;
 }
 
 
-bool AnyValue::isIssue(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_ISSUE;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_ISSUE;
-}
-
-
-bool AnyValue::isAnyWord() const {
-    switch (RedRuntime::getDatatypeID(this->cell)) {
+bool AnyWord::isValid(RenCell const & cell) {
+    switch (RedRuntime::getDatatypeID(cell)) {
         case RedRuntime::TYPE_WORD:
         case RedRuntime::TYPE_SET_WORD:
         case RedRuntime::TYPE_GET_WORD:
@@ -81,6 +52,36 @@ bool AnyValue::isAnyWord() const {
     }
     return false;
 }
+
+
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyWord::initWord(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_WORD;
+}
+
+
+void AnyWord::initSetWord(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_SET_WORD;
+}
+
+
+void AnyWord::initGetWord(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_GET_WORD;
+}
+
+
+void AnyWord::initLitWord(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_LIT_WORD;
+}
+
+
+void AnyWord::initRefinement(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_REFINEMENT;
+}
+
 
 
 //

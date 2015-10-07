@@ -79,7 +79,7 @@ namespace internal {
     //
     class Loadable;
 
-    class Series_;
+    class AnySeries_;
 
 #ifndef REN_RUNTIME
     class RebolHooks; // faking by borrowing Rebol as "no runtime"
@@ -178,7 +178,7 @@ QString to_QString(AnyValue const & value);
 
 namespace internal {
 
-using CellFunction = bool (AnyValue::*)(RenCell *) const;
+using CellFunction = void (*)(RenCell &);
 
 }
 
@@ -207,9 +207,9 @@ class AnyValue {
     // or making all AnyValue's derived classes friends of value.
 protected:
     friend class ren::internal::Loadable; // for string class constructors
-    friend class Series; // temporary - needs to write path cell in operator[]
+    friend class AnySeries; // !!! needs to write path cell in operator[] ?
     friend class Function; // needs to extract series from spec block
-    friend class ren::internal::Series_; // iterator state
+    friend class ren::internal::AnySeries_; // iterator state
 
     RenCell cell;
 
@@ -377,8 +377,6 @@ public:
     // It is probably also more efficient (though this hasn't been verified)
     //
 
-    bool isNone() const;
-
     AnyValue (std::nullptr_t) = delete; // vetoed!
 
     struct none_t
@@ -404,8 +402,6 @@ public:
     //     https://github.com/hostilefork/rencpp/issues/2
     //
 public:
-    bool isAtom() const;
-
     // Default constructor; same as none.
 
     AnyValue (Engine * engine = nullptr) noexcept :
@@ -422,8 +418,6 @@ public:
     // http://stackoverflow.com/questions/6242768/
     //
     AnyValue (bool b, Engine * engine = nullptr) noexcept;
-
-    bool isLogic() const;
 
     bool isTrue() const;
 
@@ -447,78 +441,12 @@ public:
     AnyValue (char c, Engine * engine = nullptr) noexcept;
     AnyValue (wchar_t wc, Engine * engine = nullptr) noexcept;
 
-    bool isCharacter() const;
-
-
-public:
     AnyValue (int i, Engine * engine = nullptr) noexcept;
 
-    bool isInteger() const;
-
-
-public:
     // Literals are double by default unless you suffix with "f"
     //     http://stackoverflow.com/a/4353788/211160
     AnyValue (double d, Engine * engine = nullptr) noexcept;
 
-    bool isFloat() const;
-
-
-public:
-    bool isDate() const;
-
-    bool isTime() const;
-
-    bool isImage() const;
-
-public:
-    bool isWord(RenCell * = nullptr) const;
-
-    bool isSetWord(RenCell * = nullptr) const;
-
-    bool isGetWord(RenCell * = nullptr) const;
-
-    bool isLitWord(RenCell * = nullptr) const;
-
-    bool isRefinement(RenCell * = nullptr) const;
-
-    bool isIssue(RenCell * = nullptr) const;
-
-    bool isAnyWord() const;
-
-
-public:
-    bool isBlock(RenCell * = nullptr) const;
-
-	bool isGroup(RenCell * = nullptr) const;
-
-    bool isPath(RenCell * = nullptr) const;
-
-    bool isGetPath(RenCell * = nullptr) const;
-
-    bool isSetPath(RenCell * = nullptr) const;
-
-    bool isLitPath(RenCell * = nullptr) const;
-
-    bool isAnyArray() const;
-
-    bool isAnyString() const;
-
-    bool isSeries() const;
-
-public:
-    bool isString(RenCell * = nullptr) const;
-
-    bool isTag(RenCell * = nullptr) const;
-
-    bool isFilename(RenCell * = nullptr) const;
-
-public:
-    bool isFunction() const;
-
-    bool isContext(RenCell * = nullptr) const;
-
-    bool isError() const;
 
 public:
     //
@@ -662,6 +590,31 @@ public:
     }
 #endif
 
+    // This is needed by the global free function `ren::is()` to sneak past
+    // non-friendedness status of it to derived-from-AnyValue classes to use
+    // their static `isValid()` method.
+protected:
+    template <class T, class V> friend
+    inline bool is(V const & value);
+
+    template <class T, class V> friend
+    inline bool is(optional<V> const & value);
+
+    template <class T, class V>
+    inline static bool isValidHelper(V const & value) {
+        static_assert(
+            std::is_base_of<AnyValue, V>::value,
+            "Only types derived from AnyValue may be tested by ren::is()"
+        );
+
+        static_assert(
+            std::is_base_of<V, T>::value,
+            "Type tested for not possible derived type of source in ren::is()"
+        );
+
+        return T::isValid(value.cell);
+    }
+
 
     // The explicit (and throwing) cast operators are defined via template
     // for any casts that don't already have valid paths in the hierarchy.
@@ -684,19 +637,15 @@ public:
     >
     explicit operator T () const
     {
+        if (not T::isValid(cell))
+            throw bad_value_cast("Invalid cast");
+
         // Here's the tough bit.  How do we throw exceptions on all the right
         // cases?  Each class needs a checker for the bits.  So it constructs
         // the instance, with the bits, but then throws if it's bad...and it's
         // not virtual.
         T result (Dont::Initialize);
         result.cell = cell;
-
-        if (not result.isValid())
-            throw bad_value_cast("Invalid cast");
-
-        // All constructed types, even Dont::Initialize, must be able to
-        // survive a throw.
-
         result.finishInit(origin);
         return result;
     }
@@ -710,12 +659,11 @@ public:
 
     template <class T>
     bool isEqualTo(char const * spelling) const {
-        T result (Dont::Initialize);
-        result.cell = cell;
-
-        if (not result.isValid())
+        if (not T::isValid(cell))
             return false;
 
+        T result (Dont::Initialize);
+        result.cell = cell;
         result.finishInit(origin);
 
         return result.hasSpelling(spelling);
@@ -756,6 +704,31 @@ inline std::ostream & operator<<(
     optional<AnyValue> const & value
 ) {
     return value == nullopt ? os : os << to_string(*value);
+}
+
+
+// Initially the identifying functions for determining the concrete type
+// of an AnyValue or subclass had names like `isInteger()` and `isBlock()`
+// for "readability" at the callsites, and to avoid repeating namespacing
+// e.g. `is<ren::Integer>()` or `is<ren::Block>()`.  Yet generality and
+// modularity are better, and usually code is using the types as either
+// `is<Integer>()` or `is<rBlock>()`, so the proper C++ approach permits
+// meaningful use in templating.  Moreover, by having it as a free function
+// it can use static typing to make sure you don't try and do a test that
+// isn't possible, such as testing a string to see if it's an integer.
+// Also, optionals can be tested by a variation and fail gracefully if
+// the optional is disengaged.
+
+template <class T, class V>
+bool is(V const & value) {
+    return AnyValue::isValidHelper<T, V>(value);
+}
+
+template <class T, class V>
+bool is(optional<V> const & value) {
+    if (value == nullopt)
+        return false;
+    return AnyValue::isValidHelper<T, V>(*value);
 }
 
 

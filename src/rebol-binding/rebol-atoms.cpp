@@ -7,7 +7,7 @@
 
 namespace ren {
 
-bool AnyValue::isAtom() const {
+bool Atom::isValid(RenCell const & cell) {
     // Will be more efficient when atom makes it formally into the
     // Rebol base typesets.
     return (
@@ -27,7 +27,7 @@ bool AnyValue::isAtom() const {
 // NONE
 //
 
-bool AnyValue::isNone() const {
+bool None::isValid(RenCell const & cell) {
     return IS_NONE(&cell);
 }
 
@@ -49,16 +49,16 @@ AnyValue::AnyValue (none_t, Engine * engine) noexcept :
 // LOGIC
 //
 
-bool AnyValue::isLogic() const {
+bool Logic::isValid(RenCell const & cell) {
     return IS_LOGIC(&cell);
 }
 
 bool AnyValue::isTrue() const {
-    return isLogic() && VAL_LOGIC(&cell);
+    return IS_CONDITIONAL_TRUE(&cell);
 }
 
 bool AnyValue::isFalse() const {
-    return isLogic() && !VAL_LOGIC(&cell);
+    return IS_CONDITIONAL_FALSE(&cell);
 }
 
 AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
@@ -83,7 +83,7 @@ Logic::operator bool() const {
 // CHARACTER
 //
 
-bool AnyValue::isCharacter() const {
+bool Character::isValid(RenCell const & cell) {
     return IS_CHAR(&cell);
 }
 
@@ -149,7 +149,7 @@ Character::operator QChar () const {
 // INTEGER
 //
 
-bool AnyValue::isInteger() const {
+bool Integer::isValid(RenCell const & cell) {
     return IS_INTEGER(&cell);
 }
 
@@ -175,7 +175,7 @@ Integer::operator int() const {
 // FLOAT
 //
 
-bool AnyValue::isFloat() const {
+bool Float::isValid(RenCell const & cell) {
     return IS_DECIMAL(&cell);
 }
 
@@ -201,7 +201,7 @@ Float::operator double() const {
 // DATE
 //
 
-bool AnyValue::isDate() const {
+bool Date::isValid(RenCell const & cell) {
     return IS_DATE(&cell);
 }
 

@@ -42,15 +42,15 @@ TEST_CASE("block test", "[rebol] [block]")
 
         Block blk { {1, true}, {false, 2} };
 
-        CHECK(blk.isBlock());
-        CHECK(blk[1].isBlock());
-        CHECK(blk[2].isBlock());
+        CHECK(is<Block>(blk));
+        CHECK(is<Block>(blk[1]));
+        CHECK(is<Block>(blk[2]));
 
         Block blk1 = static_cast<Block>(blk[1]);
         Block blk2 = static_cast<Block>(blk[2]);
-        CHECK(blk1[1].isInteger());
-        CHECK(blk1[2].isLogic());
-        CHECK(blk2[1].isLogic());
-        CHECK(blk2[2].isInteger());
+        CHECK(is<Integer>(blk1[1]));
+        CHECK(is<Logic>(blk1[2]));
+        CHECK(is<Logic>(blk2[1]));
+        CHECK(is<Integer>(blk2[2]));
     }
 }

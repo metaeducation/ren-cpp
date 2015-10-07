@@ -103,7 +103,7 @@ class Function : public AnyValue {
 protected:
     friend class AnyValue;
     Function (Dont) : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isFunction(); }
+    static bool isValid(RenCell const & cell);
 
 #ifdef REN_RUNTIME
 private:
@@ -517,7 +517,7 @@ private:
         catch (AnyValue const & v) {
 			// In C++ `throw` is an error mechanism, and using it for general
 			// non-localized control (as Rebol uses THROW) is considered abuse
-            if (not v.isError())
+            if (not is<Error>(v))
                 throw std::runtime_error {
                     "Non-isError() Value thrown from ren::Function"
                 };
@@ -526,11 +526,7 @@ private:
 			result = REN_APPLY_ERROR;
         }
         catch (optional<AnyValue> const & v) {
-            if (v == nullopt)
-                throw std::runtime_error {
-                    "ren::nullopt optional<AnyValue> thrown from ren::Function"
-                };
-            if (not v->isError())
+            if (not is<Error>(v))
                 throw std::runtime_error {
                     "Non-isError() optional<AnyValue> thrown from ren::Function"
                 };

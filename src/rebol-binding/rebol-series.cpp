@@ -14,8 +14,8 @@ namespace ren {
 //
 
 
-bool AnyValue::isSeries() const {
-    return isAnyArray() or isAnyString() /* or isBinary()*/;
+bool AnySeries::isValid(RenCell const & cell) {
+    return ANY_SERIES(&cell);
 }
 
 
@@ -25,36 +25,36 @@ bool AnyValue::isSeries() const {
 //
 
 
-void ren::internal::Series_::operator++() {
+void ren::internal::AnySeries_::operator++() {
     cell.data.position.index++;
 }
 
 
-void ren::internal::Series_::operator--() {
+void ren::internal::AnySeries_::operator--() {
     cell.data.position.index--;
 }
 
 
-void ren::internal::Series_::operator++(int) {
+void ren::internal::AnySeries_::operator++(int) {
     ++*this;
 }
 
 
-void ren::internal::Series_::operator--(int) {
+void ren::internal::AnySeries_::operator--(int) {
     --*this;
 }
 
 
-AnyValue ren::internal::Series_::operator*() const {
+AnyValue ren::internal::AnySeries_::operator*() const {
     AnyValue result {Dont::Initialize};
 
-    if (isAnyString()) {
+    if (ANY_STR(&cell)) {
         // from str_to_char in Rebol source
         SET_CHAR(
             &result.cell,
             GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.position.index)
         );
-    } else if (isAnyArray()) {
+    } else if (Is_Array_Series(VAL_SERIES(&cell))) {
         result.cell = *VAL_BLK_SKIP(&cell, cell.data.position.index);
     } else {
         // Binary and such, would return an integer
@@ -65,29 +65,29 @@ AnyValue ren::internal::Series_::operator*() const {
 }
 
 
-AnyValue ren::internal::Series_::operator->() const {
+AnyValue ren::internal::AnySeries_::operator->() const {
     return *(*this);
 }
 
 
-void ren::internal::Series_::head() {
+void ren::internal::AnySeries_::head() {
     cell.data.position.index = 0;
 }
 
 
-void ren::internal::Series_::tail() {
+void ren::internal::AnySeries_::tail() {
     cell.data.position.index = cell.data.position.series->tail;
 }
 
 
-size_t Series::length() const {
+size_t AnySeries::length() const {
     REBCNT index = VAL_INDEX(&cell);
     REBCNT tail = VAL_TAIL(&cell);
     return tail > index ? tail - index : 0;
 }
 
 
-AnyValue Series::operator[](AnyValue const & index)
+AnyValue AnySeries::operator[](AnyValue const & index)
 const {
     // See notes on semantic questions about SELECT vs PICK for the meaning
     // of operator[] here, and why we go with "whatever path selection does"
@@ -109,7 +109,7 @@ const {
     // So we do what building a path would do here.
 
     AnyValue getPath {Dont::Initialize};
-    AnyValue::isGetPath(&getPath.cell);
+    VAL_SET(&getPath.cell, REB_GET_PATH);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index

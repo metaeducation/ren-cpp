@@ -75,7 +75,7 @@ void EvaluatorWorker::doWork(
         success = true;
     }
     catch (evaluation_throw const & t) {
-		if (t.name() != nullopt && t.name()->isWord()) {
+        if (is<Word>(t.name())) {
 			Word word = static_cast<Word>(*t.name());
             if (word.hasSpelling("exit") || word.hasSpelling("quit")) {
                 // A programmatic request to quit the system (e.g. QUIT).
@@ -85,10 +85,10 @@ void EvaluatorWorker::doWork(
                 //
                 // https://github.com/metaeducation/ren-garden/issues/17
 
-                if (t.value() == nullopt || t.value()->isNone()) {
+                if (t.value() == nullopt || is<None>(t.value())) {
                     qApp->exit(0);
                 }
-                else if (t.value()->isInteger()) {
+                else if (is<Integer>(t.value())) {
                     qApp->exit(static_cast<Integer>(*t.value()));
                 }
                 else {

@@ -29,12 +29,19 @@ namespace ren {
 // ANYSTRING
 //
 
-class AnyString : public Series
+class AnyString : public AnySeries
 {
 protected:
     friend class AnyValue;
-    AnyString (Dont) noexcept : Series (Dont::Initialize) {}
-    inline bool isValid() const { return isAnyString(); }
+    AnyString (Dont) noexcept : AnySeries (Dont::Initialize) {}
+    static bool isValid(RenCell const & cell);
+
+    friend class String;
+    static void initString(RenCell & cell);
+    friend class Tag;
+    static void initTag(RenCell & cell);
+    friend class Filename;
+    static void initFilename(RenCell & cell);
 
 protected:
     AnyString(
@@ -73,8 +80,8 @@ public:
 public:
     class iterator {
         friend class AnyString;
-        Series state;
-        iterator (Series const & state) :
+        AnySeries state;
+        iterator (AnySeries const & state) :
             state (state)
         {
         }
@@ -173,7 +180,6 @@ class AnyString_ : public AnyString {
 protected:
     friend class AnyValue;
     AnyString_ (Dont) noexcept : AnyString (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
     explicit AnyString_ (Engine * engine = nullptr) :
@@ -214,8 +220,12 @@ public:
 //     https://github.com/hostilefork/rencpp/issues/49
 //
 
-class String : public internal::AnyString_<String, &AnyValue::isString>
+class String
+    : public internal::AnyString_<String, &AnyString::initString>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 protected:
     String (Dont) noexcept : AnyString_ (Dont::Initialize) {}
     friend class AnyValue;
@@ -255,17 +265,27 @@ public:
 };
 
 
-class Tag : public internal::AnyString_<Tag, &AnyValue::isTag> {
+class Tag
+    : public internal::AnyString_<Tag, &AnyString::initTag>
+{
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyString_<Tag, &AnyValue::isTag>::AnyString_;
+    using AnyString_<Tag, &AnyString::initTag>::AnyString_;
 };
 
 
-class Filename : public internal::AnyString_<Filename, &AnyValue::isFilename> {
+class Filename :
+    public internal::AnyString_<Filename, &AnyString::initFilename>
+{
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyString_<Filename, &AnyValue::isFilename>::AnyString_;
+    using AnyString_<Filename, &AnyString::initFilename>::AnyString_;
 };
 
 } // end namespace ren

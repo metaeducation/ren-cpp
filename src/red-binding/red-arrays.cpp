@@ -9,66 +9,42 @@
 
 namespace ren {
 
-///
-/// TYPE CHECKING AND INITIALIZATION
-///
+//
+// TYPE CHECKING
+//
 
-bool AnyValue::isBlock(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_BLOCK;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_BLOCK;
+bool Block::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_BLOCK;
 }
 
 
-bool AnyValue::isGroup(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_PAREN;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_PAREN;
+bool Group::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_PAREN;
 }
 
 
-bool AnyValue::isPath(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_PATH;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_PATH;
+bool Path::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_PATH;
 }
 
 
-bool AnyValue::isGetPath(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_GET_PATH;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_GET_PATH;
+bool GetPath::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_GET_PATH;
 }
 
 
-bool AnyValue::isSetPath(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_SET_PATH;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_SET_PATH;
+bool SetPath::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_SET_PATH;
 }
 
 
-bool AnyValue::isLitPath(RedCell * init) const {
-    if (init) {
-        init->header = RedRuntime::TYPE_LIT_PATH;
-        return true;
-    }
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LIT_PATH;
+bool LitPath::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LIT_PATH;
 }
 
 
-bool AnyValue::isAnyArray() const {
-    switch (RedRuntime::getDatatypeID(this->cell)) {
+bool AnyArray::isValid(RenCell const & cell) {
+    switch (RedRuntime::getDatatypeID(cell)) {
         case RedRuntime::TYPE_BLOCK:
         case RedRuntime::TYPE_PAREN:
         case RedRuntime::TYPE_PATH:
@@ -80,6 +56,40 @@ bool AnyValue::isAnyArray() const {
             break;
     }
     return false;
+}
+
+
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyArray::initBlock(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_BLOCK;
+}
+
+
+void AnyArray::initGroup(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_PAREN;
+}
+
+
+void AnyArray::initPath(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_PATH;
+}
+
+
+void AnyArray::initGetPath(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_GET_PATH;
+}
+
+
+void AnyArray::initSetPath(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_SET_PATH;
+}
+
+
+void AnyArray::initLitPath(RedCell & cell) {
+    cell.header = RedRuntime::TYPE_LIT_PATH;
 }
 
 
@@ -95,7 +105,7 @@ AnyArray::AnyArray (
     Context const * contextPtr,
     Engine * engine
 ) :
-    Series (Dont::Initialize)
+    AnySeries (Dont::Initialize)
 {
     throw std::runtime_error("AnyArray::AnyArray coming soon...");
 

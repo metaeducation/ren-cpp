@@ -28,11 +28,11 @@ namespace internal {
 // This class is necessary because we can't define a Series::iterator class
 // to wrap a Series inside of a Series--it would be an incomplete definition
 
-class Series_ : public AnyValue {
+class AnySeries_ : public AnyValue {
 protected:
     friend class AnyValue;
-    Series_ (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isSeries(); }
+    AnySeries_ (Dont) noexcept : AnyValue (Dont::Initialize) {}
+    static bool isValid(RenCell const & cell);
 
 public:
     // We don't return values here because that would leak the internal
@@ -58,11 +58,11 @@ public:
 } // end namespace internal
 
 
-class Series : public ren::internal::Series_ {
+class AnySeries : public ren::internal::AnySeries_ {
 protected:
     friend class AnyValue;
-    Series (Dont) noexcept : Series_ (Dont::Initialize) {}
-    inline bool isValid() const { return isSeries(); }
+    AnySeries (Dont) noexcept : AnySeries_ (Dont::Initialize) {}
+    static bool isValid(RenCell const & cell);
 
     //
     // If you wonder why C++ would need a separate iterator type for a Series
@@ -74,9 +74,9 @@ protected:
     // has to be wrapped up.
 public:
     class iterator {
-        friend class Series;
-        internal::Series_ state;
-        iterator (internal::Series_ const & state) :
+        friend class AnySeries;
+        internal::AnySeries_ state;
+        iterator (internal::AnySeries_ const & state) :
             state (state)
         {
         }

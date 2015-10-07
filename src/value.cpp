@@ -44,7 +44,7 @@ AnyValue::AnyValue (Dont) :
 
 
 AnyValue::operator bool() const {
-    return not (isNone() or isFalse());
+    return not (is<None>(*this) or isFalse());
 }
 
 
@@ -136,13 +136,13 @@ bool AnyValue::constructOrApplyInitialize(
 
         case REN_CONSTRUCT_ERROR:
             extraOut.finishInit(engine);
-            assert(extraOut.isError());
+            assert(is<Error>(extraOut));
             throw load_error {static_cast<Error>(extraOut)};
 
     #ifdef REN_RUNTIME
         case REN_APPLY_ERROR: {
             extraOut->finishInit(engine);
-            assert(extraOut->isError());
+            assert(is<Error>(extraOut));
             throw evaluation_error {static_cast<Error>(extraOut)};
         }
 

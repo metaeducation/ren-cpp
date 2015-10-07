@@ -14,7 +14,7 @@ namespace ren {
 ///
 ///
 
-bool AnyValue::isContext(RenCell *) const {
+bool Context::isValid(RenCell const &) {
     throw std::runtime_error("context not implemented");
 }
 

@@ -7,14 +7,10 @@
 namespace ren {
 
 //
-// TYPE DETECTION AND INITIALIZATION
+// TYPE DETECTION
 //
 
-bool AnyValue::isContext(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_OBJECT);
-        return true;
-    }
+bool Context::isValid(RenCell const & cell) {
     return IS_OBJECT(&cell);
 }
 
@@ -32,7 +28,7 @@ Context::Context (
 ) :
     AnyValue (Dont::Initialize)
 {
-    isContext(&cell); // CellFunction; writes type signature into cell
+    VAL_SET(&cell, REB_OBJECT);
 
     // Here, a null context pointer means null.  No finder is invoked.
 

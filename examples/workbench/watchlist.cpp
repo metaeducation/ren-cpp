@@ -108,7 +108,7 @@ WatchList::Watcher::Watcher (
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (recalculates and (not frozen))) {
-            if (watch.isBlock()) {
+            if (is<Block>(watch)) {
                 // !!! Review apply logic, right now blocks "don't have
                 // evaluator behavior" so you have to DO them.  Should
                 // that be something that watch() or watch.apply() can do?
@@ -226,7 +226,8 @@ void WatchList::pushWatcher(Watcher * watcherUnique) {
     int count = rowCount();
     insertRow(count);
 
-    // updateWatcher(count + 1);
+    // We do not `updateWatcher(count + 1)` here, rather we wait for the
+    // event loop...
 
     emit showDockRequested(this);
 }
@@ -412,7 +413,7 @@ optional<AnyValue> WatchList::watchDialect(
     // `watch 10` means fetch info about watch 10.  `watch -10` means fetch
     // info and also delete that watch
     //
-    if (arg.isInteger()) {
+    if (is<Integer>(arg)) {
         int signedIndex = static_cast<Integer>(arg);
         if (signedIndex == 0)
             throw Error {"Integer arg must be nonzero"};
@@ -427,20 +428,20 @@ optional<AnyValue> WatchList::watchDialect(
         if (index > this->watchers.size())
             throw Error {"No such watchlist item index"};
 
-		optional<AnyValue> watchValue = watchers[index - 1]->value;
-		optional<Error> watchError = watchers[index - 1]->error;
+        optional<AnyValue> watchValue = watchers[index - 1]->value;
+        optional<Error> watchError = watchers[index - 1]->error;
         if (removal) {
             emit removeWatcherRequested(index);
             return watchValue;
         }
 
-		if (watchError != nullopt)
+        if (watchError != nullopt)
             throw watchError;
 
         return watchValue;
     }
 
-    if (arg.isTag()) {
+    if (is<Tag>(arg)) {
         for (auto & watcherPtr : watchers) {
             Watcher & w = *watcherPtr;
             if (
@@ -458,15 +459,15 @@ optional<AnyValue> WatchList::watchDialect(
 
     Watcher * watcherUnique = nullptr;
 
-    if (arg.isBlock() || arg.isGroup()) {
+    if (is<Block>(arg) or is<Group>(arg)) {
         // By default a block will have its expression evaluated each time,
         // while a group will be evaluated just once and the resulting
         // value monitored.  This can be ticked on or off in the watchlist
         // but it makes it easy to express the intent at the prompt.
 
-        watcherUnique = new Watcher {arg, arg.isBlock(), label};
+        watcherUnique = new Watcher {arg, is<Block>(arg), label};
     }
-    else if (arg.isWord()) {
+    else if (is<Word>(arg)) {
         // If they ask for a word, assume they really meant they wanted
         // a get-word.  e.g. `watch x` when x is a single arity function
         // will not call x every time.  To get an evaluation you have to
@@ -476,7 +477,7 @@ optional<AnyValue> WatchList::watchDialect(
             GetWord {static_cast<Word>(arg)}, true, label
         };
     }
-    else if (arg.isPath()) {
+    else if (is<Path>(arg)) {
         // !!! Path should probably be turned to GetPath also, but that
         // means decisions need to be made on these arrays.  Should all
         // watches where the specification of the watch is an array be
@@ -487,7 +488,7 @@ optional<AnyValue> WatchList::watchDialect(
 
         watcherUnique = new Watcher {arg, true, label};
     }
-    else if (arg.isGetWord() or arg.isGetPath()) {
+    else if (is<GetWord>(arg) or is<GetPath>(arg)) {
         watcherUnique = new Watcher {arg, true, label};
     }
 

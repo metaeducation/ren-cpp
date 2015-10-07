@@ -8,58 +8,30 @@
 namespace ren {
 
 //
-// TYPE DETECTION AND INITIALIZATION
+// TYPE DETECTION
 //
 
-bool AnyValue::isWord(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_WORD);
-        return true;
-    }
+bool Word::isValid(const RenCell & cell) {
     return IS_WORD(&cell);
 }
 
-bool AnyValue::isSetWord(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_SET_WORD);
-        return true;
-    }
+bool SetWord::isValid(const RenCell & cell) {
     return IS_SET_WORD(&cell);
 }
 
-bool AnyValue::isGetWord(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_GET_WORD);
-        return true;
-    }
+bool GetWord::isValid(const RenCell & cell) {
     return IS_GET_WORD(&cell);
 }
 
-bool AnyValue::isLitWord(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_LIT_WORD);
-        return true;
-    }
+bool LitWord::isValid(const RenCell & cell) {
     return IS_LIT_WORD(&cell);
 }
 
-bool AnyValue::isRefinement(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_REFINEMENT);
-        return true;
-    }
+bool Refinement::isValid(const RenCell & cell) {
     return IS_REFINEMENT(&cell);
 }
 
-bool AnyValue::isIssue(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_ISSUE);
-        return true;
-    }
-    return IS_ISSUE(&cell);
-}
-
-bool AnyValue::isAnyWord() const {
+bool AnyWord::isValid(const RenCell & cell) {
     return IS_WORD(&cell)
         or IS_SET_WORD(&cell)
         or IS_GET_WORD(&cell)
@@ -68,6 +40,30 @@ bool AnyValue::isAnyWord() const {
         or IS_ISSUE(&cell);
 }
 
+
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyWord::initWord(RenCell & cell) {
+    VAL_SET(&cell, REB_WORD);
+}
+
+void AnyWord::initSetWord(RenCell & cell) {
+    VAL_SET(&cell, REB_SET_WORD);
+}
+
+void AnyWord::initGetWord(RenCell & cell) {
+    VAL_SET(&cell, REB_GET_WORD);
+}
+
+void AnyWord::initLitWord(RenCell & cell) {
+    VAL_SET(&cell, REB_LIT_WORD);
+}
+
+void AnyWord::initRefinement(RenCell & cell) {
+    VAL_SET(&cell, REB_REFINEMENT);
+}
 
 
 //
@@ -83,11 +79,11 @@ bool AnyValue::isAnyWord() const {
 
 std::string AnyWord::spellingOf_STD() const {
     std::string result = to_string(*this);
-    if (isWord())
+    if (is<Word>(*this))
         return result;
-    if (isRefinement() or isGetWord() or isLitWord() or isIssue())
+    if (is<Refinement>(*this) or is<GetWord>(*this) or is<LitWord>(*this))
         return result.erase(0, 1);
-    if (isSetWord())
+    if (is<SetWord>(*this))
         return result.erase(result.length() - 1, 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
@@ -96,11 +92,11 @@ std::string AnyWord::spellingOf_STD() const {
 #if REN_CLASSLIB_QT
 QString AnyWord::spellingOf_QT() const {
     QString result = to_QString(*this);
-    if (isWord())
+    if (is<Word>(*this))
         return result;
-    if (isRefinement() or isGetWord() or isLitWord() or isIssue())
+    if (is<Refinement>(*this) or is<GetWord>(*this) or is<LitWord>(*this))
         return result.right(result.length() - 1);
-    if (isSetWord())
+    if (is<SetWord>(*this))
         return result.left(result.length() - 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
@@ -120,26 +116,26 @@ AnyWord::AnyWord (
 ) :
     AnyValue (Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(cell);
 
     std::string array;
 
-    if (isWord()) {
+    if (is<Word>(*this)) {
         array += spelling;
     }
-    else if (isSetWord()) {
+    else if (is<SetWord>(*this)) {
         array += spelling;
         array += ':';
     }
-    else if (isGetWord()) {
+    else if (is<GetWord>(*this)) {
         array += ':';
         array += spelling;
     }
-    else if (isLitWord()) {
+    else if (is<LitWord>(*this)) {
         array += '\'';
         array += spelling;
     }
-    else if (isRefinement()) {
+    else if (is<Refinement>(*this)) {
         array += '/';
         array += spelling;
     }
@@ -174,26 +170,26 @@ AnyWord::AnyWord (
 ) :
     AnyValue (Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(cell);
 
     QString source;
 
-    if (isWord()) {
+    if (is<Word>(*this)) {
         source += spelling;
     }
-    else if (isSetWord()) {
+    else if (is<SetWord>(*this)) {
         source += spelling;
         source += ':';
     }
-    else if (isGetWord()) {
+    else if (is<GetWord>(*this)) {
         source += ':';
         source += spelling;
     }
-    else if (isLitWord()) {
+    else if (is<LitWord>(*this)) {
         source += '\'';
         source += spelling;
     }
-    else if (isRefinement()) {
+    else if (is<Refinement>(*this)) {
         source += '/';
         source += spelling;
     }
@@ -223,7 +219,7 @@ AnyWord::AnyWord (AnyWord const & other, internal::CellFunction cellfun) :
     AnyValue (Dont::Initialize)
 {
     this->cell = other.cell;
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(this->cell);
     finishInit(other.origin);
 }
 

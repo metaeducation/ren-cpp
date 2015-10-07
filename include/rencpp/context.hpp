@@ -48,7 +48,8 @@ class Context : public AnyValue {
 protected:
     friend class AnyValue;
     Context (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isContext(); }
+    static bool isValid(RenCell const & cell);
+
 public:
     Context copy(bool deep = true) {
         return static_cast<Context>(AnyValue::copy(deep));

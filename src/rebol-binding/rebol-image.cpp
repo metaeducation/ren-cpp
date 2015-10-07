@@ -11,7 +11,7 @@ namespace ren {
 // IMAGE
 //
 
-bool AnyValue::isImage() const {
+bool Image::isValid(RenCell const & cell) {
     return IS_IMAGE(&cell);
 }
 

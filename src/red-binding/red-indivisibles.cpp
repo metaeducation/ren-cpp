@@ -20,8 +20,8 @@ inline RedEngineHandle ensureEngine(Engine * engine) {
 /// NONE
 ///
 
-bool AnyValue::isNone() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_NONE;
+bool None::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_NONE;
 }
 
 
@@ -39,18 +39,20 @@ AnyValue::AnyValue (none_t, Engine * engine) noexcept  :
 /// LOGIC
 ///
 
-bool AnyValue::isLogic() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_LOGIC;
+bool Logic::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LOGIC;
 }
 
 
 bool AnyValue::isTrue() const {
-    return isLogic() and cell.data1;
+    return (
+        (not Logic::isValid(cell) and cell.data1) and not None::isValid(cell)
+    );
 }
 
 
 bool AnyValue::isFalse() const {
-    return isLogic() and not cell.data1;
+    return not isTrue();
 }
 
 
@@ -73,8 +75,8 @@ Logic::operator bool () const {
 /// CHARACTER
 ///
 
-bool AnyValue::isCharacter() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_CHAR;
+bool Character::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_CHAR;
 }
 
 
@@ -93,8 +95,8 @@ Character::operator wchar_t() const {
 /// INTEGER
 ///
 
-bool AnyValue::isInteger() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_INTEGER;
+bool Integer::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_INTEGER;
 }
 
 
@@ -117,8 +119,8 @@ Integer::operator int () const {
 /// FLOAT
 ///
 
-bool AnyValue::isFloat() const {
-    return RedRuntime::getDatatypeID(this->cell) == RedRuntime::TYPE_FLOAT;
+bool Float::isValid(RenCell const & cell) {
+    return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_FLOAT;
 }
 
 

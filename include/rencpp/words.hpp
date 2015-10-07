@@ -31,7 +31,19 @@ class AnyWord : public AnyValue {
 protected:
     friend class AnyValue;
     AnyWord (Dont) : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isAnyWord(); }
+    static bool isValid(RenCell const & cell);
+
+    friend class Word;
+    static void initWord(RenCell & cell);
+    friend class GetWord;
+    static void initGetWord(RenCell & cell);
+    friend class SetWord;
+    static void initSetWord(RenCell & cell);
+    friend class LitWord;
+    static void initLitWord(RenCell & cell);
+
+    friend class Refinement;
+    static void initRefinement(RenCell & cell);
 
 protected:
     explicit AnyWord (
@@ -127,7 +139,6 @@ class AnyWord_ : public AnyWord {
 protected:
     friend class AnyValue;
     AnyWord_ (Dont) : AnyWord (Dont::Initialize) {}
-    inline bool isValid() const { return (this->*F)(nullptr); }
 
 public:
     explicit AnyWord_ (char const * cstr, Engine * engine = nullptr) :
@@ -185,11 +196,15 @@ public:
 //     https://github.com/hostilefork/rencpp/issues/49
 //
 
-class Word : public internal::AnyWord_<Word, &AnyValue::isWord>
+class Word
+    : public internal::AnyWord_<Word, &AnyWord::initWord>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyWord_<Word, &AnyValue::isWord>::AnyWord_;
+    using AnyWord_<Word, &AnyWord::initWord>::AnyWord_;
 
 public:
     template <typename... Ts>
@@ -199,11 +214,15 @@ public:
 };
 
 
-class SetWord : public internal::AnyWord_<SetWord, &AnyValue::isSetWord>
+class SetWord
+    : public internal::AnyWord_<SetWord, &AnyWord::initSetWord>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyWord_<SetWord, &AnyValue::isSetWord>::AnyWord_;
+    using AnyWord_<SetWord, &AnyWord::initSetWord>::AnyWord_;
 
 public:
     template <typename... Ts>
@@ -215,11 +234,15 @@ public:
 };
 
 
-class GetWord : public internal::AnyWord_<GetWord, &AnyValue::isGetWord>
+class GetWord
+    : public internal::AnyWord_<GetWord, &AnyWord::initGetWord>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyWord_<GetWord, &AnyValue::isGetWord>::AnyWord_;
+    using AnyWord_<GetWord, &AnyWord::initGetWord>::AnyWord_;
 
     // A get-word! does not take any parameters, but it's nice to have a
     // shorthand for treating it something like a zero-parameter function
@@ -232,11 +255,15 @@ public:
 };
 
 
-class LitWord : public internal::AnyWord_<LitWord, &AnyValue::isLitWord>
+class LitWord
+    : public internal::AnyWord_<LitWord, &AnyWord::initLitWord>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyWord_<LitWord, &AnyValue::isLitWord>::AnyWord_;
+    using AnyWord_<LitWord, &AnyWord::initLitWord>::AnyWord_;
 };
 
 
@@ -244,11 +271,15 @@ public:
 // that allows for 1-element paths to fit inside a REBSER with no data
 // allocation.  They look like paths and should act like them!
 
-class Refinement : public internal::AnyWord_<Refinement, &AnyValue::isRefinement>
+class Refinement
+    : public internal::AnyWord_<Refinement, &AnyWord::initRefinement>
 {
+protected:
+    static bool isValid(RenCell const & cell);
+
 public:
     friend class AnyValue;
-    using AnyWord_<Refinement, &AnyValue::isRefinement>::AnyWord_;
+    using AnyWord_<Refinement, &AnyWord::initRefinement>::AnyWord_;
 };
 
 } // end namespace ren

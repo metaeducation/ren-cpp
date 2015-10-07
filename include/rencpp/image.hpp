@@ -49,7 +49,7 @@ class Image : public AnyValue {
 protected:
     friend class AnyValue;
     Image (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    inline bool isValid() const { return isImage(); }
+    static bool isValid(RenCell const & cell);
 
 public:
 #if REN_CLASSLIB_QT == 1

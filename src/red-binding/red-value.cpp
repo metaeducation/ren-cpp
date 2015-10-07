@@ -56,18 +56,18 @@ std::string to_string(AnyValue const & value) {
 
     // placeholder implementation...
 
-    if (value.isNone()) {
+    if (is<None>(value)) {
         return "#[none!]";
     }
-    else if (value.isLogic()) {
+    else if (is<Logic>(value)) {
         if (value.isTrue())
             return "#[true!]";
         return "#[false!]";
     }
-    else if (value.isInteger()) {
+    else if (is<Integer>(value)) {
         return std::to_string(value.cell.dataII.data2);
     }
-    else if (value.isFloat()) {
+    else if (is<Float>(value)) {
         return std::to_string(value.cell.dataD);
     }
     else

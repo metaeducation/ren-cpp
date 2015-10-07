@@ -13,19 +13,19 @@ TEST_CASE("literals construction", "[rebol] [literals]")
     SECTION("default")
     {
         AnyValue value;
-        CHECK(value.isNone());
+        CHECK(is<None>(value));
     }
 
     SECTION("none")
     {
         AnyValue value = none;
-        CHECK(value.isNone());
+        CHECK(is<None>(value));
     }
 
     SECTION("logic")
     {
         AnyValue value = false;
-        CHECK(value.isLogic());
+        CHECK(is<Logic>(value));
 
         // https://github.com/hostilefork/rencpp/issues/24
         // No way ATM to test the "shouldn't compile" cases
@@ -48,14 +48,14 @@ TEST_CASE("literals construction", "[rebol] [literals]")
     SECTION("integer")
     {
         AnyValue value = 1;
-        CHECK(value.isInteger());
+        CHECK(is<Integer>(value));
     }
 
 
     SECTION("float construction")
     {
         AnyValue value = 10.20;
-        CHECK(value.isFloat());
+        CHECK(is<Float>(value));
     }
 
 

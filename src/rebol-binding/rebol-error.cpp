@@ -11,7 +11,7 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool AnyValue::isError() const {
+bool Error::isValid(RenCell const & cell) {
     return IS_ERROR(&cell);
 }
 
@@ -24,7 +24,7 @@ bool AnyValue::isError() const {
 Error::Error (const char * msg, Engine * engine) :
     AnyValue (Dont::Initialize)
 {
-    VAL_SET(&this->cell, REB_ERROR);
+    VAL_SET(&cell, REB_ERROR);
 
     if (not engine)
         engine = &Engine::runFinder();

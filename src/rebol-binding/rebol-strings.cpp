@@ -8,37 +8,41 @@
 namespace ren {
 
 //
-// TYPE DETECTION AND INITIALIZATION
+// TYPE DETECTION
 //
 
 
-bool AnyValue::isString(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_STRING);
-        return true;
-    }
+bool String::isValid(RenCell const & cell) {
     return IS_STRING(&cell);
 }
 
-bool AnyValue::isTag(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_TAG);
-        return true;
-    }
+bool Tag::isValid(RenCell const & cell) {
     return IS_TAG(&cell);
 }
 
-bool AnyValue::isFilename(REBVAL * init) const {
-    if (init) {
-        VAL_SET(init, REB_FILE);
-        return true;
-    }
+bool Filename::isValid(RenCell const & cell) {
     return IS_FILE(&cell);
 }
 
-bool AnyValue::isAnyString() const {
-    return IS_STRING(&cell) or IS_TAG(&cell)
-        or IS_FILE(&cell) or IS_URL(&cell);
+bool AnyString::isValid(RenCell const & cell) {
+    return ANY_STR(&cell);
+}
+
+
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyString::initString(RenCell & cell) {
+    VAL_SET(&cell, REB_STRING);
+}
+
+void AnyString::initTag(RenCell & cell) {
+    VAL_SET(&cell, REB_TAG);
+}
+
+void AnyString::initFilename(RenCell & cell) {
+    VAL_SET(&cell, REB_FILE);
 }
 
 
@@ -52,26 +56,26 @@ AnyString::AnyString (
     internal::CellFunction cellfun,
     Engine * engine
 ) :
-    Series (Dont::Initialize)
+    AnySeries (Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(cell);
 
     if (not engine)
         engine = &Engine::runFinder();
 
     std::string source;
 
-    if (isString()) {
+    if (is<String>(*this)) {
         source += '{';
         source += spelling;
         source += '}';
     }
-    else if (isTag()) {
+    else if (is<Tag>(*this)) {
         source += '<';
         source += spelling;
         source += '>';
     }
-    else if (isFilename()) {
+    else if (is<Filename>(*this)) {
         source += "%";
         source += spelling;
     }
@@ -111,21 +115,21 @@ AnyString::AnyString (
     internal::CellFunction cellfun,
     Engine * engine
 )
-    : Series(Dont::Initialize)
+    : AnySeries(Dont::Initialize)
 {
-    (this->*cellfun)(&this->cell);
+    (*cellfun)(cell);
 
     QString source;
 
     // Note: wouldn't be able to return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
 
-    if (isString()) {
+    if (is<String>(*this)) {
         source += '{';
         source += spelling;
         source += '}';
     }
-    else if (isTag()) {
+    else if (is<Tag>(*this)) {
         source += '<';
         source += spelling;
         source += '>';
@@ -160,9 +164,9 @@ AnyString::AnyString (
 
 std::string AnyString::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
-    if (isString() /* or isUrl() or isEmail() or isFile() */)
+    if (is<String>(*this) /* or isUrl() or isEmail() or isFile() */)
         return result;
-    if (isTag()) {
+    if (is<Tag>(*this)) {
         result.erase(0, 1);
         return result.erase(result.length() - 1, 1);
     }
@@ -174,9 +178,9 @@ std::string AnyString::spellingOf_STD() const {
 
 QString AnyString::spellingOf_QT() const {
     QString result = static_cast<QString>(*this);
-    if (isString() /* or isUrl() or isEmail() or isFile() */)
+    if (is<String>(*this) /* or isUrl() or isEmail() or isFile() */)
         return result;
-    if (isTag()) {
+    if (is<Tag>(*this)) {
         assert(result.length() >= 2);
         return result.mid(1, result.length() - 2);
     }
