@@ -108,7 +108,7 @@ public slots:
 
             // first token will be the shell start and any startup message,
             // we toss that for now
-		#ifdef TO_WINDOWS
+        #ifdef TO_WINDOWS
             process->write("PROMPT=");
 
             process->write(token);
@@ -401,7 +401,7 @@ void ShellWorker::onReadyReadStandardOutput() {
             // would be ugly if we didn't do it, since we put our own
             // newlines in.
 
-		#ifdef TO_WINDOWS
+        #ifdef TO_WINDOWS
             int count = 1;
         #else
             int count = 0;
@@ -595,7 +595,7 @@ RenShell::RenShell (Context const & helpers, QObject * parent) :
                 throw Error {"Unknown meta command"};
             }
 
-		#ifdef TO_WINDOWS
+        #ifdef TO_WINDOWS
             static const bool windows = true;
         #else
             static const bool windows = false;

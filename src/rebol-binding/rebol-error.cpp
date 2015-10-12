@@ -4,6 +4,8 @@
 #include "rencpp/error.hpp"
 #include "rencpp/engine.hpp"
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -12,7 +14,7 @@ namespace ren {
 //
 
 bool Error::isValid(RenCell const & cell) {
-    return IS_ERROR(&cell);
+    return IS_ERROR(AS_C_REBVAL(&cell));
 }
 
 
@@ -24,7 +26,7 @@ bool Error::isValid(RenCell const & cell) {
 Error::Error (const char * msg, Engine * engine) :
     AnyValue (Dont::Initialize)
 {
-    VAL_SET(&cell, REB_ERROR);
+    VAL_SET(AS_REBVAL(&cell), REB_ERROR);
 
     if (not engine)
         engine = &Engine::runFinder();

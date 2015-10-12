@@ -488,9 +488,9 @@ public:
     }
 
 public:
-	~AnyValue () {
-		uninitialize();
-	}
+    ~AnyValue () {
+        uninitialize();
+    }
 
 
     // Although C++ assignment and moving of values around is really just
@@ -751,35 +751,35 @@ bool is(optional<V> const & value) {
 
 class evaluation_throw : public std::exception {
 private:
-	optional<AnyValue> thrownValue; // throw might not have a value, e.g. return
+    optional<AnyValue> thrownValue; // throw might not have a value, e.g. return
     optional<AnyValue> throwName;
     std::string whatString;
 
 public:
     evaluation_throw (
-		optional<AnyValue> const & value,
+        optional<AnyValue> const & value,
         optional<AnyValue> const & name = nullopt
     ) :
         thrownValue (value),
         throwName (name)
     {
-		if (name == nullopt) {
-			whatString = std::string("THROW:");
-			whatString += " ";
-			if (thrownValue == nullopt)
-				whatString += "(no value)";
-			else
-				whatString += to_string(*thrownValue);
-		}
-		else {
-			whatString = std::string("THROW/NAME:");
-			whatString += " ";
-			if (thrownValue == nullopt)
-				whatString += "(no value)";
-			else
-				whatString += to_string(*thrownValue);
-			whatString += " ";
-			whatString += to_string(*throwName);
+        if (name == nullopt) {
+            whatString = std::string("THROW:");
+            whatString += " ";
+            if (thrownValue == nullopt)
+                whatString += "(no value)";
+            else
+                whatString += to_string(*thrownValue);
+        }
+        else {
+            whatString = std::string("THROW/NAME:");
+            whatString += " ";
+            if (thrownValue == nullopt)
+                whatString += "(no value)";
+            else
+                whatString += to_string(*thrownValue);
+            whatString += " ";
+            whatString += to_string(*throwName);
         }
     }
 
@@ -787,7 +787,7 @@ public:
         return whatString.c_str();
     }
 
-	optional<AnyValue> const & value() const noexcept {
+    optional<AnyValue> const & value() const noexcept {
         return thrownValue;
     }
 

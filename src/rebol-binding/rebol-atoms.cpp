@@ -4,6 +4,8 @@
 #include "rencpp/atoms.hpp"
 #include "rencpp/engine.hpp"
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -11,13 +13,13 @@ bool Atom::isValid(RenCell const & cell) {
     // Will be more efficient when atom makes it formally into the
     // Rebol base typesets.
     return (
-        IS_UNSET(&cell)
-        || IS_NONE(&cell)
-        || IS_LOGIC(&cell)
-        || IS_CHAR(&cell)
-        || IS_INTEGER(&cell)
-        || IS_DECIMAL(&cell)
-        || IS_DATE(&cell)
+        IS_UNSET(AS_C_REBVAL(&cell))
+        || IS_NONE(AS_C_REBVAL(&cell))
+        || IS_LOGIC(AS_C_REBVAL(&cell))
+        || IS_CHAR(AS_C_REBVAL(&cell))
+        || IS_INTEGER(AS_C_REBVAL(&cell))
+        || IS_DECIMAL(AS_C_REBVAL(&cell))
+        || IS_DATE(AS_C_REBVAL(&cell))
     );
 }
 
@@ -28,13 +30,13 @@ bool Atom::isValid(RenCell const & cell) {
 //
 
 bool None::isValid(RenCell const & cell) {
-    return IS_NONE(&cell);
+    return IS_NONE(AS_C_REBVAL(&cell));
 }
 
 AnyValue::AnyValue (none_t, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_NONE(&cell);
+    SET_NONE(AS_REBVAL(&cell));
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -50,21 +52,21 @@ AnyValue::AnyValue (none_t, Engine * engine) noexcept :
 //
 
 bool Logic::isValid(RenCell const & cell) {
-    return IS_LOGIC(&cell);
+    return IS_LOGIC(AS_C_REBVAL(&cell));
 }
 
 bool AnyValue::isTrue() const {
-    return IS_CONDITIONAL_TRUE(&cell);
+    return IS_CONDITIONAL_TRUE(AS_C_REBVAL(&cell));
 }
 
 bool AnyValue::isFalse() const {
-    return IS_CONDITIONAL_FALSE(&cell);
+    return IS_CONDITIONAL_FALSE(AS_C_REBVAL(&cell));
 }
 
 AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_LOGIC(&cell, someBool);
+    SET_LOGIC(AS_REBVAL(&cell), someBool);
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -74,7 +76,7 @@ AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
 }
 
 Logic::operator bool() const {
-    return VAL_INT32(&cell);
+    return VAL_INT32(AS_C_REBVAL(&cell));
 }
 
 
@@ -84,7 +86,7 @@ Logic::operator bool() const {
 //
 
 bool Character::isValid(RenCell const & cell) {
-    return IS_CHAR(&cell);
+    return IS_CHAR(AS_C_REBVAL(&cell));
 }
 
 AnyValue::AnyValue (char c, Engine * engine) noexcept :
@@ -93,7 +95,7 @@ AnyValue::AnyValue (char c, Engine * engine) noexcept :
     if (c < 0)
         throw std::runtime_error("Non-ASCII char passed to AnyValue::AnyValue()");
 
-    SET_CHAR(&cell, static_cast<REBUNI>(c));
+    SET_CHAR(AS_REBVAL(&cell), static_cast<REBUNI>(c));
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -105,7 +107,7 @@ AnyValue::AnyValue (char c, Engine * engine) noexcept :
 AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_CHAR(&cell, wc);
+    SET_CHAR(AS_REBVAL(&cell), wc);
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -115,7 +117,7 @@ AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
 }
 
 Character::operator char () const {
-    REBUNI uni = VAL_CHAR(&cell);
+    REBUNI uni = VAL_CHAR(AS_C_REBVAL(&cell));
     if (uni > 127)
         throw std::runtime_error("Non-ASCII codepoint cast to char");
     return static_cast<char>(uni);
@@ -123,14 +125,14 @@ Character::operator char () const {
 
 
 Character::operator wchar_t () const {
-    REBUNI uni = VAL_CHAR(&cell);
+    REBUNI uni = VAL_CHAR(AS_C_REBVAL(&cell));
     // will throw in Red for "astral plane" unicode codepoints
     return static_cast<wchar_t>(uni);
 }
 
 
 unsigned long Character::codepoint() const {
-    REBUNI uni = VAL_CHAR(&cell);
+    REBUNI uni = VAL_CHAR(AS_C_REBVAL(&cell));
     // will probably not throw in Red, either
     return uni;
 }
@@ -138,7 +140,7 @@ unsigned long Character::codepoint() const {
 
 #if REN_CLASSLIB_QT
 Character::operator QChar () const {
-    REBUNI uni = VAL_CHAR(&cell);
+    REBUNI uni = VAL_CHAR(AS_C_REBVAL(&cell));
     return QChar(uni);
 }
 #endif
@@ -150,13 +152,13 @@ Character::operator QChar () const {
 //
 
 bool Integer::isValid(RenCell const & cell) {
-    return IS_INTEGER(&cell);
+    return IS_INTEGER(AS_C_REBVAL(&cell));
 }
 
 AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_INTEGER(&cell, someInt);
+    SET_INTEGER(AS_REBVAL(&cell), someInt);
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -166,7 +168,8 @@ AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
 }
 
 Integer::operator int() const {
-    return VAL_INT32(&cell);
+    // !!! How to correctly support 64-bit coercions?  Throw if out of range?
+    return VAL_INT32(AS_C_REBVAL(&cell));
 }
 
 
@@ -176,13 +179,13 @@ Integer::operator int() const {
 //
 
 bool Float::isValid(RenCell const & cell) {
-    return IS_DECIMAL(&cell);
+    return IS_DECIMAL(AS_C_REBVAL(&cell));
 }
 
 AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_DECIMAL(&cell, someDouble);
+    SET_DECIMAL(AS_REBVAL(&cell), someDouble);
 
     // !!! Should some types not need an engine field?
     if (not engine)
@@ -192,7 +195,7 @@ AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
 }
 
 Float::operator double() const {
-    return VAL_DECIMAL(&cell);
+    return VAL_DECIMAL(AS_C_REBVAL(&cell));
 }
 
 
@@ -202,7 +205,7 @@ Float::operator double() const {
 //
 
 bool Date::isValid(RenCell const & cell) {
-    return IS_DATE(&cell);
+    return IS_DATE(AS_C_REBVAL(&cell));
 }
 
 

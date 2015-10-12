@@ -16,7 +16,11 @@
 
 #include <thread>
 
+#include "rebol-common.hpp"
+
+
 extern "C" void Queue_Mark_Host_Deep(void);
+
 
 namespace ren {
 
@@ -130,7 +134,7 @@ public:
         // don't expose CTX_ROOT?
 
         if (frame) {
-            Val_Init_Object(contextOut, frame);
+            Val_Init_Object(AS_REBVAL(contextOut), frame);
             return REN_SUCCESS;
         }
 
@@ -384,9 +388,14 @@ public:
             SAVE_SERIES(aggregate);
 
             if (applicand) {
-                result = Generalized_Apply(
-                    applyOut, extraOut, applicand, aggregate, FALSE
-                );
+                if (Generalized_Apply_Throws(
+                    applyOut, applicand, aggregate, FALSE
+                )) {
+                    TAKE_THROWN_ARG(extraOut, applyOut);
+                    result = REN_APPLY_THREW;
+                }
+                else
+                    result = REN_SUCCESS;
             }
             else {
                 // Assume that nullptr for applicand means "just do the block
@@ -397,10 +406,10 @@ public:
                     TAKE_THROWN_ARG(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }
-				else {
-					// May be REB_UNSET (optional<> signaled by tryFinishInit)
-					result = REN_SUCCESS;
-				}
+                else {
+                    // May be REB_UNSET (optional<> signaled by tryFinishInit)
+                    result = REN_SUCCESS;
+                }
             }
 
             UNSAVE_SERIES(aggregate);
@@ -494,15 +503,15 @@ public:
     }
 
     void ShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
-		if (name)
-			*out = *name;
-		else
-			SET_UNSET(out);
+        if (name)
+            *out = *name;
+        else
+            SET_UNSET(out);
 
-		if (value)
-			CONVERT_NAME_TO_THROWN(out, value);
-		else
-			CONVERT_NAME_TO_THROWN(out, UNSET_VALUE);
+        if (value)
+            CONVERT_NAME_TO_THROWN(out, value);
+        else
+            CONVERT_NAME_TO_THROWN(out, UNSET_VALUE);
     }
 
     RenResult ShimFail(REBVAL const * error) {
@@ -519,8 +528,8 @@ public:
 
         ren::AnyValue * temp = ren::internal::head;
         while (temp) {
-            assert(FLAGIT_64(VAL_TYPE(&temp->cell)) & TS_GC);
-            Queue_Mark_Value_Deep(&temp->cell);
+            assert(FLAGIT_64(VAL_TYPE(AS_REBVAL(&temp->cell))) & TS_GC);
+            Queue_Mark_Value_Deep(AS_REBVAL(&temp->cell));
             temp = temp->next;
         }
     }
@@ -560,7 +569,7 @@ RenResult RenFreeEngine(RebolEngineHandle engine) {
 RenResult RenFindContext(
     RenEngineHandle engine,
     char const * name,
-    REBVAL * contextOut
+    RenCell * contextOut
 ) {
     return ren::internal::hooks.FindContext(engine, name, contextOut);
 }
@@ -568,25 +577,25 @@ RenResult RenFindContext(
 
 RenResult RenConstructOrApply(
     RebolEngineHandle engine,
-    REBVAL const * context,
-    REBVAL const * valuePtr,
-    REBVAL const * loadablesPtr,
+    RenCell const * context,
+    RenCell const * valuePtr,
+    RenCell const * loadablesPtr,
     size_t numLoadables,
     size_t sizeofLoadable,
-    REBVAL * constructOutTypeIn,
-    REBVAL * applyOut,
-    REBVAL * extraOut
+    RenCell * constructOutTypeIn,
+    RenCell * applyOut,
+    RenCell * extraOut
 ) {
     return ren::internal::hooks.ConstructOrApply(
         engine,
-        context,
-        valuePtr,
-        loadablesPtr,
+        AS_C_REBVAL(context),
+        AS_C_REBVAL(valuePtr),
+        AS_C_REBVAL(loadablesPtr),
         numLoadables,
         sizeofLoadable,
-        constructOutTypeIn,
-        applyOut,
-        extraOut
+        AS_REBVAL(constructOutTypeIn),
+        AS_REBVAL(applyOut),
+        AS_REBVAL(extraOut)
     );
 
 }
@@ -600,7 +609,7 @@ RenResult RenFormAsUtf8(
     size_t * lengthOut
 ) {
     return ren::internal::hooks.FormAsUtf8(
-        engine, value, buffer, bufSize, lengthOut
+        engine, AS_C_REBVAL(value), buffer, bufSize, lengthOut
     );
 }
 
@@ -610,11 +619,17 @@ RenResult RenShimHalt() {
 }
 
 
-void RenShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
-    ren::internal::hooks.ShimInitThrown(out, value, name);
+void RenShimInitThrown(
+    RenCell *out,
+    RenCell const *value,
+    RenCell const *name
+) {
+    ren::internal::hooks.ShimInitThrown(
+        AS_REBVAL(out), AS_C_REBVAL(value), AS_C_REBVAL(name)
+    );
 }
 
 
 RenResult RenShimFail(RenCell const * error) {
-    return ren::internal::hooks.ShimFail(error);
+    return ren::internal::hooks.ShimFail(AS_C_REBVAL(error));
 }

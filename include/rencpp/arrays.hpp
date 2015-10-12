@@ -1,5 +1,5 @@
-#ifndef RENCPP_BLOCKS_HPP
-#define RENCPP_BLOCKS_HPP
+#ifndef RENCPP_ARRAYS_HPP
+#define RENCPP_ARRAYS_HPP
 
 //
 // arrays.hpp
@@ -23,8 +23,6 @@
 #include "series.hpp"
 
 namespace ren {
-
-class Block;
 
 class AnyArray : public AnySeries {
 protected:

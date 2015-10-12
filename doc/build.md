@@ -60,7 +60,7 @@ binaries with the corresponding MinGW version:
 To build Ren/C++, you will need to build Ren/C first. Git clone it from the
 source (or you can choose "Download ZIP"):
 
-	git clone https://github.com/metaeducation/ren-c rebol
+    git clone https://github.com/metaeducation/ren-c rebol
 
 *(Note: Depending on the likelihood of Rebol taking back the changes in
 Ren/C or not, the directory used may start saying "ren-c" instead of Rebol.
@@ -75,11 +75,11 @@ other than CMD.EXE, then you might have to simply name it `r3-make`).
 Next step is to tell Rebol to build a makefile for use with MinGW. So in the
 `make` subdirectory of Rebol's source code, run this line for a 32-bit build:
 
-	make -f makefile.boot OS_ID=0.3.1
+    make -f makefile.boot OS_ID=0.3.1
 
 If you will be doing a 64-bit build, instead type:
 
-	make -f makefile.boot OS_ID=0.3.2
+    make -f makefile.boot OS_ID=0.3.2
 
 *(Note: MinGW-w64 allows 32-bits builds, and you can also stick the flag
 `-m32` onto the compiler options.)*
@@ -214,7 +214,7 @@ Now setup a directory for Ren/C++:
 
 Download the Ren/C forked source of Rebol into a directory called "rebol":
 
-	git clone https://github.com/metaeducation/ren-c rebol
+    git clone https://github.com/metaeducation/ren-c rebol
     cd rebol/make/
 
 Grab a pre-built Rebol executable to run the make:
@@ -225,11 +225,11 @@ Grab a pre-built Rebol executable to run the make:
 
 Now build Rebol.  For 32-bit Linux:
 
-	make -f makefile.boot OS_ID=0.4.4
+    make -f makefile.boot OS_ID=0.4.4
 
 If you are building for 64-bit:
 
-	make -f makefile.boot OS_ID=0.4.40
+    make -f makefile.boot OS_ID=0.4.40
     
 This should have successfully built Rebol.
 
@@ -237,12 +237,12 @@ Now change dir back to the ren dir, setup the path to Qt for cmake and grab
 the source for Ren/C++ into the ren-cpp directory:
 
     export CMAKE_PREFIX_PATH=~/Qt/5.4/gcc_64/lib/cmake
-	git clone https://github.com/metaeducation/ren-cpp
+    git clone https://github.com/metaeducation/ren-cpp
 
 Change dir to ren-cpp and build it (note: if you installed your Qt elsewhere
 be sure to update the path...)
 
-	cd ren-cpp
+    cd ren-cpp
     mkdir build
     cd build
     cmake .. -G "Unix Makefiles" -DRUNTIME=rebol -DGARDEN=1 -DCLASSLIB_QT=1 -DCMAKE_PREFIX_PATH=~/Qt/5.4/gcc/lib/cmake
@@ -301,28 +301,28 @@ features wind up being used, for instance the Form and GUI designer tool.)*
 You should now have QT installed in our working directory.  Next steps:
 
     cd RenGarden
-	curl http://www.cmake.org/files/v3.1/cmake-3.1.1-Darwin-x86_64.tar.gz | tar -xz
-	ls -F
+    curl http://www.cmake.org/files/v3.1/cmake-3.1.1-Darwin-x86_64.tar.gz | tar -xz
+    ls -F
 
 And you should see (something like) this in your working directory.
 
     Qt5.4.0/
-	cmake-3.1.1-Darwin-x86_64/
+    cmake-3.1.1-Darwin-x86_64/
 
 We now have QT and CMake ready for us to continue.   
 
 **Build Ren/C and Ren/C++**
 
-	git clone https://github.com/metaeducation/ren-c rebol
-	git clone https://github.com/metaeducation/ren-cpp
-	cd rebol
-	curl http://rebolsource.net/downloads/osx-x86/r3-g25033f8 > ./make/r3-make
+    git clone https://github.com/metaeducation/ren-c rebol
+    git clone https://github.com/metaeducation/ren-cpp
+    cd rebol
+    curl http://rebolsource.net/downloads/osx-x86/r3-g25033f8 > ./make/r3-make
 
 We are now ready to compile Rebol:
 
-	cd make
-	chmod +x ./r3-make
-	make -f makefile.boot OS_ID=0.2.40
+    cd make
+    chmod +x ./r3-make
+    make -f makefile.boot OS_ID=0.2.40
 
 If all went well we now have a brand new Rebol executable:
 
@@ -330,9 +330,9 @@ If all went well we now have a brand new Rebol executable:
 
 So lets build Ren/C++
 
-	cd ../../ren-cpp
-	PATH=$PATH:../Qt5.4.0/5.4/clang_64/bin ../cmake-3.1.1-Darwin-x86_64/CMake.app/Contents/bin/cmake -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
-	make
+    cd ../../ren-cpp
+    PATH=$PATH:../Qt5.4.0/5.4/clang_64/bin ../cmake-3.1.1-Darwin-x86_64/CMake.app/Contents/bin/cmake -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+    make
 
 If CMake gets to 100% then we are all good!  Test Ren/C++ with following step:
 

@@ -4,6 +4,9 @@
 #include "rencpp/context.hpp"
 #include "rencpp/engine.hpp"
 
+#include "rebol-common.hpp"
+
+
 namespace ren {
 
 //
@@ -11,7 +14,7 @@ namespace ren {
 //
 
 bool Context::isValid(RenCell const & cell) {
-    return IS_OBJECT(&cell);
+    return IS_OBJECT(AS_C_REBVAL(&cell));
 }
 
 
@@ -28,7 +31,7 @@ Context::Context (
 ) :
     AnyValue (Dont::Initialize)
 {
-    VAL_SET(&cell, REB_OBJECT);
+    VAL_SET(AS_REBVAL(&cell), REB_OBJECT);
 
     // Here, a null context pointer means null.  No finder is invoked.
 

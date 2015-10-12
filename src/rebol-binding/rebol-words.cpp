@@ -4,6 +4,8 @@
 #include "rencpp/words.hpp"
 #include "rencpp/context.hpp"
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -12,32 +14,32 @@ namespace ren {
 //
 
 bool Word::isValid(const RenCell & cell) {
-    return IS_WORD(&cell);
+    return IS_WORD(AS_C_REBVAL(&cell));
 }
 
 bool SetWord::isValid(const RenCell & cell) {
-    return IS_SET_WORD(&cell);
+    return IS_SET_WORD(AS_C_REBVAL(&cell));
 }
 
 bool GetWord::isValid(const RenCell & cell) {
-    return IS_GET_WORD(&cell);
+    return IS_GET_WORD(AS_C_REBVAL(&cell));
 }
 
 bool LitWord::isValid(const RenCell & cell) {
-    return IS_LIT_WORD(&cell);
+    return IS_LIT_WORD(AS_C_REBVAL(&cell));
 }
 
 bool Refinement::isValid(const RenCell & cell) {
-    return IS_REFINEMENT(&cell);
+    return IS_REFINEMENT(AS_C_REBVAL(&cell));
 }
 
 bool AnyWord::isValid(const RenCell & cell) {
-    return IS_WORD(&cell)
-        or IS_SET_WORD(&cell)
-        or IS_GET_WORD(&cell)
-        or IS_LIT_WORD(&cell)
-        or IS_REFINEMENT(&cell)
-        or IS_ISSUE(&cell);
+    return IS_WORD(AS_C_REBVAL(&cell))
+        or IS_SET_WORD(AS_C_REBVAL(&cell))
+        or IS_GET_WORD(AS_C_REBVAL(&cell))
+        or IS_LIT_WORD(AS_C_REBVAL(&cell))
+        or IS_REFINEMENT(AS_C_REBVAL(&cell))
+        or IS_ISSUE(AS_C_REBVAL(&cell));
 }
 
 
@@ -46,23 +48,23 @@ bool AnyWord::isValid(const RenCell & cell) {
 //
 
 void AnyWord::initWord(RenCell & cell) {
-    VAL_SET(&cell, REB_WORD);
+    VAL_SET(AS_REBVAL(&cell), REB_WORD);
 }
 
 void AnyWord::initSetWord(RenCell & cell) {
-    VAL_SET(&cell, REB_SET_WORD);
+    VAL_SET(AS_REBVAL(&cell), REB_SET_WORD);
 }
 
 void AnyWord::initGetWord(RenCell & cell) {
-    VAL_SET(&cell, REB_GET_WORD);
+    VAL_SET(AS_REBVAL(&cell), REB_GET_WORD);
 }
 
 void AnyWord::initLitWord(RenCell & cell) {
-    VAL_SET(&cell, REB_LIT_WORD);
+    VAL_SET(AS_REBVAL(&cell), REB_LIT_WORD);
 }
 
 void AnyWord::initRefinement(RenCell & cell) {
-    VAL_SET(&cell, REB_REFINEMENT);
+    VAL_SET(AS_REBVAL(&cell), REB_REFINEMENT);
 }
 
 
@@ -156,7 +158,8 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_FRAME(&this->cell) = VAL_OBJ_FRAME(&context.cell);
+    VAL_WORD_FRAME(AS_REBVAL(&this->cell))
+        = VAL_OBJ_FRAME(AS_REBVAL(&context.cell));
 }
 
 
@@ -210,7 +213,8 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_FRAME(&this->cell) = VAL_OBJ_FRAME(&context.cell);
+    VAL_WORD_FRAME(AS_REBVAL(&this->cell))
+        = VAL_OBJ_FRAME(AS_REBVAL(&context.cell));
 }
 #endif
 

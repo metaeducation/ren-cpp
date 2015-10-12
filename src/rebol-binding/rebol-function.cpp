@@ -3,6 +3,8 @@
 #include "rencpp/value.hpp"
 #include "rencpp/function.hpp"
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -31,7 +33,7 @@ static_assert(R_OUT == 0, "R_OUT must be 0 for RenShimPointer to work");
 //
 
 bool Function::isValid(RenCell const & cell) {
-    return ANY_FUNC(&cell);
+    return ANY_FUNC(AS_C_REBVAL(&cell));
 }
 
 
@@ -46,7 +48,12 @@ void Function::finishInitSpecial(
     Block const & spec,
     RenShimPointer const & shim
 ) {
-    Make_Native(&cell, VAL_SERIES(&spec.cell), shim, REB_NATIVE);
+    Make_Native(
+        AS_REBVAL(&cell),
+        VAL_SERIES(AS_C_REBVAL(&spec.cell)),
+        reinterpret_cast<REBFUN>(shim),
+        REB_NATIVE
+    );
 
     AnyValue::finishInit(engine);
 }

@@ -6,6 +6,9 @@
 
 #include "rencpp/rebol.hpp"
 
+#include "rebol-common.hpp"
+
+
 namespace ren {
 
 //
@@ -13,32 +16,36 @@ namespace ren {
 //
 
 bool Block::isValid(RenCell const & cell) {
-    return IS_BLOCK(&cell);
+    return IS_BLOCK(AS_C_REBVAL(&cell));
 }
 
 bool Group::isValid(RenCell const & cell) {
-    return IS_PAREN(&cell);
+    return IS_PAREN(AS_C_REBVAL(&cell));
 }
 
 bool Path::isValid(RenCell const & cell) {
-    return IS_PATH(&cell);
+    return IS_PATH(AS_C_REBVAL(&cell));
 }
 
 bool GetPath::isValid(RenCell const & cell) {
-    return IS_GET_PATH(&cell);
+    return IS_GET_PATH(AS_C_REBVAL(&cell));
 }
 
 bool SetPath::isValid(RenCell const & cell) {
-    return IS_SET_PATH(&cell);
+    return IS_SET_PATH(AS_C_REBVAL(&cell));
 }
 
 bool LitPath::isValid(RenCell const & cell) {
-    return IS_LIT_PATH(&cell);
+    return IS_LIT_PATH(AS_C_REBVAL(&cell));
 }
 
 bool AnyArray::isValid(RenCell const & cell) {
-    return IS_BLOCK(&cell) or IS_PAREN(&cell) or IS_PATH(&cell)
-        or IS_SET_PATH(&cell) or IS_GET_PATH(&cell) or IS_LIT_PATH(&cell);
+    return IS_BLOCK(AS_C_REBVAL(&cell))
+        or IS_PAREN(AS_C_REBVAL(&cell))
+        or IS_PATH(AS_C_REBVAL(&cell))
+        or IS_SET_PATH(AS_C_REBVAL(&cell))
+        or IS_GET_PATH(AS_C_REBVAL(&cell))
+        or IS_LIT_PATH(AS_C_REBVAL(&cell));
 }
 
 
@@ -47,27 +54,27 @@ bool AnyArray::isValid(RenCell const & cell) {
 //
 
 void AnyArray::initBlock(RenCell & cell) {
-    VAL_SET(&cell, REB_BLOCK);
+    VAL_SET(AS_REBVAL(&cell), REB_BLOCK);
 }
 
 void AnyArray::initGroup(RenCell & cell) {
-    VAL_SET(&cell, REB_PAREN);
+    VAL_SET(AS_REBVAL(&cell), REB_PAREN);
 }
 
 void AnyArray::initPath(RenCell & cell) {
-    VAL_SET(&cell, REB_PATH);
+    VAL_SET(AS_REBVAL(&cell), REB_PATH);
 }
 
 void AnyArray::initGetPath(RenCell & cell) {
-    VAL_SET(&cell, REB_GET_PATH);
+    VAL_SET(AS_REBVAL(&cell), REB_GET_PATH);
 }
 
 void AnyArray::initSetPath(RenCell & cell) {
-    VAL_SET(&cell, REB_SET_PATH);
+    VAL_SET(AS_REBVAL(&cell), REB_SET_PATH);
 }
 
 void AnyArray::initLitPath(RenCell & cell) {
-    VAL_SET(&cell, REB_LIT_PATH);
+    VAL_SET(AS_REBVAL(&cell), REB_LIT_PATH);
 }
 
 

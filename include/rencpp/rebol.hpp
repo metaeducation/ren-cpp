@@ -41,16 +41,6 @@ private:
     Context * defaultContext;
     bool initialized;
 
-    REBARGS rebargs;
-
-private:
-    static REBVAL loadAndBindWord(
-        REBSER * context,
-        unsigned char const * nameUtf8,
-        size_t lenBytes,
-        enum Reb_Kind kind = REB_WORD // or REB_SET_WORD, REB_GET_WORD...
-    );
-
 public:
     friend class internal::Loadable;
 
@@ -82,7 +72,5 @@ namespace internal {
 
 namespace rebol = ren;
 
-// See comments in rebol-os-lib-table.cpp
-extern REBOL_HOST_LIB Host_Lib_Init;
 
 #endif

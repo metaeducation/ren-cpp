@@ -197,34 +197,40 @@ typedef void* RenCall; // TBD
 #elif (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 /*
- * While Red has no C headers for us to include (being written in Red and
- * Red/System), Rebol does.
- */
-#include "rebol/src/include/sys-core.h"
-
-/*
  * The RenResult does double duty as the result code from functions and the
  * Rebol NATIVE! function return type, so it has to match the latter.  Rebol
  * uses fixed size types to get <stdint.h>-style compatibility.  This may
  * have to be adapted for Red, which also may have an entirely different
  * prototype needed for shims speaking the stack protocol.
  */
-typedef REBCNT RenResult;
+typedef uint32_t RenResult; // REBCNT-compatible
 
 
 /*
  * REBVAL is a typedef for Reb_Value, both defined in src/include/sys_value.h
  *
- * The Rebol codebase is (circa 2015) not able to build with a C++ compiler,
- * although patches do exist to make it possible.  Which is okay because you
- * can link the C and C++ .o files together from the separate builds.  Here
- * we are only sharing header files and macros, and linking through extern "C"
+ * In order to avoid pulling in all of the Rebol includes to every client
+ * of Ren/C++, we make an "opaque type":
+ *
+ * https://en.wikipedia.org/wiki/Opaque_data_type
+ *
+ * Rebol values are four times the size of the platform word size.
  */
 
-struct RebolEngineHandle {
+typedef struct {
+#if defined(__LP64__) || defined(__LLP64__)
+    char data[4 * sizeof(uint64_t)];
+#else
+    char data[4 * sizeof(uint32_t)];
+#endif
+} RenCell;
+
+
+typedef struct {
     int data;
-};
-const struct RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
+} RebolEngineHandle;
+
+const RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
 #define REBOL_IS_ENGINE_HANDLE_INVALID(handle) \
     ((handle).data == REBOL_ENGINE_HANDLE_INVALID.data)
 
@@ -233,46 +239,44 @@ const struct RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
  ** MAP REBOL TYPES TO REN EQUIVALENTS
  **/
 
-typedef REBVAL RenCell;
-
 typedef RebolEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
-
 /*
- * "Generalized Apply" is a concept central to the definition of operator()
- * and how the binding works.  We have to add it because APPLY is only for
- * functions ATM...but as it's a superset of the existing behavior, we
- * shift it over to the "what should be in Rebol" side of the hooks.
+ * Proxy type for the call stack frame.  Commented in Rebol's %sys-stack.h
  */
-RenResult Generalized_Apply(
-	REBVAL *out,
-	REBVAL *extraOut,
-	const REBVAL *applicand,
-	REBSER *args,
-    REBFLG reduce
-);
 
+struct RenCall {
+    int32_t chunk_left;
+    struct RenCall *prior;
+    int8_t args_ready;
+    uint32_t num_vars;
 
-/*
- * Here we have our definitions for how to find the relevant values on the
- * stack.  Because Rebol uses 1 based calculations, we have to add 1.  The
- * shim accessor here gets the actual pointer out vs. returning the whole
- * cell pointer for the function, which is not as general but if the stack
- * in Red winds up being lighter weight and not wanting to put the whole
- * 128 bit cell on then it might be more useful.
- */
-typedef struct Reb_Call RenCall;
+    RenCell *out;
+    RenCell func;
+    RenCell where;
+    RenCell label;
+
+    /* these are "variables"...SELF, RETURN, args, locals */
+    RenCell vars[1]; /* (array exceeds struct, but cannot be [0] in C++) */
+};
+
+typedef uint32_t (* RenShimPointer)(RenCall * call);
 
 #define REN_CS_OUT(stack) \
-    DSF_OUT(stack)
+    ((stack)->out)
 
 #define REN_CS_ARG(stack, index) \
-    DSF_ARG((stack), ((index) + 1))
+    (&((stack)->vars)[(index)])
 
-#define REN_STACK_SHIM(stack) \
-    VAL_FUNC_CODE(DSF_FUNC((stack) - DS_Base))
+#if defined(__LP64__) || defined(__LLP64__)
+    #define REN_STACK_SHIM(stack) \
+        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint64_t)])
+#else
+    #define REN_STACK_SHIM(stack) \
+        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint64_t)])
+#endif
 
 #else
 
@@ -280,8 +284,6 @@ CASSERT(0, hooks_h)
 
 #endif
 
-
-typedef RenResult (* RenShimPointer)(RenCall * call);
 
 
 /*

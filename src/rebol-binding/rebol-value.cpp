@@ -8,6 +8,8 @@
 
 #include "rencpp/rebol.hpp" // ren::internal::nodes
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -19,9 +21,9 @@ bool AnyValue::isEqualTo(AnyValue const & other) const {
     // acts like REBNATIVE(equalq)
 
     REBVAL cell_copy;
-    cell_copy = cell;
+    cell_copy = *AS_C_REBVAL(&cell);
     REBVAL other_copy;
-    other_copy = other.cell;
+    other_copy = *AS_C_REBVAL(&other.cell);
 
     // !!! Modifies arguments to coerce them for testing!
     return Compare_Modify_Values(&cell_copy, &other_copy, 0);
@@ -31,9 +33,9 @@ bool AnyValue::isSameAs(AnyValue const & other) const {
     // acts like REBNATIVE(sameq)
 
     REBVAL cell_copy;
-    cell_copy = cell;
+    cell_copy = *AS_C_REBVAL(&cell);
     REBVAL other_copy;
-    other_copy = other.cell;
+    other_copy = *AS_C_REBVAL(&other.cell);
 
     // !!! Modifies arguments to coerce them for testing
     return Compare_Modify_Values(&cell_copy, &other_copy, 3);
@@ -62,20 +64,20 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     origin = engine;
 
     // We shouldn't be able to get any REB_END values made in Ren/C++
-    assert(NOT_END(&cell));
+    assert(NOT_END(AS_REBVAL(&cell)));
 
     // We no longer allow AnyValue to hold a REB_UNSET (unless specialization
-	// using std::optional<AnyValue> represents unsets using that, which would
-	// happen sometime later down the line when that optimization makes sense)
-	// finishInit() is an inline wrapper that throws if this happens.
-	if (IS_UNSET(&cell))
-		return false;
+    // using std::optional<AnyValue> represents unsets using that, which would
+    // happen sometime later down the line when that optimization makes sense)
+    // finishInit() is an inline wrapper that throws if this happens.
+    if (IS_UNSET(AS_REBVAL(&cell)))
+        return false;
 
-    if (FLAGIT_64(VAL_TYPE(&cell)) & TS_NO_GC) {
+    if (FLAGIT_64(VAL_TYPE(AS_REBVAL(&cell))) & TS_NO_GC) {
         // Types with no GC-aware members do not need to be put into the list
         // While the pointers are there anyway and it saves no memory, it does
         // save time when a GC runs...as well as the cost of any sync
-		return true;
+        return true;
     }
 
     // !!! Placeholder for a less-global locking strategy (list per type, or
@@ -92,7 +94,7 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
 
     internal::head = this; // update head
 
-	return true;
+    return true;
 }
 
 
@@ -127,12 +129,12 @@ void AnyValue::uninitialize() {
 
 
 void AnyValue::toCell_(
-	RenCell & cell, optional<AnyValue> const & value
+    RenCell & cell, optional<AnyValue> const & value
 ) noexcept {
-	if (value == nullopt)
-		SET_UNSET(&cell);
-	else
-		cell = value->cell;
+    if (value == nullopt)
+        SET_UNSET(AS_REBVAL(&cell));
+    else
+        cell = value->cell;
 }
 
 
@@ -175,7 +177,7 @@ AnyValue AnyValue::copy(bool deep) const {
 
     Context userContext (Dont::Initialize);
     Val_Init_Object(
-        &userContext.cell,
+        AS_REBVAL(&userContext.cell),
         VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
     );
     userContext.finishInit(origin);
@@ -321,8 +323,8 @@ Loadable::Loadable (char const * sourceCstr) :
     AnyValue (AnyValue::Dont::Initialize)
 {
     // using REB_END as our "alien"
-    VAL_SET(&cell, REB_END);
-    VAL_HANDLE_DATA(&cell) = const_cast<char *>(sourceCstr);
+    VAL_SET(AS_REBVAL(&cell), REB_END);
+    VAL_HANDLE_DATA(AS_REBVAL(&cell)) = const_cast<char *>(sourceCstr);
 
     next = nullptr;
     prev = nullptr;
@@ -331,18 +333,18 @@ Loadable::Loadable (char const * sourceCstr) :
 
 
 Loadable::Loadable (optional<AnyValue> const & value) :
-	AnyValue (AnyValue::Dont::Initialize)
+    AnyValue (AnyValue::Dont::Initialize)
 {
-	if (value == nullopt)
-		SET_UNSET(&cell);
-	else
-		cell = value->cell;
+    if (value == nullopt)
+        SET_UNSET(AS_REBVAL(&cell));
+    else
+        cell = value->cell;
 
-	// We trust that the source value we copied from will stay alive and
-	// prevent garbage collection... (review this idea)
-	next = nullptr;
-	prev = nullptr;
-	origin = REN_ENGINE_HANDLE_INVALID;
+    // We trust that the source value we copied from will stay alive and
+    // prevent garbage collection... (review this idea)
+    next = nullptr;
+    prev = nullptr;
+    origin = REN_ENGINE_HANDLE_INVALID;
 }
 
 

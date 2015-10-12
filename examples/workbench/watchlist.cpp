@@ -65,7 +65,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             // delete everything, consider it to be "unlabeling"
 
             if (contents.isEmpty())
-				w.label = nullopt;
+                w.label = nullopt;
             else
                 w.label = Tag {contents};
 
@@ -94,7 +94,7 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 WatchList::Watcher::Watcher (
     AnyValue const & watch,
     bool recalculates,
-	optional<Tag> const & label
+    optional<Tag> const & label
 ) :
     watch (watch),
     recalculates (recalculates),
@@ -117,10 +117,10 @@ void WatchList::Watcher::evaluate(bool firstTime) {
             } else
                 value = watch.apply();
         }
-		error = nullopt;
+        error = nullopt;
     }
     catch (evaluation_error const & e) {
-		value = nullopt;
+        value = nullopt;
         error = e.error();
     }
     catch (std::exception const & e) {
@@ -150,11 +150,11 @@ QString WatchList::Watcher::getWatchString() const {
 
 
 QString WatchList::Watcher::getValueString() const {
-	if (error != nullopt)
-		return to_QString(*error);
-	if (value == nullopt)
+    if (error != nullopt)
+        return to_QString(*error);
+    if (value == nullopt)
         return "no value";
-	return to_QString(*runtime("mold/all quote", value));
+    return to_QString(*runtime("mold/all quote", value));
 }
 
 

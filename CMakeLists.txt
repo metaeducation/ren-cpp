@@ -222,15 +222,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     try_remove_cxx_flag(-Wnoexcept)
     try_remove_cxx_flag(-Wstrict-null-sentinel)
 
-	# mismatched-tags is a "questionable" warning when specializations of
-	# struct and class are mixed.  Such a mixture is legal C++ and header
-	# files are not consistent in their usage:
-	#
-	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58025
-	#
-	# Seems to not be an issue in GCC for some reason but showing up in clang
+    # mismatched-tags is a "questionable" warning when specializations of
+    # struct and class are mixed.  Such a mixture is legal C++ and header
+    # files are not consistent in their usage:
+    #
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58025
+    #
+    # Seems to not be an issue in GCC for some reason but showing up in clang
 
-	add_cxx_flags(-Wno-mismatched-tags)
+    add_cxx_flags(-Wno-mismatched-tags)
 
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 

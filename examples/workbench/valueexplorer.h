@@ -32,17 +32,17 @@ class ValueExplorer : public QPlainTextEdit {
     Q_OBJECT
 
 private:
-	ren::optional<ren::AnyValue> value;
+    ren::optional<ren::AnyValue> value;
 
 public:
     ValueExplorer (QWidget * parent);
     ~ValueExplorer () override;
 
 public slots:
-	void setValue(
-		ren::AnyValue const & helpFunction,
-		ren::optional<ren::AnyValue> const & value
-	);
+    void setValue(
+        ren::AnyValue const & helpFunction,
+        ren::optional<ren::AnyValue> const & value
+    );
 };
 
 #endif

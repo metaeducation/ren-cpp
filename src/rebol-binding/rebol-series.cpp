@@ -6,6 +6,8 @@
 #include "rencpp/series.hpp"
 #include "rencpp/arrays.hpp" // For Path evaluation in operator[]
 
+#include "rebol-common.hpp"
+
 
 namespace ren {
 
@@ -15,7 +17,7 @@ namespace ren {
 
 
 bool AnySeries::isValid(RenCell const & cell) {
-    return ANY_SERIES(&cell);
+    return ANY_SERIES(AS_C_REBVAL(&cell));
 }
 
 
@@ -26,12 +28,12 @@ bool AnySeries::isValid(RenCell const & cell) {
 
 
 void ren::internal::AnySeries_::operator++() {
-    cell.data.position.index++;
+    AS_REBVAL(&cell)->data.position.index++;
 }
 
 
 void ren::internal::AnySeries_::operator--() {
-    cell.data.position.index--;
+    AS_REBVAL(&cell)->data.position.index--;
 }
 
 
@@ -48,14 +50,19 @@ void ren::internal::AnySeries_::operator--(int) {
 AnyValue ren::internal::AnySeries_::operator*() const {
     AnyValue result {Dont::Initialize};
 
-    if (ANY_STR(&cell)) {
+    if (ANY_STR(AS_C_REBVAL(&cell))) {
         // from str_to_char in Rebol source
         SET_CHAR(
-            &result.cell,
-            GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.position.index)
+            AS_REBVAL(&result.cell),
+            GET_ANY_CHAR(
+                VAL_SERIES(AS_C_REBVAL(&cell)),
+                AS_C_REBVAL(&cell)->data.position.index
+            )
         );
-    } else if (Is_Array_Series(VAL_SERIES(&cell))) {
-        result.cell = *VAL_BLK_SKIP(&cell, cell.data.position.index);
+    } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
+        result.cell = *AS_C_RENCELL(VAL_BLK_SKIP(
+            AS_C_REBVAL(&cell), AS_C_REBVAL(&cell)->data.position.index
+        ));
     } else {
         // Binary and such, would return an integer
         UNREACHABLE_CODE();
@@ -71,18 +78,19 @@ AnyValue ren::internal::AnySeries_::operator->() const {
 
 
 void ren::internal::AnySeries_::head() {
-    cell.data.position.index = 0;
+    AS_REBVAL(&cell)->data.position.index = 0;
 }
 
 
 void ren::internal::AnySeries_::tail() {
-    cell.data.position.index = cell.data.position.series->tail;
+    AS_REBVAL(&cell)->data.position.index
+        = AS_REBVAL(&cell)->data.position.series->tail;
 }
 
 
 size_t AnySeries::length() const {
-    REBCNT index = VAL_INDEX(&cell);
-    REBCNT tail = VAL_TAIL(&cell);
+    REBCNT index = VAL_INDEX(AS_C_REBVAL(&cell));
+    REBCNT tail = VAL_TAIL(AS_C_REBVAL(&cell));
     return tail > index ? tail - index : 0;
 }
 
@@ -109,7 +117,7 @@ const {
     // So we do what building a path would do here.
 
     AnyValue getPath {Dont::Initialize};
-    VAL_SET(&getPath.cell, REB_GET_PATH);
+    VAL_SET(AS_REBVAL(&getPath.cell), REB_GET_PATH);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index
@@ -125,7 +133,7 @@ const {
         nullptr // Don't apply
     );
 
-    ASSERT_VALUE_MANAGED(&getPath.cell);
+    ASSERT_VALUE_MANAGED(AS_REBVAL(&getPath.cell));
 
     AnyValue result {Dont::Initialize};
 

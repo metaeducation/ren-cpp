@@ -67,7 +67,7 @@ public slots:
 signals:
     void resultReady(
         bool success,
-		ren::optional<ren::AnyValue> const & result // `ren::` needed for signal!
+        ren::optional<ren::AnyValue> const & result // `ren::` needed for signal!
     );
 
     void initializeDone();

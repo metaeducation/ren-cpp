@@ -87,7 +87,7 @@ public:
         print("--->[FakeRed::ConstructOrApply]--->");
 
         if (applicand) {
-			unsigned char buffer[256];
+            unsigned char buffer[256];
             size_t length;
             RenFormAsUtf8(engine, applicand, buffer, 256, &length);
             print("Applicand is", buffer);
@@ -102,7 +102,7 @@ public:
             auto & cell = *reinterpret_cast<RenCell const *>(currentPtr);
 
             if (RedRuntime::getDatatypeID(cell) != runtime.TYPE_ALIEN) {
-				unsigned char buffer[256];
+                unsigned char buffer[256];
                 size_t length;
                 RenFormAsUtf8(engine, &cell, buffer, 256, &length);
                 print("LOADED:", buffer);
@@ -151,7 +151,7 @@ public:
     RenResult FormAsUtf8(
         RedEngineHandle engine,
         RedCell const * cell,
-		unsigned char * buffer,
+        unsigned char * buffer,
         size_t bufSize,
         size_t * lengthOut
     ) {
@@ -167,26 +167,26 @@ public:
             << ")";
     #endif
         assert(bufSize > ss.str().length());
-		std::strcpy(reinterpret_cast<char*>(buffer), ss.str().c_str());
+        std::strcpy(reinterpret_cast<char*>(buffer), ss.str().c_str());
         *lengthOut = ss.str().length();
 
         return REN_SUCCESS;
     }
 
-	RenResult ShimHalt() {
-		// Done by setting a signal and then checking in the interpreter
-		// loop in Rebol and doing a longjmp; how will Red do it?
-		throw std::runtime_error("ShimCancel...coming soon...");
-	}
+    RenResult ShimHalt() {
+        // Done by setting a signal and then checking in the interpreter
+        // loop in Rebol and doing a longjmp; how will Red do it?
+        throw std::runtime_error("ShimCancel...coming soon...");
+    }
 
-	void ShimInitThrown(RedCell *, RedCell const *, RedCell const *) {
-		// Presumably Red uses a similar technique to Rebol for throw/catch
-		throw std::runtime_error("ShimInitThrown...coming soon...");
-	}
+    void ShimInitThrown(RedCell *, RedCell const *, RedCell const *) {
+        // Presumably Red uses a similar technique to Rebol for throw/catch
+        throw std::runtime_error("ShimInitThrown...coming soon...");
+    }
 
-	RenResult ShimFail(RedCell const *) {
-		throw std::runtime_error("ShimRaiseError...coming soon...");
-	}
+    RenResult ShimFail(RedCell const *) {
+        throw std::runtime_error("ShimRaiseError...coming soon...");
+    }
 
     ~FakeRedHooks() {
     }
@@ -266,15 +266,15 @@ RenResult RenFormAsUtf8(
 
 
 RenResult RenShimHalt() {
-	return ren::internal::hooks.ShimHalt();
+    return ren::internal::hooks.ShimHalt();
 }
 
 void RenShimInitThrown(RedCell *out, RedCell const *value, RedCell const *name) {
-	return ren::internal::hooks.ShimInitThrown(out, value, name);
+    return ren::internal::hooks.ShimInitThrown(out, value, name);
 }
 
 RenResult RenShimFail(RenCell const * error) {
-	return ren::internal::hooks.ShimFail(error);
+    return ren::internal::hooks.ShimFail(error);
 }
 
 #endif

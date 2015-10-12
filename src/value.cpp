@@ -146,17 +146,17 @@ bool AnyValue::constructOrApplyInitialize(
             throw evaluation_error {static_cast<Error>(extraOut)};
         }
 
-		case REN_EVALUATION_HALTED:
-			throw evaluation_halt {};
+        case REN_EVALUATION_HALTED:
+            throw evaluation_halt {};
 
-		case REN_APPLY_THREW: {
+        case REN_APPLY_THREW: {
             bool hasName = applyOut->tryFinishInit(engine);
             bool hasValue = extraOut->tryFinishInit(engine);
             throw evaluation_throw {
                 hasValue ? optional<AnyValue>{extraOut} : nullopt,
                 hasName ? optional<AnyValue>{*applyOut} : nullopt
             };
-		}
+        }
     #endif
 
         default:

@@ -160,13 +160,13 @@ public:
         Fun && fun,
         utility::indices<Ind...>
     ) {
-		// Handling `return void` serves the purpose of removing the need for
-		// a return statement, but it also has to be a way of returning the
-		// "correct" value.  In Rebol and Red the default return value is
-		// no value, which does not have a concrete type...it's the disengaged
-		// state of an `optional<AnyValue>`.
+        // Handling `return void` serves the purpose of removing the need for
+        // a return statement, but it also has to be a way of returning the
+        // "correct" value.  In Rebol and Red the default return value is
+        // no value, which does not have a concrete type...it's the disengaged
+        // state of an `optional<AnyValue>`.
 
-		using Ret = optional<AnyValue>;
+        using Ret = optional<AnyValue>;
 
         using Gen = internal::FunctionGenerator<
             Ret,
@@ -181,7 +181,7 @@ public:
                 Ret(utility::argument_type<Fun, Ind>...)
             >([&fun](utility::argument_type<Fun, Ind>&&... args){
                 fun(std::forward<utility::argument_type<Fun, Ind>>(args)...);
-				return nullopt;
+                return nullopt;
             })
         };
     }
@@ -311,7 +311,7 @@ public:
     // but it really only makes sense for a few value types.
 public:
     template <typename... Ts>
-	inline optional<AnyValue> operator()(Ts &&... args) const {
+    inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
 #endif
@@ -424,7 +424,7 @@ private:
     )
         -> decltype(
             fun(
-				AnyValue::fromCell_<
+                AnyValue::fromCell_<
                     typename std::decay<
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
@@ -436,12 +436,12 @@ private:
         )
     {
         return fun(
-			AnyValue::fromCell_<
+            AnyValue::fromCell_<
                 typename std::decay<
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                *REN_CS_ARG(call, static_cast<REBINT>(Indices)),
+                *REN_CS_ARG(call, static_cast<int>(Indices)),
                 engine
             )...
         );
@@ -479,7 +479,7 @@ private:
         // to initialize it and would rather not; but Clang complains as it
         // cannot prove it's always initialized when used.  Revisit.
 
-		RenResult result;
+        RenResult result;
 
         try {
             // Our applyFun helper does the magic to recursively forward
@@ -488,13 +488,13 @@ private:
             // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
 
-			auto && out = applyFun(entry.fun, entry.engine, call);
+            auto && out = applyFun(entry.fun, entry.engine, call);
 
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-			AnyValue::toCell_(*REN_CS_OUT(call), out); // out may be optional
-			result = REN_SUCCESS;
+            AnyValue::toCell_(*REN_CS_OUT(call), out); // out may be optional
+            result = REN_SUCCESS;
         }
         catch (bad_optional_access const & e) {
             throw std::runtime_error {
@@ -504,7 +504,7 @@ private:
         }
         catch (Error const & e) {
             *REN_CS_OUT(call) = e.cell;
-			result = REN_APPLY_ERROR;
+            result = REN_APPLY_ERROR;
         }
         catch (optional<Error> const & e) {
             if (e == nullopt)
@@ -515,15 +515,15 @@ private:
             result = REN_APPLY_ERROR;
         }
         catch (AnyValue const & v) {
-			// In C++ `throw` is an error mechanism, and using it for general
-			// non-localized control (as Rebol uses THROW) is considered abuse
+            // In C++ `throw` is an error mechanism, and using it for general
+            // non-localized control (as Rebol uses THROW) is considered abuse
             if (not is<Error>(v))
                 throw std::runtime_error {
                     "Non-isError() Value thrown from ren::Function"
                 };
 
             *REN_CS_OUT(call) = v.cell;
-			result = REN_APPLY_ERROR;
+            result = REN_APPLY_ERROR;
         }
         catch (optional<AnyValue> const & v) {
             if (not is<Error>(v))
@@ -545,33 +545,33 @@ private:
             // the implementation of a ren::Function
 
             *REN_CS_OUT(call) = e.error().cell;
-			result = REN_APPLY_ERROR;
+            result = REN_APPLY_ERROR;
         }
-		catch (evaluation_throw const & t) {
-			// We have to fabricate a THROWN() name label with the actual
-			// thrown value stored aside.  Making pointer reference
-			// temporaries is needed to suppress a compiler warning:
-			//
-			//    http://stackoverflow.com/a/2281928/211160
+        catch (evaluation_throw const & t) {
+            // We have to fabricate a THROWN() name label with the actual
+            // thrown value stored aside.  Making pointer reference
+            // temporaries is needed to suppress a compiler warning:
+            //
+            //    http://stackoverflow.com/a/2281928/211160
 
             const RenCell * thrown_value =
                 t.value() == nullopt ? nullptr : &t.value()->cell;
-			const RenCell * thrown_name =
-				t.name() == nullopt ? nullptr : &t.name()->cell;
+            const RenCell * thrown_name =
+                t.name() == nullopt ? nullptr : &t.name()->cell;
 
-			RenShimInitThrown(
-				REN_CS_OUT(call),
-				thrown_value,
-				thrown_name
-			);
-			result = REN_APPLY_THREW;
-		}
+            RenShimInitThrown(
+                REN_CS_OUT(call),
+                thrown_value,
+                thrown_name
+            );
+            result = REN_APPLY_THREW;
+        }
         catch (load_error const & e) {
             *REN_CS_OUT(call) = e.error().cell;
-			result = REN_CONSTRUCT_ERROR;
+            result = REN_CONSTRUCT_ERROR;
         }
         catch (evaluation_halt const & e) {
-			result = REN_EVALUATION_HALTED;
+            result = REN_EVALUATION_HALTED;
         }
         catch (std::exception const & e) {
 
@@ -599,23 +599,23 @@ private:
         // should be safe (which is what Rebol will do if we call RenShimError
         // or RenShimExit).
 
-		switch (result) {
-		case REN_SUCCESS:
-		case REN_APPLY_THREW:
-			// Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
-			// attention to it, but we don't know what Red will do.
-			return REN_SUCCESS;
+        switch (result) {
+        case REN_SUCCESS:
+        case REN_APPLY_THREW:
+            // Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
+            // attention to it, but we don't know what Red will do.
+            return REN_SUCCESS;
 
-		case REN_EVALUATION_HALTED:
-			return RenShimHalt();
+        case REN_EVALUATION_HALTED:
+            return RenShimHalt();
 
-		case REN_APPLY_ERROR:
-		case REN_CONSTRUCT_ERROR:
-			return RenShimFail(REN_CS_OUT(call));
+        case REN_APPLY_ERROR:
+        case REN_CONSTRUCT_ERROR:
+            return RenShimFail(REN_CS_OUT(call));
 
-		default:
-			UNREACHABLE_CODE();
-		}
+        default:
+            UNREACHABLE_CODE();
+        }
     }
 
 public:
