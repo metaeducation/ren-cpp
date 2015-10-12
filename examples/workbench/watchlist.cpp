@@ -488,7 +488,7 @@ optional<AnyValue> WatchList::watchDialect(
 
         watcherUnique = new Watcher {arg, true, label};
     }
-    else if (is<GetWord>(arg) or is<GetPath>(arg)) {
+    else if (is<GetWord>(arg) or is<ren::GetPath>(arg)) {
         watcherUnique = new Watcher {arg, true, label};
     }
 

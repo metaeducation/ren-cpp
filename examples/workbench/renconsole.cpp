@@ -287,7 +287,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                 if (
                     is<Word>(arg) or is<GetWord>(arg)
-                    or is<Path>(arg) or is<GetPath>(arg)
+                    or is<Path>(arg) or is<ren::GetPath>(arg)
                     or is<Group>(arg)
                 ) {
                     optional<AnyValue> result = arg.apply();
