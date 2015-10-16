@@ -385,13 +385,13 @@ public:
             }
 
             // Series now managed, protect from GC
-            SAVE_SERIES(aggregate);
+            PUSH_GUARD_SERIES(aggregate);
 
             if (applicand) {
                 if (Generalized_Apply_Throws(
                     applyOut, applicand, aggregate, FALSE
                 )) {
-                    TAKE_THROWN_ARG(extraOut, applyOut);
+                    CATCH_THROWN(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }
                 else
@@ -403,7 +403,7 @@ public:
                 // export a version of DO separately.
 
                 if (Do_Block_Throws(applyOut, aggregate, 0)) {
-                    TAKE_THROWN_ARG(extraOut, applyOut);
+                    CATCH_THROWN(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }
                 else {
@@ -412,7 +412,7 @@ public:
                 }
             }
 
-            UNSAVE_SERIES(aggregate);
+            DROP_GUARD_SERIES(aggregate);
         }
         else
             result = REN_SUCCESS;

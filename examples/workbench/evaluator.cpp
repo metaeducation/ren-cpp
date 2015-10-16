@@ -52,7 +52,7 @@ void EvaluatorWorker::doWork(
     Function dialect = static_cast<Function>(dialectValue);
     Context context = static_cast<Context>(contextValue);
 
-	optional<AnyValue> result;
+    optional<AnyValue> result;
     bool success = false;
 
     try {
@@ -75,9 +75,12 @@ void EvaluatorWorker::doWork(
         success = true;
     }
     catch (evaluation_throw const & t) {
-        if (is<Word>(t.name())) {
-			Word word = static_cast<Word>(*t.name());
-            if (word.hasSpelling("exit") || word.hasSpelling("quit")) {
+        if (is<Function>(t.name())) {
+            Function func = static_cast<Function>(*t.name());
+            Function qt = static_cast<Function>(*runtime(":quit"));
+            Function ex = static_cast<Function>(*runtime(":exit"));
+
+            if (func.isEqualTo(qt) || func.isEqualTo(ex)) {
                 // A programmatic request to quit the system (e.g. QUIT).
                 // Might be interesting to have some UI to configure it
                 // not actually exiting the whole GUI app, if you don't
@@ -99,7 +102,7 @@ void EvaluatorWorker::doWork(
                 // We have submitted our quit message but will have to
                 // get back to the message pump... go ahead and return
                 // none...
-				result = nullopt;
+                result = nullopt;
                 success = true;
             }
         }

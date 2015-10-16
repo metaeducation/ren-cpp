@@ -601,10 +601,12 @@ private:
 
         switch (result) {
         case REN_SUCCESS:
-        case REN_APPLY_THREW:
-            // Note: trickery!  R_OUT is 0 and so is REN_SUCCESS.  Rebol pays
-            // attention to it, but we don't know what Red will do.
+            // !!! R_OUT is 0 in Rebol and so is REN_SUCCESS
             return REN_SUCCESS;
+
+        case REN_APPLY_THREW:
+            // !!! R_OUT_THREW is 1 in Rebol and so is REN_APPLY_THREW
+            return REN_APPLY_THREW;
 
         case REN_EVALUATION_HALTED:
             return RenShimHalt();

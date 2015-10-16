@@ -33,9 +33,9 @@ Error::Error (const char * msg, Engine * engine) :
 
     std::string array {"#[error! [code: 800 type: 'User id: 'message arg1: "};
 
-    array += '"';
+    array += '{';
     array += msg;
-    array += '"';
+    array += '}';
 
     // the shim could adjust the where and say what function threw it?
     // file/line number optional?

@@ -51,10 +51,11 @@
  * the hack to use the equal value of R_OUT and REN_SUCCESS to avoid
  * trying to force Red to have R_XXX return conventions from RenShimPointer
  */
-#define REN_SUCCESS 0
+#define REN_SUCCESS 0 /* same value as R_OUT */
+#define REN_APPLY_THREW 1 /* same value as R_OUT_THREW */
+
 #define REN_CONSTRUCT_ERROR 10
 #define REN_APPLY_ERROR 11
-#define REN_APPLY_THREW 12
 #define REN_ERROR_NO_SUCH_CONTEXT 13
 #define REN_BUFFER_TOO_SMALL 14
 #define REN_SHIM_INITIALIZED 15

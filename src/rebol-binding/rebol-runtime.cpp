@@ -81,7 +81,7 @@ REBOOL Generalized_Apply_Throws(
 
     if (IS_OBJECT(applicand)) {
         REBSER * reboundArgs = Copy_Array_Deep_Managed(args);
-        SAVE_SERIES(reboundArgs);
+        PUSH_GUARD_SERIES(reboundArgs);
 
         // Note this takes a C array of values terminated by a REB_END.
         Bind_Values_Set_Forward_Shallow(
@@ -90,11 +90,11 @@ REBOOL Generalized_Apply_Throws(
         );
 
         if (Do_Block_Throws(out, reboundArgs, 0)) {
-            UNSAVE_SERIES(reboundArgs);
+            DROP_GUARD_SERIES(reboundArgs);
             return TRUE;
         }
 
-        UNSAVE_SERIES(reboundArgs);
+        DROP_GUARD_SERIES(reboundArgs);
 
         return FALSE;
     }
@@ -245,6 +245,14 @@ RebolRuntime::RebolRuntime (bool) :
     assert(offsetof(Reb_Call, out) == offsetof(RenCall, out));
     assert(offsetof(Reb_Call, where) == offsetof(RenCall, where));
     assert(offsetof(Reb_Call, vars) == offsetof(RenCall, vars));
+
+    // function.hpp does a bit more of its template work in the include file
+    // than we might like (but that's how templates work).  We don't want
+    // to expose R_OUT and R_OUT_IS_THROWN (they are Rebol internals) so we
+    // use REN_ constants as surrogates in that header.
+
+    assert(R_OUT == REN_SUCCESS);
+    assert(R_OUT_IS_THROWN == REN_APPLY_THREW);
 }
 
 
