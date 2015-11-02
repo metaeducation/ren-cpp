@@ -402,7 +402,7 @@ public:
                 // that was in the loadables".  This keeps us from having to
                 // export a version of DO separately.
 
-                if (Do_Block_Throws(applyOut, aggregate, 0)) {
+                if (Do_At_Throws(applyOut, aggregate, 0)) {
                     CATCH_THROWN(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }

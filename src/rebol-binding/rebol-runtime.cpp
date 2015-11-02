@@ -89,7 +89,7 @@ REBOOL Generalized_Apply_Throws(
             VAL_OBJ_FRAME(applicand)
         );
 
-        if (Do_Block_Throws(out, reboundArgs, 0)) {
+        if (Do_At_Throws(out, reboundArgs, 0)) {
             DROP_GUARD_SERIES(reboundArgs);
             return TRUE;
         }

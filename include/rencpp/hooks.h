@@ -184,6 +184,9 @@ typedef RedEngineHandle RenEngineHandle;
  * as written.
  */
 
+typedef void* RenCall; // TBD
+typedef uint32_t (* RenShimPointer)(RenCall * call);
+
 #define REN_CS_OUT(stack) \
     static_cast<RenCell *>((stack), nullptr)
 
@@ -193,7 +196,6 @@ typedef RedEngineHandle RenEngineHandle;
 #define REN_STACK_SHIM(stack) \
     static_cast<RenShimPointer>((stack), nullptr)
 
-typedef void* RenCall; // TBD
 
 #elif (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
 
