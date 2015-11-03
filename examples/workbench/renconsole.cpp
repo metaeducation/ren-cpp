@@ -365,41 +365,23 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
     proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
-        ":/scripts/rebol-proposals/",
+        ":/scripts/",
 
         // URL prefix
         "https://raw.githubusercontent.com/hostilefork/rencpp"
         "/develop/examples/workbench/scripts/rebol-proposals/",
 
         Block {
-            "%comparison-operators.reb",
             "%combine.reb",
-            "%while-until.reb",
-            "%print-only-with.reb",
-            "%charset-generators.reb",
-            "%exit-end-quit.reb",
-            "%remold-reform-repend.reb",
-            "%to-string-spelling.reb",
-            "%find-min-max.reb",
-            "%ls-cd-dt-short-names.reb",
-            "%loop-dialect.reb",
-            "%object-context.reb",
-            "%help-dialect.reb"
         },
 
         proposalsRef
     );
 
-    (*proposalsContext)(
-        "concat: :join", // I don't care what you call it, it's bad
-        "join: :combine" // Righful owner of the fitting name...
-    );
-
-    // go ahead and take the good print, even in "vanilla" Rebol, and also
-    // include COMBINE
+    // This is how to include something even in the "non-proposals" user
+    // context, e.g. COMBINE
 
     userContext(
-        "print: quote", (*proposalsContext)(":print"),
         "combine: quote", (*proposalsContext)(":combine")
     );
 

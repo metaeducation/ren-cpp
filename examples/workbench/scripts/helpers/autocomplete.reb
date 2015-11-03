@@ -100,7 +100,7 @@ try-get-scope-from-path: function [path [path!]] [
         value: either obj [
             unless in obj element [return none]
             select obj element
-        ] [
+        ][
             get/any element
         ]
 
@@ -170,7 +170,7 @@ autocomplete-helper: function [
 
     /backward
         {If we should search backward in the enumeration}
-] [
+][
     ; If you are at the beginning of a word and hit "tab", what are you
     ; asking to have completed?  :-/  Leave it alone for now.
 
@@ -188,7 +188,7 @@ autocomplete-helper: function [
     if all [
         last-slash
         index > index-of last-slash
-    ] [
+    ][
         fragment: next last-slash
         stem: copy/part (next last-slash) (index - index-of next last-slash)
         base: copy/part text last-slash
@@ -220,7 +220,7 @@ autocomplete-helper: function [
 
             iter: back tail contexts
             final: false
-            until [any [final (final: head? iter false)]] [
+            while [not any [final (final: head? iter false)]] [
                 path: first bind reduce [path] iter/1
                 iter: back iter
             ]
@@ -262,7 +262,7 @@ autocomplete-helper: function [
 
     adjusted-contexts: either backward [
         reverse copy completion-contexts
-    ] [
+    ][
         completion-contexts
     ]
 
@@ -347,7 +347,7 @@ autocomplete-helper: function [
             either spelling = fragment [
                 assert [not take-next]
                 take-next: true
-            ] [
+            ][
                 ; As long as this word wasn't outranked, we can use it if we
                 ; were told to take the next one we see.
 
@@ -381,7 +381,7 @@ autocomplete-helper: function [
             index
             either :scope [
                 :scope
-            ] [
+            ][
                 in first-candidate-ctx first-candidate-word
             ]
         ]

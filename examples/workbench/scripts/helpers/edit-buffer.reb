@@ -62,10 +62,8 @@ console-buffer-helper: function [value [block! string!]] [
     if any [
         find next position '|
         find next anchor '||
-    ] [
-        do make error! {
-            Buffer dialect only permits one | and || mark in a block
-        }
+    ][
+        fail {Buffer dialect only permits one | and || mark in a block}
     ]
 
 

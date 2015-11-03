@@ -18,10 +18,17 @@
 
 # NOTE: 9 times out of 10 these days, people working on this project want:
 #
-#    -DCMAKE_BUILD_TYPE=Debug -DRUNTIME=rebol -DCLASSLIB_QT=1 -DGARDEN=yes
+#    -DCMAKE_BUILD_TYPE=Debug -DRUNTIME=rebol -DCLASSLIB_QT=1
+#    -DGARDEN=yes -DCMAKE_VERBOSE_MAKEFILE=ON
 #
 # ...as the CMake build parameters.  So putting these up top.  Qt Creator
 # has a bad habit of losing the cache of this, so we keep needing it.  :-/
+#
+# If the build stops due to a warning, please report that warning to the
+# issue tracker.  However, as things have been set to be very sensitive and
+# compilers can add new "extra" warnings on a whim, you may be able to
+# get it to build by adding -DRIGOROUS=no to the list.
+#
 
 #
 # NOTE: Comments in this CMakeLists.txt were originally the entirety of

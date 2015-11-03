@@ -11,19 +11,7 @@
         <file>scripts/helpers/autocomplete.reb</file>
         <file>scripts/helpers/edit-buffer.reb</file>
         <file>scripts/helpers/shell.reb</file>
-        <file>scripts/rebol-proposals/comparison-operators.reb</file>
-        <file>scripts/rebol-proposals/combine.reb</file>
-        <file>scripts/rebol-proposals/while-until.reb</file>
-        <file>scripts/rebol-proposals/print-only-with.reb</file>
-        <file>scripts/rebol-proposals/find-min-max.reb</file>
-        <file>scripts/rebol-proposals/charset-generators.reb</file>
-        <file>scripts/rebol-proposals/exit-end-quit.reb</file>
-        <file>scripts/rebol-proposals/remold-reform-repend.reb</file>
-        <file>scripts/rebol-proposals/to-string-spelling.reb</file>
-        <file>scripts/rebol-proposals/ls-cd-dt-short-names.reb</file>
-        <file>scripts/rebol-proposals/loop-dialect.reb</file>
-        <file>scripts/rebol-proposals/object-context.reb</file>
-        <file>scripts/rebol-proposals/help-dialect.reb</file>
+        <file>scripts/combine.reb</file>
         <file>images/banner-logo.png</file>
         <file>rendata/copyright.ren</file>
     </qresource>

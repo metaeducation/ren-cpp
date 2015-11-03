@@ -46,23 +46,25 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
     result: make block! 1
     str: make string! (5 * length arg)
 
-    for-each arg [
+    ;-- FORALL definitely needs a better name.  for-next ?
+
+    forall arg [
         case [
-            paren? arg/1 [
+            group? arg/1 [
                 evaluated: do arg/1
-                append str to-string evaluated
+                append str form evaluated
             ]
 
             set-word? arg/1 [
                 append str combine [
-                    either windows [{set}] [{export}]
+                    (either windows {set} {export})
                     space spelling-of arg/1 {=}
                     either windows [
-                        to-string either paren? arg/2 [do arg/2] [arg/2]
-                    ] [
+                        form either group? arg/2 [do arg/2] [arg/2]
+                    ][
                         [
                             {"}
-                            either paren? arg/2 [do arg/2] [arg/2]
+                            either group? arg/2 [do arg/2] [arg/2]
                             {"}
                         ]
                     ]
@@ -74,7 +76,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
                 append str combine [
                     either windows [
                         [{%} spelling-of arg/1 {%}]
-                    ] [
+                    ][
                         [{$} spelling-of arg/1]
                     ]
                 ]
@@ -97,7 +99,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
             ]
 
             true [
-                append str to-string arg/1
+                append str form arg/1
             ]
         ]
 
@@ -120,23 +122,23 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
 shell-dialect-to-strings: function [
     'arg [word! block! string! unset!]
     windows [logic!]
-] [
+][
     result: make block! 1
 
-    case [
-        unset? arg [
-            do make error! "Altering command processor state...soon"
+    switch type-of arg [
+        :unset! [
+            fail "Altering command processor state...soon"
         ]
 
-        word? arg [
-            append result (to-string arg)
+        :word! [
+            append result (form arg)
         ]
 
-        string? arg [
+        :string! [
             append result (arg)
         ]
 
-        block? arg [
+        :block! [
             result: block-to-shell-strings arg windows
         ]
     ]
