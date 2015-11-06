@@ -301,7 +301,7 @@ public:
 
         if (constructOutDatatypeIn) {
             enum Reb_Kind resultType = VAL_TYPE(constructOutDatatypeIn);
-            if (ANY_BLOCK(constructOutDatatypeIn)) {
+            if (ANY_ARRAY(constructOutDatatypeIn)) {
                 // They actually wanted a constructed value, and they wanted
                 // effectively our aggregate...maybe with a different type.
                 // Depending on how much was set in the "datatype in" we may

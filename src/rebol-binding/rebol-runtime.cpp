@@ -104,7 +104,8 @@ REBOOL Generalized_Apply_Throws(
         args, 0, reinterpret_cast<const REBYTE *>(applicand), 1
     );
 
-    REBCNT index = Do_Next_May_Throw(out, args, 0);
+    REBCNT index;
+    DO_NEXT_MAY_THROW(index, out, args, 0);
 
     // The only way you can get an END_FLAG on something if you pass in
     // a 0 index is if the series is empty.  Otherwise, it should
