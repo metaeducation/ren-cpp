@@ -66,10 +66,10 @@ REBOOL Generalized_Apply_Throws(
             // If you try to "apply" an error with an arguments block, that
             // will give you an error about the apply (not the error itself)
 
-            raise Error_Invalid_Arg(BLK_HEAD(args));
+            fail (Error_Invalid_Arg(BLK_HEAD(args)));
         }
 
-        raise Error_Is(applicand);
+        fail (VAL_ERR_OBJECT(applicand));
     }
 
     assert(not reduce); // To be added?
@@ -124,7 +124,7 @@ REBOOL Generalized_Apply_Throws(
     // function being APPLY'd, you'd say that was too many arguments
 
     if (index != SERIES_TAIL(args))
-        raise Error_0(RE_APPLY_TOO_MANY);
+        fail (Error(RE_APPLY_TOO_MANY));
 
     Remove_Series(args, 0, 1);
 

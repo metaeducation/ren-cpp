@@ -172,14 +172,14 @@ public:
         assert(engine.data == 1020);
 
         REBOL_STATE state;
-        const REBVAL * error;
+        REBSER * error_frame;
 
         // longjmp could "clobber" this variable if it were not volatile, and
         // code inside of the `if (error)` depends on possible modification
         // between the setjmp (PUSH_UNHALTABLE_TRAP) and the longjmp
         volatile bool applying = false;
 
-        PUSH_UNHALTABLE_TRAP(&error, &state);
+        PUSH_UNHALTABLE_TRAP(&error_frame, &state);
 
         // Note: No C++ allocations can happen between here and the POP_STATE
         // calls as long as the C stack is in control, as setjmp/longjmp will
@@ -188,19 +188,19 @@ public:
         bool is_aggregate_managed = false;
         REBSER * aggregate = Make_Array(numLoadables * 2);
 
-// The first time through the following code 'error' will be NULL, but...
-// `raise Error()` can longjmp here, 'error' won't be NULL *if* that happens!
+// The first time through the following code 'error_frame' will be NULL, but...
+// `fail` can longjmp here, 'error_frame' won't be NULL *if* that happens!
 
-        if (error) {
+        if (error_frame) {
             // do not need to free series... it is done automatically
 
-            if (VAL_ERR_NUM(error) == RE_HALT) {
+            if (ERR_NUM(error_frame) == RE_HALT) {
                 // cancellation in middle of interpretation from outside
                 // the evaluation loop (e.g. Escape).
                 return REN_EVALUATION_HALTED;
             }
 
-            *extraOut = *error;
+            Val_Init_Error(extraOut, error_frame);
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
@@ -340,12 +340,7 @@ public:
                     // back (either 0 or more than 1 element in aggregate)
                     Val_Init_Error(
                         extraOut,
-                        Make_Error(
-                            RE_MISC, // Make error code for this...
-                            0,
-                            0,
-                            0
-                        )
+                        ::Error(RE_MISC) // Make error code for this...
                     );
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
@@ -354,11 +349,9 @@ public:
                     // Requested construct and value type was wrong
                     Val_Init_Error(
                         extraOut,
-                        Make_Error(
+                        ::Error(
                             RE_INVALID_ARG, // Make error code for this...
-                            BLK_HEAD(aggregate),
-                            0,
-                            0
+                            BLK_HEAD(aggregate)
                         )
                     );
                     result = REN_CONSTRUCT_ERROR;
@@ -498,7 +491,7 @@ public:
     }
 
     RenResult ShimHalt() {
-        raise Error_Is(TASK_HALT_ERROR);
+        fail (VAL_ERR_OBJECT(TASK_HALT_ERROR));
         DEAD_END;
     }
 
@@ -515,7 +508,7 @@ public:
     }
 
     RenResult ShimFail(REBVAL const * error) {
-        raise Error_Is(error);
+        fail (VAL_ERR_OBJECT(error));
         DEAD_END;
     }
 

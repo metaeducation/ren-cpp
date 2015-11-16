@@ -176,6 +176,11 @@ extern REBDEV *Devices[];
         static_cast<std::streamsize>(req->length) // Clang needs this cast
     );
 
+// C is *not* C++.  Ren-C is a C codebase, and its defines and macros may
+// tread on C++ and that is how it is.  Prohibiting the use of "fail" as
+// a method name is a liability, and Ren-C++ internally has the job of
+// insulating all the C madness from clients.  Here's that at work.
+#undef fail
     if (is.fail()) {
         req->error = 1020;
         return DR_ERROR;
