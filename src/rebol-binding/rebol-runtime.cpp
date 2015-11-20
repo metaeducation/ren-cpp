@@ -51,15 +51,11 @@ extern REBOL_HOST_LIB Host_Lib_Init;
 REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
-    REBSER *args,
-    REBFLG reduce
+    REBSER *args
 ) {
     // `out` will be protected during the apply
     ASSERT_VALUE_MANAGED(applicand);
     ASSERT_SERIES_MANAGED(args);
-
-    if (ANY_FUNC(applicand))
-        return Apply_Block_Throws(out, applicand, args, 0, reduce, NULL);
 
     if (IS_ERROR(applicand)) {
         if (SERIES_TAIL(args) != 0) {
@@ -71,8 +67,6 @@ REBOOL Generalized_Apply_Throws(
 
         fail (VAL_ERR_OBJECT(applicand));
     }
-
-    assert(not reduce); // To be added?
 
     // If it's an object (context) then "apply" means run the code
     // but bind it inside the object.  Suggestion by @WiseGenius:
@@ -99,19 +93,18 @@ REBOOL Generalized_Apply_Throws(
         return FALSE;
     }
 
-    // Just put the value at the head of a DO chain...
-    Insert_Series(
-        args, 0, reinterpret_cast<const REBYTE *>(applicand), 1
-    );
+    // Just put the value at the head of a DO chain.
+    //
+    // !!! This does not work for infix functions!
 
-    REBCNT index;
-    DO_NEXT_MAY_THROW(index, out, args, 0);
+    REBCNT index = Do_Core(out, applicand, TRUE, args, 0, TRUE);
+    if (index == THROWN_FLAG)
+        return TRUE;
 
     // The only way you can get an END_FLAG on something if you pass in
     // a 0 index is if the series is empty.  Otherwise, it should
     // either finish an evaluation or raise an error if it couldn't
-    // fulfill its arguments.  Given that we have just constructed a
-    // series that is *not* empty, we shouldn't get END_FLAG.
+    // fulfill its arguments.
 
     assert(index != END_FLAG);
 
@@ -125,8 +118,6 @@ REBOOL Generalized_Apply_Throws(
 
     if (index != SERIES_TAIL(args))
         fail (Error(RE_APPLY_TOO_MANY));
-
-    Remove_Series(args, 0, 1);
 
     return FALSE;
 }
@@ -357,72 +348,42 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         Val_Init_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
-    // RenCpp is based on "generalized apply", e.g. a notion of APPLY
-    // that is willing to evaluate expressions and give them to a set-word!
-    // We patch apply here (also a good place to see how other such
-    // patches could be done...)
+    // This is a small demo of a low-level extension that does not use Ren-C++
+    // methods could be written, if it were necessary.  (It used to be needed
+    // for "Generalized Apply", but then wasn't needed...so a residual stub
+    // is kept here to keep the technique in order if it becomes necessary
+    // for some other patch.)
 
-    REBYTE apply_name[] = "apply";
+    REBYTE test_name[] = "test-rencpp-low-level-hook";
 
-    REBVAL applyWord = loadAndBindWord(
-        Lib_Context, apply_name, LEN_BYTES(apply_name), REB_WORD
+    REBVAL testWord = loadAndBindWord(
+        Lib_Context, test_name, LEN_BYTES(test_name), REB_WORD
     );
 
-    REBVAL applyNative;
-    GET_VAR_INTO(&applyNative, &applyWord);
+    const REBYTE testSpecStr[] = {
+        "{Ren-C++ demo of a test extension function.}"
+        " value {Some value}"
+        " /refine {Some refinement}"
+        " arg {Some refinement arg}"
+    };
 
-    if (not IS_NATIVE(&applyNative)) {
+    REBFUN testFun = [](Reb_Call* call_) -> REBCNT {
+        REBVAL * value = D_ARG(1);
+        bool refine = D_REF(2);
+        REBVAL * arg = D_ARG(3);
 
-        // If you look at sys-value.h and check out the definition of
-        // REBHDR, you will see that the order of fields depends on the
-        // endianness of the platform.  So if the C build and the C++
-        // build do not have the same #define for ENDIAN_LITTLE then they
-        // will wind up disagreeing.  You might have successfully loaded
-        // a function but have the bits scrambled.  So before telling you
-        // we can't find "apply" in the Mezzanine, we look for the
-        // scrambling in question and tell you that's what the problem is
-
-        if (applyNative.flags.bitfields.resv == REB_NATIVE) {
-            throw std::runtime_error(
-                "Bit field order swap detected..."
-                " Did you compile Rebol with a different setting for"
-                " ENDIAN_LITTLE?  Check reb-config.h"
-            );
-        }
-
-        // If that wasn't the problem, it was something else.
-
-        throw std::runtime_error(
-            "Couldn't get APPLY native for unknown reason"
-        );
-    }
-
-    REBFUN applyFun = [](Reb_Call* call_) -> REBCNT {
-        REBVAL * applicand = D_ARG(1);
-        REBVAL * blk = D_ARG(2);
-        bool only = D_REF(3);
-
-        REBVAL throwName;
-        if (Generalized_Apply_Throws(
-            D_OUT, applicand, VAL_SERIES(blk), not only
-        )) {
-            // Just going to return it anyway...
-        }
+        // Used to be APPLY replacement, but now just a placeholder if
+        // something like that winds up being needed.
+        SET_NONE(D_OUT);
 
         return R_OUT;
     };
 
-    const REBYTE applySpecStr[] = {
-        "{Generalized apply of a value to reduced arguments.}"
-        " value {AnyValue to apply}"
-        " block [block!] {Block of args, reduced first (unless /only)}"
-        " /only {Use arg values as-is, do not reduce the block}"
-    };
+    REBSER * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
 
-    REBSER * applySpec = Scan_Source(applySpecStr, LEN_BYTES(applySpecStr));
-
-    Make_Native(&applyNative, applySpec, applyFun, REB_NATIVE);
-    Set_Var(&applyWord, &applyNative);
+    REBVAL testNative;
+    Make_Native(&testNative, testSpec, testFun, REB_NATIVE);
+    Set_Var(&testWord, &testNative);
 
     initialized = true;
 

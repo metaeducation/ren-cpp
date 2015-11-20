@@ -381,9 +381,7 @@ public:
             PUSH_GUARD_SERIES(aggregate);
 
             if (applicand) {
-                if (Generalized_Apply_Throws(
-                    applyOut, applicand, aggregate, FALSE
-                )) {
+                if (Generalized_Apply_Throws(applyOut, applicand, aggregate)) {
                     CATCH_THROWN(extraOut, applyOut);
                     result = REN_APPLY_THREW;
                 }
