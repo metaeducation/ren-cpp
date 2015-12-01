@@ -247,22 +247,31 @@ typedef RebolEngineHandle RenEngineHandle;
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
 /*
- * Proxy type for the call stack frame.  Commented in Rebol's %sys-stack.h
+ * Proxy type for struct Reb_Call.  Commented in Rebol's %sys-core.h
  */
 
+enum Ren_Call_Mode {};
+
 struct RenCall {
-    int32_t chunk_left;
-    struct RenCall *prior;
-    int8_t args_ready;
-    uint32_t num_vars;
-
-    RenCell *out;
+    RenCell cell;
     RenCell func;
-    RenCell where;
-    RenCell label;
-
-    /* these are "variables"...SELF, RETURN, args, locals */
-    RenCell vars[1]; /* (array exceeds struct, but cannot be [0] in C++) */
+    int32_t dsp_orig;
+    uint32_t flags;
+    RenCell *out;
+    const RenCell *value;
+    void *array; // REBSER
+    uint32_t index;
+    uint32_t label_sym;
+    union {
+        void *array; // REBSER
+        RenCell *chunk;
+    } arglist;
+    RenCell *param;
+    RenCell *arg;
+    RenCell *refine;
+    struct RenCall *prior;
+    enum Ren_Call_Mode mode;
+    uint32_t expr_index;
 };
 
 typedef uint32_t (* RenShimPointer)(RenCall * call);
@@ -270,15 +279,21 @@ typedef uint32_t (* RenShimPointer)(RenCall * call);
 #define REN_CS_OUT(stack) \
     ((stack)->out)
 
+// For FRAMED natives, arg is non-NULL and points to the args, with the 0
+// cell holding the function itself.  This is 1-based, not zero based.
+// For now we adjust to the zero-based expectation, but make a decision
+// on if Ren-Cpp wants to do 1-based indexing or not to line up better
+// with the internals of Ren-C.
+//
 #define REN_CS_ARG(stack, index) \
-    (&((stack)->vars)[(index)])
+    (&((stack)->arg)[(index) + 1])
 
 #if defined(__LP64__) || defined(__LLP64__)
     #define REN_STACK_SHIM(stack) \
         (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint64_t)])
 #else
     #define REN_STACK_SHIM(stack) \
-        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint64_t)])
+        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint32_t)])
 #endif
 
 #else

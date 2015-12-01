@@ -322,8 +322,12 @@ namespace internal {
 Loadable::Loadable (char const * sourceCstr) :
     AnyValue (AnyValue::Dont::Initialize)
 {
-    // using REB_END as our "alien"
-    VAL_SET(AS_REBVAL(&cell), REB_END);
+    // Using REB_TRASH as our "alien"; it's not a legal value type to request
+    // but unlike a REB_END it can still carry a full value-cell's payload.
+    // Also, if the trash is not transformed into an actual value before it
+    // gets to the Ren-C core then it will trigger alerts and asserts.
+    //
+    VAL_SET(AS_REBVAL(&cell), REB_TRASH);
     VAL_HANDLE_DATA(AS_REBVAL(&cell)) = const_cast<char *>(sourceCstr);
 
     next = nullptr;

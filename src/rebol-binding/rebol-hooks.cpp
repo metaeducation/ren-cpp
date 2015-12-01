@@ -233,7 +233,7 @@ public:
                 reinterpret_cast<volatile REBVAL const *>(current)
             );
 
-            if (VAL_TYPE(cell) == REB_END) {
+            if (VAL_TYPE(cell) == REB_TRASH) {
 
                 // This is our "Alien" type that wants to get loaded.  Key
                 // to his loading problem is that he wants to know whether

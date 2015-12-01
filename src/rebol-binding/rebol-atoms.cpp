@@ -169,7 +169,8 @@ AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
 
 Integer::operator int() const {
     // !!! How to correctly support 64-bit coercions?  Throw if out of range?
-    return VAL_INT32(AS_C_REBVAL(&cell));
+    int i = VAL_INT32(AS_C_REBVAL(&cell));
+    return i;
 }
 
 

@@ -97,8 +97,14 @@ REBOOL Generalized_Apply_Throws(
     //
     // !!! This does not work for infix functions!
 
-    REBCNT index = Do_Core(out, applicand, TRUE, args, 0, TRUE);
-    if (index == THROWN_FLAG)
+    struct Reb_Call s;
+    s.out = out;
+    s.array = args;
+    s.index = 0;
+    s.value = applicand;
+    s.flags = DO_FLAG_DO | DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD;
+    Do_Core(&s);
+    if (s.index == THROWN_FLAG)
         return TRUE;
 
     // The only way you can get an END_FLAG on something if you pass in
@@ -106,9 +112,9 @@ REBOOL Generalized_Apply_Throws(
     // either finish an evaluation or raise an error if it couldn't
     // fulfill its arguments.
 
-    assert(index != END_FLAG);
+    assert(s.index != END_FLAG);
 
-    if (index == THROWN_FLAG)
+    if (s.index == THROWN_FLAG)
         return TRUE;
 
     // If the DO chain didn't end, then consider that an error.  So
@@ -116,7 +122,7 @@ REBOOL Generalized_Apply_Throws(
     // satisfy FOO, but have a 3 left over unused.  If FOO: were a
     // function being APPLY'd, you'd say that was too many arguments
 
-    if (index != SERIES_TAIL(args))
+    if (s.index != SERIES_TAIL(args))
         fail (Error(RE_APPLY_TOO_MANY));
 
     return FALSE;
@@ -230,13 +236,22 @@ RebolRuntime::RebolRuntime (bool) :
     assert(sizeof(int32_t) == sizeof(REBINT));
 
     assert(sizeof(Reb_Call) == sizeof(RenCall));
-    assert(offsetof(Reb_Call, chunk_left) == offsetof(RenCall, chunk_left));
-    assert(offsetof(Reb_Call, prior) == offsetof(RenCall, prior));
-    assert(offsetof(Reb_Call, args_ready) == offsetof(RenCall, args_ready));
-    assert(offsetof(Reb_Call, num_vars) == offsetof(RenCall, num_vars));
+    assert(offsetof(Reb_Call, cell) == offsetof(RenCall, cell));
+    assert(offsetof(Reb_Call, func) == offsetof(RenCall, func));
+    assert(offsetof(Reb_Call, dsp_orig) == offsetof(RenCall, dsp_orig));
+    assert(offsetof(Reb_Call, flags) == offsetof(RenCall, flags));
     assert(offsetof(Reb_Call, out) == offsetof(RenCall, out));
-    assert(offsetof(Reb_Call, where) == offsetof(RenCall, where));
-    assert(offsetof(Reb_Call, vars) == offsetof(RenCall, vars));
+    assert(offsetof(Reb_Call, value) == offsetof(RenCall, value));
+    assert(offsetof(Reb_Call, array) == offsetof(RenCall, array));
+    assert(offsetof(Reb_Call, index) == offsetof(RenCall, index));
+    assert(offsetof(Reb_Call, label_sym) == offsetof(RenCall, label_sym));
+    assert(offsetof(Reb_Call, arglist) == offsetof(RenCall, arglist));
+    assert(offsetof(Reb_Call, param) == offsetof(RenCall, param));
+    assert(offsetof(Reb_Call, arg) == offsetof(RenCall, arg));
+    assert(offsetof(Reb_Call, refine) == offsetof(RenCall, refine));
+    assert(offsetof(Reb_Call, prior) == offsetof(RenCall, prior));
+    assert(offsetof(Reb_Call, mode) == offsetof(RenCall, mode));
+    assert(offsetof(Reb_Call, expr_index) == offsetof(RenCall, expr_index));
 
     // function.hpp does a bit more of its template work in the include file
     // than we might like (but that's how templates work).  We don't want
@@ -368,13 +383,15 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     };
 
     REBFUN testFun = [](Reb_Call* call_) -> REBCNT {
-        REBVAL * value = D_ARG(1);
-        bool refine = D_REF(2);
-        REBVAL * arg = D_ARG(3);
+        PARAM(1, value);
+        REFINE(2, refine);
+        PARAM(3, arg);
+
+        REBVAL * out = D_OUT;
 
         // Used to be APPLY replacement, but now just a placeholder if
         // something like that winds up being needed.
-        SET_NONE(D_OUT);
+        SET_NONE(out);
 
         return R_OUT;
     };
