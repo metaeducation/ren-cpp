@@ -26,7 +26,7 @@ Image::Image (QImage const & image, Engine * engine) {
     REBCNT width = static_cast<REBCNT>(image.width());
     REBCNT height = static_cast<REBCNT>(image.height());
 
-    VAL_SET(AS_REBVAL(&cell), REB_IMAGE);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_IMAGE);
     REBSER * img = Make_Image(width, height, FALSE);
     std::copy(
         image.bits(),

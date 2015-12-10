@@ -123,13 +123,13 @@ public:
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
-        REBSER * frame = nullptr;
+        REBFRM * frame = nullptr;
         if (strcmp(name, "USER") == 0)
-            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER));
+            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_USER));
         else if (strcmp(name, "LIB") == 0)
-            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_LIB));
+            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_LIB));
         if (strcmp(name, "SYS") == 0)
-            frame = VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
+            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
 
         // don't expose CTX_ROOT?
 
@@ -172,35 +172,35 @@ public:
         assert(engine.data == 1020);
 
         REBOL_STATE state;
-        REBSER * error_frame;
+        REBFRM * error;
 
         // longjmp could "clobber" this variable if it were not volatile, and
         // code inside of the `if (error)` depends on possible modification
         // between the setjmp (PUSH_UNHALTABLE_TRAP) and the longjmp
         volatile bool applying = false;
 
-        PUSH_UNHALTABLE_TRAP(&error_frame, &state);
+        PUSH_UNHALTABLE_TRAP(&error, &state);
 
         // Note: No C++ allocations can happen between here and the POP_STATE
         // calls as long as the C stack is in control, as setjmp/longjmp will
         // subvert stack unwinding and just reset the processor state.
 
         bool is_aggregate_managed = false;
-        REBSER * aggregate = Make_Array(numLoadables * 2);
+        REBARR * aggregate = Make_Array(numLoadables * 2);
 
-// The first time through the following code 'error_frame' will be NULL, but...
-// `fail` can longjmp here, 'error_frame' won't be NULL *if* that happens!
+// The first time through the following code 'error' will be NULL, but...
+// `fail` can longjmp here, 'error' won't be NULL *if* that happens!
 
-        if (error_frame) {
+        if (error) {
             // do not need to free series... it is done automatically
 
-            if (ERR_NUM(error_frame) == RE_HALT) {
+            if (ERR_NUM(error) == RE_HALT) {
                 // cancellation in middle of interpretation from outside
                 // the evaluation loop (e.g. Escape).
                 return REN_EVALUATION_HALTED;
             }
 
-            Val_Init_Error(extraOut, error_frame);
+            Val_Init_Error(extraOut, error);
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
@@ -233,7 +233,7 @@ public:
                 reinterpret_cast<volatile REBVAL const *>(current)
             );
 
-            if (VAL_TYPE(cell) == REB_TRASH) {
+            if (cell->header.bitfields.type == REB_TRASH) {
 
                 // This is our "Alien" type that wants to get loaded.  Key
                 // to his loading problem is that he wants to know whether
@@ -250,7 +250,7 @@ public:
                 // the `if (error)` case above!  These are the errors that
                 // happen if the input is bad (unmatched parens, etc...)
 
-                REBSER * transcoded = Scan_Source(
+                REBARR * transcoded = Scan_Source(
                     loadText, LEN_BYTES(loadText)
                 );
 
@@ -258,21 +258,21 @@ public:
                     // Binding Do_String did by default...except it only
                     // worked with the user context.  Fell through to lib.
 
-                    REBCNT len = VAL_OBJ_FRAME(context)->tail;
+                    REBCNT len = FRAME_LEN(VAL_FRAME(context));
 
                     if (len > 0)
-                        ASSERT_VALUE_MANAGED(BLK_HEAD(transcoded));
+                        ASSERT_VALUE_MANAGED(ARRAY_HEAD(transcoded));
 
                     Bind_Values_All_Deep(
-                        BLK_HEAD(transcoded),
-                        VAL_OBJ_FRAME(context)
+                        ARRAY_HEAD(transcoded),
+                        VAL_FRAME(context)
                     );
 
                     REBVAL vali;
                     SET_INTEGER(&vali, len);
 
                     Resolve_Context(
-                        VAL_OBJ_FRAME(context), Lib_Context, &vali, FALSE, 0
+                        VAL_FRAME(context), Lib_Context, &vali, FALSE, 0
                     );
                 }
 
@@ -280,10 +280,10 @@ public:
                 // an #ifdef and apparently unused.  This is its definition.
 
                 Insert_Series(
-                    aggregate,
-                    aggregate->tail,
-                    reinterpret_cast<REBYTE*>(BLK_HEAD(transcoded)),
-                    transcoded->tail
+                    ARRAY_SERIES(aggregate),
+                    ARRAY_LEN(aggregate),
+                    reinterpret_cast<REBYTE*>(ARRAY_HEAD(transcoded)),
+                    ARRAY_LEN(transcoded)
                 );
 
                 // transcoded series is managed, can't free it...
@@ -307,15 +307,14 @@ public:
                 // Depending on how much was set in the "datatype in" we may
                 // not have to rewrite the header bits (but Val_Inits do).
 
-                Val_Init_Series(constructOutDatatypeIn, resultType, aggregate);
+                Val_Init_Array(constructOutDatatypeIn, resultType, aggregate);
 
                 // Val_Init makes aggregate a managed series, can't free it
                 is_aggregate_managed = true;
             }
             else if (IS_OBJECT(constructOutDatatypeIn)) {
                 // They want to create a "Context"; so we need to execute
-                // the aggregate as per Make_Object.  First parameter to
-                // Make_Object is the parent object series.  At the moment
+                // the aggregate as per Make_Object.  At the moment
                 // we don't have an interface to give a context a parent
                 // from RenCpp
 
@@ -323,7 +322,13 @@ public:
                 // block value, but the value pointer at the *head* of
                 // the block.  :-/
 
-                REBSER * frame = Make_Object(nullptr, BLK_HEAD(aggregate));
+                REBFRM * frame = Make_Frame_Detect(
+                    REB_OBJECT,
+                    nullptr,
+                    nullptr,
+                    ARRAY_HEAD(aggregate),
+                    nullptr
+                );
 
                 // This sets REB_OBJECT in the header, possibly redundantly
                 Val_Init_Object(constructOutDatatypeIn, frame);
@@ -333,9 +338,9 @@ public:
                 // of the first thing in the block.  And there better be
                 // something in that block.
 
-                REBCNT count = SERIES_TAIL(aggregate);
+                REBCNT len = ARRAY_LEN(aggregate);
 
-                if (count != 1) {
+                if (len != 1) {
                     // Requested construct, but a singular item didn't come
                     // back (either 0 or more than 1 element in aggregate)
                     Val_Init_Error(
@@ -345,20 +350,20 @@ public:
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
                 }
-                else if (resultType != VAL_TYPE(BLK_HEAD(aggregate))) {
+                else if (resultType != VAL_TYPE(ARRAY_HEAD(aggregate))) {
                     // Requested construct and value type was wrong
                     Val_Init_Error(
                         extraOut,
                         ::Error(
                             RE_INVALID_ARG, // Make error code for this...
-                            BLK_HEAD(aggregate)
+                            ARRAY_HEAD(aggregate)
                         )
                     );
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
                 }
                 else {
-                    *constructOutDatatypeIn = *BLK_HEAD(aggregate);
+                    *constructOutDatatypeIn = *ARRAY_HEAD(aggregate);
                 }
             }
         }
@@ -367,18 +372,20 @@ public:
             applying = true;
 
             if (!is_aggregate_managed) {
+                //
                 // DO and its bretheren are not currently specifically written
                 // to not call Val_Init_Block or otherwise on the passed in
                 // values (for instance, to put them into a backtrace).  So
                 // they would manage the series if we did not do so here.
                 // Review this implementation detail for GC performance...
-
-                MANAGE_SERIES(aggregate);
+                //
+                MANAGE_ARRAY(aggregate);
                 is_aggregate_managed = TRUE;
             }
 
-            // Series now managed, protect from GC
-            PUSH_GUARD_SERIES(aggregate);
+            // Array now managed, protect from GC
+            //
+            PUSH_GUARD_ARRAY(aggregate);
 
             if (applicand) {
                 if (Generalized_Apply_Throws(applyOut, applicand, aggregate)) {
@@ -403,7 +410,7 @@ public:
                 }
             }
 
-            DROP_GUARD_SERIES(aggregate);
+            DROP_GUARD_ARRAY(aggregate);
         }
         else
             result = REN_SUCCESS;
@@ -414,9 +421,9 @@ public:
     return_result:
         // We only free the series if we didn't manage it.  For simplicity
         // we control this with a boolean flag for now.
-        assert(is_aggregate_managed == SERIES_GET_FLAG(aggregate, SER_MANAGED));
+        assert(is_aggregate_managed == ARRAY_GET_FLAG(aggregate, SER_MANAGED));
         if (!is_aggregate_managed)
-            Free_Series(aggregate);
+            Free_Array(aggregate);
 
         DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
 
@@ -452,15 +459,15 @@ public:
         // buffer and then Set_Series to that, without having a problem?
         // Who knows, but we've got our own buffer so that's not important.
 
-        REBVAL strValue;
+        REBVAL formed;
         // Don't use Val_Init_String here because it does MANAGE_SERIES, and
         // we are using the internal mold buffer here...
-        VAL_SET(&strValue, REB_STRING);
-        VAL_INDEX(&strValue) = 0;
-        VAL_SERIES(&strValue) = mo.series;
+        VAL_RESET_HEADER(&formed, REB_STRING);
+        VAL_INDEX(&formed) = 0;
+        VAL_SERIES(&formed) = mo.series;
 
         REBSER * utf8_series = Make_UTF8_From_Any_String(
-            &strValue, VAL_LEN(&strValue), 0
+            &formed, VAL_LEN_HEAD(&formed), 0
         );
 
 
@@ -480,8 +487,11 @@ public:
             result = REN_SUCCESS;
         }
 
-        for (REBCNT index = 0; index < len; index++)
-            buffer[index] = SERIES_DATA(utf8_series)[index];
+        std::copy(
+            SERIES_DATA(utf8_series),
+            SERIES_DATA(utf8_series) + len,
+            buffer
+        );
 
         Free_Series(utf8_series);
 
@@ -489,7 +499,7 @@ public:
     }
 
     RenResult ShimHalt() {
-        fail (VAL_ERR_OBJECT(TASK_HALT_ERROR));
+        fail (VAL_FRAME(TASK_HALT_ERROR));
         DEAD_END;
     }
 
@@ -506,7 +516,7 @@ public:
     }
 
     RenResult ShimFail(REBVAL const * error) {
-        fail (VAL_ERR_OBJECT(error));
+        fail (VAL_FRAME(error));
         DEAD_END;
     }
 

@@ -178,7 +178,7 @@ AnyValue AnyValue::copy(bool deep) const {
     Context userContext (Dont::Initialize);
     Val_Init_Object(
         AS_REBVAL(&userContext.cell),
-        VAL_OBJ_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
+        VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
     );
     userContext.finishInit(origin);
 
@@ -327,7 +327,7 @@ Loadable::Loadable (char const * sourceCstr) :
     // Also, if the trash is not transformed into an actual value before it
     // gets to the Ren-C core then it will trigger alerts and asserts.
     //
-    VAL_SET(AS_REBVAL(&cell), REB_TRASH);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_TRASH);
     VAL_HANDLE_DATA(AS_REBVAL(&cell)) = const_cast<char *>(sourceCstr);
 
     next = nullptr;

@@ -28,12 +28,12 @@ bool AnySeries::isValid(RenCell const & cell) {
 
 
 void ren::internal::AnySeries_::operator++() {
-    AS_REBVAL(&cell)->data.position.index++;
+    AS_REBVAL(&cell)->payload.any_series.index++;
 }
 
 
 void ren::internal::AnySeries_::operator--() {
-    AS_REBVAL(&cell)->data.position.index--;
+    AS_REBVAL(&cell)->payload.any_series.index--;
 }
 
 
@@ -50,19 +50,25 @@ void ren::internal::AnySeries_::operator--(int) {
 AnyValue ren::internal::AnySeries_::operator*() const {
     AnyValue result {Dont::Initialize};
 
-    if (ANY_STR(AS_C_REBVAL(&cell))) {
+    if (IS_EMPTY(AS_C_REBVAL(&cell))) {
+        SET_UNSET(AS_REBVAL(&result.cell));
+    }
+    else if (ANY_STR(AS_C_REBVAL(&cell))) {
         // from str_to_char in Rebol source
         SET_CHAR(
             AS_REBVAL(&result.cell),
             GET_ANY_CHAR(
                 VAL_SERIES(AS_C_REBVAL(&cell)),
-                AS_C_REBVAL(&cell)->data.position.index
+                VAL_INDEX(AS_C_REBVAL(&cell))
             )
         );
     } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
-        result.cell = *AS_C_RENCELL(VAL_BLK_SKIP(
-            AS_C_REBVAL(&cell), AS_C_REBVAL(&cell)->data.position.index
-        ));
+        result.cell = *AS_C_RENCELL(
+            ARRAY_AT(
+                VAL_ARRAY(AS_C_REBVAL(&cell)),
+                VAL_INDEX(AS_C_REBVAL(&cell))
+            )
+        );
     } else {
         // Binary and such, would return an integer
         UNREACHABLE_CODE();
@@ -78,20 +84,18 @@ AnyValue ren::internal::AnySeries_::operator->() const {
 
 
 void ren::internal::AnySeries_::head() {
-    AS_REBVAL(&cell)->data.position.index = 0;
+    AS_REBVAL(&cell)->payload.any_series.index = 0;
 }
 
 
 void ren::internal::AnySeries_::tail() {
-    AS_REBVAL(&cell)->data.position.index
-        = AS_REBVAL(&cell)->data.position.series->tail;
+    AS_REBVAL(&cell)->payload.any_series.index
+        = VAL_LEN_HEAD(AS_REBVAL(&cell));
 }
 
 
 size_t AnySeries::length() const {
-    REBCNT index = VAL_INDEX(AS_C_REBVAL(&cell));
-    REBCNT tail = VAL_TAIL(AS_C_REBVAL(&cell));
-    return tail > index ? tail - index : 0;
+    return VAL_LEN_AT(AS_C_REBVAL(&cell));
 }
 
 
@@ -117,7 +121,7 @@ const {
     // So we do what building a path would do here.
 
     AnyValue getPath {Dont::Initialize};
-    VAL_SET(AS_REBVAL(&getPath.cell), REB_GET_PATH);
+    VAL_RESET_HEADER(AS_REBVAL(&getPath.cell), REB_GET_PATH);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index

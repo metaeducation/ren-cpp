@@ -51,21 +51,21 @@ extern REBOL_HOST_LIB Host_Lib_Init;
 REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
-    REBSER *args
+    REBARR *args
 ) {
     // `out` will be protected during the apply
     ASSERT_VALUE_MANAGED(applicand);
-    ASSERT_SERIES_MANAGED(args);
+    ASSERT_ARRAY_MANAGED(args);
 
     if (IS_ERROR(applicand)) {
-        if (SERIES_TAIL(args) != 0) {
+        if (ARRAY_LEN(args) != 0) {
             // If you try to "apply" an error with an arguments block, that
             // will give you an error about the apply (not the error itself)
 
-            fail (Error_Invalid_Arg(BLK_HEAD(args)));
+            fail (Error_Invalid_Arg(ARRAY_HEAD(args)));
         }
 
-        fail (VAL_ERR_OBJECT(applicand));
+        fail (VAL_FRAME(applicand));
     }
 
     // If it's an object (context) then "apply" means run the code
@@ -74,21 +74,21 @@ REBOOL Generalized_Apply_Throws(
     // http://chat.stackoverflow.com/transcript/message/20530463#20530463
 
     if (IS_OBJECT(applicand)) {
-        REBSER * reboundArgs = Copy_Array_Deep_Managed(args);
-        PUSH_GUARD_SERIES(reboundArgs);
+        REBARR * reboundArgs = Copy_Array_Deep_Managed(args);
+        PUSH_GUARD_ARRAY(reboundArgs);
 
         // Note this takes a C array of values terminated by a REB_END.
         Bind_Values_Set_Forward_Shallow(
-            BLK_HEAD(reboundArgs),
-            VAL_OBJ_FRAME(applicand)
+            ARRAY_HEAD(reboundArgs),
+            VAL_FRAME(applicand)
         );
 
         if (Do_At_Throws(out, reboundArgs, 0)) {
-            DROP_GUARD_SERIES(reboundArgs);
+            DROP_GUARD_ARRAY(reboundArgs);
             return TRUE;
         }
 
-        DROP_GUARD_SERIES(reboundArgs);
+        DROP_GUARD_ARRAY(reboundArgs);
 
         return FALSE;
     }
@@ -122,7 +122,7 @@ REBOOL Generalized_Apply_Throws(
     // satisfy FOO, but have a 3 left over unused.  If FOO: were a
     // function being APPLY'd, you'd say that was too many arguments
 
-    if (s.index != SERIES_TAIL(args))
+    if (s.index != ARRAY_LEN(args))
         fail (Error(RE_APPLY_TOO_MANY));
 
     return FALSE;
@@ -137,7 +137,7 @@ RebolRuntime runtime {true};
 REBARGS rebargs;
 
 static REBVAL loadAndBindWord(
-    REBSER * context,
+    REBFRM * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,
     enum Reb_Kind kind
@@ -360,7 +360,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
 
-        Val_Init_Binary(BLK_SKIP(Sys_Context, SYS_CTX_BOOT_HOST), startup);
+        Val_Init_Binary(FRAME_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
     // This is a small demo of a low-level extension that does not use Ren-C++
@@ -396,7 +396,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         return R_OUT;
     };
 
-    REBSER * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
+    REBARR * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
 
     REBVAL testNative;
     Make_Native(&testNative, testSpec, testFun, REB_NATIVE);

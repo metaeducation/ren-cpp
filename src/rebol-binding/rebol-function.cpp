@@ -50,7 +50,7 @@ void Function::finishInitSpecial(
 ) {
     Make_Native(
         AS_REBVAL(&cell),
-        VAL_SERIES(AS_C_REBVAL(&spec.cell)),
+        VAL_ARRAY(AS_C_REBVAL(&spec.cell)),
         reinterpret_cast<REBFUN>(shim),
         REB_NATIVE
     );

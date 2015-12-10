@@ -36,15 +36,15 @@ bool AnyString::isValid(RenCell const & cell) {
 //
 
 void AnyString::initString(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_STRING);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_STRING);
 }
 
 void AnyString::initTag(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_TAG);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_TAG);
 }
 
 void AnyString::initFilename(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_FILE);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_FILE);
 }
 
 

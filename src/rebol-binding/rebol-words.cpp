@@ -48,23 +48,23 @@ bool AnyWord::isValid(const RenCell & cell) {
 //
 
 void AnyWord::initWord(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_WORD);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_WORD);
 }
 
 void AnyWord::initSetWord(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_SET_WORD);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_SET_WORD);
 }
 
 void AnyWord::initGetWord(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_GET_WORD);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GET_WORD);
 }
 
 void AnyWord::initLitWord(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_LIT_WORD);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_LIT_WORD);
 }
 
 void AnyWord::initRefinement(RenCell & cell) {
-    VAL_SET(AS_REBVAL(&cell), REB_REFINEMENT);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_REFINEMENT);
 }
 
 
@@ -158,8 +158,8 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_FRAME(AS_REBVAL(&this->cell))
-        = VAL_OBJ_FRAME(AS_REBVAL(&context.cell));
+    VAL_WORD_TARGET(AS_REBVAL(&this->cell))
+        = FRAME_VARLIST(VAL_FRAME(AS_REBVAL(&context.cell)));
 }
 
 
@@ -213,8 +213,8 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_FRAME(AS_REBVAL(&this->cell))
-        = VAL_OBJ_FRAME(AS_REBVAL(&context.cell));
+    VAL_WORD_TARGET(AS_REBVAL(&this->cell))
+        = FRAME_VARLIST(VAL_FRAME(AS_REBVAL(&context.cell)));
 }
 #endif
 

@@ -31,7 +31,7 @@ Context::Context (
 ) :
     AnyValue (Dont::Initialize)
 {
-    VAL_SET(AS_REBVAL(&cell), REB_OBJECT);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_OBJECT);
 
     // Here, a null context pointer means null.  No finder is invoked.
 
@@ -61,7 +61,7 @@ Context::Context (
 ) :
     AnyValue (Dont::Initialize)
 {
-    VAL_SET(&cell, REB_OBJECT);
+    VAL_RESET_HEADER(&cell, REB_OBJECT);
 
     // Here, a null context pointer means null.  No finder is invoked.
 
