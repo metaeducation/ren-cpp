@@ -22,6 +22,7 @@
 #include <exception>
 
 #include "value.hpp"
+#include "context.hpp"
 
 
 namespace ren {
@@ -73,11 +74,17 @@ namespace ren {
 // in the typical C++ execution stack.
 //
 
-class Error : public AnyValue {
+class Error
+    : public internal::AnyContext_<Error, &AnyContext::initError>
+{
+    using AnyContext::initError;
+
 protected:
-    friend class AnyValue;
-    Error (Dont) : AnyValue (Dont::Initialize) {}
     static bool isValid(RenCell const & cell);
+
+public:
+    friend class AnyValue;
+    using internal::AnyContext_<Error, &AnyContext::initError>::AnyContext_;
 
 public:
     Error (const char * msg, Engine * engine = nullptr);

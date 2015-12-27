@@ -87,14 +87,16 @@ AnyArray::AnyArray (
     internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyArray (Dont::Initialize)
 {
     (*cellfun)(this->cell);
 
-    Context context = contextPtr ? *contextPtr : Context::current(engine);
+    AnyContext context = contextPtr
+        ? *contextPtr
+        : AnyContext::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),
@@ -114,7 +116,7 @@ AnyArray::AnyArray (
     AnyValue const values[],
     size_t numValues,
     internal::CellFunction cellfun,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyArray (Dont::Initialize)
@@ -122,7 +124,9 @@ AnyArray::AnyArray (
     (*cellfun)(this->cell);
 
 
-    Context context = contextPtr ? *contextPtr : Context::current(engine);
+    AnyContext context = contextPtr
+        ? *contextPtr
+        : AnyContext::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),

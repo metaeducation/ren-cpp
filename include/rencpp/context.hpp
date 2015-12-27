@@ -33,30 +33,44 @@ namespace ren {
 
 //
 // Historically the Rebol language used the terms CONTEXT and OBJECT somewhat
-// interchangeably, although the data type was called OBJECT!  RenCpp embraces
-// the terminology notion that really "object" isn't a very good name for what
-// it does; and standard expectations don't apply.  So there is no ren::Object,
-// only ren::Context.
+// interchangeably, although the data type was called OBJECT!  Ren-C has
+// redefined the terminology so that ANY-CONTEXT! is the superclass of
+// ERROR!, OBJECT!, PORT! etc. (in the spirit of not having the superclass
+// share a name with any specific member of said class).
 //
-// Under Rebol's hood, an object was implemented as a series, but lacking any
-// of the positional properties.
+// !!! Under Rebol's hood, an object was implemented as a pair of series.
+// Accessing the object by position was not allowed, though some natives
+// offered features that demonstrated positional awareness (e.g. SET).
+// This is likely to be deprecated in favor of more fluidity in the
+// implementation of object.
 //
 
 class Engine;
 
-class Context : public AnyValue {
+class AnyContext : public AnyValue {
 protected:
     friend class AnyValue;
-    Context (Dont) noexcept : AnyValue (Dont::Initialize) {}
+    AnyContext (Dont) noexcept : AnyValue (Dont::Initialize) {}
     static bool isValid(RenCell const & cell);
 
+    // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
+    //    http://stackoverflow.com/questions/32983193/
 public:
-    Context copy(bool deep = true) {
-        return static_cast<Context>(AnyValue::copy(deep));
+    friend class Object;
+    static void initObject(RenCell & cell);
+    friend class Error;
+    static void initError(RenCell & cell);
+    //
+    // !!! Ports, Modules, Frames... (just Object and error for starters)
+    //
+
+public:
+    AnyContext copy(bool deep = true) {
+        return static_cast<AnyContext>(AnyValue::copy(deep));
     }
 
 public:
-    using Finder = std::function<Context (Engine *)>;
+    using Finder = std::function<AnyContext (Engine *)>;
 
 private:
     friend class AnyArray;
@@ -69,7 +83,7 @@ private:
 
 public:
 
-    static Context lookup(char const * name, Engine * engine = nullptr);
+    static AnyContext lookup(char const * name, Engine * engine = nullptr);
 
     static Finder setFinder(
         Finder const & newFinder
@@ -87,80 +101,147 @@ public:
     // Passing as a pointer in order to be able to optimize out the cases
     // where you don't care, but the parameter is there if you want to use it
 
-    static Context current(Engine * engine = nullptr);
+    static AnyContext current(Engine * engine = nullptr);
 
 
     // Patterned after AnyArray; you can construct a context from the same
     // data that can be used to make a block.
 protected:
-    Context (
+    AnyContext (
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Context const * contextPtr,
+        internal::CellFunction F,
+        AnyContext const * contextPtr,
         Engine * engine
     );
 
-    Context (
+    AnyContext (
         AnyValue const values[],
         size_t numValues,
-        Context const * contextPtr,
+        internal::CellFunction F,
+        AnyContext const * contextPtr,
         Engine * engine
     );
 
-
-public:
-    Context (
-        AnyValue const values[],
-        size_t numValues,
-        Context const & context
-    ) :
-        Context (values, numValues, &context, nullptr)
-    {
-    }
-
-    Context (
-        AnyValue const values[],
-        size_t numValues,
-        Engine * engine
-    ) :
-        Context (values, numValues, nullptr, engine)
-    {
-    }
-
-    Context (
-        std::initializer_list<internal::Loadable> const & loadables,
-        Context const & context // is this contradictory?
-    ) :
-        Context (loadables.begin(), loadables.size(), &context, nullptr)
-    {
-    }
-
-    Context (
-        std::initializer_list<internal::Loadable> const & loadables,
-        Engine * engine = nullptr
-    ) :
-        Context (loadables.begin(), loadables.size(), nullptr, engine)
-    {
-    }
-
-    Context (Engine * engine = nullptr) :
-        Context (static_cast<internal::Loadable *>(nullptr), 0, nullptr, engine)
-    {
-    }
 
     // If you use the apply operation in a context, then it means "do this
     // code in this context"
+    //
+    // !!! Should this be under #ifdef REN_RUNTIME or trust it to be taken
+    // care of otherwise?  Might a better error message be delivered if
+    // there is a static assert here?
+    //
 public:
     template <typename... Ts>
     inline optional<AnyValue> operator()(Ts &&... args) const {
-        return apply({std::forward<Ts>(args)...}, internal::ContextWrapper {*this});
+        return apply(
+            {std::forward<Ts>(args)...},
+            internal::ContextWrapper {*this}
+        );
     }
 
     template <typename R, typename... Ts>
     inline R create(Ts &&... args) const {
-        return R {{std::forward<Ts>(args)...}, internal::ContextWrapper {*this}};
+        return R {
+            {std::forward<Ts>(args)...},
+            internal::ContextWrapper {*this}
+        };
     }
 };
+
+
+namespace internal {
+
+//
+// ANYCONTEXT_ SUBTYPE HELPER
+//
+
+template <class C, CellFunction F>
+class AnyContext_ : public AnyContext {
+protected:
+    friend class AnyValue;
+    AnyContext_ (Dont) : AnyContext (Dont::Initialize) {}
+
+public:
+    AnyContext_ (
+        AnyValue const values[],
+        size_t numValues,
+        internal::ContextWrapper const & wrapper
+    ) :
+        AnyContext (values, numValues, F, &wrapper.context, nullptr)
+    {
+    }
+
+    AnyContext_ (
+        AnyValue const values[],
+        size_t numValues,
+        Engine * engine
+    ) :
+        AnyContext (values, numValues, F, nullptr, engine)
+    {
+    }
+
+    AnyContext_ (
+        std::initializer_list<Loadable> const & loadables,
+        internal::ContextWrapper const & wrapper
+    ) :
+        AnyContext (
+            loadables.begin(),
+            loadables.size(),
+            F,
+            &wrapper.context,
+            nullptr
+        )
+    {
+    }
+
+    AnyContext_ (AnyContext const & context) :
+        AnyContext (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
+    {
+    }
+
+    AnyContext_ (
+        std::initializer_list<Loadable> const & loadables,
+        Engine * engine = nullptr
+    ) :
+        AnyContext (loadables.begin(), loadables.size(), F, nullptr, engine)
+    {
+    }
+
+    AnyContext_ (Engine * engine = nullptr) :
+        AnyContext (static_cast<Loadable *>(nullptr), 0, F, nullptr, engine)
+    {
+    }
+};
+
+} // end namespace internal
+
+
+
+//
+// CONCRETE CONTEXT TYPES
+//
+
+//
+// For why these are classes and not typedefs:
+//
+//     https://github.com/hostilefork/rencpp/issues/49
+//
+
+
+class Object
+    : public internal::AnyContext_<Object, &AnyContext::initObject>
+{
+    using AnyContext::initObject;
+
+protected:
+    static bool isValid(RenCell const & cell);
+
+public:
+    friend class AnyValue;
+    using internal::AnyContext_<Object, &AnyContext::initObject>::AnyContext_;
+};
+
 
 } // end namespace ren
 

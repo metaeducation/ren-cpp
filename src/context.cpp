@@ -25,16 +25,16 @@
 
 namespace ren {
 
-Context::Finder Context::finder;
+AnyContext::Finder AnyContext::finder;
 
 
 
-Context Context::lookup(const char * name, Engine * engine)
+AnyContext AnyContext::lookup(const char * name, Engine * engine)
 {
     if (not engine)
         engine = &Engine::runFinder();
 
-    Context result (Dont::Initialize);
+    AnyContext result (Dont::Initialize);
 
     if (::RenFindContext(&result->cell, engine->handle, name) != REN_SUCCESS)
         throw std::runtime_error ("Couldn't find named context");
@@ -45,13 +45,13 @@ Context Context::lookup(const char * name, Engine * engine)
 
 
 
-Context Context::current(Engine * engine) {
+AnyContext AnyContext::current(Engine * engine) {
     if (not finder) {
-        finder = [] (Engine * engine) -> Context & {
+        finder = [] (Engine * engine) -> AnyContext & {
             if (not engine)
                 engine = &Engine::runFinder();
 
-            static Context user = lookup("USER", engine);
+            static AnyContext user = lookup("USER", engine);
             return user;
         };
     }

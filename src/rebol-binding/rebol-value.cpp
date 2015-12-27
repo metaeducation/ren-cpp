@@ -191,7 +191,7 @@ AnyValue AnyValue::copy(bool deep) const {
     // is to just invoke it like running normal code.  :-/  But if anyone
     // feels like fixing the above, be my guest...
 
-    Context userContext (Dont::Initialize);
+    AnyContext userContext (Dont::Initialize);
     Val_Init_Object(
         AS_REBVAL(&userContext.cell),
         VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER))

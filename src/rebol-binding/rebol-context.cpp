@@ -13,7 +13,7 @@ namespace ren {
 // TYPE DETECTION
 //
 
-bool Context::isValid(RenCell const & cell) {
+bool AnyContext::isValid(RenCell const & cell) {
     return IS_OBJECT(AS_C_REBVAL(&cell));
 }
 
@@ -23,15 +23,16 @@ bool Context::isValid(RenCell const & cell) {
 // CONSTRUCTION
 //
 
-Context::Context (
+AnyContext::AnyContext (
     internal::Loadable const loadables[],
     size_t numLoadables,
-    Context const * contextPtr,
+    internal::CellFunction cellfun,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyValue (Dont::Initialize)
 {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_OBJECT);
+    (*cellfun)(this->cell);
 
     // Here, a null context pointer means null.  No finder is invoked.
 
@@ -53,15 +54,16 @@ Context::Context (
 // TBD: Finish version where you can use values directly as an array
 /*
 
-Context::Context (
+AnyContext::AnyContext (
     AnyValue const values[],
     size_t numValues,
-    Context const * contextPtr,
+    internal::CellFunction cellfun,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyValue (Dont::Initialize)
 {
-    VAL_RESET_HEADER(&cell, REB_OBJECT);
+    (*cellfun)(this->cell);
 
     // Here, a null context pointer means null.  No finder is invoked.
 
@@ -80,5 +82,16 @@ Context::Context (
 
 */
 
+//
+// TYPE HEADER INITIALIZATION
+//
+
+void AnyContext::initObject(RenCell & cell) {
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_OBJECT);
+}
+
+void AnyContext::initError(RenCell & cell) {
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_ERROR);
+}
 
 } // end namespace ren

@@ -55,7 +55,7 @@ public:
         QString rcPrefix,
         QString urlPrefix,
         ren::Block const & spec,
-        ren::optional<ren::Context> context
+        ren::optional<ren::AnyContext> context
     );
 
     virtual ~RenPackage ();

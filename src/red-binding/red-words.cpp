@@ -91,7 +91,7 @@ void AnyWord::initRefinement(RedCell & cell) {
 AnyWord::AnyWord (
     char const * cstr,
     internal::CellFunction cellfun,
-    Context const * context,
+    AnyContext const * context,
     Engine * engine
 ) {
     throw std::runtime_error("AnyWord::AnyWord coming soon...");

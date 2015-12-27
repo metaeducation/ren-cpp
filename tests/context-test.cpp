@@ -10,18 +10,18 @@ using namespace ren;
 
 TEST_CASE("context test", "[rebol] [context]")
 {
-    Context defaultContext = Context::current();
+    AnyContext defaultContext = AnyContext::current();
 
-    Context contextOne {};
-    Context contextTwo {};
+    Object contextOne {};
+    Object contextTwo {};
 
     // We install a new "context finder" which uses an integer to indicate
     // which context is currently in effect.
    
     int contextNumber = 1;
 
-    auto oldFinder = Context::setFinder(
-        [&](Engine *) -> Context {
+    auto oldFinder = AnyContext::setFinder(
+        [&](Engine *) -> AnyContext {
             if (contextNumber == 1)
                 return contextOne;
             if (contextNumber == 2)
@@ -82,5 +82,5 @@ TEST_CASE("context test", "[rebol] [context]")
     // Restore the context finder to the previous one (default) so other
     // tests will work correctly
 
-    Context::setFinder(oldFinder);
+    AnyContext::setFinder(oldFinder);
 }

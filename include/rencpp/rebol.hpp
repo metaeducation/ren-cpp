@@ -38,7 +38,7 @@ namespace internal {
 
 class RebolRuntime : public Runtime {
 private:
-    Context * defaultContext;
+    AnyContext * defaultContext;
     bool initialized;
 
 public:

@@ -60,7 +60,7 @@ private:
     friend class AnyArray;
     friend class AnyString;
     friend class AnyWord;
-    friend class Context;
+    friend class AnyContext;
 
     RenEngineHandle handle;
 

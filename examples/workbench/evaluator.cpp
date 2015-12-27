@@ -47,10 +47,10 @@ void EvaluatorWorker::doWork(
 ) {
     // See notes on MainWindow about qRegisterMetaType about why dialect
     // and context are passed as ren::AnyValue instead of ren::Function and
-    // ren::Context (also why it needs the ren:: prefix for slots)
+    // ren::AnyContext (also why it needs the ren:: prefix for slots)
 
     Function dialect = static_cast<Function>(dialectValue);
-    Context context = static_cast<Context>(contextValue);
+    AnyContext context = static_cast<AnyContext>(contextValue);
 
     optional<AnyValue> result;
     bool success = false;

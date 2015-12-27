@@ -24,14 +24,14 @@ bool Error::isValid(RenCell const & cell) {
 //
 
 Error::Error (const char * msg, Engine * engine) :
-    AnyValue (Dont::Initialize)
+    AnyContext_ (Dont::Initialize)
 {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_ERROR);
 
     if (not engine)
         engine = &Engine::runFinder();
 
-    std::string array {"#[error! [code: 800 type: 'User id: 'message arg1: "};
+    std::string array {"#[error! [code: 1000 type: 'User id: 'message arg1: "};
 
     array += '{';
     array += msg;

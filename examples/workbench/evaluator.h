@@ -54,7 +54,7 @@ class EvaluatorWorker : public QObject
 public slots:
     // See notes on MainWindow about qRegisterMetaType about why dialect
     // and context are passed as ren::AnyValue instead of ren::Function and
-    // ren::Context (also why it needs the ren:: prefix for slots)
+    // ren::AnyContext (also why it needs the ren:: prefix for slots)
     void doWork(
         ren::AnyValue const & dialectValue,
         ren::AnyValue const & contextValue,

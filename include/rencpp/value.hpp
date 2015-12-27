@@ -66,7 +66,7 @@ namespace ren {
 
 class AnyValue;
 
-class Context;
+class AnyContext;
 
 class Engine;
 
@@ -99,7 +99,7 @@ namespace internal {
     // carry a context without itself being a candidate to be a Loadable.
 
     struct ContextWrapper {
-        Context const & context;
+        AnyContext const & context;
     };
 }
 
@@ -255,7 +255,7 @@ protected:
     //
 
 protected:
-    friend class Context;
+    friend class AnyContext;
     RenEngineHandle origin;
 
 
@@ -569,7 +569,7 @@ protected:
     optional<AnyValue> apply_(
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Context const * contextPtr = nullptr,
+        AnyContext const * contextPtr = nullptr,
         Engine * engine = nullptr
     ) const;
 
@@ -686,7 +686,7 @@ protected:
 
     static bool constructOrApplyInitialize(
         RenEngineHandle engine,
-        Context const * context,
+        AnyContext const * context,
         AnyValue const * applicand,
         internal::Loadable const loadables[],
         size_t numLoadables,

@@ -60,7 +60,7 @@ protected:
     static optional<AnyValue> evaluate(
         internal::Loadable const loadables[],
         size_t numLoadables,
-        Context const * contextPtr,
+        AnyContext const * contextPtr,
         Engine * engine
     );
 

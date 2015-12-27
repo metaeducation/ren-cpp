@@ -62,7 +62,7 @@ protected:
         internal::Loadable const loadables[],
         size_t numLoadables,
         internal::CellFunction cellfun,
-        Context const * contextPtr,
+        AnyContext const * contextPtr,
         Engine * engine
     );
 
@@ -70,7 +70,7 @@ protected:
         AnyValue const values[],
         size_t numValues,
         internal::CellFunction cellfun,
-        Context const * contextPtr,
+        AnyContext const * contextPtr,
         Engine * engine
     );
 };
@@ -149,7 +149,7 @@ public:
     {
     }
 
-    AnyArray_ (Context const & context) :
+    AnyArray_ (AnyContext const & context) :
         AnyArray (static_cast<Loadable *>(nullptr), 0, F, &context, nullptr)
     {
     }

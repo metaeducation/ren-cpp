@@ -51,7 +51,7 @@ protected:
     explicit AnyWord (
         char const * cstr,
         internal::CellFunction cellfun,
-        Context const * context = nullptr,
+        AnyContext const * context = nullptr,
         Engine * engine = nullptr
     );
 
@@ -59,7 +59,7 @@ protected:
     explicit AnyWord (
         QString const & str,
         internal::CellFunction cellfun,
-        Context const * context = nullptr,
+        AnyContext const * context = nullptr,
         Engine * engine = nullptr
     );
 #endif
@@ -72,7 +72,7 @@ protected:
     explicit AnyWord (
         std::string const & str,
         internal::CellFunction cellfun,
-        Context const & context
+        AnyContext const & context
     ) :
         AnyWord (str.c_str(), cellfun, &context, nullptr)
     {
@@ -92,7 +92,7 @@ protected:
     explicit AnyWord (
         QString const & str,
         internal::CellFunction cellfun,
-        Context * context = nullptr
+        AnyContext * context = nullptr
     );
 #endif
 
@@ -148,7 +148,7 @@ public:
     {
     }
 
-    explicit AnyWord_ (char const * cstr, Context & context) :
+    explicit AnyWord_ (char const * cstr, AnyContext & context) :
         AnyWord (cstr, F, &context, nullptr)
     {
     }
@@ -158,7 +158,7 @@ public:
     {
     }
 
-    explicit AnyWord_ (std::string const & str, Context & context) :
+    explicit AnyWord_ (std::string const & str, AnyContext & context) :
         AnyWord (str.c_str(), F, &context, nullptr)
     {
     }
@@ -168,7 +168,7 @@ public:
         AnyWord (str, F, nullptr, engine)
     {
     }
-    explicit AnyWord_ (QString const & str, Context & context) :
+    explicit AnyWord_ (QString const & str, AnyContext & context) :
         AnyWord (str, F, &context, nullptr)
     {
     }

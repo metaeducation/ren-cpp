@@ -484,7 +484,7 @@ void ShellWorker::onStateChanged(QProcess::ProcessState newState) {
 // and RenShell acts as the interface to that worker
 //
 
-RenShell::RenShell (Context const & helpers, QObject * parent) :
+RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
     QObject (parent),
     helpers (helpers),
     testMode (false)

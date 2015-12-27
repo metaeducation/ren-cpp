@@ -113,7 +113,7 @@ QString AnyWord::spellingOf_QT() const {
 AnyWord::AnyWord (
     char const * spelling,
     internal::CellFunction cellfun,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyValue (Dont::Initialize)
@@ -146,7 +146,9 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable = array.data();
 
-    Context context = contextPtr ? *contextPtr : Context::current(engine);
+    AnyContext context = contextPtr
+        ? *contextPtr
+        : AnyContext::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),
@@ -170,7 +172,7 @@ AnyWord::AnyWord (
 AnyWord::AnyWord (
     QString const & spelling,
     internal::CellFunction cellfun,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyValue (Dont::Initialize)
@@ -203,7 +205,9 @@ AnyWord::AnyWord (
 
     internal::Loadable loadable (source);
 
-    Context context = contextPtr ? *contextPtr : Context::current(engine);
+    AnyContext context = contextPtr
+        ? *contextPtr
+        : AnyContext::current(engine);
 
     constructOrApplyInitialize(
         context.getEngine(),

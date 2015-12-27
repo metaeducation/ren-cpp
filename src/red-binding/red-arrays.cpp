@@ -102,7 +102,7 @@ AnyArray::AnyArray (
     internal::Loadable const loadables[],
     size_t numLoadables,
     internal::CellFunction cellfun,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnySeries (Dont::Initialize)

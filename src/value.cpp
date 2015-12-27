@@ -45,12 +45,14 @@ AnyValue::operator bool() const {
 optional<AnyValue> AnyValue::apply_(
     internal::Loadable const loadables[],
     size_t numLoadables,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) const {
     AnyValue result (Dont::Initialize);
 
-    Context context = contextPtr ? *contextPtr : Context::current(engine);
+    AnyContext context = contextPtr
+        ? *contextPtr
+        : AnyContext::current(engine);
 
     if (constructOrApplyInitialize(
         context.getEngine(),
@@ -97,7 +99,7 @@ optional<AnyValue> AnyValue::apply(
 
 bool AnyValue::constructOrApplyInitialize(
     RenEngineHandle engine,
-    Context const * context,
+    AnyContext const * context,
     AnyValue const * applicand,
     internal::Loadable const loadables[],
     size_t numLoadables,

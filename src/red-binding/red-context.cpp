@@ -14,7 +14,7 @@ namespace ren {
 ///
 ///
 
-bool Context::isValid(RenCell const &) {
+bool AnyContext::isValid(RenCell const &) {
     throw std::runtime_error("context not implemented");
 }
 
@@ -24,15 +24,15 @@ bool Context::isValid(RenCell const &) {
 /// CONSTRUCTION
 ///
 
-Context::Context (
+AnyContext::AnyContext (
     internal::Loadable const loadables[],
     size_t numLoadables,
-    Context const * contextPtr,
+    AnyContext const * contextPtr,
     Engine * engine
 ) :
     AnyValue (Dont::Initialize)
 {
-    throw std::runtime_error("Context::Context coming soon...");
+    throw std::runtime_error("AnyContext::AnyContext coming soon...");
 
     UNUSED(loadables);
     UNUSED(numLoadables);

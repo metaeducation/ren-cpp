@@ -58,9 +58,9 @@ private:
     ) override;
 
 private:
-    ren::optional<ren::Context> helpersContext;
-    ren::Context userContext;
-    ren::Context libContext;
+    ren::optional<ren::AnyContext> helpersContext;
+    ren::AnyContext userContext;
+    ren::AnyContext libContext;
     std::unique_ptr<RenShell> shell;
 
 public:
@@ -82,7 +82,7 @@ private:
     struct TabInfo {
         ren::Function dialect; // what dialect processor tab is running
         ren::optional<ren::Tag> label; // label of the tab
-        ren::Context context;
+        ren::AnyContext context;
         WatchList * watchList;
     };
 
@@ -160,7 +160,7 @@ protected:
     // scratch attempt to make MODULE!" and then compare the implemenations.
 private:
     QSharedPointer<RenPackage> proposalsPackage;
-    ren::optional<ren::Context> proposalsContext;
+    ren::optional<ren::AnyContext> proposalsContext;
     QSharedPointer<RenPackage> helpersPackage;
     QSharedPointer<RenPackage> rendataPackage;
 

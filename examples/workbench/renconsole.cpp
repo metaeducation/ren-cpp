@@ -50,8 +50,8 @@ extern bool forcingQuit;
 RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     QTabWidget (parent),
     helpersContext (),
-    userContext (static_cast<Context>(*runtime("system/contexts/user"))),
-    libContext (static_cast<Context>(*runtime("system/contexts/lib"))),
+    userContext (static_cast<AnyContext>(*runtime("system/contexts/user"))),
+    libContext (static_cast<AnyContext>(*runtime("system/contexts/lib"))),
     shell (),
     bannerPrinted (false),
     evaluatingRepl (nullptr),
@@ -140,8 +140,8 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // Passing in an object means it will use that object as the
                 // context for this tab.
 
-                if (is<Context>(arg)) {
-                    getTabInfo(repl()).context = static_cast<Context>(arg);
+                if (is<AnyContext>(arg)) {
+                    getTabInfo(repl()).context = static_cast<AnyContext>(arg);
                     return nullopt;
                 }
 
@@ -354,14 +354,14 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     proposalsContext = userContext.copy(false);
 
     // !!! On MinGW 4.9.1 under Windows, there is an issue where if you pass
-    // the result from dereferencing a std::optional<Context> through perfect
+    // the result from dereferencing a std::optional<AnyContext> via perfect
     // forwarding (as in the constructor below) it will attempt to std::move
     // the variable.  The "RenPackage" was an experiment in the first place,
     // and after looking into this enough to believe it to be more likely
     // a compiler bug than an issue in Ren/C++ class design a workaround is
     // the best choice for the moment.  So we force to a reference to prevent
     // the choice of && from *proposalsContext;
-    Context const & proposalsRef = *proposalsContext;
+    AnyContext const & proposalsRef = *proposalsContext;
 
     proposalsPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
@@ -403,7 +403,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     helpersContext = proposalsContext->copy();
 
     // !!! See notes above on MinGW 4.9.1 workaround
-    Context const & helpersRef = *helpersContext;
+    AnyContext const & helpersRef = *helpersContext;
 
     helpersPackage = QSharedPointer<RenPackage>::create(
         // resource file prefix
@@ -432,7 +432,9 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     // make it possible to get at the proposals context from both user
     // and proposals, and also install the console extensions in both
 
-    for (auto context : std::vector<Context>{*proposalsContext, userContext}) {
+    for (auto context :
+        std::vector<AnyContext>{*proposalsContext, userContext}
+    ) {
         context(
             "append system/contexts", Block {"proposals:", *proposalsContext},
 
@@ -483,7 +485,7 @@ void RenConsole::createNewTab() {
 
     auto pad = new ReplPad {*this, *this, this};
 
-    Context context = useProposals
+    AnyContext context = useProposals
         ? proposalsContext->copy()
         : userContext.copy();
 
