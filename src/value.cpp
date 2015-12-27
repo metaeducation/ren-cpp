@@ -31,18 +31,6 @@ namespace ren {
 
 
 
-// Even if asked not to initialize, we can't leave the type in a state where
-// it cannot be safely freed.  Bad traversal pointers combined with bad data
-// would be a problem.  Review this issue.
-
-AnyValue::AnyValue (Dont) :
-    next (nullptr),
-    prev (nullptr)
-{
-}
-
-
-
 AnyValue::operator bool() const {
     return not (is<None>(*this) or isFalse());
 }

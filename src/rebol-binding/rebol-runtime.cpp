@@ -28,7 +28,7 @@ extern "C" {
 #endif
 
 // Saphirion additions with commands for running https
-extern void Init_Core_Ext(void);
+extern void Init_Core_Ext(REBYTE vers[8]);
 extern void Shutdown_Core_Ext(void);
 }
 
@@ -65,7 +65,7 @@ REBOOL Generalized_Apply_Throws(
             fail (Error_Invalid_Arg(ARRAY_HEAD(args)));
         }
 
-        fail (VAL_FRAME(applicand));
+        fail (VAL_CONTEXT(applicand));
     }
 
     // If it's an object (context) then "apply" means run the code
@@ -80,7 +80,7 @@ REBOOL Generalized_Apply_Throws(
         // Note this takes a C array of values terminated by a REB_END.
         Bind_Values_Set_Forward_Shallow(
             ARRAY_HEAD(reboundArgs),
-            VAL_FRAME(applicand)
+            VAL_CONTEXT(applicand)
         );
 
         if (Do_At_Throws(out, reboundArgs, 0)) {
@@ -137,12 +137,13 @@ RebolRuntime runtime {true};
 REBARGS rebargs;
 
 static REBVAL loadAndBindWord(
-    REBFRM * context,
+    REBCON * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,
     enum Reb_Kind kind
 ) {
     REBVAL word;
+    VAL_INIT_WRITABLE_DEBUG(&word);
 
     // !!! Make_Word has a misleading name; it allocates a symbol number
 
@@ -231,7 +232,6 @@ RebolRuntime::RebolRuntime (bool) :
 
     assert(sizeof(Reb_Value) == sizeof(RenCell));
 
-    assert(sizeof(int8_t) == sizeof(REBOOL));
     assert(sizeof(uint32_t) == sizeof(REBCNT));
     assert(sizeof(int32_t) == sizeof(REBINT));
 
@@ -264,6 +264,8 @@ RebolRuntime::RebolRuntime (bool) :
 
 
 bool RebolRuntime::lazyInitializeIfNecessary() {
+    REBYTE vers[8];
+
     if (initialized)
         return false;
 
@@ -308,7 +310,12 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     Init_Core(&rebargs);
 
-    Init_Core_Ext(); // adds to a table used by RL_Start, must be called before
+    vers[0] = 5; // len
+    RL_Version(&vers[0]);
+
+    // adds to a table used by RL_Start, must be called before
+    //
+    Init_Core_Ext(vers);
 
     // Needed to run the SYS_START function
     int err_num = RL_START(0, 0, NULL, 0, 0);
@@ -330,7 +337,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     auto signalHandler = [](int) {
         Engine::runFinder().getOutputStream() << "[escape]";
-        SET_SIGNAL(SIG_ESCAPE);
+        SET_SIGNAL(SIG_HALT); // SIG_BREAK?
     };
 
     signal(SIGINT, signalHandler);
@@ -360,7 +367,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
 
-        Val_Init_Binary(FRAME_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
+        Val_Init_Binary(CONTEXT_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
     // This is a small demo of a low-level extension that does not use Ren-C++
@@ -382,7 +389,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         " arg {Some refinement arg}"
     };
 
-    REBFUN testFun = [](Reb_Call* call_) -> REBCNT {
+    REBNAT testFun = [](Reb_Call* call_) -> REBCNT {
         PARAM(1, value);
         REFINE(2, refine);
         PARAM(3, arg);
@@ -399,8 +406,10 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     REBARR * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
 
     REBVAL testNative;
-    Make_Native(&testNative, testSpec, testFun, REB_NATIVE);
-    Set_Var(&testWord, &testNative);
+    VAL_INIT_WRITABLE_DEBUG(&testNative);
+
+    Make_Native(&testNative, testSpec, testFun, REB_NATIVE, FALSE);
+    *GET_MUTABLE_VAR(&testWord) = testNative;
 
     initialized = true;
 
@@ -415,7 +424,7 @@ void RebolRuntime::doMagicOnlyRebolCanDo() {
 
 
 void RebolRuntime::cancel() {
-    SET_SIGNAL(SIG_ESCAPE);
+    SET_SIGNAL(SIG_HALT); // SIG_BREAK and debugging...?
 }
 
 

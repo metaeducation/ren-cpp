@@ -158,8 +158,10 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_TARGET(AS_REBVAL(&this->cell))
-        = FRAME_VARLIST(VAL_FRAME(AS_REBVAL(&context.cell)));
+    INIT_WORD_CONTEXT(
+        AS_REBVAL(&this->cell),
+        VAL_CONTEXT(AS_REBVAL(&context.cell))
+    );
 }
 
 
@@ -213,8 +215,10 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    VAL_WORD_TARGET(AS_REBVAL(&this->cell))
-        = FRAME_VARLIST(VAL_FRAME(AS_REBVAL(&context.cell)));
+    INIT_WORD_CONTEXT(
+        AS_REBVAL(&this->cell),
+        VAL_CONTEXT(AS_REBVAL(&context.cell))
+    );
 }
 #endif
 

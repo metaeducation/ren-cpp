@@ -13,6 +13,22 @@
 
 namespace ren {
 
+
+// Even if asked not to initialize, we can't leave the type in a state where
+// it cannot be safely freed.  Bad traversal pointers combined with bad data
+// would be a problem.  Review this issue.
+
+AnyValue::AnyValue (Dont) :
+    next (nullptr),
+    prev (nullptr)
+{
+    // Only in the debug build, we prepare the memory for the cell so that it
+    // is "formatted for initialization"
+    //
+    VAL_INIT_WRITABLE_DEBUG(AS_REBVAL(&cell));
+}
+
+
 //
 // COMPARISON
 //
@@ -178,7 +194,7 @@ AnyValue AnyValue::copy(bool deep) const {
     Context userContext (Dont::Initialize);
     Val_Init_Object(
         AS_REBVAL(&userContext.cell),
-        VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_USER))
+        VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER))
     );
     userContext.finishInit(origin);
 

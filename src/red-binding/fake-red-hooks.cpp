@@ -60,13 +60,13 @@ public:
 
 
     RenResult FindContext(
+        RedCell * out,
         RedEngineHandle engine,
-        char const * name,
-        RedCell * contextOut
+        char const * name
     ) {
         UNUSED(engine);
         UNUSED(name);
-        UNUSED(contextOut);
+        UNUSED(out);
         return REN_SUCCESS;
     }
 
@@ -214,11 +214,11 @@ RenResult RenFreeEngine(RenEngineHandle handle) {
 
 
 RenResult RenFindContext(
+    RenCell * out,
     RenEngineHandle engine,
-    char const * name,
-    RenCell * contextOut
+    char const * name
 ) {
-    return ren::internal::hooks.FindContext(engine, name, contextOut);
+    return ren::internal::hooks.FindContext(out, engine, name);
 }
 
 

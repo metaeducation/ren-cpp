@@ -116,25 +116,25 @@ public:
 
 
     RenResult FindContext(
+        RenCell * out,
         RebolEngineHandle engine,
-        char const * name,
-        RenCell * contextOut
+        char const * name
     ) {
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
-        REBFRM * frame = nullptr;
+        REBCON * context = nullptr;
         if (strcmp(name, "USER") == 0)
-            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_USER));
+            context = VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER));
         else if (strcmp(name, "LIB") == 0)
-            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_LIB));
+            context = VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_LIB));
         if (strcmp(name, "SYS") == 0)
-            frame = VAL_FRAME(Get_System(SYS_CONTEXTS, CTX_SYS));
+            context = VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_SYS));
 
         // don't expose CTX_ROOT?
 
-        if (frame) {
-            Val_Init_Object(AS_REBVAL(contextOut), frame);
+        if (context) {
+            Val_Init_Object(AS_REBVAL(out), context);
             return REN_SUCCESS;
         }
 
@@ -171,8 +171,8 @@ public:
     ) {
         assert(engine.data == 1020);
 
-        REBOL_STATE state;
-        REBFRM * error;
+        struct Reb_State state;
+        REBCON * error;
 
         // longjmp could "clobber" this variable if it were not volatile, and
         // code inside of the `if (error)` depends on possible modification
@@ -233,7 +233,7 @@ public:
                 reinterpret_cast<volatile REBVAL const *>(current)
             );
 
-            if (cell->header.bitfields.type == REB_TRASH) {
+            if ((cell->header.all & HEADER_TYPE_MASK) >> 2 == REB_TRASH) {
 
                 // This is our "Alien" type that wants to get loaded.  Key
                 // to his loading problem is that he wants to know whether
@@ -258,21 +258,26 @@ public:
                     // Binding Do_String did by default...except it only
                     // worked with the user context.  Fell through to lib.
 
-                    REBCNT len = FRAME_LEN(VAL_FRAME(context));
+                    REBCNT len = CONTEXT_LEN(VAL_CONTEXT(context));
 
                     if (len > 0)
                         ASSERT_VALUE_MANAGED(ARRAY_HEAD(transcoded));
 
                     Bind_Values_All_Deep(
                         ARRAY_HEAD(transcoded),
-                        VAL_FRAME(context)
+                        VAL_CONTEXT(context)
                     );
 
                     REBVAL vali;
+                    VAL_INIT_WRITABLE_DEBUG(&vali);
                     SET_INTEGER(&vali, len);
 
                     Resolve_Context(
-                        VAL_FRAME(context), Lib_Context, &vali, FALSE, 0
+                        VAL_CONTEXT(context),
+                        Lib_Context,
+                        &vali,
+                        FALSE, // !all
+                        FALSE // !expand
                     );
                 }
 
@@ -322,7 +327,7 @@ public:
                 // block value, but the value pointer at the *head* of
                 // the block.  :-/
 
-                REBFRM * frame = Make_Frame_Detect(
+                REBCON * object = Make_Selfish_Context_Detect(
                     REB_OBJECT,
                     nullptr,
                     nullptr,
@@ -331,7 +336,7 @@ public:
                 );
 
                 // This sets REB_OBJECT in the header, possibly redundantly
-                Val_Init_Object(constructOutDatatypeIn, frame);
+                Val_Init_Object(constructOutDatatypeIn, object);
             }
             else {
                 // If they didn't want a block, then they better want the type
@@ -451,8 +456,7 @@ public:
         mo.dash = 0;
         mo.digits = 0;
         Reset_Mold(&mo);
-        Mold_Value(&mo, const_cast<REBVAL *>(value), 0);
-
+        Mold_Value(&mo, const_cast<REBVAL *>(value), FALSE);
 
         // Now that we've got our STRING! we need to encode it as UTF8 into
         // a "shared buffer".  How is that that TO conversions use a shared
@@ -460,6 +464,8 @@ public:
         // Who knows, but we've got our own buffer so that's not important.
 
         REBVAL formed;
+        VAL_INIT_WRITABLE_DEBUG(&formed);
+
         // Don't use Val_Init_String here because it does MANAGE_SERIES, and
         // we are using the internal mold buffer here...
         VAL_RESET_HEADER(&formed, REB_STRING);
@@ -499,7 +505,7 @@ public:
     }
 
     RenResult ShimHalt() {
-        fail (VAL_FRAME(TASK_HALT_ERROR));
+        fail (VAL_CONTEXT(TASK_HALT_ERROR));
         DEAD_END;
     }
 
@@ -509,14 +515,17 @@ public:
         else
             SET_UNSET(out);
 
+        // !!! There is no way to throw an EXIT_FROM from Ren-C, at present,
+        // other than by calling the natives that do it.
+        //
         if (value)
-            CONVERT_NAME_TO_THROWN(out, value);
+            CONVERT_NAME_TO_THROWN(out, value, FALSE);
         else
-            CONVERT_NAME_TO_THROWN(out, UNSET_VALUE);
+            CONVERT_NAME_TO_THROWN(out, UNSET_VALUE, FALSE);
     }
 
     RenResult ShimFail(REBVAL const * error) {
-        fail (VAL_FRAME(error));
+        fail (VAL_CONTEXT(error));
         DEAD_END;
     }
 
@@ -568,11 +577,11 @@ RenResult RenFreeEngine(RebolEngineHandle engine) {
 
 
 RenResult RenFindContext(
+    RenCell * out,
     RenEngineHandle engine,
-    char const * name,
-    RenCell * contextOut
+    char const * name
 ) {
-    return ren::internal::hooks.FindContext(engine, name, contextOut);
+    return ren::internal::hooks.FindContext(out, engine, name);
 }
 
 

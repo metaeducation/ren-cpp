@@ -254,7 +254,7 @@ enum Ren_Call_Mode {};
 
 struct RenCall {
     RenCell cell;
-    RenCell func;
+    void *func;
     int32_t dsp_orig;
     uint32_t flags;
     RenCell *out;
@@ -272,6 +272,10 @@ struct RenCall {
     struct RenCall *prior;
     enum Ren_Call_Mode mode;
     uint32_t expr_index;
+
+#if !defined(NDEBUG)
+    uint32_t do_count;
+#endif
 };
 
 typedef uint32_t (* RenShimPointer)(RenCall * call);
@@ -333,7 +337,7 @@ RenResult RenShimFail(RenCell const * error);
  * in it that it will recognize as invalid.
  */
 
-RenResult RenAllocEngine(RenEngineHandle * engineOut);
+RenResult RenAllocEngine(RenEngineHandle * out);
 
 RenResult RenFreeEngine(RenEngineHandle engine);
 
@@ -347,9 +351,9 @@ RenResult RenFreeEngine(RenEngineHandle engine);
  */
 
 RenResult RenFindContext(
+    RenCell * out,
     RenEngineHandle engine,
-    char const * name,
-    RenCell * contextOut
+    char const * name
 );
 
 

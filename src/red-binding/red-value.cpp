@@ -11,6 +11,17 @@ using std::to_string;
 
 namespace ren {
 
+// Even if asked not to initialize, we can't leave the type in a state where
+// it cannot be safely freed.  Bad traversal pointers combined with bad data
+// would be a problem.  Review this issue.
+
+AnyValue::AnyValue (Dont) :
+    next (nullptr),
+    prev (nullptr)
+{
+}
+
+
 ///
 /// COMPARISONS
 ///

@@ -51,8 +51,9 @@ void Function::finishInitSpecial(
     Make_Native(
         AS_REBVAL(&cell),
         VAL_ARRAY(AS_C_REBVAL(&spec.cell)),
-        reinterpret_cast<REBFUN>(shim),
-        REB_NATIVE
+        reinterpret_cast<REBNAT>(shim),
+        REB_NATIVE,
+        FALSE // !frameless
     );
 
     AnyValue::finishInit(engine);
