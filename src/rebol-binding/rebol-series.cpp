@@ -53,7 +53,7 @@ AnyValue ren::internal::AnySeries_::operator*() const {
     if (IS_EMPTY(AS_C_REBVAL(&cell))) {
         SET_UNSET(AS_REBVAL(&result.cell));
     }
-    else if (ANY_STR(AS_C_REBVAL(&cell))) {
+    else if (ANY_STRING(AS_C_REBVAL(&cell))) {
         // from str_to_char in Rebol source
         SET_CHAR(
             AS_REBVAL(&result.cell),

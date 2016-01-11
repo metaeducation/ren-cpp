@@ -20,7 +20,7 @@ bool Block::isValid(RenCell const & cell) {
 }
 
 bool Group::isValid(RenCell const & cell) {
-    return IS_PAREN(AS_C_REBVAL(&cell));
+    return IS_GROUP(AS_C_REBVAL(&cell));
 }
 
 bool Path::isValid(RenCell const & cell) {
@@ -41,7 +41,7 @@ bool LitPath::isValid(RenCell const & cell) {
 
 bool AnyArray::isValid(RenCell const & cell) {
     return IS_BLOCK(AS_C_REBVAL(&cell))
-        or IS_PAREN(AS_C_REBVAL(&cell))
+        or IS_GROUP(AS_C_REBVAL(&cell))
         or IS_PATH(AS_C_REBVAL(&cell))
         or IS_SET_PATH(AS_C_REBVAL(&cell))
         or IS_GET_PATH(AS_C_REBVAL(&cell))
@@ -58,7 +58,7 @@ void AnyArray::initBlock(RenCell & cell) {
 }
 
 void AnyArray::initGroup(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_PAREN);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GROUP);
 }
 
 void AnyArray::initPath(RenCell & cell) {

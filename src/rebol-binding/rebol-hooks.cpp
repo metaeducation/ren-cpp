@@ -426,7 +426,9 @@ public:
     return_result:
         // We only free the series if we didn't manage it.  For simplicity
         // we control this with a boolean flag for now.
-        assert(is_aggregate_managed == ARRAY_GET_FLAG(aggregate, SER_MANAGED));
+        assert(
+            is_aggregate_managed == ARRAY_GET_FLAG(aggregate, OPT_SER_MANAGED)
+        );
         if (!is_aggregate_managed)
             Free_Array(aggregate);
 
@@ -449,33 +451,11 @@ public:
         // series out of that.
 
         REB_MOLD mo;
-        mo.series = nullptr;
-        mo.opts = 0;
-        mo.indent = 0;
-        mo.period = 0;
-        mo.dash = 0;
-        mo.digits = 0;
-        Reset_Mold(&mo);
+        CLEARS(&mo);
+        Push_Mold(&mo);
         Mold_Value(&mo, const_cast<REBVAL *>(value), FALSE);
 
-        // Now that we've got our STRING! we need to encode it as UTF8 into
-        // a "shared buffer".  How is that that TO conversions use a shared
-        // buffer and then Set_Series to that, without having a problem?
-        // Who knows, but we've got our own buffer so that's not important.
-
-        REBVAL formed;
-        VAL_INIT_WRITABLE_DEBUG(&formed);
-
-        // Don't use Val_Init_String here because it does MANAGE_SERIES, and
-        // we are using the internal mold buffer here...
-        VAL_RESET_HEADER(&formed, REB_STRING);
-        VAL_INDEX(&formed) = 0;
-        VAL_SERIES(&formed) = mo.series;
-
-        REBSER * utf8_series = Make_UTF8_From_Any_String(
-            &formed, VAL_LEN_HEAD(&formed), 0
-        );
-
+        REBSER * utf8_series = Pop_Molded_UTF8(&mo);
 
         // Okay that should be the UTF8 data.  Let's copy it into the buffer
         // the caller sent us.
@@ -494,8 +474,8 @@ public:
         }
 
         std::copy(
-            SERIES_DATA(utf8_series),
-            SERIES_DATA(utf8_series) + len,
+            SERIES_HEAD(REBYTE, utf8_series),
+            SERIES_HEAD(REBYTE, utf8_series) + len,
             buffer
         );
 

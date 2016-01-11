@@ -152,8 +152,10 @@ static REBVAL loadAndBindWord(
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
 
-    if (context)
-        Bind_Word(context, &word);
+    if (context) {
+        REBCNT index = Try_Bind_Word(context, &word);
+        assert(index != 0);
+    }
 
     // Note that with C++11 move semantics, this is constructed in place;
     // in other words, the caller's REBVAL that they process in the return

@@ -27,7 +27,7 @@ bool Filename::isValid(RenCell const & cell) {
 }
 
 bool AnyString::isValid(RenCell const & cell) {
-    return ANY_STR(AS_C_REBVAL(&cell));
+    return ANY_STRING(AS_C_REBVAL(&cell));
 }
 
 
