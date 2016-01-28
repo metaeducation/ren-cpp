@@ -253,27 +253,35 @@ typedef RebolEngineHandle RenEngineHandle;
 enum Ren_Call_Mode {};
 
 struct RenCall {
-    RenCell cell;
+    union {
+        RenCell eval;
+        void *subfeed; // REBARR*
+    } cell;
     void *func;
-    int32_t dsp_orig;
-    uint32_t flags;
+    unsigned int dsp_orig;
+    unsigned int flags;
     RenCell *out;
     const RenCell *value;
-    void *array; // REBSER
-    uint32_t index;
-    uint32_t label_sym;
+    const RenCell *eval_fetched;
     union {
-        void *array; // REBSER
+        void *array; // REBSER*
+        void *vaptr; // va_list*
+    } source;
+    uintptr_t indexor;
+    uintptr_t label_sym;
+    union {
         RenCell *chunk;
-    } arglist;
+        void *context; // REBCTX*
+    } frame;
     RenCell *param;
     RenCell *arg;
     RenCell *refine;
     struct RenCall *prior;
     enum Ren_Call_Mode mode;
-    uint32_t expr_index;
+    uintptr_t expr_index;
 
 #if !defined(NDEBUG)
+    const char *label_str;
     uint32_t do_count;
 #endif
 };
@@ -283,14 +291,13 @@ typedef uint32_t (* RenShimPointer)(RenCall * call);
 #define REN_CS_OUT(stack) \
     ((stack)->out)
 
-// For FRAMED natives, arg is non-NULL and points to the args, with the 0
-// cell holding the function itself.  This is 1-based, not zero based.
-// For now we adjust to the zero-based expectation, but make a decision
-// on if Ren-Cpp wants to do 1-based indexing or not to line up better
-// with the internals of Ren-C.
+// arg should be non-NULL and points to the args, 0-based.  (Note: this
+// follows the "stack only" conventions of natives and classic "FUNCTION!",
+// however hybrid and durable frames will throw other features in the mix,
+// if Ren-Cpp wishes to be able to have arguments that outlive the call.)
 //
 #define REN_CS_ARG(stack, index) \
-    (&((stack)->arg)[(index) + 1])
+    (&((stack)->arg)[index])
 
 #if defined(__LP64__) || defined(__LLP64__)
     #define REN_STACK_SHIM(stack) \

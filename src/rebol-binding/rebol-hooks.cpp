@@ -123,7 +123,7 @@ public:
         assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
-        REBCON * context = nullptr;
+        REBCTX * context = nullptr;
         if (strcmp(name, "USER") == 0)
             context = VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER));
         else if (strcmp(name, "LIB") == 0)
@@ -172,7 +172,7 @@ public:
         assert(engine.data == 1020);
 
         struct Reb_State state;
-        REBCON * error;
+        REBCTX * error;
 
         // longjmp could "clobber" this variable if it were not volatile, and
         // code inside of the `if (error)` depends on possible modification
@@ -233,7 +233,7 @@ public:
                 reinterpret_cast<volatile REBVAL const *>(current)
             );
 
-            if ((cell->header.all & HEADER_TYPE_MASK) >> 2 == REB_TRASH) {
+            if ((cell->header.bits & HEADER_TYPE_MASK) == REB_TRASH) {
 
                 // This is our "Alien" type that wants to get loaded.  Key
                 // to his loading problem is that he wants to know whether
@@ -258,13 +258,13 @@ public:
                     // Binding Do_String did by default...except it only
                     // worked with the user context.  Fell through to lib.
 
-                    REBCNT len = CONTEXT_LEN(VAL_CONTEXT(context));
+                    REBCNT len = CTX_LEN(VAL_CONTEXT(context));
 
                     if (len > 0)
-                        ASSERT_VALUE_MANAGED(ARRAY_HEAD(transcoded));
+                        ASSERT_VALUE_MANAGED(ARR_HEAD(transcoded));
 
                     Bind_Values_All_Deep(
-                        ARRAY_HEAD(transcoded),
+                        ARR_HEAD(transcoded),
                         VAL_CONTEXT(context)
                     );
 
@@ -285,10 +285,10 @@ public:
                 // an #ifdef and apparently unused.  This is its definition.
 
                 Insert_Series(
-                    ARRAY_SERIES(aggregate),
-                    ARRAY_LEN(aggregate),
-                    reinterpret_cast<REBYTE*>(ARRAY_HEAD(transcoded)),
-                    ARRAY_LEN(transcoded)
+                    ARR_SERIES(aggregate),
+                    ARR_LEN(aggregate),
+                    reinterpret_cast<REBYTE*>(ARR_HEAD(transcoded)),
+                    ARR_LEN(transcoded)
                 );
 
                 // transcoded series is managed, can't free it...
@@ -327,11 +327,11 @@ public:
                 // block value, but the value pointer at the *head* of
                 // the block.  :-/
 
-                REBCON * object = Make_Selfish_Context_Detect(
+                REBCTX * object = Make_Selfish_Context_Detect(
                     REB_OBJECT,
                     nullptr,
                     nullptr,
-                    ARRAY_HEAD(aggregate),
+                    ARR_HEAD(aggregate),
                     nullptr
                 );
 
@@ -343,7 +343,7 @@ public:
                 // of the first thing in the block.  And there better be
                 // something in that block.
 
-                REBCNT len = ARRAY_LEN(aggregate);
+                REBCNT len = ARR_LEN(aggregate);
 
                 if (len != 1) {
                     // Requested construct, but a singular item didn't come
@@ -355,20 +355,20 @@ public:
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
                 }
-                else if (resultType != VAL_TYPE(ARRAY_HEAD(aggregate))) {
+                else if (resultType != VAL_TYPE(ARR_HEAD(aggregate))) {
                     // Requested construct and value type was wrong
                     Val_Init_Error(
                         extraOut,
                         ::Error(
                             RE_INVALID_ARG, // Make error code for this...
-                            ARRAY_HEAD(aggregate)
+                            ARR_HEAD(aggregate)
                         )
                     );
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
                 }
                 else {
-                    *constructOutDatatypeIn = *ARRAY_HEAD(aggregate);
+                    *constructOutDatatypeIn = *ARR_HEAD(aggregate);
                 }
             }
         }
@@ -392,28 +392,12 @@ public:
             //
             PUSH_GUARD_ARRAY(aggregate);
 
-            if (applicand) {
-                if (Generalized_Apply_Throws(applyOut, applicand, aggregate)) {
-                    CATCH_THROWN(extraOut, applyOut);
-                    result = REN_APPLY_THREW;
-                }
-                else
-                    result = REN_SUCCESS;
+            if (Generalized_Apply_Throws(applyOut, applicand, aggregate)) {
+                CATCH_THROWN(extraOut, applyOut);
+                result = REN_APPLY_THREW;
             }
-            else {
-                // Assume that nullptr for applicand means "just do the block
-                // that was in the loadables".  This keeps us from having to
-                // export a version of DO separately.
-
-                if (Do_At_Throws(applyOut, aggregate, 0)) {
-                    CATCH_THROWN(extraOut, applyOut);
-                    result = REN_APPLY_THREW;
-                }
-                else {
-                    // May be REB_UNSET (optional<> signaled by tryFinishInit)
-                    result = REN_SUCCESS;
-                }
-            }
+            else
+                result = REN_SUCCESS;
 
             DROP_GUARD_ARRAY(aggregate);
         }
@@ -427,7 +411,8 @@ public:
         // We only free the series if we didn't manage it.  For simplicity
         // we control this with a boolean flag for now.
         assert(
-            is_aggregate_managed == ARRAY_GET_FLAG(aggregate, OPT_SER_MANAGED)
+            is_aggregate_managed
+            == GET_ARR_FLAG(aggregate, SERIES_FLAG_MANAGED)
         );
         if (!is_aggregate_managed)
             Free_Array(aggregate);
@@ -460,7 +445,7 @@ public:
         // Okay that should be the UTF8 data.  Let's copy it into the buffer
         // the caller sent us.
 
-        REBCNT len = SERIES_LEN(utf8_series);
+        REBCNT len = SER_LEN(utf8_series);
         *numBytesOut = static_cast<size_t>(len);
 
         RenResult result;
@@ -474,8 +459,8 @@ public:
         }
 
         std::copy(
-            SERIES_HEAD(REBYTE, utf8_series),
-            SERIES_HEAD(REBYTE, utf8_series) + len,
+            SER_HEAD(REBYTE, utf8_series),
+            SER_HEAD(REBYTE, utf8_series) + len,
             buffer
         );
 

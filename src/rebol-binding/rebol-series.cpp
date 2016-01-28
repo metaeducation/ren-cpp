@@ -64,7 +64,7 @@ AnyValue ren::internal::AnySeries_::operator*() const {
         );
     } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
         result.cell = *AS_C_RENCELL(
-            ARRAY_AT(
+            ARR_AT(
                 VAL_ARRAY(AS_C_REBVAL(&cell)),
                 VAL_INDEX(AS_C_REBVAL(&cell))
             )

@@ -160,10 +160,7 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    INIT_WORD_CONTEXT(
-        AS_REBVAL(&this->cell),
-        VAL_CONTEXT(AS_REBVAL(&context.cell))
-    );
+    assert(ANY_WORD(AS_REBVAL(&this->cell)));
 }
 
 
@@ -219,10 +216,7 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    INIT_WORD_CONTEXT(
-        AS_REBVAL(&this->cell),
-        VAL_CONTEXT(AS_REBVAL(&context.cell))
-    );
+    assert(ANY_WORD(AS_REBVAL(&this->cell)));
 }
 #endif
 

@@ -53,16 +53,12 @@ REBOOL Generalized_Apply_Throws(
     const REBVAL *applicand,
     REBARR *args
 ) {
-    // `out` will be protected during the apply
-    ASSERT_VALUE_MANAGED(applicand);
-    ASSERT_ARRAY_MANAGED(args);
-
-    if (IS_ERROR(applicand)) {
-        if (ARRAY_LEN(args) != 0) {
+    if (applicand && IS_ERROR(applicand)) {
+        if (ARR_LEN(args) != 0) {
             // If you try to "apply" an error with an arguments block, that
             // will give you an error about the apply (not the error itself)
 
-            fail (Error_Invalid_Arg(ARRAY_HEAD(args)));
+            fail (Error_Invalid_Arg(ARR_HEAD(args)));
         }
 
         fail (VAL_CONTEXT(applicand));
@@ -73,13 +69,13 @@ REBOOL Generalized_Apply_Throws(
     //
     // http://chat.stackoverflow.com/transcript/message/20530463#20530463
 
-    if (IS_OBJECT(applicand)) {
+    if (applicand && IS_OBJECT(applicand)) {
         REBARR * reboundArgs = Copy_Array_Deep_Managed(args);
         PUSH_GUARD_ARRAY(reboundArgs);
 
         // Note this takes a C array of values terminated by a REB_END.
         Bind_Values_Set_Forward_Shallow(
-            ARRAY_HEAD(reboundArgs),
+            ARR_HEAD(reboundArgs),
             VAL_CONTEXT(applicand)
         );
 
@@ -95,35 +91,27 @@ REBOOL Generalized_Apply_Throws(
 
     // Just put the value at the head of a DO chain.
     //
-    // !!! This does not work for infix functions!
 
-    struct Reb_Call s;
-    s.out = out;
-    s.array = args;
-    s.index = 0;
-    s.value = applicand;
-    s.flags = DO_FLAG_DO | DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD;
-    Do_Core(&s);
-    if (s.index == THROWN_FLAG)
+    REBIXO indexor = Do_Array_At_Core(
+        out,
+        applicand,
+        args,
+        0,
+        DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD | DO_FLAG_EVAL_NORMAL
+    );
+
+    if (indexor == THROWN_FLAG)
         return TRUE;
 
-    // The only way you can get an END_FLAG on something if you pass in
-    // a 0 index is if the series is empty.  Otherwise, it should
-    // either finish an evaluation or raise an error if it couldn't
-    // fulfill its arguments.
-
-    assert(s.index != END_FLAG);
-
-    if (s.index == THROWN_FLAG)
-        return TRUE;
-
-    // If the DO chain didn't end, then consider that an error.  So
-    // generalized apply of FOO: with `1 + 2 3` will do the addition,
-    // satisfy FOO, but have a 3 left over unused.  If FOO: were a
-    // function being APPLY'd, you'd say that was too many arguments
-
-    if (s.index != ARRAY_LEN(args))
+    if (indexor != END_FLAG) {
+        //
+        // If the DO chain didn't end, then consider that an error.  So
+        // generalized apply of FOO: with `1 + 2 3` will do the addition,
+        // satisfy FOO, but have a 3 left over unused.  If FOO: were a
+        // function being APPLY'd, you'd say that was too many arguments
+        //
         fail (Error(RE_APPLY_TOO_MANY));
+    }
 
     return FALSE;
 }
@@ -137,7 +125,7 @@ RebolRuntime runtime {true};
 REBARGS rebargs;
 
 static REBVAL loadAndBindWord(
-    REBCON * context,
+    REBCTX * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,
     enum Reb_Kind kind
@@ -147,7 +135,7 @@ static REBVAL loadAndBindWord(
 
     // !!! Make_Word has a misleading name; it allocates a symbol number
 
-    Val_Init_Word_Unbound(&word, kind, Make_Word(nameUtf8, lenBytes));
+    Val_Init_Word(&word, kind, Make_Word(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
@@ -236,24 +224,27 @@ RebolRuntime::RebolRuntime (bool) :
 
     assert(sizeof(uint32_t) == sizeof(REBCNT));
     assert(sizeof(int32_t) == sizeof(REBINT));
+    assert(sizeof(intptr_t) == sizeof(REBIPT));
+    assert(sizeof(uintptr_t) == sizeof(REBUPT));
 
-    assert(sizeof(Reb_Call) == sizeof(RenCall));
     assert(offsetof(Reb_Call, cell) == offsetof(RenCall, cell));
     assert(offsetof(Reb_Call, func) == offsetof(RenCall, func));
     assert(offsetof(Reb_Call, dsp_orig) == offsetof(RenCall, dsp_orig));
     assert(offsetof(Reb_Call, flags) == offsetof(RenCall, flags));
     assert(offsetof(Reb_Call, out) == offsetof(RenCall, out));
     assert(offsetof(Reb_Call, value) == offsetof(RenCall, value));
-    assert(offsetof(Reb_Call, array) == offsetof(RenCall, array));
-    assert(offsetof(Reb_Call, index) == offsetof(RenCall, index));
+    assert(offsetof(Reb_Call, eval_fetched) == offsetof(RenCall, eval_fetched));
+    assert(offsetof(Reb_Call, source) == offsetof(RenCall, source));
+    assert(offsetof(Reb_Call, indexor) == offsetof(RenCall, indexor));
     assert(offsetof(Reb_Call, label_sym) == offsetof(RenCall, label_sym));
-    assert(offsetof(Reb_Call, arglist) == offsetof(RenCall, arglist));
+    assert(offsetof(Reb_Call, frame) == offsetof(RenCall, frame));
     assert(offsetof(Reb_Call, param) == offsetof(RenCall, param));
     assert(offsetof(Reb_Call, arg) == offsetof(RenCall, arg));
     assert(offsetof(Reb_Call, refine) == offsetof(RenCall, refine));
     assert(offsetof(Reb_Call, prior) == offsetof(RenCall, prior));
     assert(offsetof(Reb_Call, mode) == offsetof(RenCall, mode));
     assert(offsetof(Reb_Call, expr_index) == offsetof(RenCall, expr_index));
+    assert(sizeof(Reb_Call) == sizeof(RenCall));
 
     // function.hpp does a bit more of its template work in the include file
     // than we might like (but that's how templates work).  We don't want
@@ -369,7 +360,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         if (not startup)
             throw std::runtime_error("RebolHooks: Bad startup code");;
 
-        Val_Init_Binary(CONTEXT_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
+        Val_Init_Binary(CTX_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
     }
 
     // This is a small demo of a low-level extension that does not use Ren-C++
@@ -411,7 +402,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     VAL_INIT_WRITABLE_DEBUG(&testNative);
 
     Make_Native(&testNative, testSpec, testFun, REB_NATIVE, FALSE);
-    *GET_MUTABLE_VAR(&testWord) = testNative;
+    *GET_MUTABLE_VAR_MAY_FAIL(&testWord) = testNative;
 
     initialized = true;
 

@@ -49,8 +49,14 @@ RenPackage::RenPackage (
         QFile file {rcPrefix + static_cast<Filename>(filename)};
         file.open(QIODevice::ReadOnly);
         QByteArray bytes = file.readAll();
-        if (context)
+        if (context) {
+            //
+            // !!! This file was just an experiment, but it seems to have
+            // used the feature for loading and binding information into
+            // a context.  But what would this do?  There's no binding.
+            //
             (*context)(bytes.data());
+        }
         else {
             // because pure Ren hasn't been thought about yet, and
             // runtime defaults to USER context, we have to force
