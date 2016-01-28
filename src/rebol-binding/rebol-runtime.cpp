@@ -28,18 +28,17 @@ extern "C" {
 #endif
 
 // Saphirion additions with commands for running https
-extern void Init_Core_Ext(REBYTE vers[8]);
+extern void Init_Core_Ext();
 extern void Shutdown_Core_Ext(void);
+
+// See comments in rebol-os-lib-table.cpp
+extern REBOL_HOST_LIB Host_Lib_Init;
 }
 
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096  // from host-lib.c, generally lacking in Posix
 #endif
-
-
-// See comments in rebol-os-lib-table.cpp
-extern REBOL_HOST_LIB Host_Lib_Init;
 
 
 // The binding was built on an idea that did not exist in R3-Alpha, which is
@@ -303,12 +302,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     Init_Core(&rebargs);
 
-    vers[0] = 5; // len
-    RL_Version(&vers[0]);
-
     // adds to a table used by RL_Start, must be called before
     //
-    Init_Core_Ext(vers);
+    Init_Core_Ext();
 
     // Needed to run the SYS_START function
     int err_num = RL_START(0, 0, NULL, 0, 0);
