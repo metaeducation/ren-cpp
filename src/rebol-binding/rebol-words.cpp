@@ -224,8 +224,23 @@ AnyWord::AnyWord (
 AnyWord::AnyWord (AnyWord const & other, internal::CellFunction cellfun) :
     AnyValue (Dont::Initialize)
 {
-    this->cell = other.cell;
+    // !!! There were changes where the header bits started to contain
+    // information relevant to the binding.  The original design for an
+    // agnostic "cellfun" that would write headers for Rebol-or-Red was
+    // such that was the place where the type was encoded.  With the
+    // implementations drifting apart, it's likely that this attempt at
+    // code sharing won't last.
+    //
+    // Work around the lost binding issue here with a very temporary hack
+    // to write the cell header, then extract the REB_XXX type, then
+    // overwrite with the new cell, then put the type bits back.
+
     (*cellfun)(this->cell);
+
+    enum Reb_Kind kind = VAL_TYPE(AS_REBVAL(&this->cell));
+    this->cell = other.cell;
+    VAL_SET_TYPE_BITS(AS_REBVAL(&this->cell), kind);
+
     finishInit(other.origin);
 }
 

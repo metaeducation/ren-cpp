@@ -50,8 +50,8 @@ void ren::internal::AnySeries_::operator--(int) {
 AnyValue ren::internal::AnySeries_::operator*() const {
     AnyValue result {Dont::Initialize};
 
-    if (IS_EMPTY(AS_C_REBVAL(&cell))) {
-        SET_UNSET(AS_REBVAL(&result.cell));
+    if (0 == VAL_LEN_AT(AS_C_REBVAL(&cell))) {
+        SET_VOID(AS_REBVAL(&result.cell));
     }
     else if (ANY_STRING(AS_C_REBVAL(&cell))) {
         // from str_to_char in Rebol source
@@ -63,11 +63,13 @@ AnyValue ren::internal::AnySeries_::operator*() const {
             )
         );
     } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
-        result.cell = *AS_C_RENCELL(
+        COPY_RELVAL(
+            AS_REBVAL(&result.cell),
             ARR_AT(
                 VAL_ARRAY(AS_C_REBVAL(&cell)),
                 VAL_INDEX(AS_C_REBVAL(&cell))
-            )
+            ),
+            VAL_SPECIFIER(AS_C_REBVAL(&cell))
         );
     } else {
         // Binary and such, would return an integer
@@ -122,6 +124,7 @@ const {
 
     AnyValue getPath {Dont::Initialize};
     VAL_RESET_HEADER(AS_REBVAL(&getPath.cell), REB_GET_PATH);
+    SET_VAL_FLAG(AS_REBVAL(&getPath.cell), VALUE_FLAG_ARRAY);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index

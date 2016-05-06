@@ -233,9 +233,10 @@ public:
                 reinterpret_cast<volatile REBVAL const *>(current)
             );
 
-            if ((cell->header.bits & HEADER_TYPE_MASK) == REB_TRASH) {
+            if ((cell->header.bits & HEADER_TYPE_MASK) == REB_0) {
 
-                // This is our "Alien" type that wants to get loaded.  Key
+                // This is our "Alien" type that wants to get loaded (voids
+                // cannot be legally loaded into blocks, by design).  Key
                 // to his loading problem is that he wants to know whether
                 // he is an explicit or implicit block type.  So that means
                 // discerning between "foo bar" and "[foo bar]", which we
@@ -269,7 +270,6 @@ public:
                     );
 
                     REBVAL vali;
-                    VAL_INIT_WRITABLE_DEBUG(&vali);
                     SET_INTEGER(&vali, len);
 
                     Resolve_Context(
@@ -368,7 +368,7 @@ public:
                     goto return_result;
                 }
                 else {
-                    *constructOutDatatypeIn = *ARR_HEAD(aggregate);
+                    *constructOutDatatypeIn = *KNOWN(ARR_HEAD(aggregate));
                 }
             }
         }
@@ -392,7 +392,12 @@ public:
             //
             PUSH_GUARD_ARRAY(aggregate);
 
-            if (Generalized_Apply_Throws(applyOut, applicand, aggregate)) {
+            if (Generalized_Apply_Throws(
+                applyOut,
+                applicand,
+                aggregate,
+                SPECIFIED // the aggregate is all REBVALs, fully specified
+            )) {
                 CATCH_THROWN(extraOut, applyOut);
                 result = REN_APPLY_THREW;
             }
@@ -478,15 +483,15 @@ public:
         if (name)
             *out = *name;
         else
-            SET_UNSET(out);
+            SET_VOID(out);
 
         // !!! There is no way to throw an EXIT_FROM from Ren-C, at present,
         // other than by calling the natives that do it.
         //
         if (value)
-            CONVERT_NAME_TO_THROWN(out, value, FALSE);
+            CONVERT_NAME_TO_THROWN(out, value);
         else
-            CONVERT_NAME_TO_THROWN(out, UNSET_VALUE, FALSE);
+            CONVERT_NAME_TO_THROWN(out, VOID_VALUE);
     }
 
     RenResult ShimFail(REBVAL const * error) {

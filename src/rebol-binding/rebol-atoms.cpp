@@ -12,9 +12,11 @@ namespace ren {
 bool Atom::isValid(RenCell const & cell) {
     // Will be more efficient when atom makes it formally into the
     // Rebol base typesets.
+    //
+    // !!! Review handling of void.  It is not considered an atom, correct?
+    //
     return (
-        IS_UNSET(AS_C_REBVAL(&cell))
-        || IS_NONE(AS_C_REBVAL(&cell))
+        IS_NONE(AS_C_REBVAL(&cell))
         || IS_LOGIC(AS_C_REBVAL(&cell))
         || IS_CHAR(AS_C_REBVAL(&cell))
         || IS_INTEGER(AS_C_REBVAL(&cell))
@@ -66,7 +68,7 @@ bool AnyValue::isFalse() const {
 AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_LOGIC(AS_REBVAL(&cell), someBool);
+    SET_LOGIC(AS_REBVAL(&cell), someBool ? TRUE : FALSE);
 
     // !!! Should some types not need an engine field?
     if (not engine)

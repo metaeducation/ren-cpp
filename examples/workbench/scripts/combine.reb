@@ -62,6 +62,8 @@ combine: function [
         out: make string! 10 ;; No good heuristic for string size yet
     ]
 
+    unless set? 'delimiter [delimiter: none]
+
     unless any-function? :delimiter [
         unless block? delimiter [
             delimiter: reduce [delimiter]
@@ -72,9 +74,7 @@ combine: function [
         ]
     ]
 
-    unless depth [
-        depth: 1
-    ]
+    depth: any [:depth 1]
 
     if all [
         part
@@ -164,9 +164,9 @@ combine: function [
         ; of parse rules.
 
         case [
-            ; Ignore UNSET! (precedent: ANY, ALL, COMPOSE)
+            ; Ignore voids (precedent: ANY, ALL, COMPOSE)
 
-            unset? :value []
+            void? :value []
 
 
             ; Skip all nones.  This is suggested for COMPOSE as well:

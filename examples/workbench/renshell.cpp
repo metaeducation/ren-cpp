@@ -521,7 +521,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
 
     shellFunction = Function::construct(
         "{SHELL dialect for interacting with an OS shell process}"
-        "'arg [unset! word! lit-word! block! paren! string!]"
+        "'arg [word! lit-word! block! paren! string! none!]"
         "    {block in dialect or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
@@ -530,11 +530,14 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
         [this, worker](optional<AnyValue> const & arg, AnyValue const & meta)
             -> optional<AnyValue>
         {
-            if (arg == nullopt) {
-                // Uses the "unset quoted" trick, same as HELP, to fake up the
-                // ability to have one less arity when used at the end of an
-                // evaluation.  Only sensible for interactive commands!
-
+            if (is<None>(arg)) {
+                //
+                // Used to use the "unset quoting" trick to do variadic, but
+                // now that's been removed.  Real variadic handling has not
+                // been added to Ren-C, and would need `ren::Varargs`.
+                //
+                // For now, just signal that with NONE!
+                //
                 runtime("console quote", shellFunction);
                 return nullopt;
             }

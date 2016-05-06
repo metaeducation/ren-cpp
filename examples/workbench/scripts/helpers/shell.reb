@@ -120,13 +120,13 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
 ; the shell as sequential commands.
 
 shell-dialect-to-strings: function [
-    'arg [word! block! string! unset!]
+    'arg [<opt> word! block! string!]
     windows [logic!]
 ][
     result: make block! 1
 
     switch type-of arg [
-        :unset! [
+        _ [
             fail "Altering command processor state...soon"
         ]
 

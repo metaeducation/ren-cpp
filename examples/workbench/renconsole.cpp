@@ -84,7 +84,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
     consoleFunction = Function::construct(
         "{Default CONSOLE dialect for executing commands in Ren Garden}"
-        "arg [block! any-function! string! word! image! object!]"
+        "arg [block! function! string! word! image! object!]"
         "    {block to execute or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 

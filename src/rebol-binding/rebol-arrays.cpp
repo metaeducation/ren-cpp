@@ -55,26 +55,32 @@ bool AnyArray::isValid(RenCell const & cell) {
 
 void AnyArray::initBlock(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_BLOCK);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 void AnyArray::initGroup(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GROUP);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 void AnyArray::initPath(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_PATH);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 void AnyArray::initGetPath(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GET_PATH);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 void AnyArray::initSetPath(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_SET_PATH);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 void AnyArray::initLitPath(RenCell & cell) {
     VAL_RESET_HEADER(AS_REBVAL(&cell), REB_LIT_PATH);
+    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
 }
 
 

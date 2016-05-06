@@ -468,11 +468,12 @@ optional<AnyValue> WatchList::watchDialect(
         watcherUnique = new Watcher {arg, is<Block>(arg), label};
     }
     else if (is<Word>(arg)) {
+        //
         // If they ask for a word, assume they really meant they wanted
         // a get-word.  e.g. `watch x` when x is a single arity function
         // will not call x every time.  To get an evaluation you have to
         // use a block like `watch [x]`.
-
+        //
         watcherUnique = new Watcher {
             GetWord {static_cast<Word>(arg)}, true, label
         };

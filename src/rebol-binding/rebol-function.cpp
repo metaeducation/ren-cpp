@@ -33,7 +33,7 @@ static_assert(R_OUT == 0, "R_OUT must be 0 for RenShimPointer to work");
 //
 
 bool Function::isValid(RenCell const & cell) {
-    return ANY_FUNC(AS_C_REBVAL(&cell));
+    return IS_FUNCTION(AS_C_REBVAL(&cell));
 }
 
 
@@ -51,9 +51,9 @@ void Function::finishInitSpecial(
     Make_Native(
         AS_REBVAL(&cell),
         VAL_ARRAY(AS_C_REBVAL(&spec.cell)),
+        VAL_SPECIFIER(AS_C_REBVAL(&spec.cell)),
         reinterpret_cast<REBNAT>(shim),
-        REB_NATIVE,
-        FALSE // !frameless
+        FUNC_CLASS_NATIVE
     );
 
     AnyValue::finishInit(engine);

@@ -144,7 +144,7 @@ fake-context-from-function: function [fun [any-function!]] [
         ]
     ]
     append spec none
-    return make object! spec
+    return has spec
 ]
 
 
@@ -175,7 +175,7 @@ autocomplete-helper: function [
     ; asking to have completed?  :-/  Leave it alone for now.
 
     if index = 1 [
-        return reduce [text index #[unset!]]
+        return reduce [text index none]
     ]
 
 
@@ -200,9 +200,9 @@ autocomplete-helper: function [
         ]
 
         ; Now that we've loaded the path, put the trailing slash back on the
-        ; autocomplete base.  (When we autocomplete to actual values, this
+        ; autocomplete base.  (If we autocompleted to actual ANY-VALUE!, this
         ; stuff won't be necessary...)
-
+        ;
         append base "/"
 
         if all [success any [path? loaded word? loaded]] [
@@ -246,26 +246,24 @@ autocomplete-helper: function [
     ; Ren Garden typically passes us two right now...the context for the tab
     ; window you are in, followed by LIB.  There seems to be a strong need
     ; for a notion of inheritance in contexts that is more general.  :-/
-
-    unless completion-contexts [
+    ;
+    unless set? 'completion-contexts [
         completion-contexts: copy contexts
         fragment: text
         stem: copy/part text (index - 1) ;-- index is a *cursor* position
         base: copy ""
     ]
 
-
     ; If we are doing a backward completion via shift-tab, we need to
     ; enumerate backward.  But we still need to keep the completion-contexts
     ; intact, because even if our enumeration is backwards the priority
     ; of which context "wins" in lookup is still forwards!
-
+    ;
     adjusted-contexts: either backward [
         reverse copy completion-contexts
     ][
         completion-contexts
     ]
-
 
     ; We track the first candidate we have seen for completion, but do not
     ; take it immediately.  That's because we might find an word corresponding
@@ -282,12 +280,7 @@ autocomplete-helper: function [
         if backward [reverse words]
         
         for-each word words [
-            if unset? word [
-                continue
-            ]
-
             spelling: spelling-of word
-
 
             ; Not a very sophisticated search ATM, we just walk through
             ; matching all words with the same beginning stem.
@@ -297,7 +290,6 @@ autocomplete-helper: function [
             if stem != copy/part spelling (length stem) [
                 continue
             ]
-
 
             ; When evaluating a match candidate, we first must consider if
             ; we should actually be looking at this candidate at all.  We
@@ -336,14 +328,13 @@ autocomplete-helper: function [
                 continue
             ]
 
-
             ; If we see an exact match of the spelling, then it is effectively
             ; thought of as a "state of prior completion".  Yet it may not
             ; have been supplied by a previous autocomplete; the user might
             ; just have typed it in!  But we handle it the same either way,
             ; by interpreting it as an instruction to take the next
             ; candidate that we see.
-
+            ;
             either spelling = fragment [
                 assert [not take-next]
                 take-next: true
@@ -355,15 +346,14 @@ autocomplete-helper: function [
                     return reduce [
                         combine [base spelling]
                         index
-                        either :scope [:scope] [in ctx word]
+                        any [:scope (in ctx word)]
                     ]
                 ]
             ]
 
-
             ; This still might be a candidate for completion, if we reach
             ; the end of the loops.
-
+            ;
             unless first-candidate-word [
                 first-candidate-word: word
                 first-candidate-ctx: ctx
@@ -371,23 +361,18 @@ autocomplete-helper: function [
         ]
     ] 
 
-
     ; If we get to the end, then we just take the first candidate for
     ; completion if there was one (whether take-next was set or not)
-
+    ;
     if first-candidate-word [
         return reduce [
             combine [base spelling-of first-candidate-word]
             index
-            either :scope [
-                :scope
-            ][
-                in first-candidate-ctx first-candidate-word
-            ]
+            any [:scope (in first-candidate-ctx first-candidate-word)]
         ]
     ]
 
-
     ; Didn't find anything, just return what we were given...
-    return reduce [text index #[unset!]]
+    ;
+    return reduce [text index none]
 ]

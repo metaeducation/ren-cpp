@@ -258,8 +258,8 @@ struct RenCall {
         void *subfeed; // REBARR*
     } cell;
     void *func;
-    unsigned int dsp_orig;
-    unsigned int flags;
+    uintptr_t dsp_orig;
+    uintptr_t flags;
     RenCell *out;
     const RenCell *value;
     const RenCell *eval_fetched;
@@ -268,21 +268,26 @@ struct RenCall {
         void *vaptr; // va_list*
     } source;
     uintptr_t indexor;
+    void *specifier; // REBCTX*
     uintptr_t label_sym;
     union {
-        RenCell *chunk;
+        RenCell *stackvars;
         void *context; // REBCTX*
-    } frame;
+    } data;
     RenCell *param;
     RenCell *arg;
     RenCell *refine;
     struct RenCall *prior;
     enum Ren_Call_Mode mode;
     uintptr_t expr_index;
+    void *exit_from; // REBARR*
+    uintptr_t args_evaluate;
+    uintptr_t lookahead_flags;
 
 #if !defined(NDEBUG)
     const char *label_str;
     uint32_t do_count;
+    // the Rebol state structure goes here.
 #endif
 };
 

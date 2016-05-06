@@ -50,14 +50,15 @@ extern REBOL_HOST_LIB Host_Lib_Init;
 REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
-    REBARR *args
+    REBARR *args,
+    REBCTX *specifier
 ) {
     if (applicand && IS_ERROR(applicand)) {
         if (ARR_LEN(args) != 0) {
             // If you try to "apply" an error with an arguments block, that
             // will give you an error about the apply (not the error itself)
 
-            fail (Error_Invalid_Arg(ARR_HEAD(args)));
+            fail (Error_Invalid_Arg_Core(ARR_HEAD(args), specifier));
         }
 
         fail (VAL_CONTEXT(applicand));
@@ -69,16 +70,16 @@ REBOOL Generalized_Apply_Throws(
     // http://chat.stackoverflow.com/transcript/message/20530463#20530463
 
     if (applicand && IS_OBJECT(applicand)) {
-        REBARR * reboundArgs = Copy_Array_Deep_Managed(args);
+        REBARR * reboundArgs = Copy_Array_Deep_Managed(args, specifier);
         PUSH_GUARD_ARRAY(reboundArgs);
 
         // Note this takes a C array of values terminated by a REB_END.
-        Bind_Values_Set_Forward_Shallow(
+        Bind_Values_Set_Midstream_Shallow(
             ARR_HEAD(reboundArgs),
             VAL_CONTEXT(applicand)
         );
 
-        if (Do_At_Throws(out, reboundArgs, 0)) {
+        if (Do_At_Throws(out, reboundArgs, 0, SPECIFIED)) { // was copied
             DROP_GUARD_ARRAY(reboundArgs);
             return TRUE;
         }
@@ -96,7 +97,8 @@ REBOOL Generalized_Apply_Throws(
         applicand,
         args,
         0,
-        DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD | DO_FLAG_EVAL_NORMAL
+        specifier,
+        DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD | DO_FLAG_ARGS_EVALUATE
     );
 
     if (indexor == THROWN_FLAG)
@@ -130,7 +132,6 @@ static REBVAL loadAndBindWord(
     enum Reb_Kind kind
 ) {
     REBVAL word;
-    VAL_INIT_WRITABLE_DEBUG(&word);
 
     // !!! Make_Word has a misleading name; it allocates a symbol number
 
@@ -226,24 +227,38 @@ RebolRuntime::RebolRuntime (bool) :
     assert(sizeof(intptr_t) == sizeof(REBIPT));
     assert(sizeof(uintptr_t) == sizeof(REBUPT));
 
-    assert(offsetof(Reb_Call, cell) == offsetof(RenCall, cell));
-    assert(offsetof(Reb_Call, func) == offsetof(RenCall, func));
-    assert(offsetof(Reb_Call, dsp_orig) == offsetof(RenCall, dsp_orig));
-    assert(offsetof(Reb_Call, flags) == offsetof(RenCall, flags));
-    assert(offsetof(Reb_Call, out) == offsetof(RenCall, out));
-    assert(offsetof(Reb_Call, value) == offsetof(RenCall, value));
-    assert(offsetof(Reb_Call, eval_fetched) == offsetof(RenCall, eval_fetched));
-    assert(offsetof(Reb_Call, source) == offsetof(RenCall, source));
-    assert(offsetof(Reb_Call, indexor) == offsetof(RenCall, indexor));
-    assert(offsetof(Reb_Call, label_sym) == offsetof(RenCall, label_sym));
-    assert(offsetof(Reb_Call, frame) == offsetof(RenCall, frame));
-    assert(offsetof(Reb_Call, param) == offsetof(RenCall, param));
-    assert(offsetof(Reb_Call, arg) == offsetof(RenCall, arg));
-    assert(offsetof(Reb_Call, refine) == offsetof(RenCall, refine));
-    assert(offsetof(Reb_Call, prior) == offsetof(RenCall, prior));
-    assert(offsetof(Reb_Call, mode) == offsetof(RenCall, mode));
-    assert(offsetof(Reb_Call, expr_index) == offsetof(RenCall, expr_index));
-    assert(sizeof(Reb_Call) == sizeof(RenCall));
+    assert(offsetof(Reb_Frame, cell) == offsetof(RenCall, cell));
+    assert(offsetof(Reb_Frame, func) == offsetof(RenCall, func));
+    assert(offsetof(Reb_Frame, dsp_orig) == offsetof(RenCall, dsp_orig));
+    assert(offsetof(Reb_Frame, flags) == offsetof(RenCall, flags));
+    assert(offsetof(Reb_Frame, out) == offsetof(RenCall, out));
+    assert(offsetof(Reb_Frame, value) == offsetof(RenCall, value));
+    assert(offsetof(Reb_Frame, eval_fetched) == offsetof(RenCall, eval_fetched));
+    assert(offsetof(Reb_Frame, source) == offsetof(RenCall, source));
+    assert(offsetof(Reb_Frame, indexor) == offsetof(RenCall, indexor));
+    assert(offsetof(Reb_Frame, specifier) == offsetof(RenCall, specifier));
+    assert(offsetof(Reb_Frame, label_sym) == offsetof(RenCall, label_sym));
+    assert(offsetof(Reb_Frame, data) == offsetof(RenCall, data));
+    assert(offsetof(Reb_Frame, param) == offsetof(RenCall, param));
+    assert(offsetof(Reb_Frame, arg) == offsetof(RenCall, arg));
+    assert(offsetof(Reb_Frame, refine) == offsetof(RenCall, refine));
+    assert(offsetof(Reb_Frame, prior) == offsetof(RenCall, prior));
+    assert(offsetof(Reb_Frame, mode) == offsetof(RenCall, mode));
+    assert(offsetof(Reb_Frame, expr_index) == offsetof(RenCall, expr_index));
+    assert(offsetof(Reb_Frame, exit_from) == offsetof(RenCall, exit_from));
+    assert(
+        offsetof(Reb_Frame, args_evaluate)
+        == offsetof(RenCall, args_evaluate)
+    );
+    assert(
+        offsetof(Reb_Frame, lookahead_flags)
+        == offsetof(RenCall, lookahead_flags)
+    );
+
+    // The debug build now includes the REBOL_STATE structure in the frame,
+    // so this assert won't work...not that it's really necessary.
+    //
+    /*assert(sizeof(Reb_Call) == sizeof(RenCall));*/
 
     // function.hpp does a bit more of its template work in the include file
     // than we might like (but that's how templates work).  We don't want
@@ -378,7 +393,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         " arg {Some refinement arg}"
     };
 
-    REBNAT testFun = [](Reb_Call* call_) -> REBCNT {
+    REBNAT testFun = [](Reb_Frame* frame_) -> REBCNT {
         PARAM(1, value);
         REFINE(2, refine);
         PARAM(3, arg);
@@ -395,10 +410,15 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     REBARR * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
 
     REBVAL testNative;
-    VAL_INIT_WRITABLE_DEBUG(&testNative);
 
-    Make_Native(&testNative, testSpec, testFun, REB_NATIVE, FALSE);
-    *GET_MUTABLE_VAR_MAY_FAIL(&testWord) = testNative;
+    Make_Native(
+        &testNative,
+        testSpec,
+        SPECIFIED,
+        testFun,
+        FUNC_CLASS_NATIVE
+    );
+    *GET_MUTABLE_VAR_MAY_FAIL(&testWord, SPECIFIED) = testNative;
 
     initialized = true;
 

@@ -23,7 +23,8 @@ inline RenCell * AS_RENCELL(REBVAL * rebval) {
 extern REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
-    REBARR *args
+    REBARR *args,
+    REBCTX *specifier
 );
 
 #endif // RENCPP_REBOL_COMMON_HPP

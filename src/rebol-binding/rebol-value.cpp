@@ -25,7 +25,10 @@ AnyValue::AnyValue (Dont) :
     // Only in the debug build, we prepare the memory for the cell so that it
     // is "formatted for initialization"
     //
-    VAL_INIT_WRITABLE_DEBUG(AS_REBVAL(&cell));
+#if !defined(NDEBUG)
+    REBVAL cleared;
+    *AS_REBVAL(&cell) = cleared;
+#endif
 }
 
 
@@ -82,11 +85,12 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     // We shouldn't be able to get any REB_END values made in Ren/C++
     assert(NOT_END(AS_REBVAL(&cell)));
 
-    // We no longer allow AnyValue to hold a REB_UNSET (unless specialization
+    // We no longer allow AnyValue to hold a void (unless specialization
     // using std::optional<AnyValue> represents unsets using that, which would
     // happen sometime later down the line when that optimization makes sense)
     // finishInit() is an inline wrapper that throws if this happens.
-    if (IS_UNSET(AS_REBVAL(&cell)))
+    //
+    if (IS_VOID(AS_REBVAL(&cell)))
         return false;
 
     if (FLAGIT_64(VAL_TYPE(AS_REBVAL(&cell))) & TS_NO_GC) {
@@ -148,7 +152,7 @@ void AnyValue::toCell_(
     RenCell & cell, optional<AnyValue> const & value
 ) noexcept {
     if (value == nullopt)
-        SET_UNSET(AS_REBVAL(&cell));
+        SET_VOID(AS_REBVAL(&cell));
     else
         cell = value->cell;
 }
@@ -338,12 +342,10 @@ namespace internal {
 Loadable::Loadable (char const * sourceCstr) :
     AnyValue (AnyValue::Dont::Initialize)
 {
-    // Using REB_TRASH as our "alien"; it's not a legal value type to request
-    // but unlike a REB_END it can still carry a full value-cell's payload.
-    // Also, if the trash is not transformed into an actual value before it
-    // gets to the Ren-C core then it will trigger alerts and asserts.
+    // Using REB_0 as our "alien"; it's not a legal value type to request
+    // to be put into a block.
     //
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_TRASH);
+    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_0);
     VAL_HANDLE_DATA(AS_REBVAL(&cell)) = const_cast<char *>(sourceCstr);
 
     next = nullptr;
@@ -356,7 +358,7 @@ Loadable::Loadable (optional<AnyValue> const & value) :
     AnyValue (AnyValue::Dont::Initialize)
 {
     if (value == nullopt)
-        SET_UNSET(AS_REBVAL(&cell));
+        SET_VOID(AS_REBVAL(&cell));
     else
         cell = value->cell;
 
