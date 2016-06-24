@@ -53,13 +53,13 @@ AnyValue ren::internal::AnySeries_::operator*() const {
 /*
     AnyValue result {Dont::Initialize};
 
-    if (is<String>(*this)) {
+    if (hasType<String>(*this)) {
         // from str_to_char in Rebol source
         SET_CHAR(
             &result.cell,
             GET_ANY_CHAR(VAL_SERIES(&cell), cell.data.series.index)
         );
-    } else if (is<AnyArray>(*this)) {
+    } else if (hasType<AnyArray>(*this)) {
         result.cell = *VAL_BLK_SKIP(&cell, cell.data.series.index);
     } else {
         // Binary and such, would return an integer
@@ -98,7 +98,7 @@ size_t AnySeries::length() const {
 
 
 AnyValue AnySeries::operator[](AnyValue const & index) const {
-    if (not is<Integer>(index))
+    if (not hasType<Integer>(index))
         throw std::runtime_error("operator[] currently integers only...");
 
     // Terrible placeholder implementation (helps with testing in any case)

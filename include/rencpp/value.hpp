@@ -596,26 +596,26 @@ public:
     }
 #endif
 
-    // This is needed by the global free function `ren::is()` to sneak past
-    // non-friendedness status of it to derived-from-AnyValue classes to use
-    // their static `isValid()` method.
+    // This is needed by the global free function `ren::hasTyPe()` to sneak
+    // past non-friendedness status of it to derived-from-AnyValue classes to
+    // use their static `isValid()` method.
 protected:
     template <class T, class V> friend
-    inline bool is(V const & value);
+    inline bool hasType(V const & value);
 
     template <class T, class V> friend
-    inline bool is(optional<V> const & value);
+    inline bool hasType(optional<V> const & value);
 
     template <class T, class V>
-    inline static bool isValidHelper(V const & value) {
+    inline static bool hasTypeHelper(V const & value) {
         static_assert(
             std::is_base_of<AnyValue, V>::value,
-            "Only types derived from AnyValue may be tested by ren::is()"
+            "Only types derived from AnyValue may be tested by ren::hasType()"
         );
 
         static_assert(
             std::is_base_of<V, T>::value,
-            "Type tested for not possible derived type of source in ren::is()"
+            "Type test not possible for derived type in ren::hasType()"
         );
 
         return T::isValid(value.cell);
@@ -716,25 +716,27 @@ inline std::ostream & operator<<(
 // Initially the identifying functions for determining the concrete type
 // of an AnyValue or subclass had names like `isInteger()` and `isBlock()`
 // for "readability" at the callsites, and to avoid repeating namespacing
-// e.g. `is<ren::Integer>()` or `is<ren::Block>()`.  Yet generality and
-// modularity are better, and usually code is using the types as either
-// `is<Integer>()` or `is<rBlock>()`, so the proper C++ approach permits
-// meaningful use in templating.  Moreover, by having it as a free function
-// it can use static typing to make sure you don't try and do a test that
-// isn't possible, such as testing a string to see if it's an integer.
-// Also, optionals can be tested by a variation and fail gracefully if
-// the optional is disengaged.
+// e.g. `isType<ren::Integer>()` or `isType<ren::Block>()`.
+//
+// The up-in-the-air question of what IS will do in Ren-C led to changing the
+// name to hasType, since IS may become a "fuzzy equality" in order to give
+// back = to the concept of "real equality"
+//
+// Also, hasType was turned into a free function.  This means it can do
+// static typing to make sure you don't try and do a test that isn't possible,
+// such as testing a string to see if it's an integer.  Also, optionals can be
+// tested by a variation and fail gracefully if the optional is disengaged.
 
 template <class T, class V>
-bool is(V const & value) {
-    return AnyValue::isValidHelper<T, V>(value);
+bool hasType(V const & value) {
+    return AnyValue::hasTypeHelper<T, V>(value);
 }
 
 template <class T, class V>
-bool is(optional<V> const & value) {
+bool hasType(optional<V> const & value) {
     if (value == nullopt)
         return false;
-    return AnyValue::isValidHelper<T, V>(*value);
+    return AnyValue::hasTypeHelper<T, V>(*value);
 }
 
 

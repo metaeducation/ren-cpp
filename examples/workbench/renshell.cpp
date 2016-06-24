@@ -573,10 +573,10 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
 
                 // Meta protocol may ask you for things you don't know about,
                 // so gracefully ignore them.
-                if (is<LitWord>(arg))
+                if (hasType<LitWord>(arg))
                     return {blank};
 
-                if (not is<Block>(arg))
+                if (not hasType<Block>(arg))
                     throw Error {"Unknown meta command"};
 
                 auto blk = static_cast<Block>(*arg);

@@ -75,7 +75,7 @@ void EvaluatorWorker::doWork(
         success = true;
     }
     catch (evaluation_throw const & t) {
-        if (is<Function>(t.name())) {
+        if (hasType<Function>(t.name())) {
             Function func = static_cast<Function>(*t.name());
             Function qt = static_cast<Function>(*runtime(":quit"));
             Function ex = static_cast<Function>(*runtime(":exit"));
@@ -88,10 +88,10 @@ void EvaluatorWorker::doWork(
                 //
                 // https://github.com/metaeducation/ren-garden/issues/17
 
-                if (t.value() == nullopt || is<Blank>(t.value())) {
+                if (t.value() == nullopt || hasType<Blank>(t.value())) {
                     qApp->exit(0);
                 }
-                else if (is<Integer>(t.value())) {
+                else if (hasType<Integer>(t.value())) {
                     qApp->exit(static_cast<Integer>(*t.value()));
                 }
                 else {

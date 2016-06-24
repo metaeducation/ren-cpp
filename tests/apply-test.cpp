@@ -12,7 +12,7 @@ TEST_CASE("apply test", "[rebol] [apply]")
     SECTION("set-word success")
     {
         AnyValue result = SetWord {"w"}(10);
-        CHECK(is<Integer>(result));
+        CHECK(hasType<Integer>(result));
         CHECK(static_cast<int>(static_cast<Integer>(result)) == 10);
     }
 

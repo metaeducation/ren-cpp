@@ -81,11 +81,16 @@ void AnyWord::initRefinement(RenCell & cell) {
 
 std::string AnyWord::spellingOf_STD() const {
     std::string result = to_string(*this);
-    if (is<Word>(*this))
+    if (hasType<Word>(*this))
         return result;
-    if (is<Refinement>(*this) or is<GetWord>(*this) or is<LitWord>(*this))
+    if (
+        hasType<Refinement>(*this)
+        or hasType<GetWord>(*this)
+        or hasType<LitWord>(*this)
+    ){
         return result.erase(0, 1);
-    if (is<SetWord>(*this))
+    }
+    if (hasType<SetWord>(*this))
         return result.erase(result.length() - 1, 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
@@ -94,11 +99,16 @@ std::string AnyWord::spellingOf_STD() const {
 #if REN_CLASSLIB_QT
 QString AnyWord::spellingOf_QT() const {
     QString result = to_QString(*this);
-    if (is<Word>(*this))
+    if (hasType<Word>(*this))
         return result;
-    if (is<Refinement>(*this) or is<GetWord>(*this) or is<LitWord>(*this))
+    if (
+        hasType<Refinement>(*this)
+        or hasType<GetWord>(*this)
+        or hasType<LitWord>(*this)
+    ){
         return result.right(result.length() - 1);
-    if (is<SetWord>(*this))
+    }
+    if (hasType<SetWord>(*this))
         return result.left(result.length() - 1);
     throw std::runtime_error {"Invalid Word Type"};
 }
@@ -122,22 +132,22 @@ AnyWord::AnyWord (
 
     std::string array;
 
-    if (is<Word>(*this)) {
+    if (hasType<Word>(*this)) {
         array += spelling;
     }
-    else if (is<SetWord>(*this)) {
+    else if (hasType<SetWord>(*this)) {
         array += spelling;
         array += ':';
     }
-    else if (is<GetWord>(*this)) {
+    else if (hasType<GetWord>(*this)) {
         array += ':';
         array += spelling;
     }
-    else if (is<LitWord>(*this)) {
+    else if (hasType<LitWord>(*this)) {
         array += '\'';
         array += spelling;
     }
-    else if (is<Refinement>(*this)) {
+    else if (hasType<Refinement>(*this)) {
         array += '/';
         array += spelling;
     }
@@ -178,22 +188,22 @@ AnyWord::AnyWord (
 
     QString source;
 
-    if (is<Word>(*this)) {
+    if (hasType<Word>(*this)) {
         source += spelling;
     }
-    else if (is<SetWord>(*this)) {
+    else if (hasType<SetWord>(*this)) {
         source += spelling;
         source += ':';
     }
-    else if (is<GetWord>(*this)) {
+    else if (hasType<GetWord>(*this)) {
         source += ':';
         source += spelling;
     }
-    else if (is<LitWord>(*this)) {
+    else if (hasType<LitWord>(*this)) {
         source += '\'';
         source += spelling;
     }
-    else if (is<Refinement>(*this)) {
+    else if (hasType<Refinement>(*this)) {
         source += '/';
         source += spelling;
     }

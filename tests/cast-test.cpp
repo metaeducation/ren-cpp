@@ -13,7 +13,7 @@ TEST_CASE("cast test", "[rebol] [cast]")
     SECTION("integer cast")
     {
         AnyValue someIntAsValue = 10;
-        CHECK(is<Integer>(someIntAsValue));
+        CHECK(hasType<Integer>(someIntAsValue));
 
         Integer someInt = static_cast<Integer>(someIntAsValue);
 

@@ -42,15 +42,15 @@ TEST_CASE("block test", "[rebol] [block]")
 
         Block blk { {1, true}, {false, 2} };
 
-        CHECK(is<Block>(blk));
-        CHECK(is<Block>(blk[1]));
-        CHECK(is<Block>(blk[2]));
+        CHECK(hasType<Block>(blk));
+        CHECK(hasType<Block>(blk[1]));
+        CHECK(hasType<Block>(blk[2]));
 
         Block blk1 = static_cast<Block>(blk[1]);
         Block blk2 = static_cast<Block>(blk[2]);
-        CHECK(is<Integer>(blk1[1]));
-        CHECK(is<Logic>(blk1[2]));
-        CHECK(is<Logic>(blk2[1]));
-        CHECK(is<Integer>(blk2[2]));
+        CHECK(hasType<Integer>(blk1[1]));
+        CHECK(hasType<Logic>(blk1[2]));
+        CHECK(hasType<Logic>(blk2[1]));
+        CHECK(hasType<Integer>(blk2[2]));
     }
 }

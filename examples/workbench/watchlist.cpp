@@ -108,7 +108,7 @@ WatchList::Watcher::Watcher (
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
         if (firstTime or (recalculates and (not frozen))) {
-            if (is<Block>(watch)) {
+            if (hasType<Block>(watch)) {
                 // !!! Review apply logic, right now blocks "don't have
                 // evaluator behavior" so you have to DO them.  Should
                 // that be something that watch() or watch.apply() can do?
@@ -413,7 +413,7 @@ optional<AnyValue> WatchList::watchDialect(
     // `watch 10` means fetch info about watch 10.  `watch -10` means fetch
     // info and also delete that watch
     //
-    if (is<Integer>(arg)) {
+    if (hasType<Integer>(arg)) {
         int signedIndex = static_cast<Integer>(arg);
         if (signedIndex == 0)
             throw Error {"Integer arg must be nonzero"};
@@ -441,7 +441,7 @@ optional<AnyValue> WatchList::watchDialect(
         return watchValue;
     }
 
-    if (is<Tag>(arg)) {
+    if (hasType<Tag>(arg)) {
         for (auto & watcherPtr : watchers) {
             Watcher & w = *watcherPtr;
             if (
@@ -459,15 +459,15 @@ optional<AnyValue> WatchList::watchDialect(
 
     Watcher * watcherUnique = nullptr;
 
-    if (is<Block>(arg) or is<Group>(arg)) {
+    if (hasType<Block>(arg) or hasType<Group>(arg)) {
         // By default a block will have its expression evaluated each time,
         // while a group will be evaluated just once and the resulting
         // value monitored.  This can be ticked on or off in the watchlist
         // but it makes it easy to express the intent at the prompt.
 
-        watcherUnique = new Watcher {arg, is<Block>(arg), label};
+        watcherUnique = new Watcher {arg, hasType<Block>(arg), label};
     }
-    else if (is<Word>(arg)) {
+    else if (hasType<Word>(arg)) {
         //
         // If they ask for a word, assume they really meant they wanted
         // a get-word.  e.g. `watch x` when x is a single arity function
@@ -478,7 +478,7 @@ optional<AnyValue> WatchList::watchDialect(
             GetWord {static_cast<Word>(arg)}, true, label
         };
     }
-    else if (is<Path>(arg)) {
+    else if (hasType<Path>(arg)) {
         // !!! Path should probably be turned to GetPath also, but that
         // means decisions need to be made on these arrays.  Should all
         // watches where the specification of the watch is an array be
@@ -489,7 +489,7 @@ optional<AnyValue> WatchList::watchDialect(
 
         watcherUnique = new Watcher {arg, true, label};
     }
-    else if (is<GetWord>(arg) or is<ren::GetPath>(arg)) {
+    else if (hasType<GetWord>(arg) or hasType<ren::GetPath>(arg)) {
         watcherUnique = new Watcher {arg, true, label};
     }
 

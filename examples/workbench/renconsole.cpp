@@ -96,7 +96,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // a more clever version of HELP that breaks the arity rules
                 // entirely.  But there's something to be said for consistency.
 
-                if (is<Block>(arg))
+                if (hasType<Block>(arg))
                     return runtime("do", arg);
 
                 // Passing in a function is the way of swapping in a new
@@ -104,7 +104,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // to print out a banner, because it is called with the /meta
                 // refinement and a parameter of 'banner.
 
-                if (is<Function>(arg)) {
+                if (hasType<Function>(arg)) {
                     AnyValue wordsOf = *runtime("words-of quote", arg);
 
                     Block blk = static_cast<Block>(wordsOf);
@@ -112,11 +112,14 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     if (
                         blk.isEmpty()
                         or not (
-                            is<Word>(blk[1])
-                            or is<LitWord>(blk[1])
-                            or is<GetWord>(blk[1])
+                            hasType<Word>(blk[1])
+                            or hasType<LitWord>(blk[1])
+                            or hasType<GetWord>(blk[1])
                         )
-                        or ((blk.length() > 1) and not is<Refinement>(blk[2]))
+                        or (
+                            (blk.length() > 1)
+                            and not hasType<Refinement>(blk[2])
+                        )
                     ) {
                         throw Error {
                             "Console dialects must be single arity"
@@ -138,7 +141,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // Passing in an object means it will use that object as the
                 // context for this tab.
 
-                if (is<AnyContext>(arg)) {
+                if (hasType<AnyContext>(arg)) {
                     getTabInfo(repl()).context = static_cast<AnyContext>(arg);
                     return nullopt;
                 }
@@ -147,7 +150,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // any permanent guarantee of a feature, but it's useful for
                 // demonstration purposes so let's do that for now.
 
-                if (is<String>(arg)) {
+                if (hasType<String>(arg)) {
                     emit reportStatus(to_QString(arg));
                     return nullopt;
                 }
@@ -156,7 +159,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // for, so at the moment if you want an image displayed on
                 // the console you have to use CONSOLE
 
-                if (is<Image>(arg)) {
+                if (hasType<Image>(arg)) {
                     repl().appendImage(static_cast<Image>(arg), true);
                     return nullopt;
                 }
@@ -164,7 +167,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 throw Error {"More CONSOLE features soon!"};
             }
 
-            if (is<Word>(arg)) {
+            if (hasType<Word>(arg)) {
                 if (arg.isEqualTo<Word>("prompt"))
                     return String {""}; // doesn't add before >> prompt
 
@@ -183,7 +186,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 return {blank};
             }
 
-            if (is<Block>(arg)) {
+            if (hasType<Block>(arg)) {
                 auto blk = static_cast<Block>(arg);
 
                 if (blk[1].isEqualTo<Word>("target")) {
@@ -212,7 +215,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 }
 
                 if (blk[1].isEqualTo<Word>("tab")) {
-                    if (is<Tag>(blk[2])) {
+                    if (hasType<Tag>(blk[2])) {
                         getTabInfo(repl()).label = static_cast<Tag>(blk[2]);
                         return nullopt;
                     }
@@ -259,13 +262,13 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
             optional<Tag> label;
 
-            if (is<Block>(arg) or is<Group>(arg)) {
+            if (hasType<Block>(arg) or hasType<Group>(arg)) {
                 // If it's a block or a group, then if the first item is a
                 // tag we steal as a label.  `watch (<before> first foo)`
 
                 auto array = static_cast<AnyArray>(arg);
 
-                if (not array.isEmpty() && is<Tag>(array[1]))
+                if (not array.isEmpty() && hasType<Tag>(array[1]))
                     label = static_cast<Tag>(array[1]);
             }
 
@@ -282,9 +285,9 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // need a place to have it "written down" for you.)
 
                 if (
-                    is<Word>(arg) or is<GetWord>(arg)
-                    or is<Path>(arg) or is<ren::GetPath>(arg)
-                    or is<Group>(arg)
+                    hasType<Word>(arg) or hasType<GetWord>(arg)
+                    or hasType<Path>(arg) or hasType<ren::GetPath>(arg)
+                    or hasType<Group>(arg)
                 ) {
                     optional<AnyValue> result = arg.apply();
                     if (result == nullopt)
@@ -294,7 +297,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                     arg = *result;
 
-                    if (is<Block>(arg) or is<Group>(arg)) {
+                    if (hasType<Block>(arg) or hasType<Group>(arg)) {
                         // If we already captured a label from the first
                         // element being a tag then don't override it with the
                         // watch dialect interpretation.
@@ -307,7 +310,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                         if (label != nullopt) {
                             auto array = static_cast<AnyArray>(arg);
 
-                            if (not array.isEmpty() && is<Tag>(array[1]))
+                            if (not array.isEmpty() && hasType<Tag>(array[1]))
                                 label = static_cast<Tag>(array[1]);
                         }
                     }
@@ -652,7 +655,7 @@ void RenConsole::printBanner() {
     );
 
     assert(copyrightData[1].isEqualTo<Word>("Ren"));
-    assert(is<Block>(copyrightData[2]));
+    assert(hasType<Block>(copyrightData[2]));
     assert(copyrightData[3].isEqualTo<SetWord>("copyright"));
 
     repl().appendHtml(static_cast<String>(copyrightData[4]), true);
@@ -822,7 +825,7 @@ void RenConsole::handleResults(
         // not to hang or crash; we cannot escape out of this call.  So
         // just like to_string works, this should too.
 
-        if (is<Function>(result)) {
+        if (hasType<Function>(result)) {
             evaluatingRepl->appendText("#[function! (");
             evaluatingRepl->appendText(
                 to_QString(*runtime("words-of quote", result))

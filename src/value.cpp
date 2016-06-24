@@ -32,7 +32,7 @@ namespace ren {
 
 
 AnyValue::operator bool() const {
-    return not (is<Blank>(*this) or isFalse());
+    return not (hasType<Blank>(*this) or isFalse());
 }
 
 
@@ -126,13 +126,13 @@ bool AnyValue::constructOrApplyInitialize(
 
         case REN_CONSTRUCT_ERROR:
             extraOut.finishInit(engine);
-            assert(is<Error>(extraOut));
+            assert(hasType<Error>(extraOut));
             throw load_error {static_cast<Error>(extraOut)};
 
     #ifdef REN_RUNTIME
         case REN_APPLY_ERROR: {
             extraOut->finishInit(engine);
-            assert(is<Error>(extraOut));
+            assert(hasType<Error>(extraOut));
             throw evaluation_error {static_cast<Error>(extraOut)};
         }
 

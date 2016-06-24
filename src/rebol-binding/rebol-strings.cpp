@@ -67,17 +67,17 @@ AnyString::AnyString (
 
     std::string source;
 
-    if (is<String>(*this)) {
+    if (hasType<String>(*this)) {
         source += '{';
         source += spelling;
         source += '}';
     }
-    else if (is<Tag>(*this)) {
+    else if (hasType<Tag>(*this)) {
         source += '<';
         source += spelling;
         source += '>';
     }
-    else if (is<Filename>(*this)) {
+    else if (hasType<Filename>(*this)) {
         source += "%";
         source += spelling;
     }
@@ -126,12 +126,12 @@ AnyString::AnyString (
     // Note: wouldn't be able to return char * without intermediate
     // http://stackoverflow.com/questions/17936160/
 
-    if (is<String>(*this)) {
+    if (hasType<String>(*this)) {
         source += '{';
         source += spelling;
         source += '}';
     }
-    else if (is<Tag>(*this)) {
+    else if (hasType<Tag>(*this)) {
         source += '<';
         source += spelling;
         source += '>';
@@ -166,9 +166,9 @@ AnyString::AnyString (
 
 std::string AnyString::spellingOf_STD() const {
     std::string result = static_cast<std::string>(*this);
-    if (is<String>(*this) /* or isUrl() or isEmail() or isFile() */)
+    if (hasType<String>(*this) /* or isUrl() or isEmail() or isFile() */)
         return result;
-    if (is<Tag>(*this)) {
+    if (hasType<Tag>(*this)) {
         result.erase(0, 1);
         return result.erase(result.length() - 1, 1);
     }
@@ -180,9 +180,9 @@ std::string AnyString::spellingOf_STD() const {
 
 QString AnyString::spellingOf_QT() const {
     QString result = static_cast<QString>(*this);
-    if (is<String>(*this) /* or isUrl() or isEmail() or isFile() */)
+    if (hasType<String>(*this) /* or isUrl() or isEmail() or isFile() */)
         return result;
-    if (is<Tag>(*this)) {
+    if (hasType<Tag>(*this)) {
         assert(result.length() >= 2);
         return result.mid(1, result.length() - 2);
     }
