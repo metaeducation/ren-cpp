@@ -63,7 +63,7 @@ AnyValue ren::internal::AnySeries_::operator*() const {
             )
         );
     } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
-        COPY_RELVAL(
+        COPY_VALUE(
             AS_REBVAL(&result.cell),
             ARR_AT(
                 VAL_ARRAY(AS_C_REBVAL(&cell)),

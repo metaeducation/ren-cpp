@@ -24,10 +24,10 @@ TEST_CASE("apply test", "[rebol] [apply]")
         );
     }
 
-    SECTION("none failure")
+    SECTION("blank failure")
     {
-        // technical note: explicit none(arg1, arg2...) is now illegal
-        AnyValue value = none;
+        // technical note: explicit blank(arg1, arg2...) is now illegal
+        AnyValue value = blank;
 
         CHECK_THROWS_AS(
             value.apply(10),

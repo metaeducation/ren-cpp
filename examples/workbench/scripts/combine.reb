@@ -62,7 +62,7 @@ combine: function [
         out: make string! 10 ;; No good heuristic for string size yet
     ]
 
-    unless set? 'delimiter [delimiter: none]
+    unless set? 'delimiter [delimiter: _]
 
     unless any-function? :delimiter [
         unless block? delimiter [
@@ -91,7 +91,7 @@ combine: function [
             set/any quote temp: delimiter depth
             if all [
                 value? 'temp
-                (not none? temp) or (block? out)
+                (not blank? temp) or (block? out)
             ][
                 out: append out temp
             ]
@@ -101,7 +101,7 @@ combine: function [
     ]
 
 
-    ; Do evaluation of the block until a non-none evaluation result
+    ; Do evaluation of the block until a non-blank evaluation result
     ; is found... the limit is hit...or end of the input is reached.
 
     original: block
@@ -110,7 +110,7 @@ combine: function [
         all [
             not tail? block
             any [
-                none? part
+                blank? part
                 either integer? limit [
                     0 <= limit: limit - 1
                 ][
@@ -124,7 +124,7 @@ combine: function [
         ; in this case that is okay since block is a parameter and won't
         ; leak as a global
 
-        set/any (quote value:) either safe [
+        value: either safe [
             either any [word? block/1 path? block/1] [
                 get/any first back (block: next block)
             ][
@@ -166,14 +166,14 @@ combine: function [
         case [
             ; Ignore voids (precedent: ANY, ALL, COMPOSE)
 
-            void? :value []
+            not set? 'value []
 
 
-            ; Skip all nones.  This is suggested for COMPOSE as well:
+            ; Skip all blanks.  This is suggested for COMPOSE as well:
             ;
             ;     http://curecode.org/rebol3/ticket.rsp?id=2198
 
-            none? :value []
+            blank? :value []
 
 
             ; If a function or PAREN! are returned, then evaluate it at
@@ -193,7 +193,7 @@ combine: function [
 
             any [
                 any-function? :value
-                paren? value
+                group? value
             ][
                 if safe [
                     do make error! {

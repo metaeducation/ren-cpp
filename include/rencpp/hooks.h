@@ -179,13 +179,13 @@ typedef RedEngineHandle RenEngineHandle;
 
 /*
  * The Red runtime is still fake for the moment, so no real convention for the
- * stack has been established.  But this lays out what is needed for the binding
- * to be able to process arguments, if the RenShimPointer function signature is
- * as written.
+ * stack has been established.  But this lays out what is needed for the
+ * binding to be able to process arguments, if the RenDispatcherPoitner
+ * function signature is as written.
  */
 
 typedef void* RenCall; // TBD
-typedef uint32_t (* RenShimPointer)(RenCall * call);
+typedef uint32_t (* RenDispatcherPointer)(RenCall * call);
 
 #define REN_CS_OUT(stack) \
     static_cast<RenCell *>((stack), nullptr)
@@ -194,7 +194,7 @@ typedef uint32_t (* RenShimPointer)(RenCall * call);
     static_cast<RenCell *>((stack), nullptr)
 
 #define REN_STACK_SHIM(stack) \
-    static_cast<RenShimPointer>((stack), nullptr)
+    static_cast<RenDispatcherPointer>((stack), nullptr)
 
 
 #elif (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
@@ -247,7 +247,7 @@ typedef RebolEngineHandle RenEngineHandle;
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
 /*
- * Proxy type for struct Reb_Call.  Commented in Rebol's %sys-core.h
+ * Proxy type for struct Reb_Frame.  Commented in Rebol's %sys-frame.h
  */
 
 enum Ren_Call_Mode {};
@@ -257,41 +257,34 @@ struct RenCall {
         RenCell eval;
         void *subfeed; // REBARR*
     } cell;
-    void *func;
+    struct RenCall *prior;
     uintptr_t dsp_orig;
-    uintptr_t flags;
     RenCell *out;
-    const RenCell *value;
-    const RenCell *eval_fetched;
+    uintptr_t flags;
     union {
         void *array; // REBSER*
         void *vaptr; // va_list*
     } source;
-    uintptr_t indexor;
     void *specifier; // REBCTX*
+    const RenCell *value;
+    uintptr_t index;
+    uintptr_t expr_index;
+    uintptr_t eval_type;
+    const RenCell *gotten;
+    const RenCell *pending;
+    void *func; // REBFUN*
+    void *exit_from; // REBARR*
     uintptr_t label_sym;
-    union {
-        RenCell *stackvars;
-        void *context; // REBCTX*
-    } data;
+    RenCell *stackvars;
+    void *varlist; // REBARR*
     RenCell *param;
     RenCell *arg;
     RenCell *refine;
-    struct RenCall *prior;
-    enum Ren_Call_Mode mode;
-    uintptr_t expr_index;
-    void *exit_from; // REBARR*
-    uintptr_t args_evaluate;
-    uintptr_t lookahead_flags;
 
-#if !defined(NDEBUG)
-    const char *label_str;
-    uint32_t do_count;
-    // the Rebol state structure goes here.
-#endif
+//additional data is debug information--cast to Reb_Frame to read
 };
 
-typedef uint32_t (* RenShimPointer)(RenCall * call);
+typedef uint32_t (RenDispatcher)(RenCall * call);
 
 #define REN_CS_OUT(stack) \
     ((stack)->out)
@@ -306,10 +299,10 @@ typedef uint32_t (* RenShimPointer)(RenCall * call);
 
 #if defined(__LP64__) || defined(__LLP64__)
     #define REN_STACK_SHIM(stack) \
-        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint64_t)])
+        (RenDispatcher*)(&(stack)->func.data)[3 * sizeof(uint64_t)])
 #else
     #define REN_STACK_SHIM(stack) \
-        (RenShimPointer)(&(stack)->func.data)[3 * sizeof(uint32_t)])
+        (RenDispatcher*)(&(stack)->func.data)[3 * sizeof(uint32_t)])
 #endif
 
 #else

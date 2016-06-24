@@ -13,13 +13,13 @@ TEST_CASE("literals construction", "[rebol] [literals]")
     SECTION("default")
     {
         AnyValue value;
-        CHECK(is<None>(value));
+        CHECK(is<Blank>(value));
     }
 
-    SECTION("none")
+    SECTION("blank")
     {
-        AnyValue value = none;
-        CHECK(is<None>(value));
+        AnyValue value = blank;
+        CHECK(is<Blank>(value));
     }
 
     SECTION("logic")

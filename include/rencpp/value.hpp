@@ -197,6 +197,12 @@ using CellFunction = void (*)(RenCell &);
 // managing the 128-bit cells and the series reference itself is the only
 // one value that needs the overhead in the binding.
 //
+// !!! The new economics of Ren-C allows each AnyValue to become a REBSER,
+// stored as a "singular array".  This will drastically change the behavior
+// and is a pending change, but the short-term choice is to add a virtual
+// destructor--as it is no longer a goal to have a cell footprint matching
+// the cells of the language.
+//
 
 class AnyValue {
     // Function needs access to the spec block's series cell in its creation.
@@ -370,7 +376,7 @@ public:
 public:
     //
     // Though technically possible to just assign from the none class as
-    // `ren::None{}`, it is slightly nicer to be able to use `ren::none`.
+    // `ren::Blank{}`, it is slightly nicer to be able to use `ren::blank`.
     //
     //     https://github.com/hostilefork/rencpp/issues/3
     //
@@ -379,22 +385,22 @@ public:
 
     AnyValue (std::nullptr_t) = delete; // vetoed!
 
-    struct none_t
+    struct blank_t
     {
       struct init {};
-      constexpr none_t(init) {}
+      constexpr blank_t(init) {}
     };
 
-    AnyValue (none_t, Engine * engine = nullptr) noexcept;
+    AnyValue (blank_t, Engine * engine = nullptr) noexcept;
 
 
     //
     // At first the only user-facing constructor that was exposed directly
-    // from AnyValue was the default constructor.  It was used to make ren::Unset
+    // from AnyValue was the default constructor.  It made a ren::Void
     // before that class was eliminated to embrace std::optional for the
-    // purpose...now it makes a NONE!:
+    // purpose...now it makes a BLANK!:
     //
-    //     ren::AnyValue something; // will be a NONE! value
+    //     ren::AnyValue something; // will be a BLANK! value
     //
     // But support for other construction types directly as AnyValue has been
     // incorporated.  For the rationale, see:
@@ -402,10 +408,10 @@ public:
     //     https://github.com/hostilefork/rencpp/issues/2
     //
 public:
-    // Default constructor; same as none.
+    // Default constructor; same as blank.
 
     AnyValue (Engine * engine = nullptr) noexcept :
-        AnyValue(none_t::init{}, engine)
+        AnyValue(blank_t::init{}, engine)
     {}
 
 
@@ -488,7 +494,7 @@ public:
     }
 
 public:
-    ~AnyValue () {
+    virtual ~AnyValue () {
         uninitialize();
     }
 

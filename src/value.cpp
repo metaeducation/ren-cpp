@@ -32,7 +32,7 @@ namespace ren {
 
 
 AnyValue::operator bool() const {
-    return not (is<None>(*this) or isFalse());
+    return not (is<Blank>(*this) or isFalse());
 }
 
 
@@ -110,8 +110,8 @@ bool AnyValue::constructOrApplyInitialize(
 
     auto result = ::RenConstructOrApply(
         engine,
-        &context->cell,
-        &applicand->cell,
+        context ? &context->cell : nullptr,
+        applicand ? &applicand->cell : nullptr,
         numLoadables != 0 ? &loadables[0].cell : nullptr,
         numLoadables,
         sizeof(internal::Loadable),

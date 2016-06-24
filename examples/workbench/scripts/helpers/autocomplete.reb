@@ -85,20 +85,20 @@ Rebol [
 ;
 
 try-get-scope-from-path: function [path [path!]] [
-    obj: none
+    obj: _
 
     for-each element path [
 
         ; only consider paths made up of words...
 
-        unless word? :element [return none]
+        unless word? :element [return _]
 
 
         ; If we have an object in progress, look up the word in it,
         ; otherwise get the word.
 
         value: either obj [
-            unless in obj element [return none]
+            unless in obj element [return _]
             select obj element
         ][
             get/any element
@@ -118,7 +118,7 @@ try-get-scope-from-path: function [path [path!]] [
         ;
         ; How did it know?
 
-        unless object? :value [return none]
+        unless object? :value [return _]
 
         obj: value
     ]
@@ -143,7 +143,7 @@ fake-context-from-function: function [fun [any-function!]] [
             append spec to-set-word word
         ]
     ]
-    append spec none
+    append spec _
     return has spec
 ]
 
@@ -175,7 +175,7 @@ autocomplete-helper: function [
     ; asking to have completed?  :-/  Leave it alone for now.
 
     if index = 1 [
-        return reduce [text index none]
+        return reduce [text index _]
     ]
 
 
@@ -270,8 +270,8 @@ autocomplete-helper: function [
     ; to the current complete "state" embodied by the selection, and want
     ; whichever one is after that instead.
 
-    first-candidate-word: none
-    first-candidate-ctx: none
+    first-candidate-word: _
+    first-candidate-ctx: _
     take-next: false
 
     for-each ctx adjusted-contexts [
@@ -374,5 +374,5 @@ autocomplete-helper: function [
 
     ; Didn't find anything, just return what we were given...
     ;
-    return reduce [text index none]
+    return reduce [text index _]
 ]

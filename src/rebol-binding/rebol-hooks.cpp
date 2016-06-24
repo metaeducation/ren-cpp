@@ -491,7 +491,7 @@ public:
         if (value)
             CONVERT_NAME_TO_THROWN(out, value);
         else
-            CONVERT_NAME_TO_THROWN(out, VOID_VALUE);
+            CONVERT_NAME_TO_THROWN(out, VOID_CELL);
     }
 
     RenResult ShimFail(REBVAL const * error) {

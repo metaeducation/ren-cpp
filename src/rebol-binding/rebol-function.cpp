@@ -39,6 +39,28 @@ bool Function::isValid(RenCell const & cell) {
 
 #ifdef REN_RUNTIME
 
+
+static REB_R Ren_Cpp_Dispatcher(struct Reb_Frame *f)
+{
+    REBARR *info = VAL_ARRAY(FUNC_BODY(f->func));
+
+    RenEngineHandle engine;
+    engine.data = cast(int, cast(REBUPT, VAL_HANDLE_DATA(ARR_AT(info, 0))));
+
+    internal::RenShimPointer shim
+        = cast(internal::RenShimPointer, VAL_HANDLE_CODE(ARR_AT(info, 1)));
+
+    // !!! Note that this is a raw pointer to a C++ object.  Currently its
+    // lifetime is until program end.  If these were to be GC'd, only the
+    // shim would be able to do it...because only it would know how to cast
+    // the std::function pointer to the right type for deletion.
+    //
+    void *cppfun = VAL_HANDLE_DATA(ARR_AT(info, 2));
+
+    return (*shim)(engine, cppfun, cast(RenCall*, f));
+}
+
+
 //
 // FUNCTION FINALIZER FOR EXTENSION
 //
@@ -46,15 +68,37 @@ bool Function::isValid(RenCell const & cell) {
 void Function::finishInitSpecial(
     RenEngineHandle engine,
     Block const & spec,
-    RenShimPointer const & shim
+    internal::RenShimPointer shim,
+    const void *cppfun // a std::function object, with varying type signatures
 ) {
-    Make_Native(
-        AS_REBVAL(&cell),
-        VAL_ARRAY(AS_C_REBVAL(&spec.cell)),
-        VAL_SPECIFIER(AS_C_REBVAL(&spec.cell)),
-        reinterpret_cast<REBNAT>(shim),
-        FUNC_CLASS_NATIVE
+    REBFUN *fun = Make_Function(
+        Make_Paramlist_Managed_May_Fail(
+            AS_C_REBVAL(&spec.cell),
+            MKF_KEYWORDS
+        ),
+        &Ren_Cpp_Dispatcher
     );
+
+    // The C++ function interface that is generated is typed specifically to
+    // the parameters of the extension function.  This is what allows for
+    // calling them in a way that looks like calling a C function ordinarily,
+    // as well as getting type checking (int parameters for INTEGER!, strings
+    // for STRING!, etc.)
+    //
+    // However, since all those functions have different type signatures, they
+    // are different datatypes entirely.  They are funneled through a common
+    // "unpacker" shim function, which is called by the dispatcher.
+
+    REBARR *info = Make_Array(3);
+    SET_HANDLE_DATA(
+        Alloc_Tail_Array(info), cast(void*, cast(REBUPT, engine.data))
+    );
+    SET_HANDLE_CODE(Alloc_Tail_Array(info), cast(CFUNC*, shim));
+    SET_HANDLE_DATA(Alloc_Tail_Array(info), cast(void*, cast(REBUPT, cppfun)));
+
+    Val_Init_Block(FUNC_BODY(fun), info);
+
+    *AS_REBVAL(&cell) = *FUNC_VALUE(fun);
 
     AnyValue::finishInit(engine);
 }

@@ -25,11 +25,7 @@ namespace ren {
 #ifdef REN_RUNTIME
 
 namespace internal {
-    std::mutex extensionTablesMutex;
-
-    RenShimId shimIdToCapture = -1;
-
-    RenShimBouncer shimBouncerToCapture = nullptr;
+    std::mutex keepaliveMutex;
 }
 
 #endif

@@ -88,8 +88,6 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
         "    {block to execute or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
-        REN_STD_FUNCTION,
-
         [this](AnyValue const & arg, AnyValue const & meta) -> optional<AnyValue>
         {
             if (not meta) {
@@ -174,7 +172,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     if (not bannerPrinted) {
                         printBanner();
                         bannerPrinted = true;
-                        return {none};
+                        return {blank};
                     }
                 }
 
@@ -182,7 +180,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // do not support, so don't raise an error if you don't
                 // know what it is... just return none.
 
-                return {none};
+                return {blank};
             }
 
             if (is<Block>(arg)) {
@@ -249,8 +247,6 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
         ":arg [word! get-word! path! get-path! block! group! integer! tag!] "
             "{word to watch or other legal parameter, see documentation)} "
         "/dialect {Interpret as instruction to WATCH vs. raw value} ",
-
-        REN_STD_FUNCTION,
 
         [this](
             AnyValue const & argOriginal, AnyValue const & dialect

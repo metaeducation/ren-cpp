@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include <memory> // for std::unique_ptr
 #include <mutex> // global table must be protected for thread safety
 
 #include "value.hpp"
@@ -41,62 +42,58 @@ namespace ren {
 namespace internal {
 
 //
-// PREPROCESSOR UNIQUE LAMBDA FUNCTION POINTER TRICK
+// RenShimPointer
+//
+// The dispatch for Rebol functions is through an ordinary C protocol, where
+// all the dispatchers look like:
+//
+//     REB_R Some_Dispatcher(struct Reb_Frame *f)
+//
+// Dispatchers can get a pointer to the REBFUN (if they need it) via f->func,
+// and extract properties from it.  They can also read the argument cells out
+// of the frame, through f->arg[N].
+//
+// One concept in Ren-Cpp is to build a facade that is an actual type-correct
+// C++-style signature for functions (that can also be invoked from Rebol).
+// This means that when they are called from C++, they can be checked at
+// compile time for the right types and number of parameters.  In fact, the
+// idea is to be able to implement this for anything that can be operator()
+// overloaded.  (e.g. any "Callable")
+//
+// Yet there has to be some translation between the dispatcher and the C++
+// "callable" object.  The code needed to do that translation will be
+// different based on the type signature of the C++ object, and has to be
+// generated at compile time.  These "shims" are all templated variations on
+// a static method of FunctionGenerator.
+//
+// Because this common archetype is used by varying types of C++ function
+// objects, the `cppfun` is a void pointer.  But the specific implementation
+// of the shim in the template knows which type to cast to when it runs.
+//
+// !!! Should the engine handle come implicitly from the frame?  It seems
+// that a frame needs to know this.
+//
+
+using RenShimPointer = RenResult (*)(
+    RenEngineHandle engine,
+    const void *cppfun, // each function type signature has its own shim
+    RenCall * call
+);
+
+}
+
+
+//
+// FUNCTION TYPE
 //
 
 //
-// While preprocessor macros are to be avoided whenever possible, the
-// particulars of this case require them.  At the moment, the only "identity"
-// the generated parameter-unpacking "shim" function gets when it is called
-// is its own pointer pushed on the stack.  That's the only way it can look
-// up the C++ function it's supposed to unpack and forward to.  And C/C++
-// functions *don't even know their own pointer*!
-//
-// So what we do here is a trick.  The first call to the function isn't asking
-// it to forward parameters, it's just asking it to save knowledge of its own
-// identity and the pointer to the function it should forward to in future
-// calls.  Because the macro is instantiated by each client, there is a
-// unique pointer for each lambda.  It's really probably the only way this
-// can be done without changing the runtime to pass something more to us.
-//
-// It should be noted that if you try to re-use a lambda to make a function
-// value twice this way, you will be getting another spec block.  It is
-// technically possible to get multiple function values for the same lambda
-// with different specs (though this is probably not what you want; you
-// should probably find a way to create functions only once).
-//
-
-#define REN_STD_FUNCTION \
-    [](RenCall * call) -> RenResult {\
-        static ren::internal::RenShimId id = -1; \
-        static ren::internal::RenShimBouncer bouncer = nullptr; \
-        if (call) \
-            return bouncer(id, call); \
-        if (id != -1) \
-            return REN_SHIM_INITIALIZED; \
-        id = ren::internal::shimIdToCapture; \
-        bouncer = ren::internal::shimBouncerToCapture; \
-        return REN_SHIM_INITIALIZED; \
-    }
-
-} // end namespace internal
-
-
-
-//
-// FUNCTION TYPE(S?)
-//
-
-//
-// In the current implementation, a FunctionGenerator is really just a NATIVE!
-// where the native function pointer (that processes the argument stack) is
-// built automatically by the system.  It's not possible to have a term be
-// both a template and a class, so if FunctionGenerator was going to be
-// Function then Function would have to be written Function<> and be
-// specialized for that.
-//
-// !!! Should we call this Native instead, or should Function represent
-// ANY-FUNCTION! types and not bother with inventing a separate AnyFunction?
+// Function is the interface for FUNCTION! values that may-or-may-not have a
+// C++ implementation.  Because it's not possible to have a term be
+// both a template and a class, the template magic is done inside of
+// FunctionGenerator so that one doesn't have to write Function<> when just
+// working with ordinary function values.  The FunctionGenerator is then
+// hidden behind Function::construct.
 //
 
 class Function : public AnyValue {
@@ -120,7 +117,8 @@ private:
     void finishInitSpecial(
         RenEngineHandle engine,
         Block const & spec,
-        RenShimPointer const & shim
+        internal::RenShimPointer shim,
+        const void *cppfun // a std::function that shim knows how to interpret
     );
 
 
@@ -156,8 +154,7 @@ public:
         std::true_type, // Fun return type is void
         RenEngineHandle engine,
         Block const & spec,
-        RenShimPointer shim,
-        Fun && fun,
+        Fun && cppfun,
         utility::indices<Ind...>
     ) {
         // Handling `return void` serves the purpose of removing the need for
@@ -175,12 +172,10 @@ public:
 
         return Gen {
             engine,
-            spec,
-            shim,
             std::function<
                 Ret(utility::argument_type<Fun, Ind>...)
-            >([&fun](utility::argument_type<Fun, Ind>&&... args){
-                fun(std::forward<utility::argument_type<Fun, Ind>>(args)...);
+            >([&cppfun](utility::argument_type<Fun, Ind>&&... args){
+                cppfun(std::forward<utility::argument_type<Fun, Ind>>(args)...);
                 return nullopt;
             })
         };
@@ -191,8 +186,7 @@ public:
         std::false_type,    // Fun return type is not void
         RenEngineHandle engine,
         Block const & spec,
-        RenShimPointer shim,
-        Fun && fun,
+        Fun && cppfun,
         utility::indices<Ind...>
     ) {
         using Ret = utility::result_type<Fun>;
@@ -205,10 +199,9 @@ public:
         return Gen {
             engine,
             spec,
-            shim,
             std::function<
                 Ret(utility::argument_type<Fun, Ind>...)
-            >(fun)
+            >(cppfun)
         };
     }
 
@@ -216,8 +209,7 @@ public:
     static Function construct_(
         RenEngineHandle engine,
         Block const & spec,
-        RenShimPointer shim,
-        Fun && fun
+        Fun && cppfun
     ) {
         using Ret = utility::result_type<Fun>;
 
@@ -229,8 +221,7 @@ public:
             typename std::is_void<Ret>::type{},  // tag dispatching
             engine,
             spec,
-            shim,
-            std::forward<Fun>(fun),
+            std::forward<Fun>(cppfun),
             Indices{}
         );
     }
@@ -244,14 +235,12 @@ public:
     template<typename Fun>
     static Function construct(
         char const * spec,
-        RenShimPointer shim,
-        Fun && fun
+        Fun && cppfun
     ) {
         return construct_(
             Engine::runFinder().getHandle(),
             Block {spec},
-            shim,
-            std::forward<Fun>(fun)
+            std::forward<Fun>(cppfun)
         );
     }
 
@@ -259,14 +248,12 @@ public:
     template<typename Fun>
     static Function construct(
         Block const & spec,
-        RenShimPointer shim,
-        Fun && fun
+        Fun && cppfun
     ) {
         return construct_(
             Engine::runFinder().getHandle(),
             spec,
-            shim,
-            std::forward<Fun>(fun)
+            std::forward<Fun>(cppfun)
         );
     }
 
@@ -275,14 +262,12 @@ public:
     static Function construct(
         Engine & engine,
         char const * spec,
-        RenShimPointer shim,
-        Fun && fun
+        Fun && cppfun
     ) {
         return construct_(
             engine,
             Block {spec},
-            shim,
-            std::forward<Fun>(fun)
+            std::forward<Fun>(cppfun)
         );
     }
 
@@ -296,14 +281,12 @@ public:
     static Function construct(
         Engine & engine,
         Block const & spec,
-        RenShimPointer shim,
-        Fun && fun
+        Fun && cppfun
     ) {
         return construct_(
             engine.getHandle(),
             spec,
-            shim,
-            std::forward<Fun>(fun)
+            std::forward<Fun>(cppfun)
         );
     }
 
@@ -359,17 +342,7 @@ namespace internal {
 // no good reason to have one mutex per table.  One for all will do.
 //
 
-extern std::mutex extensionTablesMutex;
-
-using RenShimId = int;
-
-extern RenShimId shimIdToCapture;
-
-using RenShimBouncer = RenResult (*)(RenShimId id, RenCall * call);
-
-extern RenShimBouncer shimBouncerToCapture;
-
-
+extern std::mutex keepaliveMutex;
 
 template<class R, class... Ts>
 class FunctionGenerator : public Function {
@@ -381,49 +354,26 @@ private:
     // information (like where the value for the function being called is
     // written), and an offset where to write the return value:
     //
-    //     int  (* REBFUN)(REBVAL * ds);
-    //
-    // That's too low level for a C++ library.  We wish to allow richer
-    // function signatures that can be authored with lambdas (or objects with
-    // operator() overloaded, any "Callable").  That means this C-like
-    // interface hook ("shim") needs to be generated automatically from
-    // examining the type signature, so that it can call the C++ hook.
-    //
 
     using FunType = std::function<R(Ts...)>;
 
     using ParamsType = std::tuple<Ts...>;
 
-
-    // When a "self-aware" shim forwards its parameter and its function
-    // identity to the templatized generator that created it, then it
-    // looks in this per-signature table to find the std::function to
-    // unpack the parameters and give to.  It also has the engine handle,
-    // which is required to construct the values for the cells in the
-    // appropriate sandbox.  The vector is only added to and never removed,
-    // but it has to be protected with a mutex in case multiple threads
-    // are working with it at the same time.
-
-    struct TableEntry {
-        RenEngineHandle engine;
-        FunType const fun;
-    };
-
-    static std::vector<TableEntry> table;
+    static std::vector<std::unique_ptr<FunType>> keepaliveCppFuns;
 
 
     // Function used to create Ts... on the fly and apply a
     // given function to them
 
     template <std::size_t... Indices>
-    static auto applyFunImpl(
-        FunType const & fun,
+    static auto applyCppFunImpl(
+        FunType const & cppfun,
         RenEngineHandle engine,
         RenCall * call,
         utility::indices<Indices...>
     )
         -> decltype(
-            fun(
+            cppfun(
                 AnyValue::fromCell_<
                     typename std::decay<
                         typename utility::type_at<Indices, Ts...>::type
@@ -435,7 +385,7 @@ private:
             )
         )
     {
-        return fun(
+        return cppfun(
             AnyValue::fromCell_<
                 typename std::decay<
                     typename utility::type_at<Indices, Ts...>::type
@@ -448,27 +398,20 @@ private:
     }
 
     template <typename Indices = utility::make_indices<sizeof...(Ts)>>
-    static auto applyFun(
-        FunType const & fun, RenEngineHandle engine, RenCall * call
+    static auto applyCppFun(
+        FunType const & cppfun, RenEngineHandle engine, RenCall * call
     ) ->
-        decltype(applyFunImpl(fun, engine, call, Indices {}))
+        decltype(applyCppFunImpl(cppfun, engine, call, Indices {}))
     {
-        return applyFunImpl(fun, engine, call, Indices {});
+        return applyCppFunImpl(cppfun, engine, call, Indices {});
     }
 
 private:
-    static RenResult bounceShim(internal::RenShimId id, RenCall * call) {
-        using internal::extensionTablesMutex;
-
-        // The extension table is add-only, but additions can resize,
-        // and move the underlying memory.  We either hold the lock for
-        // the entire duration of the function run, or copy the table
-        // entry out by value... the latter makes more sense.
-
-        extensionTablesMutex.lock();
-        TableEntry entry = table[static_cast<size_t>(id)];
-        extensionTablesMutex.unlock();
-
+    static RenResult shim(
+        RenEngineHandle engine,
+        const void *cppfun,
+        RenCall * call
+    ){
         // To be idiomatic for C++, we want to be able to throw a ren::Error
         // using C++ exceptions from within a ren::Function.  Yet since the
         // ren runtimes cannot catch C++ exceptions, we have to translate it
@@ -482,13 +425,17 @@ private:
         RenResult result;
 
         try {
-            // Our applyFun helper does the magic to recursively forward
+            // Our applyCppFun helper does the magic to recursively forward
             // the AnyValue classes that we generate to the function that
             // interfaces us with the Callable the extension author wrote
             // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
 
-            auto && out = applyFun(entry.fun, entry.engine, call);
+            auto && out = applyCppFun(
+                *reinterpret_cast<const FunType*>(cppfun),
+                engine,
+                call
+            );
 
             // The return result is written into a location that is known
             // according to the protocol of the call frame
@@ -624,43 +571,31 @@ public:
     FunctionGenerator (
         RenEngineHandle engine,
         Block const & spec,
-        RenShimPointer shim,
-        FunType const & fun = FunType {nullptr}
+        FunType const & cppfun
     ) :
         Function (Dont::Initialize)
     {
-        // First we lock the global table so we can call the shim for the
-        // initial time.  It will grab its identity so that from then on it
-        // can forward calls to us.
+        // We are receiving a std::function that implements the C++ "body" of
+        // the Ren function.  But the entity that will be holding onto it for
+        // its lifetime is a Ren-C FUNC...which can only stow a void pointer.
+        // That's not enough--because the function object's destructor will
+        // run and the pointer will go bad.
+        //
+        // Since the function object is generally just a small wrapper around
+        // compiled and linked code, it basically a "sunk cost".   There is
+        // little advantage to destroying the object, vs. keeping it alive
+        // for the entire program run.  So make a copy and hold onto it
+        // via unique_ptr, so it's good for the lifetime of the run.
 
-        std::lock_guard<std::mutex> lock {internal::extensionTablesMutex};
-
-        assert(::ren::internal::shimIdToCapture == -1);
-        assert(not ::ren::internal::shimBouncerToCapture);
-
-        ::ren::internal::shimIdToCapture = static_cast<int>(table.size());
-        ::ren::internal::shimBouncerToCapture = &bounceShim;
-
-        if (shim(nullptr) != REN_SHIM_INITIALIZED)
-            throw std::runtime_error(
-                "First shim call didn't return REN_SHIM_INITIALIZED"
-            );
-
-        ::ren::internal::shimIdToCapture = -1;
-        ::ren::internal::shimBouncerToCapture = nullptr;
-
-        // Insert the shim into the mapping table so it can find itself while
-        // the shim code is running.  Note that the tableAdd code has
-        // to be thread-safe in case two threads try to modify the global
-        // table at the same time.
-
-        table.push_back({engine, fun});
+        std::lock_guard<std::mutex> lock {internal::keepaliveMutex};
+        keepaliveCppFuns.emplace_back(new FunType {cppfun});
+        FunType const *stableCppFun = keepaliveCppFuns.back().get();
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInitSpecial(engine, spec, shim);
+        Function::finishInitSpecial(engine, spec, &shim, stableCppFun);
     }
 };
 
@@ -673,8 +608,8 @@ public:
 
 template<class R, class... Ts>
 std::vector<
-    typename FunctionGenerator<R, Ts...>::TableEntry
-> FunctionGenerator<R, Ts...>::table;
+    std::unique_ptr<typename FunctionGenerator<R, Ts...>::FunType>
+> FunctionGenerator<R, Ts...>::keepaliveCppFuns;
 
 
 } // end namespace internal

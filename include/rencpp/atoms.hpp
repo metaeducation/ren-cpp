@@ -84,16 +84,16 @@ public:
 // probably never find much of a reason to use it.
 //
 
-constexpr AnyValue::none_t none {AnyValue::none_t::init{}};
+constexpr AnyValue::blank_t blank {AnyValue::blank_t::init{}};
 
-class None : public Atom {
+class Blank : public Atom {
 protected:
     friend class AnyValue;
-    None (Dont) noexcept : Atom (Dont::Initialize) {}
+    Blank (Dont) noexcept : Atom (Dont::Initialize) {}
     static bool isValid(RenCell const & cell);
 
 public:
-    explicit None (Engine * engine = nullptr) : Atom (none, engine) {}
+    explicit Blank (Engine * engine = nullptr) : Atom (blank, engine) {}
 };
 
 

@@ -11,8 +11,6 @@ int main(int, char **) {
         "{Demonstration of the C++ Extension mechanism}"
         "blk [block!] {The block to print}",
 
-        REN_STD_FUNCTION,
-
         [](Block const & blk) -> Logic {
             print("blk is", blk);
             return true;

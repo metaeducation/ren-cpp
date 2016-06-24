@@ -22,10 +22,8 @@ public:
 TEST_CASE("function test", "[rebol] [function]")
 {
     auto addFive = Function::construct(
-        "{Demonstration of using an operator() overloaded class}"
-        "value [integer!]",
-
-        REN_STD_FUNCTION,
+        " {Demonstration of using an operator() overloaded class}"
+        " value [integer!]",
 
         // This won't work, operator() may (in the general case) be a template
         // http://stackoverflow.com/a/8670836/211160

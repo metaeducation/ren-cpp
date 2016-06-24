@@ -521,23 +521,14 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
 
     shellFunction = Function::construct(
         "{SHELL dialect for interacting with an OS shell process}"
-        "'arg [word! lit-word! block! paren! string! none!]"
+        "'arg [<end> word! lit-word! block! paren! string!]"
         "    {block in dialect or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
-
-        REN_STD_FUNCTION,
 
         [this, worker](optional<AnyValue> const & arg, AnyValue const & meta)
             -> optional<AnyValue>
         {
-            if (is<None>(arg)) {
-                //
-                // Used to use the "unset quoting" trick to do variadic, but
-                // now that's been removed.  Real variadic handling has not
-                // been added to Ren-C, and would need `ren::Varargs`.
-                //
-                // For now, just signal that with NONE!
-                //
+            if (not arg) {
                 runtime("console quote", shellFunction);
                 return nullopt;
             }
@@ -583,7 +574,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
                 // Meta protocol may ask you for things you don't know about,
                 // so gracefully ignore them.
                 if (is<LitWord>(arg))
-                    return {none};
+                    return {blank};
 
                 if (not is<Block>(arg))
                     throw Error {"Unknown meta command"};

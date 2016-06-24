@@ -46,7 +46,7 @@ TEST_CASE("context test", "[rebol] [context]")
 
     // Here in context 2, the changes to x had no effect; x is unset
 
-    CHECK(runtime("unset? get/any 'x"));
+    CHECK(runtime("void? get/opt 'x"));
 
     // Let's use function apply notation to set x in contextTwo, this time
     // using a temporary SetWord...

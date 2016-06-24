@@ -16,7 +16,7 @@ bool Atom::isValid(RenCell const & cell) {
     // !!! Review handling of void.  It is not considered an atom, correct?
     //
     return (
-        IS_NONE(AS_C_REBVAL(&cell))
+        IS_BLANK(AS_C_REBVAL(&cell))
         || IS_LOGIC(AS_C_REBVAL(&cell))
         || IS_CHAR(AS_C_REBVAL(&cell))
         || IS_INTEGER(AS_C_REBVAL(&cell))
@@ -28,17 +28,17 @@ bool Atom::isValid(RenCell const & cell) {
 
 
 //
-// NONE
+// BLANK
 //
 
-bool None::isValid(RenCell const & cell) {
-    return IS_NONE(AS_C_REBVAL(&cell));
+bool Blank::isValid(RenCell const & cell) {
+    return IS_BLANK(AS_C_REBVAL(&cell));
 }
 
-AnyValue::AnyValue (none_t, Engine * engine) noexcept :
+AnyValue::AnyValue (blank_t, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_NONE(AS_REBVAL(&cell));
+    SET_BLANK(AS_REBVAL(&cell));
 
     // !!! Should some types not need an engine field?
     if (not engine)

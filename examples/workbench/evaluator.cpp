@@ -88,7 +88,7 @@ void EvaluatorWorker::doWork(
                 //
                 // https://github.com/metaeducation/ren-garden/issues/17
 
-                if (t.value() == nullopt || is<None>(t.value())) {
+                if (t.value() == nullopt || is<Blank>(t.value())) {
                     qApp->exit(0);
                 }
                 else if (is<Integer>(t.value())) {

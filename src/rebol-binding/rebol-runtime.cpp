@@ -227,46 +227,57 @@ RebolRuntime::RebolRuntime (bool) :
     assert(sizeof(intptr_t) == sizeof(REBIPT));
     assert(sizeof(uintptr_t) == sizeof(REBUPT));
 
+    union {
+        RenCell eval;
+        void *subfeed; // REBARR*
+    } cell;
+    struct RenCall *prior;
+    uintptr_t dsp_orig;
+    RenCell *out;
+    uintptr_t flags;
+    union {
+        void *array; // REBSER*
+        void *vaptr; // va_list*
+    } source;
+    void *specifier; // REBCTX*
+    const RenCell *value;
+    uintptr_t index;
+    uintptr_t expr_index;
+    uintptr_t eval_type;
+    const RenCell *gotten;
+    const RenCell *pending;
+    void *func; // REBFUN*
+    void *exit_from; // REBARR*
+    uintptr_t label_sym;
+    RenCell *stackvars;
+    void *varlist; // REBARR*
+    RenCell *param;
+    RenCell *arg;
+    RenCell *refine;
+    uintptr_t args_evaluate;
+    uintptr_t lookahead_flags;
+
     assert(offsetof(Reb_Frame, cell) == offsetof(RenCall, cell));
-    assert(offsetof(Reb_Frame, func) == offsetof(RenCall, func));
+    assert(offsetof(Reb_Frame, prior) == offsetof(RenCall, prior));
     assert(offsetof(Reb_Frame, dsp_orig) == offsetof(RenCall, dsp_orig));
-    assert(offsetof(Reb_Frame, flags) == offsetof(RenCall, flags));
     assert(offsetof(Reb_Frame, out) == offsetof(RenCall, out));
-    assert(offsetof(Reb_Frame, value) == offsetof(RenCall, value));
-    assert(offsetof(Reb_Frame, eval_fetched) == offsetof(RenCall, eval_fetched));
+    assert(offsetof(Reb_Frame, flags) == offsetof(RenCall, flags));
     assert(offsetof(Reb_Frame, source) == offsetof(RenCall, source));
-    assert(offsetof(Reb_Frame, indexor) == offsetof(RenCall, indexor));
     assert(offsetof(Reb_Frame, specifier) == offsetof(RenCall, specifier));
+    assert(offsetof(Reb_Frame, value) == offsetof(RenCall, value));
+    assert(offsetof(Reb_Frame, index) == offsetof(RenCall, index));
+    assert(offsetof(Reb_Frame, expr_index) == offsetof(RenCall, expr_index));
+    assert(offsetof(Reb_Frame, eval_type) == offsetof(RenCall, eval_type));
+    assert(offsetof(Reb_Frame, gotten) == offsetof(RenCall, gotten));
+    assert(offsetof(Reb_Frame, pending) == offsetof(RenCall, pending));
+    assert(offsetof(Reb_Frame, func) == offsetof(RenCall, func));
+    assert(offsetof(Reb_Frame, exit_from) == offsetof(RenCall, exit_from));
     assert(offsetof(Reb_Frame, label_sym) == offsetof(RenCall, label_sym));
-    assert(offsetof(Reb_Frame, data) == offsetof(RenCall, data));
+    assert(offsetof(Reb_Frame, stackvars) == offsetof(RenCall, stackvars));
+    assert(offsetof(Reb_Frame, varlist) == offsetof(RenCall, varlist));
     assert(offsetof(Reb_Frame, param) == offsetof(RenCall, param));
     assert(offsetof(Reb_Frame, arg) == offsetof(RenCall, arg));
     assert(offsetof(Reb_Frame, refine) == offsetof(RenCall, refine));
-    assert(offsetof(Reb_Frame, prior) == offsetof(RenCall, prior));
-    assert(offsetof(Reb_Frame, mode) == offsetof(RenCall, mode));
-    assert(offsetof(Reb_Frame, expr_index) == offsetof(RenCall, expr_index));
-    assert(offsetof(Reb_Frame, exit_from) == offsetof(RenCall, exit_from));
-    assert(
-        offsetof(Reb_Frame, args_evaluate)
-        == offsetof(RenCall, args_evaluate)
-    );
-    assert(
-        offsetof(Reb_Frame, lookahead_flags)
-        == offsetof(RenCall, lookahead_flags)
-    );
-
-    // The debug build now includes the REBOL_STATE structure in the frame,
-    // so this assert won't work...not that it's really necessary.
-    //
-    /*assert(sizeof(Reb_Call) == sizeof(RenCall));*/
-
-    // function.hpp does a bit more of its template work in the include file
-    // than we might like (but that's how templates work).  We don't want
-    // to expose R_OUT and R_OUT_IS_THROWN (they are Rebol internals) so we
-    // use REN_ constants as surrogates in that header.
-
-    assert(R_OUT == REN_SUCCESS);
-    assert(R_OUT_IS_THROWN == REN_APPLY_THREW);
 }
 
 
@@ -393,7 +404,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         " arg {Some refinement arg}"
     };
 
-    REBNAT testFun = [](Reb_Frame* frame_) -> REBCNT {
+    REBNAT testDispatcher = [](Reb_Frame* frame_) -> REB_R {
         PARAM(1, value);
         REFINE(2, refine);
         PARAM(3, arg);
@@ -402,23 +413,19 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
         // Used to be APPLY replacement, but now just a placeholder if
         // something like that winds up being needed.
-        SET_NONE(out);
+        SET_BLANK(out);
 
         return R_OUT;
     };
 
-    REBARR * testSpec = Scan_Source(testSpecStr, LEN_BYTES(testSpecStr));
+    REBVAL testSpec;
+    Val_Init_Block(&testSpec, Scan_Source(testSpecStr, LEN_BYTES(testSpecStr)));
 
-    REBVAL testNative;
-
-    Make_Native(
-        &testNative,
-        testSpec,
-        SPECIFIED,
-        testFun,
-        FUNC_CLASS_NATIVE
+    REBFUN *testNative = Make_Function(
+        Make_Paramlist_Managed_May_Fail(&testSpec, MKF_KEYWORDS),
+        testDispatcher
     );
-    *GET_MUTABLE_VAR_MAY_FAIL(&testWord, SPECIFIED) = testNative;
+    *GET_MUTABLE_VAR_MAY_FAIL(&testWord, SPECIFIED) = *FUNC_VALUE(testNative);
 
     initialized = true;
 
