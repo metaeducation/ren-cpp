@@ -16,8 +16,8 @@ namespace ren {
 //
 
 
-bool AnySeries::isValid(RenCell const & cell) {
-    return ANY_SERIES(AS_C_REBVAL(&cell));
+bool AnySeries::isValid(RenCell const * cell) {
+    return ANY_SERIES(AS_C_REBVAL(cell));
 }
 
 
@@ -28,12 +28,13 @@ bool AnySeries::isValid(RenCell const & cell) {
 
 
 void ren::internal::AnySeries_::operator++() {
-    AS_REBVAL(&cell)->payload.any_series.index++;
+    REBVAL *v = AS_REBVAL(cell);
+    v->payload.any_series.index++;
 }
 
 
 void ren::internal::AnySeries_::operator--() {
-    AS_REBVAL(&cell)->payload.any_series.index--;
+    AS_REBVAL(cell)->payload.any_series.index--;
 }
 
 
@@ -50,26 +51,21 @@ void ren::internal::AnySeries_::operator--(int) {
 AnyValue ren::internal::AnySeries_::operator*() const {
     AnyValue result {Dont::Initialize};
 
-    if (0 == VAL_LEN_AT(AS_C_REBVAL(&cell))) {
-        SET_VOID(AS_REBVAL(&result.cell));
+    const REBVAL *v = AS_C_REBVAL(cell);
+
+    if (0 == VAL_LEN_AT(v)) {
+        SET_VOID(AS_REBVAL(result.cell));
     }
-    else if (ANY_STRING(AS_C_REBVAL(&cell))) {
+    else if (ANY_STRING(v)) {
         // from str_to_char in Rebol source
         SET_CHAR(
-            AS_REBVAL(&result.cell),
-            GET_ANY_CHAR(
-                VAL_SERIES(AS_C_REBVAL(&cell)),
-                VAL_INDEX(AS_C_REBVAL(&cell))
-            )
+            AS_REBVAL(result.cell),
+            GET_ANY_CHAR(VAL_SERIES(v), VAL_INDEX(v))
         );
-    } else if (Is_Array_Series(VAL_SERIES(AS_C_REBVAL(&cell)))) {
+    } else if (Is_Array_Series(VAL_SERIES(v))) {
         COPY_VALUE(
-            AS_REBVAL(&result.cell),
-            ARR_AT(
-                VAL_ARRAY(AS_C_REBVAL(&cell)),
-                VAL_INDEX(AS_C_REBVAL(&cell))
-            ),
-            VAL_SPECIFIER(AS_C_REBVAL(&cell))
+            AS_REBVAL(result.cell),
+            ARR_AT(VAL_ARRAY(v), VAL_INDEX(v)), VAL_SPECIFIER(v)
         );
     } else {
         // Binary and such, would return an integer
@@ -86,18 +82,18 @@ AnyValue ren::internal::AnySeries_::operator->() const {
 
 
 void ren::internal::AnySeries_::head() {
-    AS_REBVAL(&cell)->payload.any_series.index = 0;
+    AS_REBVAL(cell)->payload.any_series.index = 0;
 }
 
 
 void ren::internal::AnySeries_::tail() {
-    AS_REBVAL(&cell)->payload.any_series.index
-        = VAL_LEN_HEAD(AS_REBVAL(&cell));
+    AS_REBVAL(cell)->payload.any_series.index
+        = VAL_LEN_HEAD(AS_REBVAL(cell));
 }
 
 
 size_t AnySeries::length() const {
-    return VAL_LEN_AT(AS_C_REBVAL(&cell));
+    return VAL_LEN_AT(AS_C_REBVAL(cell));
 }
 
 
@@ -123,8 +119,7 @@ const {
     // So we do what building a path would do here.
 
     AnyValue getPath {Dont::Initialize};
-    VAL_RESET_HEADER(AS_REBVAL(&getPath.cell), REB_GET_PATH);
-    SET_VAL_FLAG(AS_REBVAL(&getPath.cell), VALUE_FLAG_ARRAY);
+    VAL_RESET_HEADER(AS_REBVAL(getPath.cell), REB_GET_PATH);
 
     std::array<internal::Loadable, 2> loadables {{
         *this, index
@@ -140,7 +135,7 @@ const {
         nullptr // Don't apply
     );
 
-    ASSERT_VALUE_MANAGED(AS_REBVAL(&getPath.cell));
+    ASSERT_VALUE_MANAGED(AS_REBVAL(getPath.cell));
 
     AnyValue result {Dont::Initialize};
 

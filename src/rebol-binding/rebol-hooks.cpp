@@ -19,14 +19,11 @@
 #include "rebol-common.hpp"
 
 
-extern "C" void Queue_Mark_Host_Deep(void);
-
-
 namespace ren {
 
 namespace internal {
 
-std::mutex linkMutex;
+std::mutex refcountMutex;
 ren::AnyValue * head;
 
 class RebolHooks {
@@ -60,9 +57,6 @@ public:
 
         runtime.lazyInitializeIfNecessary();
 
-        assert(not GC_Mark_Hook);
-        GC_Mark_Hook = &::Queue_Mark_Host_Deep;
-
         *engineOut = theEngine;
 
         return REN_SUCCESS;
@@ -75,33 +69,6 @@ public:
 
         if (REBOL_IS_ENGINE_HANDLE_INVALID(engine))
             return REN_BAD_ENGINE_HANDLE;
-
-        // Any values that have been allocated globally or statically will
-        // still exist.  There isn't anyway to guarantee they will have
-        // their destructors run before the shutdown of the runtime...which
-        // means trouble.  Considering them to be leaks is unfriendly, so
-        // the better thing to do is to clear them out.
-        if (head) {
-            AnyValue *temp = head;
-            while (temp) {
-                AnyValue *next = temp->next;
-
-                // clearing out the origin and next/prev will make the
-                // destructor treat the value as uninitialized.
-                temp->origin.data = REN_BAD_ENGINE_HANDLE;
-                temp->next = temp->prev = nullptr;
-
-                // !!! Should there be a OPT_VALUE_FREE bit that is checked by
-                // higher level interfaces like this on every usage, or is it
-                // better to crash on accessing the bad cells?
-                memset(&temp->cell, 0xAE, sizeof(REBVAL));
-
-                temp = next;
-            }
-        }
-
-        assert(GC_Mark_Hook == &::Queue_Mark_Host_Deep);
-        GC_Mark_Hook = nullptr;
 
         theEngine = REBOL_ENGINE_HANDLE_INVALID;
 
@@ -162,7 +129,7 @@ public:
         RebolEngineHandle engine,
         REBVAL const * context,
         REBVAL const * applicand,
-        REBVAL const * loadablesPtr,
+        REBVAL * const * loadablesPtr,
         size_t numLoadables,
         size_t sizeofLoadable,
         REBVAL * constructOutDatatypeIn,
@@ -181,13 +148,6 @@ public:
 
         PUSH_UNHALTABLE_TRAP(&error, &state);
 
-        // Note: No C++ allocations can happen between here and the POP_STATE
-        // calls as long as the C stack is in control, as setjmp/longjmp will
-        // subvert stack unwinding and just reset the processor state.
-
-        bool is_aggregate_managed = false;
-        REBARR * aggregate = Make_Array(numLoadables * 2);
-
 // The first time through the following code 'error' will be NULL, but...
 // `fail` can longjmp here, 'error' won't be NULL *if* that happens!
 
@@ -204,6 +164,13 @@ public:
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
+
+        // Note: No C++ allocations can happen between here and the POP_STATE
+        // calls as long as the C stack is in control, as setjmp/longjmp will
+        // subvert stack unwinding and just reset the processor state.
+
+        bool is_aggregate_managed = false;
+        REBARR * aggregate = Make_Array(numLoadables * 2);
 
         if (applicand) {
             // This is the current rule and the code expects it to be true,
@@ -229,9 +196,7 @@ public:
 
         for (size_t index = 0; index < numLoadables; index++) {
 
-            auto cell = const_cast<REBVAL *>(
-                reinterpret_cast<volatile REBVAL const *>(current)
-            );
+            auto cell = *reinterpret_cast<REBVAL * const *>(current);
 
             if ((cell->header.bits & HEADER_TYPE_MASK) == REB_0) {
 
@@ -246,6 +211,12 @@ public:
                 auto loadText = reinterpret_cast<REBYTE*>(
                     VAL_HANDLE_DATA(cell)
                 );
+
+                // !!! Temporary: we can't let the GC see a REB_0 trash.
+                // There will be a REB_LOADABLE and ET_LOADABLE type, so use
+                // that when it arrives, but until then blank it.
+                //
+                SET_BLANK(cell);
 
                 // CAN raise errors and longjmp backwards on the C stack to
                 // the `if (error)` case above!  These are the errors that
@@ -330,7 +301,6 @@ public:
                 REBCTX * object = Make_Selfish_Context_Detect(
                     REB_OBJECT,
                     nullptr,
-                    nullptr,
                     ARR_HEAD(aggregate),
                     nullptr
                 );
@@ -413,12 +383,11 @@ public:
         // done in this order)
 
     return_result:
+
         // We only free the series if we didn't manage it.  For simplicity
         // we control this with a boolean flag for now.
-        assert(
-            is_aggregate_managed
-            == GET_ARR_FLAG(aggregate, SERIES_FLAG_MANAGED)
-        );
+        //
+        assert(is_aggregate_managed == IS_ARRAY_MANAGED(aggregate));
         if (!is_aggregate_managed)
             Free_Array(aggregate);
 
@@ -499,21 +468,6 @@ public:
         DEAD_END;
     }
 
-    void Queue_Mark_Host_Deep() {
-        // This lock on GC does not suddenly make Rebol thread safe, but just
-        // ensures that if any other threads are using values that they
-        // do not come and go until after the lock is released.
-
-        std::lock_guard<std::mutex> lock(internal::linkMutex);
-
-        ren::AnyValue * temp = ren::internal::head;
-        while (temp) {
-            assert(FLAGIT_64(VAL_TYPE(AS_REBVAL(&temp->cell))) & TS_GC);
-            Queue_Mark_Value_Deep(AS_REBVAL(&temp->cell));
-            temp = temp->next;
-        }
-    }
-
     ~RebolHooks () {
         // The runtime may be shutdown already, so don't do anything here
         // using REBVALs or REBSERs.  Put that in engine shutdown.
@@ -525,15 +479,6 @@ RebolHooks hooks;
 } // end namespace internal
 
 } // end namespace ren
-
-
-//
-// Hacked in for handling the garbage collection...this is an ordinary C
-// function that we register in GC_Mark_Hook
-//
-void Queue_Mark_Host_Deep(void) {
-    return ren::internal::hooks.Queue_Mark_Host_Deep();
-}
 
 
 RenResult RenAllocEngine(RebolEngineHandle * engineOut) {
@@ -559,7 +504,7 @@ RenResult RenConstructOrApply(
     RebolEngineHandle engine,
     RenCell const * context,
     RenCell const * valuePtr,
-    RenCell const * loadablesPtr,
+    RenCell * const * loadablesPtr,
     size_t numLoadables,
     size_t sizeofLoadable,
     RenCell * constructOutTypeIn,
@@ -570,7 +515,7 @@ RenResult RenConstructOrApply(
         engine,
         AS_C_REBVAL(context),
         AS_C_REBVAL(valuePtr),
-        AS_C_REBVAL(loadablesPtr),
+        reinterpret_cast<REBVAL * const *>(loadablesPtr),
         numLoadables,
         sizeofLoadable,
         AS_REBVAL(constructOutTypeIn),

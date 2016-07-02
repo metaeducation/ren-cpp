@@ -49,7 +49,7 @@ class Atom : public AnyValue {
 protected:
     friend class AnyValue;
     Atom (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     // We need to inherit AnyValue's constructors, as an Atom can be
@@ -90,7 +90,7 @@ class Blank : public Atom {
 protected:
     friend class AnyValue;
     Blank (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     explicit Blank (Engine * engine = nullptr) : Atom (blank, engine) {}
@@ -106,7 +106,7 @@ class Logic : public Atom {
 protected:
     friend class AnyValue;
     Logic (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     // Trick so that Logic can be implicitly constructed from bool but not
@@ -157,7 +157,7 @@ protected:
     friend class AnyValue;
     friend class AnyString;
     Character (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     Character (char c, Engine * engine = nullptr) :
@@ -207,7 +207,7 @@ class Integer : public Atom {
 protected:
     friend class AnyValue;
     Integer (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     Integer (int i, Engine * engine = nullptr) :
@@ -228,7 +228,7 @@ class Float : public Atom {
 protected:
     friend class AnyValue;
     Float (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     Float (double d, Engine * engine = nullptr) :
@@ -263,7 +263,7 @@ class Date : public Atom {
 protected:
     friend class AnyValue;
     Date (Dont) noexcept : Atom (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     explicit Date (

@@ -110,14 +110,14 @@ bool AnyValue::constructOrApplyInitialize(
 
     auto result = ::RenConstructOrApply(
         engine,
-        context ? &context->cell : nullptr,
-        applicand ? &applicand->cell : nullptr,
+        context ? context->cell : nullptr,
+        applicand ? applicand->cell : nullptr,
         numLoadables != 0 ? &loadables[0].cell : nullptr,
         numLoadables,
         sizeof(internal::Loadable),
-        constructOutTypeIn ? &constructOutTypeIn->cell : nullptr,
-        applyOut ? &applyOut->cell : nullptr,
-        &extraOut.cell
+        constructOutTypeIn ? constructOutTypeIn->cell : nullptr,
+        applyOut ? applyOut->cell : nullptr,
+        extraOut.cell
     );
 
     switch (result) {

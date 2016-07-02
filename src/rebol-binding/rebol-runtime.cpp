@@ -135,7 +135,7 @@ static REBVAL loadAndBindWord(
 
     // !!! Make_Word has a misleading name; it allocates a symbol number
 
-    Val_Init_Word(&word, kind, Make_Word(nameUtf8, lenBytes));
+    Val_Init_Word(&word, kind, Intern_UTF8_Managed(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
@@ -227,36 +227,6 @@ RebolRuntime::RebolRuntime (bool) :
     assert(sizeof(intptr_t) == sizeof(REBIPT));
     assert(sizeof(uintptr_t) == sizeof(REBUPT));
 
-    union {
-        RenCell eval;
-        void *subfeed; // REBARR*
-    } cell;
-    struct RenCall *prior;
-    uintptr_t dsp_orig;
-    RenCell *out;
-    uintptr_t flags;
-    union {
-        void *array; // REBSER*
-        void *vaptr; // va_list*
-    } source;
-    void *specifier; // REBCTX*
-    const RenCell *value;
-    uintptr_t index;
-    uintptr_t expr_index;
-    uintptr_t eval_type;
-    const RenCell *gotten;
-    const RenCell *pending;
-    void *func; // REBFUN*
-    void *exit_from; // REBARR*
-    uintptr_t label_sym;
-    RenCell *stackvars;
-    void *varlist; // REBARR*
-    RenCell *param;
-    RenCell *arg;
-    RenCell *refine;
-    uintptr_t args_evaluate;
-    uintptr_t lookahead_flags;
-
     assert(offsetof(Reb_Frame, cell) == offsetof(RenCall, cell));
     assert(offsetof(Reb_Frame, prior) == offsetof(RenCall, prior));
     assert(offsetof(Reb_Frame, dsp_orig) == offsetof(RenCall, dsp_orig));
@@ -271,8 +241,8 @@ RebolRuntime::RebolRuntime (bool) :
     assert(offsetof(Reb_Frame, gotten) == offsetof(RenCall, gotten));
     assert(offsetof(Reb_Frame, pending) == offsetof(RenCall, pending));
     assert(offsetof(Reb_Frame, func) == offsetof(RenCall, func));
-    assert(offsetof(Reb_Frame, exit_from) == offsetof(RenCall, exit_from));
-    assert(offsetof(Reb_Frame, label_sym) == offsetof(RenCall, label_sym));
+    assert(offsetof(Reb_Frame, binding) == offsetof(RenCall, binding));
+    assert(offsetof(Reb_Frame, label) == offsetof(RenCall, label));
     assert(offsetof(Reb_Frame, stackvars) == offsetof(RenCall, stackvars));
     assert(offsetof(Reb_Frame, varlist) == offsetof(RenCall, varlist));
     assert(offsetof(Reb_Frame, param) == offsetof(RenCall, param));
@@ -327,6 +297,8 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 #endif
 
     Init_Core(&rebargs);
+
+    initialized = true;
 
     // adds to a table used by RL_Start, must be called before
     //
@@ -423,11 +395,10 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     REBFUN *testNative = Make_Function(
         Make_Paramlist_Managed_May_Fail(&testSpec, MKF_KEYWORDS),
-        testDispatcher
+        testDispatcher,
+        NULL // no underlying function, this is foundational
     );
     *GET_MUTABLE_VAR_MAY_FAIL(&testWord, SPECIFIED) = *FUNC_VALUE(testNative);
-
-    initialized = true;
 
     return true;
 }

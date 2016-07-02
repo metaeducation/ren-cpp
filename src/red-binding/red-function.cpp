@@ -9,7 +9,7 @@
 namespace ren {
 
 
-bool Function::isValid(RenCell const & cell) {
+bool Function::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_FUNCTION;
 }
 

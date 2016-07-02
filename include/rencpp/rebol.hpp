@@ -46,6 +46,8 @@ public:
 
 private:
     friend class internal::RebolHooks;
+
+public: // !!! temporary--values need it
     bool lazyInitializeIfNecessary();
 
 
@@ -62,9 +64,8 @@ public:
 extern RebolRuntime runtime;
 
 namespace internal {
-    // Placeholder for better solution: mutex for management of linked list
-    extern std::mutex linkMutex;
-    extern ren::AnyValue * head;
+    // Placeholder for better solution: mutex for management of refcounts
+    extern std::mutex refcountMutex;
 }
 
 } // end namespace ren

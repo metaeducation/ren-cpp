@@ -178,7 +178,7 @@ QString to_QString(AnyValue const & value);
 
 namespace internal {
 
-using CellFunction = void (*)(RenCell &);
+using CellFunction = void (*)(RenCell *);
 
 }
 
@@ -217,7 +217,7 @@ protected:
     friend class Function; // needs to extract series from spec block
     friend class ren::internal::AnySeries_; // iterator state
 
-    RenCell cell;
+    RenCell *cell;
 
 #ifndef REN_RUNTIME
     friend class internal::RebolHooks;
@@ -228,20 +228,6 @@ protected:
 #else
     static_assert(false, "Invalid runtime setting");
 #endif
-
-    //
-    // We need to be able to enumerate through value cells being held in live
-    // C++ objects on the stack or heap, in case they contain something the
-    // garbage collector needs to see.  Rather than maintain a tracking
-    // structure separately, they are kept in a doubly linked list...which
-    // makes insertions and removals efficient.
-    //
-    // (The larger size of the C++ wrapped values makes them poor for storing
-    // en-masse in collections such as std::Vector<ren::AnyValue>.  So...don't
-    // do that.  Use a ren::Series, which is about half the size.)
-    //
-    AnyValue * next;
-    AnyValue * prev;
 
     //
     // While "adding a few more bytes here and there" in Red and Rebol culture
@@ -259,7 +245,6 @@ protected:
     // bit of per-value bookkeeping helps keep things straight when we
     // release the value for GC.
     //
-
 protected:
     friend class AnyContext;
     RenEngineHandle origin;
@@ -314,7 +299,7 @@ protected:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    explicit AnyValue (RenCell const & cell, RenEngineHandle engine) noexcept {
+    explicit AnyValue (RenCell * cell, RenEngineHandle engine) noexcept {
         this->cell = cell;
         finishInit(engine);
     }
@@ -326,7 +311,7 @@ protected:
         >::type
     >
     static T fromCell_(
-        RenCell const & cell, RenEngineHandle engine
+        RenCell const * cell, RenEngineHandle engine
     ) noexcept {
         // Do NOT use {} construction!
         T result (Dont::Initialize);
@@ -334,7 +319,7 @@ protected:
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
-        result.cell = cell;
+        *result.cell = *cell;
         result.finishInit(engine);
         return result;
     }
@@ -346,7 +331,7 @@ protected:
         >::type
     >
     static optional<utility::extract_optional_t<T>> fromCell_(
-        RenCell const & cell, RenEngineHandle engine
+        RenCell const * cell, RenEngineHandle engine
     ) noexcept {
         // Do NOT use {} construction!
         utility::extract_optional_t<T> result (Dont::Initialize);
@@ -354,7 +339,7 @@ protected:
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
-        result.cell = cell;
+        *result.cell = *cell;
         if (!result.tryFinishInit(engine))
             return nullopt;
         return result;
@@ -363,14 +348,22 @@ protected:
 
 public:
     static void toCell_(
-        RenCell & cell, AnyValue const & value
+        RenCell * cell, AnyValue const & value
     ) noexcept {
-        cell = value.cell;
+        *cell = *value.cell;
     }
 
     static void toCell_(
-        RenCell & cell, optional<AnyValue> const & value
+        RenCell * cell, optional<AnyValue> const & value
     ) noexcept;
+
+    operator RenCell const & () const {
+        return *cell;
+    }
+
+    operator RenCell & () {
+        return *cell;
+    }
 
 
 public:
@@ -455,47 +448,52 @@ public:
 
 
 public:
+    // "Copy constructing" values--in the C++ sense--corresponds to assignment
+    // in Rebol.  That's not "copying"...e.g. how `X: [1 2 3] | Y: X` does
+    // not "copy".  It only copies the value *cell* itself.  So you get
+    // an entity that can track a new position in something, while sharing the
+    // identity of the payload.
     //
-    // Copy construction must make a new copy of the 128 bits in the cell, as
-    // well as add to the tracking (if it is necessary)
+    // So each copy construct makes a new allocation of a pairing.  Thus if a
+    // unique positioning is *not* needed, it's best to pass by `const &` (as
+    // is true in C++ generally).
     //
     AnyValue (AnyValue const & other) noexcept :
-        cell (other.cell),
-        next (nullptr), // for debug, for now...
-        prev (nullptr)
+        AnyValue (Dont::Initialize)
     {
+        *cell = *other.cell;
         finishInit(other.origin);
     }
 
+    // Move construction "takes over" the pairing.
     //
     // User-defined move constructors should not throw exceptions.  We
     // trust the C++ type system here.  You can move a String into an
     // AnySeries but not vice-versa.
     //
     AnyValue (AnyValue && other) noexcept :
-        cell (other.cell),
-        next (nullptr), // for debug, for now...
-        prev (nullptr)
+        cell (other.cell)
     {
-        // Technically speaking, we don't have to null out the other's
-        // runtime handle.  But it's worth it for the safety,
-        // because sometimes values that have been moved *do* get used on
-        // accident after the move.
-
-        finishInit(other.origin);
-        other.uninitialize();
+        if (other.cell) {
+            other.cell = NULL;
+            finishInit(other.origin);
+        }
     }
 
     AnyValue & operator=(AnyValue const & other) noexcept {
-        uninitialize();
-        cell = other.cell;
-        finishInit(other.origin);
+        *cell = *other.cell;
+        finishInit(other.origin); // increase new refcount
         return *this;
     }
 
 public:
     virtual ~AnyValue () {
-        uninitialize();
+        if (cell) {
+            uninitialize();
+        #if !defined(NDEBUG)
+            cell = reinterpret_cast<RenCell*>(0xBAADF00D);
+        #endif
+        }
     }
 
 
@@ -651,7 +649,7 @@ public:
         // the instance, with the bits, but then throws if it's bad...and it's
         // not virtual.
         T result (Dont::Initialize);
-        result.cell = cell;
+        *result.cell = *cell;
         result.finishInit(origin);
         return result;
     }
@@ -669,7 +667,7 @@ public:
             return false;
 
         T result (Dont::Initialize);
-        result.cell = cell;
+        *result.cell = *cell;
         result.finishInit(origin);
 
         return result.hasSpelling(spelling);
@@ -832,7 +830,7 @@ namespace internal {
 // are implicitly constructed only.
 //
 
-class Loadable : protected AnyValue {
+class Loadable : public AnyValue {
 private:
     friend class AnyValue;
 

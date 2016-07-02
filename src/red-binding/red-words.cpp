@@ -13,32 +13,32 @@ namespace ren {
 // TYPE CHECKING
 //
 
-bool Word::isValid(RenCell const & cell) {
+bool Word::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_WORD;
 }
 
 
-bool SetWord::isValid(RenCell const & cell) {
+bool SetWord::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_SET_WORD;
 }
 
 
-bool GetWord::isValid(RenCell const & cell) {
+bool GetWord::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_GET_WORD;
 }
 
 
-bool LitWord::isValid(RenCell const & cell) {
+bool LitWord::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LIT_WORD;
 }
 
 
-bool Refinement::isValid(RenCell const & cell) {
+bool Refinement::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_REFINEMENT;
 }
 
 
-bool AnyWord::isValid(RenCell const & cell) {
+bool AnyWord::isValid(RenCell const * cell) {
     switch (RedRuntime::getDatatypeID(cell)) {
         case RedRuntime::TYPE_WORD:
         case RedRuntime::TYPE_SET_WORD:

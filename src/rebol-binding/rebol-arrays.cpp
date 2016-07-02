@@ -15,37 +15,37 @@ namespace ren {
 // TYPE DETECTION
 //
 
-bool Block::isValid(RenCell const & cell) {
-    return IS_BLOCK(AS_C_REBVAL(&cell));
+bool Block::isValid(RenCell const * cell) {
+    return IS_BLOCK(AS_C_REBVAL(cell));
 }
 
-bool Group::isValid(RenCell const & cell) {
-    return IS_GROUP(AS_C_REBVAL(&cell));
+bool Group::isValid(RenCell const * cell) {
+    return IS_GROUP(AS_C_REBVAL(cell));
 }
 
-bool Path::isValid(RenCell const & cell) {
-    return IS_PATH(AS_C_REBVAL(&cell));
+bool Path::isValid(RenCell const * cell) {
+    return IS_PATH(AS_C_REBVAL(cell));
 }
 
-bool GetPath::isValid(RenCell const & cell) {
-    return IS_GET_PATH(AS_C_REBVAL(&cell));
+bool GetPath::isValid(RenCell const * cell) {
+    return IS_GET_PATH(AS_C_REBVAL(cell));
 }
 
-bool SetPath::isValid(RenCell const & cell) {
-    return IS_SET_PATH(AS_C_REBVAL(&cell));
+bool SetPath::isValid(RenCell const * cell) {
+    return IS_SET_PATH(AS_C_REBVAL(cell));
 }
 
-bool LitPath::isValid(RenCell const & cell) {
-    return IS_LIT_PATH(AS_C_REBVAL(&cell));
+bool LitPath::isValid(RenCell const * cell) {
+    return IS_LIT_PATH(AS_C_REBVAL(cell));
 }
 
-bool AnyArray::isValid(RenCell const & cell) {
-    return IS_BLOCK(AS_C_REBVAL(&cell))
-        or IS_GROUP(AS_C_REBVAL(&cell))
-        or IS_PATH(AS_C_REBVAL(&cell))
-        or IS_SET_PATH(AS_C_REBVAL(&cell))
-        or IS_GET_PATH(AS_C_REBVAL(&cell))
-        or IS_LIT_PATH(AS_C_REBVAL(&cell));
+bool AnyArray::isValid(RenCell const * cell) {
+    return IS_BLOCK(AS_C_REBVAL(cell))
+        or IS_GROUP(AS_C_REBVAL(cell))
+        or IS_PATH(AS_C_REBVAL(cell))
+        or IS_SET_PATH(AS_C_REBVAL(cell))
+        or IS_GET_PATH(AS_C_REBVAL(cell))
+        or IS_LIT_PATH(AS_C_REBVAL(cell));
 }
 
 
@@ -53,34 +53,28 @@ bool AnyArray::isValid(RenCell const & cell) {
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyArray::initBlock(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_BLOCK);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initBlock(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_BLOCK);
 }
 
-void AnyArray::initGroup(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GROUP);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initGroup(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_GROUP);
 }
 
-void AnyArray::initPath(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_PATH);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initPath(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_PATH);
 }
 
-void AnyArray::initGetPath(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GET_PATH);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initGetPath(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_GET_PATH);
 }
 
-void AnyArray::initSetPath(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_SET_PATH);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initSetPath(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_SET_PATH);
 }
 
-void AnyArray::initLitPath(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_LIT_PATH);
-    SET_VAL_FLAG(AS_REBVAL(&cell), VALUE_FLAG_ARRAY);
+void AnyArray::initLitPath(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_LIT_PATH);
 }
 
 

@@ -13,37 +13,37 @@ namespace ren {
 // TYPE CHECKING
 //
 
-bool Block::isValid(RenCell const & cell) {
+bool Block::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_BLOCK;
 }
 
 
-bool Group::isValid(RenCell const & cell) {
+bool Group::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_PAREN;
 }
 
 
-bool Path::isValid(RenCell const & cell) {
+bool Path::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_PATH;
 }
 
 
-bool GetPath::isValid(RenCell const & cell) {
+bool GetPath::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_GET_PATH;
 }
 
 
-bool SetPath::isValid(RenCell const & cell) {
+bool SetPath::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_SET_PATH;
 }
 
 
-bool LitPath::isValid(RenCell const & cell) {
+bool LitPath::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LIT_PATH;
 }
 
 
-bool AnyArray::isValid(RenCell const & cell) {
+bool AnyArray::isValid(RenCell const * cell) {
     switch (RedRuntime::getDatatypeID(cell)) {
         case RedRuntime::TYPE_BLOCK:
         case RedRuntime::TYPE_PAREN:

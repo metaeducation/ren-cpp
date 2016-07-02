@@ -100,7 +100,7 @@ class Function : public AnyValue {
 protected:
     friend class AnyValue;
     Function (Dont) : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 #ifdef REN_RUNTIME
 private:
@@ -172,6 +172,7 @@ public:
 
         return Gen {
             engine,
+            spec,
             std::function<
                 Ret(utility::argument_type<Fun, Ind>...)
             >([&cppfun](utility::argument_type<Fun, Ind>&&... args){
@@ -379,7 +380,7 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    *REN_CS_ARG(call, Indices),
+                    REN_CS_ARG(call, Indices),
                     engine
                 )...
             )
@@ -391,7 +392,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                *REN_CS_ARG(call, static_cast<int>(Indices)),
+                REN_CS_ARG(call, static_cast<int>(Indices)),
                 engine
             )...
         );
@@ -440,7 +441,7 @@ private:
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-            AnyValue::toCell_(*REN_CS_OUT(call), out); // out may be optional
+            AnyValue::toCell_(REN_CS_OUT(call), out); // out may be optional
             result = REN_SUCCESS;
         }
         catch (bad_optional_access const & e) {
@@ -450,7 +451,7 @@ private:
             };
         }
         catch (Error const & e) {
-            *REN_CS_OUT(call) = e.cell;
+            *REN_CS_OUT(call) = e;
             result = REN_APPLY_ERROR;
         }
         catch (optional<Error> const & e) {
@@ -458,7 +459,7 @@ private:
                 throw std::runtime_error {
                     "ren::nullopt optional<Error> thrown from ren::Function"
                 };
-            *REN_CS_OUT(call) = e->cell;
+            *REN_CS_OUT(call) = (*e);
             result = REN_APPLY_ERROR;
         }
         catch (AnyValue const & v) {
@@ -469,7 +470,7 @@ private:
                     "Non-isError() Value thrown from ren::Function"
                 };
 
-            *REN_CS_OUT(call) = v.cell;
+            *REN_CS_OUT(call) = v;
             result = REN_APPLY_ERROR;
         }
         catch (optional<AnyValue> const & v) {
@@ -478,7 +479,7 @@ private:
                     "Non-isError() optional<AnyValue> thrown from ren::Function"
                 };
 
-            *REN_CS_OUT(call) = v->cell;
+            *REN_CS_OUT(call) = *(v->cell);
             result = REN_APPLY_ERROR;
         }
         catch (evaluation_error const & e) {
@@ -491,7 +492,7 @@ private:
             // code (hence having std::exception expectations) or just as
             // the implementation of a ren::Function
 
-            *REN_CS_OUT(call) = e.error().cell;
+            *REN_CS_OUT(call) = (e.error());
             result = REN_APPLY_ERROR;
         }
         catch (evaluation_throw const & t) {
@@ -502,9 +503,14 @@ private:
             //    http://stackoverflow.com/a/2281928/211160
 
             const RenCell * thrown_value =
-                t.value() == nullopt ? nullptr : &t.value()->cell;
+                t.value() == nullopt
+                    ? nullptr
+                    : t.value()->cell;
+
             const RenCell * thrown_name =
-                t.name() == nullopt ? nullptr : &t.name()->cell;
+                t.name() == nullopt
+                    ? nullptr
+                    : t.name()->cell;
 
             RenShimInitThrown(
                 REN_CS_OUT(call),
@@ -514,7 +520,7 @@ private:
             result = REN_APPLY_THREW;
         }
         catch (load_error const & e) {
-            *REN_CS_OUT(call) = e.error().cell;
+            *REN_CS_OUT(call) = e.error();
             result = REN_CONSTRUCT_ERROR;
         }
         catch (evaluation_halt const & e) {

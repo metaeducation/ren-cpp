@@ -13,8 +13,8 @@ namespace ren {
 // TYPE DETECTION
 //
 
-bool AnyContext::isValid(RenCell const & cell) {
-    return IS_OBJECT(AS_C_REBVAL(&cell));
+bool AnyContext::isValid(RenCell const * cell) {
+    return IS_OBJECT(AS_C_REBVAL(cell));
 }
 
 
@@ -86,12 +86,12 @@ AnyContext::AnyContext (
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyContext::initObject(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_OBJECT);
+void AnyContext::initObject(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_OBJECT);
 }
 
-void AnyContext::initError(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_ERROR);
+void AnyContext::initError(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_ERROR);
 }
 
 } // end namespace ren

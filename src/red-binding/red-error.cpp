@@ -14,7 +14,7 @@ namespace ren {
 ///
 
 
-bool Error::isValid(RenCell const &) {
+bool Error::isValid(RenCell const *) {
     throw std::runtime_error("errors not implemented");
 }
 

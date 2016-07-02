@@ -13,33 +13,33 @@ namespace ren {
 // TYPE DETECTION
 //
 
-bool Word::isValid(const RenCell & cell) {
-    return IS_WORD(AS_C_REBVAL(&cell));
+bool Word::isValid(const RenCell * cell) {
+    return IS_WORD(AS_C_REBVAL(cell));
 }
 
-bool SetWord::isValid(const RenCell & cell) {
-    return IS_SET_WORD(AS_C_REBVAL(&cell));
+bool SetWord::isValid(const RenCell * cell) {
+    return IS_SET_WORD(AS_C_REBVAL(cell));
 }
 
-bool GetWord::isValid(const RenCell & cell) {
-    return IS_GET_WORD(AS_C_REBVAL(&cell));
+bool GetWord::isValid(const RenCell * cell) {
+    return IS_GET_WORD(AS_C_REBVAL(cell));
 }
 
-bool LitWord::isValid(const RenCell & cell) {
-    return IS_LIT_WORD(AS_C_REBVAL(&cell));
+bool LitWord::isValid(const RenCell * cell) {
+    return IS_LIT_WORD(AS_C_REBVAL(cell));
 }
 
-bool Refinement::isValid(const RenCell & cell) {
-    return IS_REFINEMENT(AS_C_REBVAL(&cell));
+bool Refinement::isValid(const RenCell * cell) {
+    return IS_REFINEMENT(AS_C_REBVAL(cell));
 }
 
-bool AnyWord::isValid(const RenCell & cell) {
-    return IS_WORD(AS_C_REBVAL(&cell))
-        or IS_SET_WORD(AS_C_REBVAL(&cell))
-        or IS_GET_WORD(AS_C_REBVAL(&cell))
-        or IS_LIT_WORD(AS_C_REBVAL(&cell))
-        or IS_REFINEMENT(AS_C_REBVAL(&cell))
-        or IS_ISSUE(AS_C_REBVAL(&cell));
+bool AnyWord::isValid(const RenCell * cell) {
+    return IS_WORD(AS_C_REBVAL(cell))
+        or IS_SET_WORD(AS_C_REBVAL(cell))
+        or IS_GET_WORD(AS_C_REBVAL(cell))
+        or IS_LIT_WORD(AS_C_REBVAL(cell))
+        or IS_REFINEMENT(AS_C_REBVAL(cell))
+        or IS_ISSUE(AS_C_REBVAL(cell));
 }
 
 
@@ -47,24 +47,24 @@ bool AnyWord::isValid(const RenCell & cell) {
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyWord::initWord(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_WORD);
+void AnyWord::initWord(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_WORD);
 }
 
-void AnyWord::initSetWord(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_SET_WORD);
+void AnyWord::initSetWord(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_SET_WORD);
 }
 
-void AnyWord::initGetWord(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_GET_WORD);
+void AnyWord::initGetWord(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_GET_WORD);
 }
 
-void AnyWord::initLitWord(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_LIT_WORD);
+void AnyWord::initLitWord(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_LIT_WORD);
 }
 
-void AnyWord::initRefinement(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_REFINEMENT);
+void AnyWord::initRefinement(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_REFINEMENT);
 }
 
 
@@ -170,7 +170,7 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    assert(ANY_WORD(AS_REBVAL(&this->cell)));
+    assert(ANY_WORD(AS_REBVAL(this->cell)));
 }
 
 
@@ -226,7 +226,7 @@ AnyWord::AnyWord (
         nullptr // don't apply
     );
 
-    assert(ANY_WORD(AS_REBVAL(&this->cell)));
+    assert(ANY_WORD(AS_REBVAL(this->cell)));
 }
 #endif
 
@@ -247,9 +247,9 @@ AnyWord::AnyWord (AnyWord const & other, internal::CellFunction cellfun) :
 
     (*cellfun)(this->cell);
 
-    enum Reb_Kind kind = VAL_TYPE(AS_REBVAL(&this->cell));
+    enum Reb_Kind kind = VAL_TYPE(AS_REBVAL(this->cell));
     this->cell = other.cell;
-    VAL_SET_TYPE_BITS(AS_REBVAL(&this->cell), kind);
+    VAL_SET_TYPE_BITS(AS_REBVAL(this->cell), kind);
 
     finishInit(other.origin);
 }

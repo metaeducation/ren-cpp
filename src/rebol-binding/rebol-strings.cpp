@@ -14,20 +14,20 @@ namespace ren {
 //
 
 
-bool String::isValid(RenCell const & cell) {
-    return IS_STRING(AS_C_REBVAL(&cell));
+bool String::isValid(RenCell const * cell) {
+    return IS_STRING(AS_C_REBVAL(cell));
 }
 
-bool Tag::isValid(RenCell const & cell) {
-    return IS_TAG(AS_C_REBVAL(&cell));
+bool Tag::isValid(RenCell const * cell) {
+    return IS_TAG(AS_C_REBVAL(cell));
 }
 
-bool Filename::isValid(RenCell const & cell) {
-    return IS_FILE(AS_C_REBVAL(&cell));
+bool Filename::isValid(RenCell const * cell) {
+    return IS_FILE(AS_C_REBVAL(cell));
 }
 
-bool AnyString::isValid(RenCell const & cell) {
-    return ANY_STRING(AS_C_REBVAL(&cell));
+bool AnyString::isValid(RenCell const * cell) {
+    return ANY_STRING(AS_C_REBVAL(cell));
 }
 
 
@@ -35,16 +35,16 @@ bool AnyString::isValid(RenCell const & cell) {
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyString::initString(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_STRING);
+void AnyString::initString(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_STRING);
 }
 
-void AnyString::initTag(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_TAG);
+void AnyString::initTag(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_TAG);
 }
 
-void AnyString::initFilename(RenCell & cell) {
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_FILE);
+void AnyString::initFilename(RenCell * cell) {
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_FILE);
 }
 
 

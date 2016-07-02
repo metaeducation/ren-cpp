@@ -18,17 +18,25 @@ namespace ren {
 // it cannot be safely freed.  Bad traversal pointers combined with bad data
 // would be a problem.  Review this issue.
 
-AnyValue::AnyValue (Dont) :
-    next (nullptr),
-    prev (nullptr)
+AnyValue::AnyValue (Dont)
 {
-    // Only in the debug build, we prepare the memory for the cell so that it
-    // is "formatted for initialization"
+    runtime.lazyInitializeIfNecessary();
+
+    // We make a pairing of values, where the key stores extra tracking info.
+    // The value is the cell we are interested in (what is returned from
+    // make pairing).  We do not mark it managed, but rather manually free
+    // it in the destructor, using C++ exception handling to take care of
+    // error cases.
     //
-#if !defined(NDEBUG)
-    REBVAL cleared;
-    *AS_REBVAL(&cell) = cleared;
-#endif
+    cell = reinterpret_cast<RenCell*>(Make_Pairing(NULL));
+
+    REBVAL *key = PAIRING_KEY(AS_REBVAL(cell));
+    SET_BLANK(key);
+
+    // Mark the created pairing so it will act as a "root".  The key and value
+    // will be deep marked for GC.
+    //
+    SET_VAL_FLAG(key, REBSER_REBVAL_FLAG_ROOT);
 }
 
 
@@ -40,9 +48,9 @@ bool AnyValue::isEqualTo(AnyValue const & other) const {
     // acts like REBNATIVE(equalq)
 
     REBVAL cell_copy;
-    cell_copy = *AS_C_REBVAL(&cell);
+    cell_copy = *AS_C_REBVAL(cell);
     REBVAL other_copy;
-    other_copy = *AS_C_REBVAL(&other.cell);
+    other_copy = *AS_C_REBVAL(other.cell);
 
     // !!! Modifies arguments to coerce them for testing!
     return Compare_Modify_Values(&cell_copy, &other_copy, 0);
@@ -52,9 +60,9 @@ bool AnyValue::isSameAs(AnyValue const & other) const {
     // acts like REBNATIVE(sameq)
 
     REBVAL cell_copy;
-    cell_copy = *AS_C_REBVAL(&cell);
+    cell_copy = *AS_C_REBVAL(cell);
     REBVAL other_copy;
-    other_copy = *AS_C_REBVAL(&other.cell);
+    other_copy = *AS_C_REBVAL(other.cell);
 
     // !!! Modifies arguments to coerce them for testing
     return Compare_Modify_Values(&cell_copy, &other_copy, 3);
@@ -71,10 +79,6 @@ bool AnyValue::isSameAs(AnyValue const & other) const {
 //
 
 bool AnyValue::tryFinishInit(RenEngineHandle engine) {
-    // Safe to test this before potentially put into a list...these had to be
-    // initialized to nullptr instead of left as-is in order to be safe for
-    // freeing in case the destructor got called when finishInit never did...
-    assert(not next and not prev);
 
     // For the immediate moment, we have only one engine, but taking note
     // when that engine isn't being threaded through the values is a good
@@ -83,36 +87,15 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
     origin = engine;
 
     // We shouldn't be able to get any REB_END values made in Ren/C++
-    assert(NOT_END(AS_REBVAL(&cell)));
+    assert(NOT_END(AS_REBVAL(cell)));
 
     // We no longer allow AnyValue to hold a void (unless specialization
     // using std::optional<AnyValue> represents unsets using that, which would
     // happen sometime later down the line when that optimization makes sense)
     // finishInit() is an inline wrapper that throws if this happens.
     //
-    if (IS_VOID(AS_REBVAL(&cell)))
+    if (IS_VOID(AS_REBVAL(cell)))
         return false;
-
-    if (FLAGIT_64(VAL_TYPE(AS_REBVAL(&cell))) & TS_NO_GC) {
-        // Types with no GC-aware members do not need to be put into the list
-        // While the pointers are there anyway and it saves no memory, it does
-        // save time when a GC runs...as well as the cost of any sync
-        return true;
-    }
-
-    // !!! Placeholder for a less-global locking strategy (list per type, or
-    // maybe hashed out somehow for less contention?)
-    std::lock_guard<std::mutex> lock(internal::linkMutex);
-
-    if (internal::head) {
-        assert(this != internal::head);
-        internal::head->prev = this;
-        next = internal::head;
-    } // else leave next null
-
-    // prev is already null
-
-    internal::head = this; // update head
 
     return true;
 }
@@ -120,41 +103,21 @@ bool AnyValue::tryFinishInit(RenEngineHandle engine) {
 
 void AnyValue::uninitialize() {
 
-    // !!! We could avoid taking the mutex if the type wasn't tracked, but we
-    // do not pay for initialization of the cell bits.  So this check could
-    // touch uninitialized memory in the destructor case:
-    //
-    //     FLAGIT_64(VAL_TYPE(&temp->cell)) & TS_NO_GC
-    //
-    // The cell bits would need to be initialized at least to REB_END or
-    // similar.  Or some other way of marking the next and prev with magic
-    // numbers to distinguish from the nullptr/nullptr case that may be
-    // the sole linked in element in the chain.
+    Free_Pairing(AS_REBVAL(cell));
 
-    std::lock_guard<std::mutex> lock(internal::linkMutex);
-
-    if (internal::head == this) {
-        assert(not prev);
-        internal::head = next;
-    }
-    else if (prev) // possible to be false if finishInit never called...
-        prev->next = next;
-
-    if (next) next->prev = prev;
-
-    next = prev = nullptr;
+    // drop refcount here
 
     origin = REN_ENGINE_HANDLE_INVALID;
 }
 
 
 void AnyValue::toCell_(
-    RenCell & cell, optional<AnyValue> const & value
+    RenCell * cell, optional<AnyValue> const & value
 ) noexcept {
     if (value == nullopt)
-        SET_VOID(AS_REBVAL(&cell));
+        SET_VOID(AS_REBVAL(cell));
     else
-        cell = value->cell;
+        *cell = *value->cell;
 }
 
 
@@ -197,7 +160,7 @@ AnyValue AnyValue::copy(bool deep) const {
 
     AnyContext userContext (Dont::Initialize);
     Val_Init_Object(
-        AS_REBVAL(&userContext.cell),
+        AS_REBVAL(userContext.cell),
         VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER))
     );
     userContext.finishInit(origin);
@@ -240,7 +203,7 @@ std::string to_string(AnyValue const & value) {
 
     switch (
         RenFormAsUtf8(
-            value.origin, &value.cell, buffer.data(), defaultBufLen, &numBytes
+            value.origin, value.cell, buffer.data(), defaultBufLen, &numBytes
         ))
     {
         case REN_SUCCESS:
@@ -255,7 +218,7 @@ std::string to_string(AnyValue const & value) {
             if (
                 RenFormAsUtf8(
                     value.origin,
-                    &value.cell,
+                    value.cell,
                     buffer.data(),
                     numBytes,
                     &numBytesNew
@@ -291,7 +254,7 @@ QString to_QString(AnyValue const & value) {
     switch (
         RenFormAsUtf8(
             value.origin,
-            &value.cell,
+            value.cell,
             b_cast(buffer.data()),
             defaultBufLen,
             &numBytes
@@ -309,7 +272,7 @@ QString to_QString(AnyValue const & value) {
             if (
                 RenFormAsUtf8(
                     value.origin,
-                    &value.cell,
+                    value.cell,
                     b_cast(buffer.data()),
                     numBytes,
                     &numBytesNew
@@ -345,11 +308,9 @@ Loadable::Loadable (char const * sourceCstr) :
     // Using REB_0 as our "alien"; it's not a legal value type to request
     // to be put into a block.
     //
-    VAL_RESET_HEADER(AS_REBVAL(&cell), REB_0);
-    VAL_HANDLE_DATA(AS_REBVAL(&cell)) = const_cast<char *>(sourceCstr);
+    VAL_RESET_HEADER(AS_REBVAL(cell), REB_0);
+    VAL_HANDLE_DATA(AS_REBVAL(cell)) = const_cast<char *>(sourceCstr);
 
-    next = nullptr;
-    prev = nullptr;
     origin = REN_ENGINE_HANDLE_INVALID;
 }
 
@@ -358,14 +319,13 @@ Loadable::Loadable (optional<AnyValue> const & value) :
     AnyValue (AnyValue::Dont::Initialize)
 {
     if (value == nullopt)
-        SET_VOID(AS_REBVAL(&cell));
+        SET_VOID(AS_REBVAL(cell));
     else
-        cell = value->cell;
+        *cell = *value->cell;
 
     // We trust that the source value we copied from will stay alive and
     // prevent garbage collection... (review this idea)
-    next = nullptr;
-    prev = nullptr;
+
     origin = REN_ENGINE_HANDLE_INVALID;
 }
 

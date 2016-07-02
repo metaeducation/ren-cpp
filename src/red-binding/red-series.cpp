@@ -12,7 +12,7 @@ namespace ren {
 
 
 
-bool AnySeries::isValid(RenCell const & cell) {
+bool AnySeries::isValid(RenCell const * cell) {
     UNUSED(cell);
     throw std::runtime_error("AnySeries::isValid not implemented");
 }

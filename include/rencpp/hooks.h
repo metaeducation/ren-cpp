@@ -210,7 +210,11 @@ typedef uint32_t RenResult; // REBCNT-compatible
 
 
 /*
- * REBVAL is a typedef for Reb_Value, both defined in src/include/sys_value.h
+ * The original concept of Ren-Cpp was to work with raw REBVAL or Red cells,
+ * which are structs that are 4 platform pointers in size.  The practical
+ * issues of GC extension for this model, included with the advent of
+ * "singular" REBSER nodes that could hold a single value, led to switching
+ * so that the responsibility for the cell's memory is on the engine side.
  *
  * In order to avoid pulling in all of the Rebol includes to every client
  * of Ren/C++, we make an "opaque type":
@@ -221,12 +225,8 @@ typedef uint32_t RenResult; // REBCNT-compatible
  */
 
 typedef struct {
-#if defined(__LP64__) || defined(__LLP64__)
-    char data[4 * sizeof(uint64_t)];
-#else
-    char data[4 * sizeof(uint32_t)];
-#endif
-} RenCell;
+    uintptr_t data[4];
+} RenCell; // actually a REBSER node--a "singular array" w/1 REBVAL
 
 
 typedef struct {
@@ -273,8 +273,8 @@ struct RenCall {
     const RenCell *gotten;
     const RenCell *pending;
     void *func; // REBFUN*
-    void *exit_from; // REBARR*
-    uintptr_t label_sym;
+    void *binding; // REBARR*
+    void *label; // REBSTR*
     RenCell *stackvars;
     void *varlist; // REBARR*
     RenCell *param;
@@ -380,7 +380,7 @@ RenResult RenConstructOrApply(
     RenEngineHandle engine,
     RenCell const * context,
     RenCell const * applicand,
-    RenCell const * loadablesCell,
+    RenCell * const * loadablesCell,
     size_t numLoadables,
     size_t sizeofLoadable,
     RenCell * constructOutDatatypeIn,

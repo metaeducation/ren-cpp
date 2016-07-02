@@ -51,15 +51,15 @@ class AnyContext : public AnyValue {
 protected:
     friend class AnyValue;
     AnyContext (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
     // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
     //    http://stackoverflow.com/questions/32983193/
 public:
     friend class Object;
-    static void initObject(RenCell & cell);
+    static void initObject(RenCell * cell);
     friend class Error;
-    static void initError(RenCell & cell);
+    static void initError(RenCell * cell);
     //
     // !!! Ports, Modules, Frames... (just Object and error for starters)
     //
@@ -235,7 +235,7 @@ class Object
     using AnyContext::initObject;
 
 protected:
-    static bool isValid(RenCell const & cell);
+    static bool isValid(RenCell const * cell);
 
 public:
     friend class AnyValue;

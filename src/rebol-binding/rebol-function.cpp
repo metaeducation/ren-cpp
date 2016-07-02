@@ -32,8 +32,8 @@ static_assert(R_OUT == 0, "R_OUT must be 0 for RenShimPointer to work");
 // some users want of their own functions.
 //
 
-bool Function::isValid(RenCell const & cell) {
-    return IS_FUNCTION(AS_C_REBVAL(&cell));
+bool Function::isValid(RenCell const * cell) {
+    return IS_FUNCTION(AS_C_REBVAL(cell));
 }
 
 
@@ -73,10 +73,11 @@ void Function::finishInitSpecial(
 ) {
     REBFUN *fun = Make_Function(
         Make_Paramlist_Managed_May_Fail(
-            AS_C_REBVAL(&spec.cell),
+            AS_C_REBVAL(spec.cell),
             MKF_KEYWORDS
         ),
-        &Ren_Cpp_Dispatcher
+        &Ren_Cpp_Dispatcher,
+        NULL // no underlying function, this is fundamental
     );
 
     // The C++ function interface that is generated is typed specifically to
@@ -98,7 +99,7 @@ void Function::finishInitSpecial(
 
     Val_Init_Block(FUNC_BODY(fun), info);
 
-    *AS_REBVAL(&cell) = *FUNC_VALUE(fun);
+    *AS_REBVAL(cell) = *FUNC_VALUE(fun);
 
     AnyValue::finishInit(engine);
 }

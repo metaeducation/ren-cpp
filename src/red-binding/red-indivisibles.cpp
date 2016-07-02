@@ -20,7 +20,7 @@ inline RedEngineHandle ensureEngine(Engine * engine) {
 /// NONE
 ///
 
-bool None::isValid(RenCell const & cell) {
+bool None::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_NONE;
 }
 
@@ -39,7 +39,7 @@ AnyValue::AnyValue (none_t, Engine * engine) noexcept  :
 /// LOGIC
 ///
 
-bool Logic::isValid(RenCell const & cell) {
+bool Logic::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_LOGIC;
 }
 
@@ -75,7 +75,7 @@ Logic::operator bool () const {
 /// CHARACTER
 ///
 
-bool Character::isValid(RenCell const & cell) {
+bool Character::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_CHAR;
 }
 
@@ -95,7 +95,7 @@ Character::operator wchar_t() const {
 /// INTEGER
 ///
 
-bool Integer::isValid(RenCell const & cell) {
+bool Integer::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_INTEGER;
 }
 
@@ -119,7 +119,7 @@ Integer::operator int () const {
 /// FLOAT
 ///
 
-bool Float::isValid(RenCell const & cell) {
+bool Float::isValid(RenCell const * cell) {
     return RedRuntime::getDatatypeID(cell) == RedRuntime::TYPE_FLOAT;
 }
 

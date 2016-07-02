@@ -36,7 +36,7 @@ AnyContext AnyContext::lookup(const char * name, Engine * engine)
 
     AnyContext result (Dont::Initialize);
 
-    if (::RenFindContext(&result->cell, engine->handle, name) != REN_SUCCESS)
+    if (::RenFindContext(result->cell, engine->handle, name) != REN_SUCCESS)
         throw std::runtime_error ("Couldn't find named context");
 
     result->finishInit(engine->handle);
