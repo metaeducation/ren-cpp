@@ -248,7 +248,7 @@ AnyWord::AnyWord (AnyWord const & other, internal::CellFunction cellfun) :
     (*cellfun)(this->cell);
 
     enum Reb_Kind kind = VAL_TYPE(AS_REBVAL(this->cell));
-    this->cell = other.cell;
+    *this->cell = *other.cell;
     VAL_SET_TYPE_BITS(AS_REBVAL(this->cell), kind);
 
     finishInit(other.origin);

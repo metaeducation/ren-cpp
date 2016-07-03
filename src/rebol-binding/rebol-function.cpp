@@ -57,7 +57,9 @@ static REB_R Ren_Cpp_Dispatcher(struct Reb_Frame *f)
     //
     void *cppfun = VAL_HANDLE_DATA(ARR_AT(info, 2));
 
-    return (*shim)(engine, cppfun, cast(RenCall*, f));
+    // f->arg has the 0-based arguments, f->out is the return
+    //
+    return (*shim)(AS_RENCELL(f->out), engine, cppfun, AS_RENCELL(f->arg));
 }
 
 

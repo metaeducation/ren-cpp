@@ -226,28 +226,6 @@ RebolRuntime::RebolRuntime (bool) :
     assert(sizeof(int32_t) == sizeof(REBINT));
     assert(sizeof(intptr_t) == sizeof(REBIPT));
     assert(sizeof(uintptr_t) == sizeof(REBUPT));
-
-    assert(offsetof(Reb_Frame, cell) == offsetof(RenCall, cell));
-    assert(offsetof(Reb_Frame, prior) == offsetof(RenCall, prior));
-    assert(offsetof(Reb_Frame, dsp_orig) == offsetof(RenCall, dsp_orig));
-    assert(offsetof(Reb_Frame, out) == offsetof(RenCall, out));
-    assert(offsetof(Reb_Frame, flags) == offsetof(RenCall, flags));
-    assert(offsetof(Reb_Frame, source) == offsetof(RenCall, source));
-    assert(offsetof(Reb_Frame, specifier) == offsetof(RenCall, specifier));
-    assert(offsetof(Reb_Frame, value) == offsetof(RenCall, value));
-    assert(offsetof(Reb_Frame, index) == offsetof(RenCall, index));
-    assert(offsetof(Reb_Frame, expr_index) == offsetof(RenCall, expr_index));
-    assert(offsetof(Reb_Frame, eval_type) == offsetof(RenCall, eval_type));
-    assert(offsetof(Reb_Frame, gotten) == offsetof(RenCall, gotten));
-    assert(offsetof(Reb_Frame, pending) == offsetof(RenCall, pending));
-    assert(offsetof(Reb_Frame, func) == offsetof(RenCall, func));
-    assert(offsetof(Reb_Frame, binding) == offsetof(RenCall, binding));
-    assert(offsetof(Reb_Frame, label) == offsetof(RenCall, label));
-    assert(offsetof(Reb_Frame, stackvars) == offsetof(RenCall, stackvars));
-    assert(offsetof(Reb_Frame, varlist) == offsetof(RenCall, varlist));
-    assert(offsetof(Reb_Frame, param) == offsetof(RenCall, param));
-    assert(offsetof(Reb_Frame, arg) == offsetof(RenCall, arg));
-    assert(offsetof(Reb_Frame, refine) == offsetof(RenCall, refine));
 }
 
 
@@ -333,15 +311,6 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 #endif
     signal(SIGTERM, signalHandler);
 
-    // Initialize the REBOL library (reb-lib):
-    if (not CHECK_STRUCT_ALIGN)
-        throw std::runtime_error(
-            "RebolHooks: Incompatible struct alignment..."
-            " Did you build mainline Rebol on 64-bit instead of with -m32?"
-            " (for 64-bit builds, use http://github.com/rebolsource/r3)"
-        );
-
-
     // bin is optional startup code (compressed).  If it is provided, it
     // will be stored in system/options/boot-host, loaded, and evaluated.
 
@@ -391,7 +360,10 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     };
 
     REBVAL testSpec;
-    Val_Init_Block(&testSpec, Scan_Source(testSpecStr, LEN_BYTES(testSpecStr)));
+    Val_Init_Block(
+        &testSpec,
+        Scan_UTF8_Managed(testSpecStr, LEN_BYTES(testSpecStr))
+    );
 
     REBFUN *testNative = Make_Function(
         Make_Paramlist_Managed_May_Fail(&testSpec, MKF_KEYWORDS),

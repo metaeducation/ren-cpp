@@ -75,9 +75,10 @@ namespace internal {
 //
 
 using RenShimPointer = RenResult (*)(
+    RenCell *out,
     RenEngineHandle engine,
     const void *cppfun, // each function type signature has its own shim
-    RenCall * call
+    RenCell args[] // args passed as contiguous array of cells
 );
 
 }
@@ -368,9 +369,9 @@ private:
 
     template <std::size_t... Indices>
     static auto applyCppFunImpl(
-        FunType const & cppfun,
         RenEngineHandle engine,
-        RenCall * call,
+        FunType const & cppfun,
+        RenCell *args,
         utility::indices<Indices...>
     )
         -> decltype(
@@ -380,7 +381,7 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    REN_CS_ARG(call, Indices),
+                    &args[Indices],
                     engine
                 )...
             )
@@ -392,7 +393,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                REN_CS_ARG(call, static_cast<int>(Indices)),
+                &args[Indices],
                 engine
             )...
         );
@@ -400,18 +401,19 @@ private:
 
     template <typename Indices = utility::make_indices<sizeof...(Ts)>>
     static auto applyCppFun(
-        FunType const & cppfun, RenEngineHandle engine, RenCall * call
+        RenEngineHandle engine, FunType const & cppfun, RenCell *args
     ) ->
-        decltype(applyCppFunImpl(cppfun, engine, call, Indices {}))
+        decltype(applyCppFunImpl(engine, cppfun, args, Indices {}))
     {
-        return applyCppFunImpl(cppfun, engine, call, Indices {});
+        return applyCppFunImpl(engine, cppfun, args, Indices {});
     }
 
 private:
     static RenResult shim(
+        RenCell *out,
         RenEngineHandle engine,
         const void *cppfun,
-        RenCall * call
+        RenCell args[]
     ){
         // To be idiomatic for C++, we want to be able to throw a ren::Error
         // using C++ exceptions from within a ren::Function.  Yet since the
@@ -432,16 +434,16 @@ private:
             // (who is blissfully unaware of the call frame convention and
             // writing using high-level types...)
 
-            auto && out = applyCppFun(
-                *reinterpret_cast<const FunType*>(cppfun),
+            auto && temp = applyCppFun(
                 engine,
-                call
+                *reinterpret_cast<const FunType*>(cppfun),
+                args
             );
 
             // The return result is written into a location that is known
             // according to the protocol of the call frame
 
-            AnyValue::toCell_(REN_CS_OUT(call), out); // out may be optional
+            AnyValue::toCell_(out, temp); // temp may be ren::optional
             result = REN_SUCCESS;
         }
         catch (bad_optional_access const & e) {
@@ -451,7 +453,7 @@ private:
             };
         }
         catch (Error const & e) {
-            *REN_CS_OUT(call) = e;
+            *out = e;
             result = REN_APPLY_ERROR;
         }
         catch (optional<Error> const & e) {
@@ -459,7 +461,7 @@ private:
                 throw std::runtime_error {
                     "ren::nullopt optional<Error> thrown from ren::Function"
                 };
-            *REN_CS_OUT(call) = (*e);
+            *out = (*e);
             result = REN_APPLY_ERROR;
         }
         catch (AnyValue const & v) {
@@ -470,7 +472,7 @@ private:
                     "Non-isError() Value thrown from ren::Function"
                 };
 
-            *REN_CS_OUT(call) = v;
+            *out = v;
             result = REN_APPLY_ERROR;
         }
         catch (optional<AnyValue> const & v) {
@@ -479,7 +481,7 @@ private:
                     "Non-isError() optional<AnyValue> thrown from ren::Function"
                 };
 
-            *REN_CS_OUT(call) = *(v->cell);
+            *out = *(v->cell);
             result = REN_APPLY_ERROR;
         }
         catch (evaluation_error const & e) {
@@ -492,7 +494,7 @@ private:
             // code (hence having std::exception expectations) or just as
             // the implementation of a ren::Function
 
-            *REN_CS_OUT(call) = (e.error());
+            *out = (e.error());
             result = REN_APPLY_ERROR;
         }
         catch (evaluation_throw const & t) {
@@ -512,15 +514,11 @@ private:
                     ? nullptr
                     : t.name()->cell;
 
-            RenShimInitThrown(
-                REN_CS_OUT(call),
-                thrown_value,
-                thrown_name
-            );
+            RenShimInitThrown(out, thrown_value, thrown_name);
             result = REN_APPLY_THREW;
         }
         catch (load_error const & e) {
-            *REN_CS_OUT(call) = e.error();
+            *out = e.error();
             result = REN_CONSTRUCT_ERROR;
         }
         catch (evaluation_halt const & e) {
@@ -566,7 +564,7 @@ private:
 
         case REN_APPLY_ERROR:
         case REN_CONSTRUCT_ERROR:
-            return RenShimFail(REN_CS_OUT(call));
+            return RenShimFail(out);
 
         default:
             UNREACHABLE_CODE();

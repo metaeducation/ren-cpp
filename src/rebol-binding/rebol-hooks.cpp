@@ -222,7 +222,7 @@ public:
                 // the `if (error)` case above!  These are the errors that
                 // happen if the input is bad (unmatched parens, etc...)
 
-                REBARR * transcoded = Scan_Source(
+                REBARR * transcoded = Scan_UTF8_Managed(
                     loadText, LEN_BYTES(loadText)
                 );
 

@@ -246,64 +246,6 @@ typedef RebolEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
 
-/*
- * Proxy type for struct Reb_Frame.  Commented in Rebol's %sys-frame.h
- */
-
-enum Ren_Call_Mode {};
-
-struct RenCall {
-    union {
-        RenCell eval;
-        void *subfeed; // REBARR*
-    } cell;
-    struct RenCall *prior;
-    uintptr_t dsp_orig;
-    RenCell *out;
-    uintptr_t flags;
-    union {
-        void *array; // REBSER*
-        void *vaptr; // va_list*
-    } source;
-    void *specifier; // REBCTX*
-    const RenCell *value;
-    uintptr_t index;
-    uintptr_t expr_index;
-    uintptr_t eval_type;
-    const RenCell *gotten;
-    const RenCell *pending;
-    void *func; // REBFUN*
-    void *binding; // REBARR*
-    void *label; // REBSTR*
-    RenCell *stackvars;
-    void *varlist; // REBARR*
-    RenCell *param;
-    RenCell *arg;
-    RenCell *refine;
-
-//additional data is debug information--cast to Reb_Frame to read
-};
-
-typedef uint32_t (RenDispatcher)(RenCall * call);
-
-#define REN_CS_OUT(stack) \
-    ((stack)->out)
-
-// arg should be non-NULL and points to the args, 0-based.  (Note: this
-// follows the "stack only" conventions of natives and classic "FUNCTION!",
-// however hybrid and durable frames will throw other features in the mix,
-// if Ren-Cpp wishes to be able to have arguments that outlive the call.)
-//
-#define REN_CS_ARG(stack, index) \
-    (&((stack)->arg)[index])
-
-#if defined(__LP64__) || defined(__LLP64__)
-    #define REN_STACK_SHIM(stack) \
-        (RenDispatcher*)(&(stack)->func.data)[3 * sizeof(uint64_t)])
-#else
-    #define REN_STACK_SHIM(stack) \
-        (RenDispatcher*)(&(stack)->func.data)[3 * sizeof(uint32_t)])
-#endif
 
 #else
 
