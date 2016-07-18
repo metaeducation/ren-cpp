@@ -59,7 +59,12 @@ static REB_R Ren_Cpp_Dispatcher(struct Reb_Frame *f)
 
     // f->arg has the 0-based arguments, f->out is the return
     //
-    return (*shim)(AS_RENCELL(f->out), engine, cppfun, AS_RENCELL(f->arg));
+    return (*shim)(
+        AS_RENCELL(f->out),
+        engine,
+        cppfun,
+        AS_RENCELL(f->args_head)
+    );
 }
 
 

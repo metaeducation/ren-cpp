@@ -577,7 +577,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
                     return {blank};
 
                 if (not hasType<Block>(arg))
-                    throw Error {"Unknown meta command"};
+                    throw Error ("Unknown meta command");
 
                 auto blk = static_cast<Block>(*arg);
 
@@ -586,7 +586,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
                     return nullopt;
                 };
 
-                throw Error {"Unknown meta command"};
+                throw Error ("Unknown meta command");
             }
 
         #ifdef TO_WINDOWS

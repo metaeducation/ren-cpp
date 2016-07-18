@@ -31,7 +31,9 @@ Error::Error (const char * msg, Engine * engine) :
     if (not engine)
         engine = &Engine::runFinder();
 
-    std::string array {"#[error! [code: 1000 type: 'User id: 'message arg1: "};
+    std::string array (
+        "#[error! [code: 1000 type: 'User id: 'message message: "
+    );
 
     array += '{';
     array += msg;
@@ -40,7 +42,7 @@ Error::Error (const char * msg, Engine * engine) :
     // the shim could adjust the where and say what function threw it?
     // file/line number optional?
 
-    array += " arg2: none arg3: none near: {ren::Error} where: none]]";
+    array += "]]";
 
     internal::Loadable loadable = array.data();
 

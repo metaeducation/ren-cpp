@@ -121,10 +121,10 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                             and not hasType<Refinement>(blk[2])
                         )
                     ) {
-                        throw Error {
+                        throw Error (
                             "Console dialects must be single arity"
-                            " (/meta switch for control)}"
-                        };
+                            " (/meta switch for control)"
+                        );
                     }
 
                     // should we check if arg.isEqualTo(dialect) and do
@@ -164,7 +164,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     return nullopt;
                 }
 
-                throw Error {"More CONSOLE features soon!"};
+                throw Error ("More CONSOLE features soon!");
             }
 
             if (hasType<Word>(arg)) {
@@ -221,10 +221,10 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     }
                 }
 
-                throw Error {"Unknown dialect options"};
+                throw Error ("Unknown dialect options");
             }
 
-            throw Error {"Unknown dialect options."};
+            throw Error ("Unknown dialect options.");
         }
     );
 
@@ -291,9 +291,9 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 ) {
                     optional<AnyValue> result = arg.apply();
                     if (result == nullopt)
-                        throw Error {
+                        throw Error (
                             "No expression result to use as watch dialect"
-                        };
+                        );
 
                     arg = *result;
 

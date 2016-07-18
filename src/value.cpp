@@ -185,7 +185,7 @@ internal::Loadable::Loadable (std::string const & source) :
     Loadable (Dont::Initialize)
 {
     String value {source};
-    cell = value.cell;
+    *cell = *value.cell;
 }
 
 #if REN_CLASSLIB_QT == 1
@@ -193,7 +193,7 @@ internal::Loadable::Loadable (QString const & source) :
     Loadable (Dont::Initialize)
 {
     String value {source};
-    cell = value.cell;
+    *cell = *value.cell;
 }
 #endif
 

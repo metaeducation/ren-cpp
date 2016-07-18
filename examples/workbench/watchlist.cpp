@@ -126,11 +126,11 @@ void WatchList::Watcher::evaluate(bool firstTime) {
     catch (std::exception const & e) {
         std::string message {"C++ exception: "};
         message += e.what();
-        error = Error {message.c_str()};
+        error = Error (message.c_str());
     }
     catch (...) {
         assert(false);
-        error = Error {"C++ non-std::exception"};
+        error = Error ("C++ non-std::exception");
     }
 }
 
@@ -294,7 +294,7 @@ void WatchList::updateWatcher(int index) {
     }
 
     if (not w.recalculates)
-        valueItem->setForeground(Qt::darkGreen);
+        nameItem->setForeground(Qt::darkGray);
     else if (w.error)
         valueItem->setForeground(Qt::darkRed);
     else if (w.value)
@@ -310,10 +310,18 @@ void WatchList::updateWatcher(int index) {
         valueItem->setBackground(Qt::white);
     }
 
-    if (w.label)
-        nameItem->setForeground(Qt::darkMagenta);
-    else
-        nameItem->setForeground(Qt::black);
+    if (w.label) {
+        if (w.recalculates)
+            nameItem->setForeground(Qt::darkMagenta);
+        else
+            nameItem->setForeground(Qt::darkMagenta); // !!! another color?
+    }
+    else {
+        if (w.recalculates)
+            nameItem->setForeground(Qt::black);
+        else
+            nameItem->setForeground(Qt::darkGray);
+    }
 
     // We give visual feedback by selecting the watches that have changed
     // since the last update.
@@ -416,7 +424,7 @@ optional<AnyValue> WatchList::watchDialect(
     if (hasType<Integer>(arg)) {
         int signedIndex = static_cast<Integer>(arg);
         if (signedIndex == 0)
-            throw Error {"Integer arg must be nonzero"};
+            throw Error ("Integer arg must be nonzero");
 
         bool removal = signedIndex < 0;
         size_t index = std::abs(signedIndex);
@@ -426,7 +434,7 @@ optional<AnyValue> WatchList::watchDialect(
         // Negative integers affect the GUI and run on GUI thread.
 
         if (index > this->watchers.size())
-            throw Error {"No such watchlist item index"};
+            throw Error ("No such watchlist item index");
 
         optional<AnyValue> watchValue = watchers[index - 1]->value;
         optional<Error> watchError = watchers[index - 1]->error;
@@ -451,7 +459,7 @@ optional<AnyValue> WatchList::watchDialect(
                 return w.value;
             }
         }
-        throw Error {"unknown tag name in watch list"};
+        throw Error ("unknown tag name in watch list");
     }
 
     // With those words out of the way, we should be able to take for granted
@@ -494,7 +502,7 @@ optional<AnyValue> WatchList::watchDialect(
     }
 
     if (not watcherUnique)
-        throw Error {"unexpected type passed to watch dialect"};
+        throw Error ("unexpected type passed to watch dialect");
 
     // we append to end instead of inserting at the top because
     // it keeps the numbering more consistent.  But some people might

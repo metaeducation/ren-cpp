@@ -65,7 +65,7 @@ void EvaluatorWorker::doWork(
 
         if (meta) {
             if (not runtime("find words-of quote", dialect, "/meta"))
-                throw Error {"current dialect has no /meta refinement"};
+                throw Error ("current dialect has no /meta refinement");
 
             result = context(Path {dialect, "meta"}, loaded);
         }
@@ -109,7 +109,7 @@ void EvaluatorWorker::doWork(
 
         if (!success) {
             std::string message = std::string("No CATCH for: ") + t.what();
-            result = Error {message.c_str()};
+            result = Error (message.c_str());
         }
     }
     catch (load_error const & e) {

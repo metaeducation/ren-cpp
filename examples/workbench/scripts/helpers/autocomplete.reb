@@ -231,7 +231,7 @@ autocomplete-helper: function [
 
             scope: try-get-scope-from-path path
 
-            if any-function? :scope [
+            if function? :scope [
                 completion-contexts: reduce [fake-context-from-function :scope]
             ]
 

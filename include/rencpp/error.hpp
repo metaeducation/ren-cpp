@@ -53,13 +53,19 @@ namespace ren {
 // However, if you know yourself to be writing code that is inside of
 // a ren::Function, a shorthand is provided in the form of:
 //
-//     throw ren::Error {"Invalid hedgehog found"};
+//     throw ren::Error ("Invalid hedgehog found");
+//
+// If you use the () form of construction then it will interpret the string
+// literal as a string.  But if you use the {} initializer list form, it will
+// assume you want to LOAD the code:
+//
+//     throw ren::Error {"{Invalid} animal-type {found}"};
 //
 // Because C++ throws cannot be caught by Ren runtime's CATCH, the meaning
 // chosen for throwing an error object is effectively to "raise" an error, as
 // if you had written:
 //
-//     ren::runtime("do make error! {Invalid Hedgehog found}");
+//     ren::runtime("fail {Invalid Hedgehog found}");
 //
 // Yet you should not throw other value types; they will be handled as
 // exceptions if you do.  And when using this convenience, remember that

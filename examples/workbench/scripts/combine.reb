@@ -106,6 +106,8 @@ combine: function [
 
     original: block
 
+    limit: to-value :limit ;-- Combine originally written w/NONE! refinements
+
     while [
         all [
             not tail? block
