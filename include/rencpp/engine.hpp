@@ -84,7 +84,7 @@ public:
         osPtr (&std::cout),
         isPtr (&std::cin)
     {
-        if (::RenAllocEngine(&handle) != 0) {
+        if (::RenAllocEngine(&handle) != REN_SUCCESS) {
             throw std::runtime_error ("Couldn't initialize red runtime");
         }
     }

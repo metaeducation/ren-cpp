@@ -63,7 +63,7 @@ AnyValue ren::internal::AnySeries_::operator*() const {
             GET_ANY_CHAR(VAL_SERIES(v), VAL_INDEX(v))
         );
     } else if (Is_Array_Series(VAL_SERIES(v))) {
-        COPY_VALUE(
+        Derelativize(
             AS_REBVAL(result.cell),
             ARR_AT(VAL_ARRAY(v), VAL_INDEX(v)), VAL_SPECIFIER(v)
         );

@@ -28,15 +28,16 @@ AnyValue::AnyValue (Dont)
     // it in the destructor, using C++ exception handling to take care of
     // error cases.
     //
-    cell = reinterpret_cast<RenCell*>(Make_Pairing(NULL));
+    cell = reinterpret_cast<RenCell*>(Alloc_Pairing(NULL));
 
     REBVAL *key = PAIRING_KEY(AS_REBVAL(cell));
     SET_BLANK(key);
+    SET_BLANK(AS_REBVAL(cell));
 
     // Mark the created pairing so it will act as a "root".  The key and value
     // will be deep marked for GC.
     //
-    SET_VAL_FLAG(key, REBSER_REBVAL_FLAG_ROOT);
+    SET_VAL_FLAG(key, NODE_FLAG_ROOT);
 }
 
 
@@ -159,7 +160,7 @@ AnyValue AnyValue::copy(bool deep) const {
     // feels like fixing the above, be my guest...
 
     AnyContext userContext (Dont::Initialize);
-    Val_Init_Object(
+    Init_Object(
         AS_REBVAL(userContext.cell),
         VAL_CONTEXT(Get_System(SYS_CONTEXTS, CTX_USER))
     );
@@ -309,7 +310,7 @@ Loadable::Loadable (char const * sourceCstr) :
     // to be put into a block.
     //
     VAL_RESET_HEADER(AS_REBVAL(cell), REB_0);
-    VAL_HANDLE_DATA(AS_REBVAL(cell)) = const_cast<char *>(sourceCstr);
+    AS_REBVAL(cell)->payload.handle.pointer = const_cast<char *>(sourceCstr);
 
     origin = REN_ENGINE_HANDLE_INVALID;
 }

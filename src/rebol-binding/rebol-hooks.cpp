@@ -101,7 +101,7 @@ public:
         // don't expose CTX_ROOT?
 
         if (context) {
-            Val_Init_Object(AS_REBVAL(out), context);
+            Init_Object(AS_REBVAL(out), context);
             return REN_SUCCESS;
         }
 
@@ -160,7 +160,7 @@ public:
                 return REN_EVALUATION_HALTED;
             }
 
-            Val_Init_Error(extraOut, error);
+            Init_Error(extraOut, error);
 
             return applying ? REN_APPLY_ERROR : REN_CONSTRUCT_ERROR;
         }
@@ -198,7 +198,7 @@ public:
 
             auto cell = *reinterpret_cast<REBVAL * const *>(current);
 
-            if ((cell->header.bits & HEADER_TYPE_MASK) == REB_0) {
+            if (VAL_TYPE_RAW(cell) == REB_0) {
 
                 // This is our "Alien" type that wants to get loaded (voids
                 // cannot be legally loaded into blocks, by design).  Key
@@ -209,7 +209,7 @@ public:
                 // [[foo bar]] that discern the cases
 
                 auto loadText = reinterpret_cast<REBYTE*>(
-                    VAL_HANDLE_DATA(cell)
+                    cell->payload.handle.pointer // not actually a REB_HANDLE
                 );
 
                 // !!! Temporary: we can't let the GC see a REB_0 trash.
@@ -256,7 +256,7 @@ public:
                 // an #ifdef and apparently unused.  This is its definition.
 
                 Insert_Series(
-                    ARR_SERIES(aggregate),
+                    AS_SERIES(aggregate),
                     ARR_LEN(aggregate),
                     reinterpret_cast<REBYTE*>(ARR_HEAD(transcoded)),
                     ARR_LEN(transcoded)
@@ -283,7 +283,7 @@ public:
                 // Depending on how much was set in the "datatype in" we may
                 // not have to rewrite the header bits (but Val_Inits do).
 
-                Val_Init_Array(constructOutDatatypeIn, resultType, aggregate);
+                Init_Any_Array(constructOutDatatypeIn, resultType, aggregate);
 
                 // Val_Init makes aggregate a managed series, can't free it
                 is_aggregate_managed = true;
@@ -306,7 +306,7 @@ public:
                 );
 
                 // This sets REB_OBJECT in the header, possibly redundantly
-                Val_Init_Object(constructOutDatatypeIn, object);
+                Init_Object(constructOutDatatypeIn, object);
             }
             else {
                 // If they didn't want a block, then they better want the type
@@ -318,7 +318,7 @@ public:
                 if (len != 1) {
                     // Requested construct, but a singular item didn't come
                     // back (either 0 or more than 1 element in aggregate)
-                    Val_Init_Error(
+                    Init_Error(
                         extraOut,
                         ::Error(RE_MISC) // Make error code for this...
                     );
@@ -327,7 +327,7 @@ public:
                 }
                 else if (resultType != VAL_TYPE(ARR_HEAD(aggregate))) {
                     // Requested construct and value type was wrong
-                    Val_Init_Error(
+                    Init_Error(
                         extraOut,
                         ::Error(
                             RE_INVALID_ARG, // Make error code for this...
@@ -419,7 +419,7 @@ public:
         // Okay that should be the UTF8 data.  Let's copy it into the buffer
         // the caller sent us.
 
-        REBCNT len = SER_LEN(utf8_series);
+        size_t len = SER_LEN(utf8_series);
         *numBytesOut = static_cast<size_t>(len);
 
         RenResult result;

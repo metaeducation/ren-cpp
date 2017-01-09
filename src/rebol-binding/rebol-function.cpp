@@ -11,12 +11,12 @@ namespace ren {
 //
 // Although the abstraction is that the RenShimPointer returns a RenResult,
 // the native function pointers in Rebol do not do this.  It just happens
-// that 0 maps to R_OUT, which is what we want.  The return conventions of
+// that 5 maps to R_OUT, which is what we want.  The return conventions of
 // Red are unlikely to match that...and maybe never give back an integer
 // at all.  For the moment though we'll assume it does but the interpretation
 // as some kind of error code for the hook seems more sensible.
 //
-static_assert(R_OUT == 0, "R_OUT must be 0 for RenShimPointer to work");
+static_assert(R_OUT == REN_SUCCESS, "R_OUT must be 5 for RenShimPointer to work");
 
 
 //
@@ -45,26 +45,39 @@ static REB_R Ren_Cpp_Dispatcher(struct Reb_Frame *f)
     REBARR *info = VAL_ARRAY(FUNC_BODY(f->func));
 
     RenEngineHandle engine;
-    engine.data = cast(int, cast(REBUPT, VAL_HANDLE_DATA(ARR_AT(info, 0))));
+    engine.data = cast(int, cast(REBUPT, VAL_HANDLE_POINTER(ARR_AT(info, 0))));
 
     internal::RenShimPointer shim
-        = cast(internal::RenShimPointer, VAL_HANDLE_CODE(ARR_AT(info, 1)));
+        = cast(internal::RenShimPointer, VAL_HANDLE_POINTER(ARR_AT(info, 1)));
 
-    // !!! Note that this is a raw pointer to a C++ object.  Currently its
-    // lifetime is until program end.  If these were to be GC'd, only the
-    // shim would be able to do it...because only it would know how to cast
-    // the std::function pointer to the right type for deletion.
+    // Note that this is a raw pointer to a C++ object.  The only code that
+    // knows how to free it is the "freer" function (held in the handle's
+    // code pointer), and this freeing occurs when the handle is GC'd
     //
-    void *cppfun = VAL_HANDLE_DATA(ARR_AT(info, 2));
+    void *cppfun = VAL_HANDLE_POINTER(ARR_AT(info, 2));
 
     // f->arg has the 0-based arguments, f->out is the return
     //
-    return (*shim)(
+    return cast(REB_R, (*shim)(
         AS_RENCELL(f->out),
         engine,
         cppfun,
         AS_RENCELL(f->args_head)
+    ));
+}
+
+
+static void CppFunCleaner(const REBVAL *v) {
+    assert(IS_HANDLE(v));
+    
+    auto freer = reinterpret_cast<internal::RenCppfunFreer>(
+        VAL_HANDLE_LEN(v)
     );
+
+    // The "freer" knows how to `delete` the specific C++ std::function subtype
+    // that was being held onto by the handle's data pointer
+    //
+    (freer)(VAL_HANDLE_POINTER(v));
 }
 
 
@@ -76,7 +89,8 @@ void Function::finishInitSpecial(
     RenEngineHandle engine,
     Block const & spec,
     internal::RenShimPointer shim,
-    const void *cppfun // a std::function object, with varying type signatures
+    void *cppfun, // a std::function object, with varying type signatures
+    internal::RenCppfunFreer freer
 ) {
     REBFUN *fun = Make_Function(
         Make_Paramlist_Managed_May_Fail(
@@ -98,13 +112,24 @@ void Function::finishInitSpecial(
     // "unpacker" shim function, which is called by the dispatcher.
 
     REBARR *info = Make_Array(3);
-    SET_HANDLE_DATA(
-        Alloc_Tail_Array(info), cast(void*, cast(REBUPT, engine.data))
+    Init_Handle_Simple(
+        Alloc_Tail_Array(info),
+        cast(void*, cast(REBUPT, engine.data)), // data
+        0 // len
     );
-    SET_HANDLE_CODE(Alloc_Tail_Array(info), cast(CFUNC*, shim));
-    SET_HANDLE_DATA(Alloc_Tail_Array(info), cast(void*, cast(REBUPT, cppfun)));
+    Init_Handle_Simple(
+        Alloc_Tail_Array(info),
+        cast(void*, shim), // code
+        0 // len
+    );
+    Init_Handle_Managed(
+        Alloc_Tail_Array(info),
+        cast(void*, cast(REBUPT, cppfun)), // data
+        cast(REBUPT, freer), // hide the type-aware freeing function in the "len"
+        &CppFunCleaner // function to call when this handle gets GC'd
+    );
 
-    Val_Init_Block(FUNC_BODY(fun), info);
+    Init_Block(FUNC_BODY(fun), info);
 
     *AS_REBVAL(cell) = *FUNC_VALUE(fun);
 

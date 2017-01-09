@@ -437,7 +437,7 @@ public:
 
 
 public:
-    AnyValue (char c, Engine * engine = nullptr) noexcept;
+    AnyValue (char c, Engine * engine = nullptr);
     AnyValue (wchar_t wc, Engine * engine = nullptr) noexcept;
 
     AnyValue (int i, Engine * engine = nullptr) noexcept;
@@ -491,7 +491,7 @@ public:
         if (cell) {
             uninitialize();
         #if !defined(NDEBUG)
-            cell = reinterpret_cast<RenCell*>(0xBAADF00D);
+            cell = NULL;
         #endif
         }
     }

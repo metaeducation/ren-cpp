@@ -24,7 +24,7 @@ extern REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
     REBARR *args,
-    REBCTX *specifier
+    REBSPC *specifier
 );
 
 #endif // RENCPP_REBOL_COMMON_HPP

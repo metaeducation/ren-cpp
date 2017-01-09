@@ -123,12 +123,12 @@ void EvaluatorWorker::doWork(
 
         result = e.error();
     }
-    catch (evaluation_halt const & e) {
+    catch (evaluation_halt const &) {
         // Cancellation as with hitting the escape key during an infinite
         // loop.  (Such requests must originate from the GUI thread.)
         // Let returning none for the error mean cancellation.
 
-		result = nullopt;
+        result = nullopt;
     }
     catch (std::exception const & e) {
         const char * what = e.what();

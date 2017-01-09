@@ -32,7 +32,7 @@ Error::Error (const char * msg, Engine * engine) :
         engine = &Engine::runFinder();
 
     std::string array (
-        "#[error! [code: 1000 type: 'User id: 'message message: "
+        "#[error! [code: 10000 type: 'User id: 'message message: "
     );
 
     array += '{';

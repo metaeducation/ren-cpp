@@ -11,7 +11,11 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <unistd.h>
+
+#if !defined TO_WINDOWS
+    #include <unistd.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 

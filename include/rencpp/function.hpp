@@ -73,13 +73,21 @@ namespace internal {
 // !!! Should the engine handle come implicitly from the frame?  It seems
 // that a frame needs to know this.
 //
-
 using RenShimPointer = RenResult (*)(
     RenCell *out,
     RenEngineHandle engine,
     const void *cppfun, // each function type signature has its own shim
     RenCell args[] // args passed as contiguous array of cells
 );
+
+//
+// How long the C++ function object has to stick around depends on how long
+// it takes for the wrapping FUNCTION! to be garbage collected.  In order
+// for the generic C code inside Rebol to be able to free the C++ function,
+// there has to be a C-style routine to call to do it for that specific
+// function subtype.
+//
+using RenCppfunFreer = void (*)(void *cppfun);
 
 }
 
@@ -119,7 +127,8 @@ private:
         RenEngineHandle engine,
         Block const & spec,
         internal::RenShimPointer shim,
-        const void *cppfun // a std::function that shim knows how to interpret
+        void *cppfun, // a std::function that shim knows how to interpret
+        internal::RenCppfunFreer freer
     );
 
 
@@ -338,14 +347,6 @@ public:
 
 namespace internal {
 
-//
-// Limits of the type system and specialization force us to have a table
-// of functions on a per-template specialization basis.  However, there's
-// no good reason to have one mutex per table.  One for all will do.
-//
-
-extern std::mutex keepaliveMutex;
-
 template<class R, class... Ts>
 class FunctionGenerator : public Function {
 private:
@@ -360,9 +361,6 @@ private:
     using FunType = std::function<R(Ts...)>;
 
     using ParamsType = std::tuple<Ts...>;
-
-    static std::vector<std::unique_ptr<FunType>> keepaliveCppFuns;
-
 
     // Function used to create Ts... on the fly and apply a
     // given function to them
@@ -446,7 +444,7 @@ private:
             AnyValue::toCell_(out, temp); // temp may be ren::optional
             result = REN_SUCCESS;
         }
-        catch (bad_optional_access const & e) {
+        catch (bad_optional_access const &) {
             throw std::runtime_error {
                 "C++ code dereferenced empty optional, no further details"
                 " (try setting a breakpoint in optional.hpp)"
@@ -521,7 +519,7 @@ private:
             *out = e.error();
             result = REN_CONSTRUCT_ERROR;
         }
-        catch (evaluation_halt const & e) {
+        catch (evaluation_halt const &) {
             result = REN_EVALUATION_HALTED;
         }
         catch (std::exception const & e) {
@@ -552,7 +550,7 @@ private:
 
         switch (result) {
         case REN_SUCCESS:
-            // !!! R_OUT is 0 in Rebol and so is REN_SUCCESS
+            // !!! R_OUT is 5 in Rebol and so is REN_SUCCESS
             return REN_SUCCESS;
 
         case REN_APPLY_THREW:
@@ -571,6 +569,14 @@ private:
         }
     }
 
+    // Note this is a template, and so there is a different "freer" function generated for each
+    // instance.  That means the `delete` has to be against this `FunType`, and it has to
+    // happen in the header file.
+    //
+    static void freer(void *cppfun) {
+        delete reinterpret_cast<FunType*>(cppfun); 
+    }
+
 public:
     FunctionGenerator (
         RenEngineHandle engine,
@@ -581,40 +587,24 @@ public:
     {
         // We are receiving a std::function that implements the C++ "body" of
         // the Ren function.  But the entity that will be holding onto it for
-        // its lifetime is a Ren-C FUNC...which can only stow a void pointer.
-        // That's not enough--because the function object's destructor will
-        // run and the pointer will go bad.
+        // its lifetime is a Ren-C FUNCTION! body...which can only stow it
+        // in a void pointer of a handle.
         //
-        // Since the function object is generally just a small wrapper around
-        // compiled and linked code, it basically a "sunk cost".   There is
-        // little advantage to destroying the object, vs. keeping it alive
-        // for the entire program run.  So make a copy and hold onto it
-        // via unique_ptr, so it's good for the lifetime of the run.
-
-        std::lock_guard<std::mutex> lock {internal::keepaliveMutex};
-        keepaliveCppFuns.emplace_back(new FunType {cppfun});
-        FunType const *stableCppFun = keepaliveCppFuns.back().get();
+        // Hence, we need to pass in a freeing function as well.
 
         // We've got what we need, but depending on the runtime it will have
         // a different encoding of the shim and type into the bits of the
         // cell.  We defer to a function provided by each runtime.
 
-        Function::finishInitSpecial(engine, spec, &shim, stableCppFun);
+        Function::finishInitSpecial(
+            engine,
+            spec,
+            &shim,
+            new FunType {cppfun},
+            &freer
+        );
     }
 };
-
-
-//
-// There is some kind of voodoo that makes this work, even though it's in a
-// header file.  So each specialization of the FunctionGenerator type gets its
-// own copy and there are no duplicate symbols arising from multiple includes
-//
-
-template<class R, class... Ts>
-std::vector<
-    std::unique_ptr<typename FunctionGenerator<R, Ts...>::FunType>
-> FunctionGenerator<R, Ts...>::keepaliveCppFuns;
-
 
 } // end namespace internal
 

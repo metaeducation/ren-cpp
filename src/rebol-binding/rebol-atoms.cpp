@@ -91,7 +91,7 @@ bool Character::isValid(RenCell const * cell) {
     return IS_CHAR(AS_C_REBVAL(cell));
 }
 
-AnyValue::AnyValue (char c, Engine * engine) noexcept :
+AnyValue::AnyValue (char c, Engine * engine) :
     AnyValue (Dont::Initialize)
 {
     if (c < 0)

@@ -2,7 +2,6 @@
 #include <stdexcept>
 
 #include <csignal>
-#include <unistd.h>
 
 #include "rencpp/engine.hpp"
 #include "rencpp/rebol.hpp"
@@ -24,7 +23,10 @@ extern "C" {
     // queue.  We thus have to initialize it if we want things like devices
     // and http/https to work, so we use GetModuleHandle(NULL).
     //
+    extern HINSTANCE App_Instance;
     HINSTANCE App_Instance = 0;
+#else
+    #include <unistd.h>
 #endif
 
 // Saphirion additions with commands for running https
@@ -51,7 +53,7 @@ REBOOL Generalized_Apply_Throws(
     REBVAL *out,
     const REBVAL *applicand,
     REBARR *args,
-    REBCTX *specifier
+    REBSPC *specifier
 ) {
     if (applicand && IS_ERROR(applicand)) {
         if (ARR_LEN(args) != 0) {
@@ -98,7 +100,7 @@ REBOOL Generalized_Apply_Throws(
         args,
         0,
         specifier,
-        DO_FLAG_NEXT | DO_FLAG_LOOKAHEAD | DO_FLAG_ARGS_EVALUATE
+        DO_FLAG_NORMAL
     );
 
     if (indexor == THROWN_FLAG)
@@ -123,8 +125,6 @@ namespace ren {
 
 RebolRuntime runtime {true};
 
-REBARGS rebargs;
-
 static REBVAL loadAndBindWord(
     REBCTX * context,
     unsigned char const * nameUtf8,
@@ -132,10 +132,7 @@ static REBVAL loadAndBindWord(
     enum Reb_Kind kind
 ) {
     REBVAL word;
-
-    // !!! Make_Word has a misleading name; it allocates a symbol number
-
-    Val_Init_Word(&word, kind, Intern_UTF8_Managed(nameUtf8, lenBytes));
+    Init_Any_Word(&word, kind, Intern_UTF8_Managed(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
@@ -196,28 +193,6 @@ RebolRuntime::RebolRuntime (bool) :
             );
         };
 
-    // = {0} on construct should zero fill, but gives warnings in older gcc
-    // http://stackoverflow.com/questions/13238635/#comment37115390_13238635
-
-    rebargs.options = 0;
-    rebargs.script = nullptr;
-    rebargs.args = nullptr;
-    rebargs.do_arg = nullptr;
-    rebargs.version = nullptr;
-    rebargs.debug = nullptr;
-    rebargs.import = nullptr;
-    rebargs.secure = nullptr;
-    rebargs.boot = nullptr;
-    rebargs.exe_path = nullptr;
-    rebargs.home_dir = nullptr;
-
-    // Rebytes, version numbers
-    // REBOL_VER
-    // REBOL_REV
-    // REBOL_UPD
-    // REBOL_SYS
-    // REBOL_VAR
-
     // Make sure our opaque types stay in sync with their "real" variants
 
     assert(sizeof(Reb_Value) == sizeof(RenCell));
@@ -230,7 +205,6 @@ RebolRuntime::RebolRuntime (bool) :
 
 
 bool RebolRuntime::lazyInitializeIfNecessary() {
-    REBYTE vers[8];
 
     if (initialized)
         return false;
@@ -245,53 +219,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     App_Instance = GetModuleHandle(NULL);
 #endif
 
-    // Parse_Args has a memory leak; it uses OS_Get_Current_Dir which
-    // mallocs a string which is never freed.  We hold onto the REBARGS
-    // we use and control the initialization so we don't leak strings
-
-    // There are (R)ebol (O)ption flags telling it various things,
-    // in rebargs.options, we just don't want it to display the banner
-
-    rebargs.options = RO_QUIET;
-
-    // Theoretically we could offer hooks for this deferred initialization
-    // to pass something here, or even change it while running.  Right
-    // now for exe_path we offer an informative fake path that is (hopefully)
-    // harmless.
-
-    REBCHR const * exe_path_const = OS_STR_LIT(
-        "/dev/null/rencpp-binding/look-at/rebol-hooks.cpp"
-    );
-
-    rebargs.exe_path = new REBCHR[OS_STRLEN(exe_path_const) + 1];
-    OS_STRNCPY(rebargs.exe_path, exe_path_const, OS_STRLEN(exe_path_const) + 1);
-
-    rebargs.home_dir = new REBCHR[MAX_PATH];
-
-#ifdef TO_WINDOWS
-    GetCurrentDirectory(MAX_PATH, reinterpret_cast<wchar_t *>(rebargs.home_dir));
-#else
-    getcwd(reinterpret_cast<char *>(rebargs.home_dir), MAX_PATH);
-#endif
-
-    Init_Core(&rebargs);
+    Init_Core();
 
     initialized = true;
-
-    // adds to a table used by RL_Start, must be called before
-    //
-    Init_Core_Ext();
-
-    // Needed to run the SYS_START function
-    int err_num = RL_START(0, 0, NULL, 0, 0);
-
-    GC_Active = TRUE; // Turn on GC
-
-    if (rebargs.options & RO_TRACE) {
-        Trace_Level = 9999;
-        Trace_Flags = 1;
-    }
-
 
     // Set up the interrupt handler for things like Ctrl-C (which had
     // previously been stuck in with stdio, because that's where the signals
@@ -310,21 +240,6 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     signal(SIGHUP, signalHandler);
 #endif
     signal(SIGTERM, signalHandler);
-
-    // bin is optional startup code (compressed).  If it is provided, it
-    // will be stored in system/options/boot-host, loaded, and evaluated.
-
-    REBYTE * startupBin = nullptr;
-    REBCNT len = 0; // length of above bin
-
-    if (startupBin) {
-        REBSER * startup = Decompress(startupBin, len, -1, FALSE, FALSE);
-
-        if (not startup)
-            throw std::runtime_error("RebolHooks: Bad startup code");;
-
-        Val_Init_Binary(CTX_VAR(Sys_Context, SYS_CTX_BOOT_HOST), startup);
-    }
 
     // This is a small demo of a low-level extension that does not use Ren-C++
     // methods could be written, if it were necessary.  (It used to be needed
@@ -360,7 +275,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     };
 
     REBVAL testSpec;
-    Val_Init_Block(
+    Init_Block(
         &testSpec,
         Scan_UTF8_Managed(testSpecStr, LEN_BYTES(testSpecStr))
     );
@@ -370,7 +285,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         testDispatcher,
         NULL // no underlying function, this is foundational
     );
-    *GET_MUTABLE_VAR_MAY_FAIL(&testWord, SPECIFIED) = *FUNC_VALUE(testNative);
+    *Sink_Var_May_Fail(&testWord, SPECIFIED) = *FUNC_VALUE(testNative);
 
     return true;
 }
@@ -391,13 +306,7 @@ RebolRuntime::~RebolRuntime () {
     if (initialized) {
         OS_QUIT_DEVICES(0);
 
-        Shutdown_Core_Ext();
-
         Shutdown_Core();
-
-        // needs to last during Rebol run
-        delete [] rebargs.exe_path;
-        delete [] rebargs.home_dir;
     }
 }
 

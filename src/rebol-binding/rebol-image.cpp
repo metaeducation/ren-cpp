@@ -33,7 +33,7 @@ Image::Image (QImage const & image, Engine * engine) {
         image.bits() + (sizeof(char[4]) * width * height),
         IMG_DATA(img)
     );
-    Val_Init_Image(AS_REBVAL(cell), img);
+    Init_Image(AS_REBVAL(cell), img);
     finishInit(engine->getHandle());
 }
 

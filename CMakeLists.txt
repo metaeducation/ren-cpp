@@ -113,6 +113,21 @@ project(rencpp)
 cmake_minimum_required(VERSION 2.8)
 
 
+# This is a C++11 project, but it should work on pre-2011 compilers
+# If you are using gcc 4.6 or older, then use `--std=c++0x` instead of
+# `--std=c++11`
+#
+# Note that this *should* work:
+#
+#     set (CMAKE_CXX_STANDARD 11)
+#
+# But for some reason it isn't working on the CMake with Travis CI.
+#
+# http://stackoverflow.com/questions/40877744/
+#
+set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+
+
 # Simplify appending additional flags to CMAKE_CXX_FLAGS.
 
 macro(add_cxx_flags flags)
@@ -179,13 +194,6 @@ if(NOT DEFINED(RUNTIME) AND NOT RUNTIME_PATH)
 endif()
 
 
-# This is a C++11 project, but it should work on pre-2011 compilers
-# If you are using gcc 4.6 or older, then use `--std=c++0x` instead of
-# `--std=c++11`
-
-add_cxx_flags("-std=c++11")
-
-
 # Turn up the warnings very high.
 #
 #     http://stackoverflow.com/a/9862800/211160
@@ -197,37 +205,72 @@ add_cxx_flags("-std=c++11")
 #
 #     http://stackoverflow.com/a/10055571/211160
 
-add_cxx_flags(-Wall)
-add_cxx_flags(-Wsign-conversion)
-add_cxx_flags(-Wextra)
-add_cxx_flags(-Wcast-align)
-add_cxx_flags(-Wcast-qual)
-add_cxx_flags(-Wctor-dtor-privacy)
-add_cxx_flags(-Wdisabled-optimization)
-add_cxx_flags(-Wformat=2)
-add_cxx_flags(-Winit-self)
-add_cxx_flags(-Wlogical-op)
-add_cxx_flags(-Wmissing-declarations)
-add_cxx_flags(-Wmissing-include-dirs)
-add_cxx_flags(-Wnoexcept)
-add_cxx_flags(-Woverloaded-virtual)
-add_cxx_flags(-Wredundant-decls)
-add_cxx_flags(-Wsign-promo)
-add_cxx_flags(-Wstrict-null-sentinel)
-add_cxx_flags(-Wstrict-overflow=5)
-add_cxx_flags(-Wswitch-default)
-add_cxx_flags(-Wundef)
-add_cxx_flags(-Wno-unused)
-add_cxx_flags(-pedantic)
-add_cxx_flags(-Wold-style-cast)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+
+    # GCC and regular Clang or AppleClang share a lot of compatible switches
+
+    add_cxx_flags(-Wall)
+    add_cxx_flags(-Wsign-conversion)
+    add_cxx_flags(-Wextra)
+    add_cxx_flags(-Wcast-align)
+    add_cxx_flags(-Wcast-qual)
+    add_cxx_flags(-Wctor-dtor-privacy)
+    add_cxx_flags(-Wdisabled-optimization)
+    add_cxx_flags(-Wformat=2)
+    add_cxx_flags(-Winit-self)
+    add_cxx_flags(-Wmissing-declarations)
+    add_cxx_flags(-Wmissing-include-dirs)
+    add_cxx_flags(-Woverloaded-virtual)
+    add_cxx_flags(-Wredundant-decls)
+    add_cxx_flags(-Wsign-promo)
+    add_cxx_flags(-Wstrict-overflow=5)
+    add_cxx_flags(-Wswitch-default)
+    add_cxx_flags(-Wundef)
+    add_cxx_flags(-Wno-unused)
+    add_cxx_flags(-pedantic)
+
+    # The C headers for Rebol use old-style C casts in some places, for
+    # reasons of performance in the debug build (since there's a templated
+    # function that doesn't get inlined)
+    #
+    #add_cxx_flags(-Wold-style-cast)
+
+    # We encourage *everyone* who is building the project to use the `-Werror`
+    # switch.  This converts messages that are considered "warnings" to the
+    # status of being show-stopper errors.  Being rigorous about this helps
+    # keep distracting warnings from accumulating in the build process over
+    # time, drowning out important messages that should be heeded.
+    #
+    # However...this idealism isn't long-term compatible with telling the
+    # compiler it can throw in as many errors as it can think of (via the
+    # switches `-Wpedantic`, `-Wall`, and `-Wextra`).  Each time a new
+    # compiler or new compiler version is used to build the project, it may
+    # invent new and never before seen warnings that haven't been explicitly
+    # disabled yet.
+    #
+    # Reports to help adjust the warnings to keep them at zero on relevant
+    # platforms are preferred to turning off the switch.  But the switch is
+    # available to use on the command line: `-DRIGOROUS=no`
+
+    if(NOT DEFINED(RIGOROUS) OR RIGOROUS)
+        add_cxx_flags(-Werror)
+    endif()
+
+    # Rebol is written in "old" ANSI C, so when we include its headers then it
+    # can have some complaints if the warnings are set too high.  We tone the
+    # strictness down a little so the headers will work.
+
+    if(RUNTIME STREQUAL "rebol")
+        add_cxx_flags(-Wno-unknown-pragmas)
+        add_cxx_flags(-Wno-cast-align)
+        try_remove_cxx_flag(-Wold-style-cast)
+    endif()
+
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 
     # using regular Clang or AppleClang
-
-    try_remove_cxx_flag(-Wlogical-op)
-    try_remove_cxx_flag(-Wnoexcept)
-    try_remove_cxx_flag(-Wstrict-null-sentinel)
 
     # mismatched-tags is a "questionable" warning when specializations of
     # struct and class are mixed.  Such a mixture is legal C++ and header
@@ -243,35 +286,43 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 
     # using GCC
 
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-
-    # using Intel C++
+    add_cxx_flags(-Wlogical-op)
+    add_cxx_flags(-Wnoexcept)
+    add_cxx_flags(-Wstrict-null-sentinel)
 
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 
-    # using Visual Studio C++
+    # using Visual Studio C++ (note C++11 and beyond support on by default)
 
-endif()
+    # Though `not`, `and`, `or`, `xor`, etc. have been keywords in C++ since
+    # the beginning, MSVC somehow doesn't support them unless you "disable
+    # extensions"
+    
+    add_cxx_flags(/Za)
 
+    # Historically, Rebol triggers its 64-bitness on either __LLP64__ or
+    # __LP64__ being defined.  MSVC doesn't define this itself the way GCC
+    # does, so the Rebol makefiles do it.  We're not using the Rebol makefile
+    # here, hence we have to do it manually.
+    
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_definitions(-D__LLP64__)
+    endif()
 
-# We encourage *everyone* who is building the project to use the `-Werror`
-# switch.  This converts messages that are considered "warnings" to the
-# status of being show-stopper errors.  Being rigorous about this helps keep
-# distracting warnings from accumulating in the build process over time,
-# drowning out important messages that should be heeded.
-#
-# However...this idealism isn't long-term compatible with telling the
-# compiler it can throw in as many errors as it can think of (via the
-# switches `-Wpedantic`, `-Wall`, and `-Wextra`).  Each time a new compiler
-# or new compiler version is used to build the project, it may invent new
-# and never before seen warnings that haven't been explicitly disabled yet.
-#
-# Reports to help adjust the warnings to keep them at zero on relevant
-# platforms are preferred to turning off the switch.  But the switch is
-# available to use on the command line: `-DRIGOROUS=no`
+    # If you turn the warning level up, Qt sets off these warnings in MSVC
+    # and there's not much you can do about it but disable them.
+     
+    if(CLASSLIB_QT EQUAL 1)
+        add_cxx_flags(/wd4180)
+    endif()
 
-if(NOT DEFINED(RIGOROUS) OR RIGOROUS)
-    add_cxx_flags(-Werror)
+else()
+
+    # !!! If you're not using GCC, Clang, or MSVC then you're pretty much on
+    # your own.  Pull requests welcome, however.
+    #
+    # e.g. if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")...
+
 endif()
 
 
@@ -465,14 +516,6 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
 
     file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
 
-    # Rebol is written in "old" ANSI C, so when we include its headers then it
-    # can have some complaints if the warnings are set too high.  We tone the
-    # strictness down a little so the headers will work.
-
-    add_cxx_flags(-Wno-unknown-pragmas)
-    add_cxx_flags(-Wno-cast-align)
-    try_remove_cxx_flag(-Wold-style-cast)
-
     # Add any extra includes for the project browser
 
     file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
@@ -562,10 +605,20 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     # include in the binding.  Take out the main and Host_Lib
     # instance so that the program you link with the binding is
     # the entry point.
+    #
+    # Note: there is a GLOB RELATIVE in CMake to do it relative to a path, but
+    # it doesn't work on Windows.
 
-    file(GLOB EXTRA_OBJS ${RUNTIME_PATH}/make/objs/*.o)
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/host-main.o)
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/host-stdio.o)
+    get_filename_component(EXTRA_OBJ_PATH ${RUNTIME_PATH}/make/objs/ REALPATH)
+    #set(EXTRA_OBJ_PATH ${CMAKE_CURRENT_SOURCE_DIR}//tests/)
+    
+    file(
+        GLOB EXTRA_OBJS ${EXTRA_OBJ_PATH}/*.o # .obj
+    )
+    message(STATUS "blah blah:" ${EXTRA_OBJ_PATH})
+    message(STATUS "glob glub: " ${EXTRA_OBJS})
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main.o) # .obj
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio.o) # .obj
 
     # One of the goals of Ren/C was to replace the RL_LIB host library, which
     # is how extension code would "call into" Rebol.  It cannot however be
@@ -575,7 +628,7 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     if(FALSE)
         # !!! Can't remove it yet...and it's not that much code to lose
         # sleep about having exist anyway.
-        ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/a-lib.o)
+        ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/a-lib.o) # .obj
     endif()
 
     # R3-Alpha had an an extension system called "host kit", which was a way
@@ -594,7 +647,7 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     # implementation of talking to STDIN/STDOUT so that it may be replaced
     # with one that bridges to C++ <iostream> classes.
 
-    ensure_remove_item("EXTRA_OBJS" ${RUNTIME_PATH}/make/objs/dev-stdio.o)
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/dev-stdio.o) # .obj
 
     # Rebol depends on dlopen and other calls in "libDl".  Cmake can
     # supposedly find that for you automatically with this variable.
@@ -623,8 +676,11 @@ add_library(
     ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST}
 )
 
-target_link_libraries(RenCpp ${LIBS_ALL} -lstdc++ -lm)
-
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_link_libraries(RenCpp ${LIBS_ALL})
+else()
+    target_link_libraries(RenCpp ${LIBS_ALL} -lstdc++ -lm)
+endif()
 
 # %examples/ has its own CMakeLists.txt, with settings pertinent to each
 # case (e.g. OpenGL configuration, etc.), but inherits the settings

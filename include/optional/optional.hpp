@@ -100,9 +100,11 @@ namespace experimental{
     // leave it: it is already there
 # elif defined TR2_OPTIONAL_DISABLE_EMULATION_OF_TYPE_TRAITS
     // leave it: the user doesn't want it
+# elif defined _MSC_VER
+    // MSVC 2015 came after the standard had picked is_trivially_destructible
 # else
-	template <typename T>
-	using is_trivially_destructible = std::has_trivial_destructor<T>;
+    template <typename T>
+    using is_trivially_destructible = std::has_trivial_destructor<T>;
 # endif
 // END workaround for missing is_trivially_destructible
 
@@ -199,7 +201,11 @@ template <class T> inline constexpr typename std::remove_reference<T>::type&& co
     _assert(expr, file, line);
   }
 #else
-# error UNSUPPORTED COMPILER
+# define TR2_OPTIONAL_ASSERTED_EXPRESSION(CHECK, EXPR) ((CHECK) ? (EXPR) : (fail(#CHECK, __FILE__, __LINE__), (EXPR)))
+inline void fail(const char* expr, const char*, unsigned)
+{
+    assert(expr);
+}
 #endif
 
 
@@ -544,7 +550,7 @@ public:
   
   OPTIONAL_MUTABLE_CONSTEXPR T&& value() && {
     if (!initialized()) throw bad_optional_access("bad optional access");
-	return std::move(contained_val());
+    return std::move(contained_val());
   }
   
 # else
