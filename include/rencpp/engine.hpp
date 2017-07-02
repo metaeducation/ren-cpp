@@ -102,7 +102,7 @@ public:
     }
 
     static Engine & runFinder() {
-        if (not finder) {
+        if (finder == nullptr) {
             finder = [] () -> Engine & {
                 static Engine global;
                 return global;
@@ -147,7 +147,7 @@ public:
 
 
     virtual ~Engine() {
-        if (not REN_IS_ENGINE_HANDLE_INVALID(handle))
+        if (!REN_IS_ENGINE_HANDLE_INVALID(handle))
             ::RenFreeEngine(handle);
     }
 

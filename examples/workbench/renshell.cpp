@@ -1,7 +1,7 @@
 //
 // renshell.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ public slots:
 
         if (process == nullptr) {
             initProcess();
-            if (not process->waitForStarted(3000)) {
+            if (!process->waitForStarted(3000)) {
                 assert(false);
                 emit resultReady(
                     process->error()
@@ -374,7 +374,7 @@ void ShellWorker::onReadyReadStandardOutput() {
     buffer += process->readAll();
 
     int index = 0;
-    while ((tokenCount > 1) and (index != -1)) {
+    while (tokenCount > 1 && index != -1) {
         index = buffer.indexOf(token);
         if (index != -1) {
             buffer = buffer.right(buffer.size() - (index + token.size()));
@@ -528,7 +528,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
         [this, worker](optional<AnyValue> const & arg, AnyValue const & meta)
             -> optional<AnyValue>
         {
-            if (not arg) {
+            if (!arg) {
                 runtime("console quote", shellFunction);
                 return nullopt;
             }
@@ -576,7 +576,7 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
                 if (hasType<LitWord>(arg))
                     return {blank};
 
-                if (not hasType<Block>(arg))
+                if (!hasType<Block>(arg))
                     throw Error ("Unknown meta command");
 
                 auto blk = static_cast<Block>(*arg);
@@ -666,8 +666,10 @@ void RenShell::evaluate(QString const & input, std::ostream & os) {
 
 RenShell::~RenShell () {
     workerThread.quit();
-    if ((not workerThread.wait(1000) and (not forcingQuit))) {
-        // How to print to console about quitting
+    if (!workerThread.wait(1000) && !forcingQuit) {
+        //
+        // How to print to console about quitting?
+        //
         QMessageBox::information(
             nullptr,
             "Ren Garden Terminated Abnormally",

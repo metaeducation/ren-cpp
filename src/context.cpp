@@ -1,7 +1,7 @@
 //
 // context.cpp
 // This file is part of RenCpp
-// Copyright (C) 2015 HostileFork.com
+// Copyright (C) 2015-2017 HostileFork.com
 //
 // Licensed under the Boost License, Version 1.0 (the "License")
 //
@@ -31,7 +31,7 @@ AnyContext::Finder AnyContext::finder;
 
 AnyContext AnyContext::lookup(const char * name, Engine * engine)
 {
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     AnyContext result (Dont::Initialize);
@@ -46,9 +46,9 @@ AnyContext AnyContext::lookup(const char * name, Engine * engine)
 
 
 AnyContext AnyContext::current(Engine * engine) {
-    if (not finder) {
+    if (finder == nullptr) {
         finder = [] (Engine * engine) -> AnyContext & {
-            if (not engine)
+            if (engine == nullptr)
                 engine = &Engine::runFinder();
 
             static AnyContext user = lookup("USER", engine);

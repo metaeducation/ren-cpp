@@ -31,8 +31,8 @@ AnyValue::AnyValue (Dont)
     cell = reinterpret_cast<RenCell*>(Alloc_Pairing(NULL));
 
     REBVAL *key = PAIRING_KEY(AS_REBVAL(cell));
-    SET_BLANK(key);
-    SET_BLANK(AS_REBVAL(cell));
+    Init_Blank(key);
+    Init_Blank(AS_REBVAL(cell));
 
     // Mark the created pairing so it will act as a "root".  The key and value
     // will be deep marked for GC.
@@ -48,25 +48,25 @@ AnyValue::AnyValue (Dont)
 bool AnyValue::isEqualTo(AnyValue const & other) const {
     // acts like REBNATIVE(equalq)
 
-    REBVAL cell_copy;
-    cell_copy = *AS_C_REBVAL(cell);
-    REBVAL other_copy;
-    other_copy = *AS_C_REBVAL(other.cell);
+    DECLARE_LOCAL (cell_copy);
+    Move_Value(cell_copy, AS_C_REBVAL(cell));
+    DECLARE_LOCAL (other_copy);
+    Move_Value(other_copy, AS_C_REBVAL(other.cell));
 
     // !!! Modifies arguments to coerce them for testing!
-    return Compare_Modify_Values(&cell_copy, &other_copy, 0);
+    return Compare_Modify_Values(cell_copy, other_copy, 0);
 }
 
 bool AnyValue::isSameAs(AnyValue const & other) const {
     // acts like REBNATIVE(sameq)
 
-    REBVAL cell_copy;
-    cell_copy = *AS_C_REBVAL(cell);
-    REBVAL other_copy;
-    other_copy = *AS_C_REBVAL(other.cell);
+    DECLARE_LOCAL (cell_copy);
+    Move_Value(cell_copy, AS_C_REBVAL(cell));
+    DECLARE_LOCAL (other_copy);
+    Move_Value(other_copy, AS_C_REBVAL(other.cell));
 
     // !!! Modifies arguments to coerce them for testing
-    return Compare_Modify_Values(&cell_copy, &other_copy, 3);
+    return Compare_Modify_Values(cell_copy, other_copy, 3);
 }
 
 
@@ -116,7 +116,7 @@ void AnyValue::toCell_(
     RenCell * cell, optional<AnyValue> const & value
 ) noexcept {
     if (value == nullopt)
-        SET_VOID(AS_REBVAL(cell));
+        Init_Void(AS_REBVAL(cell));
     else
         *cell = *value->cell;
 }
@@ -243,6 +243,22 @@ std::string to_string(AnyValue const & value) {
 #if REN_CLASSLIB_QT == 1
 
 QString to_QString(AnyValue const & value) {
+
+    // Currently, PUSH_UNHALTABLE_TRAP sets up the stack limit.  Anything that
+    // calls C_STACK_OVERFLOWING(), e.g. MOLD, must have the Stack_Limit set
+    // correctly for the running thread.
+
+    REBCTX *error;
+    struct Reb_State state;
+
+    PUSH_UNHALTABLE_TRAP(&error, &state);
+
+// The first time through the following code 'error' will be NULL, but...
+// `fail` can longjmp here, so 'error' won't be NULL *if* that happens!
+
+    if (error != NULL)
+        throw std::runtime_error("Error during to_QString (stack overflow?)");
+
     const size_t defaultBufLen = 100;
 
     QByteArray buffer (defaultBufLen, Qt::Uninitialized);
@@ -291,6 +307,9 @@ QString to_QString(AnyValue const & value) {
 
     buffer.truncate(static_cast<int>(numBytes));
     auto result = QString {buffer};
+
+    DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
+
     return result;
 }
 
@@ -310,7 +329,8 @@ Loadable::Loadable (char const * sourceCstr) :
     // to be put into a block.
     //
     VAL_RESET_HEADER(AS_REBVAL(cell), REB_0);
-    AS_REBVAL(cell)->payload.handle.pointer = const_cast<char *>(sourceCstr);
+    AS_REBVAL(cell)->payload.handle.data.pointer
+        = const_cast<char *>(sourceCstr);
 
     origin = REN_ENGINE_HANDLE_INVALID;
 }
@@ -320,7 +340,7 @@ Loadable::Loadable (optional<AnyValue> const & value) :
     AnyValue (AnyValue::Dont::Initialize)
 {
     if (value == nullopt)
-        SET_VOID(AS_REBVAL(cell));
+        Init_Void(AS_REBVAL(cell));
     else
         *cell = *value->cell;
 

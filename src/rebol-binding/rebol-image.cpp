@@ -28,11 +28,12 @@ Image::Image (QImage const & image, Engine * engine) {
 
     VAL_RESET_HEADER(AS_REBVAL(cell), REB_IMAGE);
     REBSER * img = Make_Image(width, height, FALSE);
-    std::copy(
-        image.bits(),
-        image.bits() + (sizeof(char[4]) * width * height),
-        IMG_DATA(img)
-    );
+
+    // Was using std::copy, but MSVC complained unless you used a safe
+    // iterator that is non standard.
+    //
+    memcpy(IMG_DATA(img), image.bits(), sizeof(char[4]) * width * height);
+
     Init_Image(AS_REBVAL(cell), img);
     finishInit(engine->getHandle());
 }

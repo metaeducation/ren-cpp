@@ -58,13 +58,13 @@
 
 #include "rencpp/rebol.hpp" // cheating for now, no C++ version...
 
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
-
-#include "rencpp/red.hpp"
-
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 #include "rencpp/rebol.hpp"
+
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
+
+static_assert(false, "Red runtime not currently supported");
 
 #else
 

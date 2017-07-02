@@ -1,7 +1,7 @@
 //
 // watchlist.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@
 using namespace ren;
 
 
-
 //
 // WATCH WIDGET ITEM REPRESENTING A SINGLE CELL IN THE WATCH TABLE
 //
@@ -53,17 +52,19 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
             QString contents = item->data(Qt::DisplayRole).toString();
 
             if (contents == w.getWatchString()) {
+                //
                 // If the text is the same as what it was, then odds are they
                 // selected in the cell and clicked away...vs having the
                 // expression (x + y) and wanting to label it (x + y), for
                 // instance.
+                //
                 return;
             }
 
-            // If they type text into the first column and it doesn't match the
+            // If they type text into the first column and it doesn't match
             // text that was there, then consider it to be a label.  If they
             // delete everything, consider it to be "unlabeling"
-
+            //
             if (contents.isEmpty())
                 w.label = nullopt;
             else
@@ -90,7 +91,6 @@ void WatchList::onItemChanged(QTableWidgetItem * item) {
 // WATCHER CLASS REPRESENTING A SINGLE WATCHED VALUE OR EXPRESSION
 //
 
-
 WatchList::Watcher::Watcher (
     AnyValue const & watch,
     bool recalculates,
@@ -107,12 +107,13 @@ WatchList::Watcher::Watcher (
 
 void WatchList::Watcher::evaluate(bool firstTime) {
     try {
-        if (firstTime or (recalculates and (not frozen))) {
+        if (firstTime || (recalculates && !frozen)) {
             if (hasType<Block>(watch)) {
+                //
                 // !!! Review apply logic, right now blocks "don't have
                 // evaluator behavior" so you have to DO them.  Should
                 // that be something that watch() or watch.apply() can do?
-
+                //
                 value = runtime("do", watch);
             } else
                 value = watch.apply();
@@ -156,7 +157,6 @@ QString WatchList::Watcher::getValueString() const {
         return "no value";
     return to_QString(*runtime("mold/all quote", value));
 }
-
 
 
 //
@@ -217,10 +217,11 @@ WatchList::WatchList(QWidget * parent) :
 
 
 void WatchList::pushWatcher(Watcher * watcherUnique) {
+    //
     // Note that because we are passing a unique pointer, more than one
     // client can not listen to the pushWatcherRequest signal.  Should this
     // be a shared pointer?
-
+    //
     watchers.push_back(std::unique_ptr<Watcher>(watcherUnique));
 
     int count = rowCount();
@@ -228,7 +229,7 @@ void WatchList::pushWatcher(Watcher * watcherUnique) {
 
     // We do not `updateWatcher(count + 1)` here, rather we wait for the
     // event loop...
-
+    //
     emit showDockRequested(this);
 }
 
@@ -272,7 +273,7 @@ void WatchList::mousePressEvent(QMouseEvent * event) {
 
 
 void WatchList::updateWatcher(int index) {
-    Watcher & w = *watchers[index - 1];
+    Watcher &w = *watchers[index - 1];
 
     w.evaluate(); // will not evaluate if frozen
 
@@ -282,18 +283,18 @@ void WatchList::updateWatcher(int index) {
 
     blockSignals(true);
 
-    QTableWidgetItem * nameItem = item(index - 1, 0);
-    if (not nameItem) {
+    QTableWidgetItem *nameItem = item(index - 1, 0);
+    if (!nameItem) {
         nameItem = new QTableWidgetItem;
         setItem(index - 1, 0, nameItem);
     }
-    QTableWidgetItem * valueItem = item(index - 1, 1);
-    if (not valueItem) {
+    QTableWidgetItem *valueItem = item(index - 1, 1);
+    if (!valueItem) {
         valueItem = new QTableWidgetItem;
         setItem(index - 1, 1, valueItem);
     }
 
-    if (not w.recalculates)
+    if (!w.recalculates)
         nameItem->setForeground(Qt::darkGray);
     else if (w.error)
         valueItem->setForeground(Qt::darkRed);
@@ -345,7 +346,7 @@ void WatchList::updateWatcher(int index) {
 
 
 void WatchList::updateAllWatchers() {
-    if (not isVisible())
+    if (!isVisible())
         return;
 
     // We only temporarily do this selection mode to do our highlighting
@@ -467,12 +468,13 @@ optional<AnyValue> WatchList::watchDialect(
 
     Watcher * watcherUnique = nullptr;
 
-    if (hasType<Block>(arg) or hasType<Group>(arg)) {
+    if (hasType<Block>(arg) || hasType<Group>(arg)) {
+        //
         // By default a block will have its expression evaluated each time,
         // while a group will be evaluated just once and the resulting
         // value monitored.  This can be ticked on or off in the watchlist
         // but it makes it easy to express the intent at the prompt.
-
+        //
         watcherUnique = new Watcher {arg, hasType<Block>(arg), label};
     }
     else if (hasType<Word>(arg)) {
@@ -487,6 +489,7 @@ optional<AnyValue> WatchList::watchDialect(
         };
     }
     else if (hasType<Path>(arg)) {
+        //
         // !!! Path should probably be turned to GetPath also, but that
         // means decisions need to be made on these arrays.  Should all
         // watches where the specification of the watch is an array be
@@ -494,14 +497,14 @@ optional<AnyValue> WatchList::watchDialect(
         // arrays so that any one can be seen as just a view of another?
         // This question ties in pretty deeply to "lit bits" in the
         // evaluator; if the literalness itself deep copies or not.
-
+        //
         watcherUnique = new Watcher {arg, true, label};
     }
-    else if (hasType<GetWord>(arg) or hasType<ren::GetPath>(arg)) {
+    else if (hasType<GetWord>(arg) || hasType<ren::GetPath>(arg)) {
         watcherUnique = new Watcher {arg, true, label};
     }
 
-    if (not watcherUnique)
+    if (!watcherUnique)
         throw Error ("unexpected type passed to watch dialect");
 
     // we append to end instead of inserting at the top because

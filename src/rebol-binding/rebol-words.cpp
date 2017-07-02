@@ -35,11 +35,11 @@ bool Refinement::isValid(const RenCell * cell) {
 
 bool AnyWord::isValid(const RenCell * cell) {
     return IS_WORD(AS_C_REBVAL(cell))
-        or IS_SET_WORD(AS_C_REBVAL(cell))
-        or IS_GET_WORD(AS_C_REBVAL(cell))
-        or IS_LIT_WORD(AS_C_REBVAL(cell))
-        or IS_REFINEMENT(AS_C_REBVAL(cell))
-        or IS_ISSUE(AS_C_REBVAL(cell));
+        || IS_SET_WORD(AS_C_REBVAL(cell))
+        || IS_GET_WORD(AS_C_REBVAL(cell))
+        || IS_LIT_WORD(AS_C_REBVAL(cell))
+        || IS_REFINEMENT(AS_C_REBVAL(cell))
+        || IS_ISSUE(AS_C_REBVAL(cell));
 }
 
 
@@ -85,8 +85,8 @@ std::string AnyWord::spellingOf_STD() const {
         return result;
     if (
         hasType<Refinement>(*this)
-        or hasType<GetWord>(*this)
-        or hasType<LitWord>(*this)
+        || hasType<GetWord>(*this)
+        || hasType<LitWord>(*this)
     ){
         return result.erase(0, 1);
     }
@@ -103,8 +103,8 @@ QString AnyWord::spellingOf_QT() const {
         return result;
     if (
         hasType<Refinement>(*this)
-        or hasType<GetWord>(*this)
-        or hasType<LitWord>(*this)
+        || hasType<GetWord>(*this)
+        || hasType<LitWord>(*this)
     ){
         return result.right(result.length() - 1);
     }

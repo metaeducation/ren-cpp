@@ -1,7 +1,7 @@
 //
 // replpad.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ ReplPad::ReplPad (
     connect(
         this, &QTextEdit::textChanged,
         [this]() {
-            if (not documentMutex.tryLock())
+            if (!documentMutex.tryLock())
                 return; // we are purposefully making the change!
 
             documentMutex.unlock();
@@ -142,14 +142,13 @@ ReplPad::ReplPad (
         }
     );
 
-
     // Should the selection change for a reason other than autocomplete, we
     // want to signal that a keypress should overwrite the content vs. add
-
+    //
     connect(
         this, &QTextEdit::selectionChanged,
         [this]() {
-            if (not autocompleteMutex.tryLock()) {
+            if (!autocompleteMutex.tryLock()) {
                 // autocomplete is doing the change!
                 selectionWasAutocomplete = true;
                 return;
@@ -161,7 +160,6 @@ ReplPad::ReplPad (
         }
     );
 
-
     // It may be possible to do some special processing on advanced MIME
     // types, such as if you pasted a jpeg it could be turned into some
     // kind of image!
@@ -170,9 +168,8 @@ ReplPad::ReplPad (
     //
     // For now we accept the convenience of the default stripping out of
     // rich text information on user pasted text.
-
+    //
     setAcceptRichText(false);
-
 
     // Being a C++ program, our interface for abstracted I/O is based on
     // iostreams, hence we have objects that are "fake" streams you can
@@ -181,7 +178,7 @@ ReplPad::ReplPad (
     // a line of input from the user.  The stream will synchronously block
     // until we notify it that the GUI has the line ready (hence the input
     // stream cannot be read from the GUI thread).
-
+    //
     connect(
         &fakeIn, &FakeStdin::requestInput,
         this, &ReplPad::onRequestInput,
@@ -216,7 +213,7 @@ ReplPad::ReplPad (
     // the scroll bars or do any navigation of your own after an evaluation
     // starts...then if you want to go to the end you'll ask for it (by hitting
     // a key and trying to put input in)
-
+    //
     connect(
         verticalScrollBar(), &QScrollBar::valueChanged,
         [this] (int value) {
@@ -232,14 +229,13 @@ ReplPad::ReplPad (
     // what's available in the document queue to undoing content from the
     // console to edit old data.  We get this via signals, and save in a
     // variable.
-
+    //
     connect(
         this, &QTextEdit::undoAvailable,
         [this] (bool b) {
             hasUndo = b;
         }
     );
-
     connect(
         this, &QTextEdit::redoAvailable,
         [this] (bool b) {
@@ -253,7 +249,7 @@ ReplPad::ReplPad (
     // CtrlPlus and CtrlMinus won't do anything useful.  See issue:
     //
     //     https://github.com/metaeducation/ren-garden/issues/7
-
+    //
     // Make the input just a shade lighter black than the output.  (It's also
     // not a fixed width font, so between those two differences you should be
     // able to see what's what.)
@@ -284,7 +280,6 @@ ReplPad::ReplPad (
 }
 
 
-
 //
 // BASIC CLIENT INTERFACE FOR ADDING MATERIAL TO THE CONSOLE
 //
@@ -298,10 +293,11 @@ ReplPad::ReplPad (
 
 void ReplPad::appendImage(QImage const & image, bool centered) {
     if (thread() != QThread::currentThread()) {
+        //
         // we need to block in order to properly check for write mutex
         // authority (otherwise we could just queue it and split...)
         // just calls this function again but from the Gui Thread
-
+        //
         emit needGuiThreadImageAppend(image, centered);
         return;
     }
@@ -322,10 +318,11 @@ void ReplPad::appendImage(QImage const & image, bool centered) {
 
 void ReplPad::appendText(QString const & text, bool centered) {
     if (thread() != QThread::currentThread()) {
+        //
         // we need to block in order to properly check for write mutex
         // authority (otherwise we could just queue it and split...)
         // just calls this function again but from the Gui Thread
-
+        //
         emit needGuiThreadTextAppend(text, centered);
         return;
     }
@@ -360,10 +357,11 @@ void ReplPad::appendText(QString const & text, bool centered) {
 
 void ReplPad::appendHtml(QString const & html, bool centered) {
     if (thread() != QThread::currentThread()) {
+        //
         // we need to block in order to properly check for write mutex
         // authority (otherwise we could just queue it and split...)
         // just calls this function again but from the Gui Thread
-
+        //
         emit needGuiThreadHtmlAppend(html, centered);
         return;
     }
@@ -402,14 +400,13 @@ void ReplPad::onRequestInput()
 }
 
 
-
-
 int ReplPad::getZoom() {
     return zoomDelta;
 }
 
 
 void ReplPad::setZoom(int delta) {
+    //
     // We're being asked to set the zoom a certain delta (positive or negative)
     // indiciating zoom-in and zoom-out calls assuming we are at zero.
     // But if we already have a zoom state, we have to compensate for that.
@@ -430,6 +427,7 @@ void ReplPad::setZoom(int delta) {
     }
 }
 
+
 //
 // RICH-TEXT CONSOLE BEHAVIOR
 //
@@ -440,7 +438,6 @@ void ReplPad::setZoom(int delta) {
 // Helper to get a cursor located at the tail of the QTextDocument underlying
 // the console.  (Use textCursor() to get the actual caret location).
 //
-
 QTextCursor ReplPad::endCursor() const {
     QTextCursor result {document()};
 
@@ -469,7 +466,7 @@ void ReplPad::mousePressEvent(QMouseEvent * event) {
         else {
             int lo = std::min(textCursor().position(), textCursor().anchor());
             int hi = std::max(textCursor().position(), textCursor().anchor());
-            if ((clickCursor.position() < lo) or (clickCursor.position() > hi))
+            if (clickCursor.position() < lo || clickCursor.position() > hi)
                 setTextCursor(clickCursor);
         }
     }
@@ -481,6 +478,7 @@ void ReplPad::mousePressEvent(QMouseEvent * event) {
 
 
 void ReplPad::mouseDoubleClickEvent(QMouseEvent * event) {
+    //
     // There is no exposed "triple click" event in Qt.  The behavior you see
     // where entire lines are selected by QTextEdit if a third click happens
     // is custom implemented inside QTextEdit::mouseDoubleClickEvent.  A
@@ -529,14 +527,12 @@ void ReplPad::pushFormat(QTextCharFormat const & format) {
 }
 
 
-
 //
 // ReplPad::appendPrompt()
 //
 // Append a prompt and remember the cursor's offset into the QTextDocument,
 // which we'll use later to find the beginning of the user's input.
 //
-
 void ReplPad::appendNewPrompt() {
 
     // This initializes a new history entry, which also rewrites the
@@ -550,7 +546,6 @@ void ReplPad::appendNewPrompt() {
 
     document()->clearUndoRedoStacks();
 }
-
 
 
 void ReplPad::rewritePrompt() {
@@ -674,7 +669,6 @@ void ReplPad::containInputSelection() {
 }
 
 
-
 //
 // ReplPad::keyPressEvent()
 //
@@ -685,17 +679,16 @@ void ReplPad::containInputSelection() {
 //
 
 void ReplPad::keyPressEvent(QKeyEvent * event) {
-
     int key = event->key();
 
     // Debugging alted or ctrled or shifted keys is made difficult if you set
     // a breakpoint and it tells you about hitting those keys themselves, so
     // since we do nothing in that case (yet) return quickly.
-
+    //
     if (
         (key == Qt::Key_Control)
-        or (key == Qt::Key_Shift)
-        or (key == Qt::Key_Alt)
+        || (key == Qt::Key_Shift)
+        || (key == Qt::Key_Alt)
     ) {
         QTextEdit::keyPressEvent(event);
         return;
@@ -704,21 +697,19 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // The "hold down escape to make window fade and quit" trick looks cool
     // but depends on a working implementation of SetWindowOpacity.  This
     // starts the timer that makes it fade (the timer is stopped on key up)
-
-    if ((key == Qt::Key_Escape) and (not event->isAutoRepeat()))
+    //
+    if (key == Qt::Key_Escape && !event->isAutoRepeat())
         emit fadeOutToQuit(true);
-
 
     // Putting this list here for convenience.  In theory commands could take
     // into account whether you hit the 1 on a numeric kepad or on the top
     // row of the keyboard....
-
-    bool shifted = event->modifiers() & Qt::ShiftModifier;
-
-    // What ctrl means on the platforms is different:
+    //
+    // Note that what ctrl means on the platforms is different:
     //
     //     http://stackoverflow.com/questions/16809139/
 
+    bool shifted = event->modifiers() & Qt::ShiftModifier;
     bool ctrled = event->modifiers() & Qt::ControlModifier;
     bool alted = event->modifiers() & Qt::AltModifier;
     bool metaed = event->modifiers() & Qt::MetaModifier;
@@ -729,21 +720,19 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // and the group determines whether the left or right symbol is used.
     // On US keyboards, the shift key changes the keyboard level, and there
     // are no groups."
-
+    //
     bool groupswitched = event->modifiers() & Qt::GroupSwitchModifier;
-
 
     // Some systems use Key_Backtab instead of a shifted Tab.  We could
     // canonize to either, but to call attention to the anomaly we canonize
     // shifted tabs to Key_Backtab
     //
     //     http://www.qtcentre.org/threads/32646-shift-key
-
-    if ((key == Qt::Key_Tab) and shifted) {
+    //
+    if (key == Qt::Key_Tab && shifted) {
         key = Qt::Key_Backtab;
         shifted = false;
     }
-
 
     // Qt says some key events "have text" and hence correspond to an
     // intent to insert that QString, but it says that about lots of odd
@@ -764,14 +753,13 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     QString temp = event->text();
 
-    bool hasRealText = not event->text().isEmpty();
+    bool hasRealText = !event->text().isEmpty();
     for (QChar ch : event->text()) {
-        if (not ch.isPrint() or (ch == '\t')) {
+        if (!ch.isPrint() || ch == '\t') {
             hasRealText = false;
             break;
         }
     }
-
 
     // Matching QKeySequence::ZoomIn seems to not work; the keysequence
     // Ctrl and = or Ctrl and Shift and = (to get a textual plus) isn't
@@ -783,8 +771,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (
         event->matches(QKeySequence::ZoomIn)
-        or (ctrled and ((key == Qt::Key_Plus) or (event->text() == "+")))
-        or (ctrled and ((key == Qt::Key_Equal) or (event->text() == "=")))
+        || (ctrled && (key == Qt::Key_Plus || event->text() == "+"))
+        || (ctrled && (key == Qt::Key_Equal || event->text() == "="))
     ) {
         zoomIn();
         zoomDelta += 1;
@@ -793,13 +781,12 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     if (
         event->matches(QKeySequence::ZoomOut)
-        or (ctrled and ((key == Qt::Key_Minus) or (event->text() == "-")))
+        || (ctrled && (key == Qt::Key_Minus || event->text() == "-"))
     ) {
         zoomOut();
         zoomDelta -=1;
         return;
     }
-
 
     // If something has no printable representation, we usually assume
     // getting it in a key event isn't asking us to mutate the document.
@@ -808,16 +795,16 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     //
     // There are some exceptions, so we form it as a while loop to make it
     // easier to style with breaks.
-
-    while (not hasRealText) {
-        if ((key == Qt::Key_Up) or (key == Qt::Key_Down))
+    //
+    while (!hasRealText) {
+        if (key == Qt::Key_Up || key == Qt::Key_Down)
             if (
-                ctrled or (
-                    ((not history.back().multiline) or historyIndex)
-                    and (textCursor().position() >= history.back().inputPos)
-                    and (not shifted)
+                ctrled || (
+                    (!history.back().multiline || historyIndex)
+                    && (textCursor().position() >= history.back().inputPos)
+                    && !shifted
                 )
-            ) {
+            ){
                 // Ctrl-Up and Ctrl-Down always do history navigation.  But
                 // if you don't use Ctrl then cursor navigation will act
                 // normally *unless* you are either positioned in the edit
@@ -835,51 +822,50 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         historyIndex = std::experimental::nullopt;
 
         if (
-            (key == Qt::Key_Return)
-            or (key == Qt::Key_Enter)
-            or (key == Qt::Key_Backspace)
-            or (key == Qt::Key_Delete)
-            or (key == Qt::Key_Tab)
-            or (key == Qt::Key_Backtab)
-            or (key == Qt::Key_Escape)
-        ) {
+            key == Qt::Key_Return
+            || key == Qt::Key_Enter
+            || key == Qt::Key_Backspace
+            || key == Qt::Key_Delete
+            || key == Qt::Key_Tab
+            || key == Qt::Key_Backtab
+            || key == Qt::Key_Escape
+        ){
             // Though not true for all programs at all times, in the
             // console's case all of these are operations asking to modify
             // the state of the console.  So fall through.
             break;
         }
 
-
-        if ((key == Qt::Key_Space) and ctrled) {
+        if (key == Qt::Key_Space && ctrled) {
+            //
             // Shifting into (or out of) meta mode, we edit the prompt
+            //
             break;
         }
 
-
         if (
             event->matches(QKeySequence::Undo)
-            or event->matches(QKeySequence::Redo)
-        ) {
+            || event->matches(QKeySequence::Redo)
+        ){
             // Undo and Redo are requests for modification to the console.
             // Attempts to hook the QTextEdit's undo and redo behavior with
             // QAction commands were not successful; doing it in this
             // routine seems the only way to override it.
-
+            //
             break;
         }
 
-
         // Cut, Paste, and Delete variants obviously modify, and we can just
         // pass them through to the QTextEdit with the write mutex locked here
-
+        //
         if (
             event->matches(QKeySequence::Cut)
-            or event->matches(QKeySequence::Delete)
-            or event->matches(QKeySequence::DeleteCompleteLine)
-            or event->matches(QKeySequence::DeleteEndOfLine)
-            or event->matches(QKeySequence::DeleteEndOfWord)
-            or event->matches(QKeySequence::DeleteStartOfWord)
-        ) {
+            || event->matches(QKeySequence::Delete)
+            || event->matches(QKeySequence::DeleteCompleteLine)
+            || event->matches(QKeySequence::DeleteEndOfLine)
+            || event->matches(QKeySequence::DeleteEndOfWord)
+            || event->matches(QKeySequence::DeleteStartOfWord)
+        ){
             containInputSelection();
 
             QMutexLocker lock {&documentMutex};
@@ -891,61 +877,56 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
-
         // That should be all the modifying operations.  But if we turn out
         // to be wrong and the QTextEdit default handler does modify the
         // document, we'll trap it with an error and then clear console.
-
+        //
         QTextEdit::keyPressEvent(event);
         return;
     }
 
-
     // Give a hook opportunity to do something about this key, which is
     // asking to do some kind of modification when there may be an evaluation
     // running on another thread.
-
-    if (not hooks.isReadyToModify(*this, key == Qt::Key_Escape)) {
+    //
+    if (!hooks.isReadyToModify(*this, key == Qt::Key_Escape)) {
         followLatestOutput();
         return;
     }
 
-
     // Whatever we do from here should update the status bar, even to clear
     // it.  Rather than simply clearing it, we should set up something more
     // formal to ensure all paths have some kind of success or failure report
-
+    //
     emit reportStatus("");
-
 
     // If they have made a selection and have intent to modify, we must
     // contain that selection within the boundaries of the editable area.
-
+    //
     containInputSelection();
-
 
     // Command history browsing via up and down arrows.  Presents some
     // visual oddity swapping really long program segments short ones
-
-    if ((key == Qt::Key_Up) or (key == Qt::Key_Down)) {
+    //
+    if (key == Qt::Key_Up || key == Qt::Key_Down) {
         assert(history.size() != 0);
 
-        if (not historyIndex)
+        if (!historyIndex)
             historyIndex = history.size() - 1;
 
         while (true) {
             if (
-                (key == Qt::Key_Down)
-                and (historyIndex == history.size() - 1)
-            ) {
+                key == Qt::Key_Down
+                && historyIndex == history.size() - 1
+            ){
                 emit reportStatus("Already at bottom of history.");
                 return;
             }
 
             if (
-                (key == Qt::Key_Up)
-                and (historyIndex == static_cast<size_t>(0))
-            ) {
+                key == Qt::Key_Up
+                && historyIndex == static_cast<size_t>(0)
+            ){
                 emit reportStatus("Already at top of history.");
                 return;
             }
@@ -953,14 +934,15 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             historyIndex = *historyIndex + ((key == Qt::Key_Down) ? 1 : -1);
 
             // skip over empty lines
-
-            if (not history[*historyIndex].getInput(*this).isEmpty())
+            //
+            if (!history[*historyIndex].getInput(*this).isEmpty())
                 break;
         }
 
         clearCurrentInput();
 
         if (historyIndex == history.size() - 1) {
+            //
             // Because the edit history content is currently only reflected
             // in the document itself, we've lost what you were editing
             // when you started the cursor navigation.  Theoretically we
@@ -992,16 +974,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
-
     // Now that we know we're not doing paging, then all other operations will
     // forget where you were while cursoring through the history.
-
+    //
     historyIndex = std::experimental::nullopt;
-
 
     // Testing of an initial magicUndo concept, which will backtrack the work
     // log and take you to where you were from previous evaluations.
-
+    //
     if (event->matches(QKeySequence::Undo)) {
         if (hasUndo) {
             QMutexLocker lock {&documentMutex};
@@ -1011,8 +991,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         // If there's input but no undo queue, clear the input first before
         // moving on to magic undo...
-
-        if (not history.back().getInput(*this).isEmpty()) {
+        //
+        if (!history.back().getInput(*this).isEmpty()) {
             clearCurrentInput();
 
             HistoryEntry & entry = history.back();
@@ -1066,9 +1046,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
-
     // No magical redo as of yet...
-
+    //
     if (event->matches(QKeySequence::Redo)) {
         if (hasRedo) {
             QMutexLocker lock {&documentMutex};
@@ -1079,16 +1058,14 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
-
     // All other commands will assume we are only working with the current
     // history item, which lives at the tail of the history buffer
-
+    //
     HistoryEntry & entry = history.back();
-
 
     if (key == Qt::Key_Space) {
         if (ctrled) {
-            entry.meta = not entry.meta;
+            entry.meta = !entry.meta;
             rewritePrompt();
             return;
         }
@@ -1101,11 +1078,11 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // evaluating and it has cleared your input, and you hit it twice enough
     // within the double click timer window, it will bump you out of the
     // current shell.
-
+    //
     if (key == Qt::Key_Escape) {
-        if (not escapeTimer.hasExpired(
+        if (!escapeTimer.hasExpired(
             qApp->styleHints()->mouseDoubleClickInterval()
-        )) {
+        )){
             hooks.escape(*this);
             return;
         }
@@ -1113,22 +1090,21 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         escapeTimer.start();
 
         // If there's any text, clear it and take us back.
-
-        if (not entry.getInput(*this).isEmpty()) {
+        //
+        if (!entry.getInput(*this).isEmpty()) {
             clearCurrentInput();
             entry.multiline = false;
             rewritePrompt();
         }
 
         // If there's no text but we're in meta mode, get rid of it.
-
+        //
         if (entry.meta) {
             entry.meta = false;
             rewritePrompt();
         }
         return;
     }
-
 
     // Behavior of Enter/Return depends on the line mode you are in, due to
     // this fantastic suggestion.  :-)
@@ -1139,27 +1115,24 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // single-line mode.  Shift-Enter switches you into multi-line mode where
     // Enter doesn't evaluate, but Shift-Enter starts acting like ordinary
     // Enter once you're in it.  This reduces accidents.
-
-    if ((key == Qt::Key_Enter) or (key == Qt::Key_Return)) {
-
-        if ((not entry.multiline) and (shifted and (not ctrled))) {
+    //
+    if (key == Qt::Key_Enter || key == Qt::Key_Return) {
+        if (!entry.multiline && shifted && !ctrled) {
             switchToMultiline();
             return;
         }
-
 
         // The user may have entered or pasted an arbitrary amount of
         // whitespace, so the cursor may have no data after it.  Find
         // the last good position (which may be equal to the cursor
         // position if there's no extra whitespace)
-
+        //
         int lastGoodPosition = [&]() {
             QTextCursor cursor = textCursor();
 
             setTextCursor(endCursor());
-            if (not find(QRegExp("[^\\s]"), QTextDocument::FindBackward)) {
+            if (!find(QRegExp("[^\\s]"), QTextDocument::FindBackward))
                 throw std::runtime_error("No non-whitespace in console.");
-            }
 
             int result = textCursor().position();
             setTextCursor(cursor);
@@ -1170,7 +1143,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             if (textCursor().position() <= lastGoodPosition)
                 return 0;
 
-            if (not entry.multiline)
+            if (!entry.multiline)
                 return 0;
 
             QTextCursor cursor {document()};
@@ -1182,7 +1155,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return cursor.selection().toPlainText().count("\n");
         }();
 
-        if (ctrled or (not entry.multiline) or (extraneousNewlines > 1)) {
+        if (ctrled || !entry.multiline || extraneousNewlines > 1) {
+            //
             // Perform an evaluation.  But first, clean up all the whitespace
             // at the tail of the input (if it happens after our cursor
             // position.) 
@@ -1223,15 +1197,15 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             return;
         }
 
-
         if (textCursor().anchor() == textCursor().position()) {
+            //
             // Try to do some kind of "auto-indent" on enter, by finding
             // out the current line's indentation level, and inserting
             // that many spaces after the newline we insert.
 
             QTextCursor cursor = textCursor();
 
-            if (not find(QRegExp("^"), QTextDocument::FindBackward)) {
+            if (!find(QRegExp("^"), QTextDocument::FindBackward)) {
                 assert(false);
                 return;
             }
@@ -1256,10 +1230,10 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         // and hitting enter?  What happens to your indent?
     }
 
-
     QString tabString {4, QChar::Space};
 
     if (textCursor().anchor() != textCursor().position()) {
+        //
         // Range selections, we replace them with the event text unless it
         // is a tab, where we entab or detab the content based on shift
         // IF it spans multiple lines (otherwise we handle it as an
@@ -1267,10 +1241,11 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         QMutexLocker lock {&documentMutex};
 
-        if ((key == Qt::Key_Tab) or (key == Qt::Key_Backtab)) {
+        if (key == Qt::Key_Tab || key == Qt::Key_Backtab) {
             QString contents = textCursor().selection().toPlainText();
 
             if (contents.indexOf(QRegExp("[\\n]")) != -1) {
+                //
                 // Tab with a multi-line selection should entab and detab,
                 // but with spaces.
 
@@ -1287,7 +1262,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
             // If single-line contents selected, then collapse the selection
             // down to a point to use in autocomplete.
-
+            //
             QTextCursor cursor = textCursor();
             cursor.setPosition(
                 std::min(cursor.position(), cursor.anchor())
@@ -1299,7 +1274,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
             // selection unless the last selection was made by an autocomplete
             // (and they didn't explicitly say "delete")
 
-            if ((key == Qt::Key_Backspace) or (key == Qt::Key_Delete)) {
+            if (key == Qt::Key_Backspace || key == Qt::Key_Delete) {
                 textCursor().removeSelectedText();
             }
             else {
@@ -1322,7 +1297,8 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
     assert(textCursor().anchor() == textCursor().position());
 
-    if ((key == Qt::Key_Tab) or (key == Qt::Key_Backtab)) {
+    if (key == Qt::Key_Tab || key == Qt::Key_Backtab) {
+        //
         // A tab will autocomplete unless it's in the beginning whitespace of
         // a line, in which case it inserts spaces.  For now we don't
         // distinguish tab from backtab, but backtab (a.k.a. shift-Tab)
@@ -1331,17 +1307,19 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         QMutexLocker lockAuto {&autocompleteMutex};
         QTextCursor cursor = textCursor();
 
-        if (not find(QRegExp("^"), QTextDocument::FindBackward))
+        if (!find(QRegExp("^"), QTextDocument::FindBackward))
             assert(false); // we should be able to find a start of line!
 
         bool isPromptLine;
         int basis;
 
         if (textCursor().position() == entry.promptPos) {
+            //
             // We are on the prompt line (hence we have something besides
             // spaces to beginning of line, even if we haven't typed
             // anything).  This can be given a different behavior for the
             // whitespace case.
+            //
             basis = entry.inputPos;
             isPromptLine = true;
         }
@@ -1358,7 +1336,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         // If just whitespace or nothing, handle it as inserting some
         // spaces for now.  (Could have special behavior if isPromptLine)
-
+        //
         if (leading.trimmed().isEmpty()) {
             QMutexLocker lockDoc {&documentMutex};
             textCursor().insertText(tabString);
@@ -1366,7 +1344,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         }
 
         // Ask the syntaxer to find the range of the current token.
-
 
         QString input = entry.getInput(*this);
         auto tokenRange = syntaxer.rangeForWholeToken(
@@ -1407,7 +1384,6 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
 
         return;
     }
-
 
     if (key == Qt::Key_Backspace) {
         QTextCursor cursor = textCursor();
@@ -1463,7 +1439,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
         return;
     }
 
-    if (not hasRealText) {
+    if (!hasRealText) {
         QMessageBox::information(
             this,
             "Attempt to Insert Non-Printables in Console",
@@ -1500,32 +1476,30 @@ void ReplPad::switchToMultiline() {
     // https://github.com/metaeducation/ren-garden/issues/11
 
     if (
-            (position == anchor) and (position == input.length())
-            and (not input.isEmpty())
-        ) {
-            input += "\n";
-            position++;
-            anchor++;
-        }
-
+        position == anchor && position == input.length()
+        && !input.isEmpty()
+    ){
+        input += "\n";
+        position++;
+        anchor++;
+    }
 
     // Clear the input area and then rewrite as a multi-line prompt
-
+    //
     clearCurrentInput();
     entry.multiline = true;
     rewritePrompt();
 
     // Put the buffer and selection back, now on its own line
-
+    //
     setBuffer(input, position, anchor);
 
     // It may be possible to detect when we undo backwards across
     // a multi-line switch and reset the history item, but until
     // then allowing an undo might mess with our history record
-
+    //
     this->document()->clearUndoRedoStacks();
 }
-
 
 
 //
@@ -1533,7 +1507,7 @@ void ReplPad::switchToMultiline() {
 // way to cancel and exit by holding down escape
 //
 void ReplPad::keyReleaseEvent(QKeyEvent * event) {
-
+    //
     // Strangely, on KDE/Linux at least...you get spurious key release events
     // after a timer, followed by another key press event.  Presumably a
     // guard against stuck keys in the GUI system?  You can work around it,
@@ -1541,12 +1515,11 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
     // released a key for a tiny amount of time or had it held down the whole
     // (a distinction unimportant here.)
 
-    if ((event->key() == Qt::Key_Escape) and (not event->isAutoRepeat()))
+    if (event->key() == Qt::Key_Escape && !event->isAutoRepeat())
         emit fadeOutToQuit(false);
 
     QTextEdit::keyReleaseEvent(event);
 }
-
 
 
 //
@@ -1555,12 +1528,12 @@ void ReplPad::keyReleaseEvent(QKeyEvent * event) {
 // back and gets changed...it's not a "fully additive" process.
 //
 void ReplPad::inputMethodEvent(QInputMethodEvent * event) {
-
+    //
     // Give a hook opportunity to do something about this key, which is
     // asking to do some kind of modification when there may be an evaluation
     // running on another thread.
-
-    if (not hooks.isReadyToModify(*this, false)) {
+    //
+    if (!hooks.isReadyToModify(*this, false)) {
         followLatestOutput();
         return;
     }
@@ -1568,7 +1541,7 @@ void ReplPad::inputMethodEvent(QInputMethodEvent * event) {
     // If our current selection was made by an autocomplete, we want to
     // collapse it down to a single point instead of a range so that the
     // insertion won't overwrite it
-
+    //
     if (selectionWasAutocomplete) {
         QTextCursor cursor = textCursor();
         cursor.setPosition(cursor.position());
@@ -1584,7 +1557,6 @@ void ReplPad::inputMethodEvent(QInputMethodEvent * event) {
 
     QTextEdit::inputMethodEvent(event);
 }
-
 
 
 // Trap cut, paste so we can limit the selection to the edit buffer

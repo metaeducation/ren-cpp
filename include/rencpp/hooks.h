@@ -4,7 +4,7 @@
 /*
  * hooks.h
  * This file is part of RenCpp
- * Copyright (C) 2015 HostileFork.com
+ * Copyright (C) 2015-2017 HostileFork.com
  *
  * Licensed under the Boost License, Version 1.0 (the "License")
  *
@@ -70,134 +70,7 @@
 #define REN_RUNTIME_RED 304
 #define REN_RUNTIME_REBOL 1020
 
-#if defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
-
-/*
- * See notes about RenResult being a standardized-size REBCNT in the Rebol
- * definitions, and how that is currently shared with the C function shim
- * prototype for speaking the stack protocol...which may not apply to Red.
- */
-typedef int RenResult;
-
-/*
- * RedCell
- *
- * Sometimes this fixed-size cell holds a value in its entirety--such as
- * an integer! or a date!.  For variable sized types such as series, the
- * values are only references to the data.  The cells thus contain a pointer
- * to the NODE! where the actual data is stored.  Also in the cell is an
- * index of where the reference is offset into the series.
- *
- * If a value contains a NODE! as a reference to the *actual* data, then that
- * is an abstraction that is good for the lifetime of the series.  Modulo
- * garbage collection, the 128-bit sequence is guaranteed to represent the
- * same series for all time.  The content of the series may change, the
- * embedded index may "go stale", but will not crash.  Look at:
- *
- *   https://github.com/red/red/blob/master/runtime/allocator.reds
- *
- * It tells us the bits are laid out like this:
- *
- * ;-- cell header bits layout --
- * ;   31:     lock           ;-- lock series for active thread access only
- * ;   30:     new-line       ;-- new-line (LF) marker (before the slot)
- * ;   29-25:  arity          ;-- arity for routine! functions.
- * ;   24:     self?          ;-- self-aware context flag
- * ;   23:     node-body      ;-- op! body points to a block node
- * ;                          ;--     (instead of native code)
- * ;   22-8:   <reserved>
- * ;   7-0:    datatype ID    ;-- datatype number
- *
- * cell!: alias struct! [
- *    header  [integer!]      ;-- cell's header flags
- *    data1   [integer!]      ;-- placeholders to make a 128-bit cell
- *    data2   [integer!]
- *    data3   [integer!]
- * ]
- *
- * More specific interpretations of the 128 bits are given in the file:
- *
- *   https://github.com/red/red/blob/master/runtime/datatypes/structures.reds
- *
- * Note that anonymous structs inside anonymous unions are not standard, so
- * there is RedCellDataII (ii => "two integers")
- */
-
-typedef struct {
-    int32_t data2;
-    int32_t data3;
-} RedCellDataII;
-
-struct RedCell {
-    int32_t header;
-    int32_t data1;
-
-    /*
-     * C and C++ compilers actually have something called the "strict aliasing
-     * requirement".  There are a lot of common mistakes with it:
-     *
-     *     http://stackoverflow.com/questions/98650/
-     *
-     * Long story short: if a type was of one kind, you cannot reliably cast
-     * it to another data type and read or write from it (unless the type you
-     * cast to was char*, it's an exception).  When optimizing and being
-     * concerned about whether to re-fetch a variable or use the last value,
-     * it is driven by knowledge of the type system; every write to every
-     * type does not cause it to assume anything in the world could have
-     * changed.  For this reason we can't just cast one struct to another.
-     */
-
-    /*
-     * For union initializer list syntax, see here:
-     *     http://stackoverflow.com/questions/18411039/
-     */
-    union {
-        double dataD;
-        void * dataP;
-        RedCellDataII dataII;
-    };
-};
-
-struct RedEngineHandle {
-    int data;
-};
-const struct RedEngineHandle RED_ENGINE_HANDLE_INVALID = {-1};
-#define RED_IS_ENGINE_HANDLE_INVALID(handle) \
-    ((handle).data == RED_ENGINE_HANDLE_INVALID.data)
-
-
-/*
- * MAP RED TYPES TO REN EQUIVALENTS
- */
-
-typedef RedCell RenCell;
-
-typedef RedEngineHandle RenEngineHandle;
-#define REN_ENGINE_HANDLE_INVALID RED_ENGINE_HANDLE_INVALID
-#define REN_IS_ENGINE_HANDLE_INVALID RED_IS_ENGINE_HANDLE_INVALID
-
-
-/*
- * The Red runtime is still fake for the moment, so no real convention for the
- * stack has been established.  But this lays out what is needed for the
- * binding to be able to process arguments, if the RenDispatcherPoitner
- * function signature is as written.
- */
-
-typedef void* RenCall; // TBD
-typedef uint32_t (* RenDispatcherPointer)(RenCall * call);
-
-#define REN_CS_OUT(stack) \
-    static_cast<RenCell *>((stack), nullptr)
-
-#define REN_CS_ARG(stack, index) \
-    static_cast<RenCell *>((stack), nullptr)
-
-#define REN_STACK_SHIM(stack) \
-    static_cast<RenDispatcherPointer>((stack), nullptr)
-
-
-#elif (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
+#if (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
 
 /*
  * The RenResult does double duty as the result code from functions and the

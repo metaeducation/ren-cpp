@@ -1,7 +1,7 @@
 //
 // mainwindow.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -227,11 +227,11 @@ void MainWindow::about()
         this,
         tr("About Ren Garden"),
         tr(
-            "The <b>Ren Garden</b> workbench integrates Rebol or Red"
+            "The <b>Ren Garden</b> workbench integrates Rebol language"
             " evaluators into a Qt-based environment, by utilizing the RenCpp"
             " binding.<br><br>"
-            "Copyright © 2015 MetÆducation, GPL License<br><br>"
-            "Rebol, Red, and Qt are governed by the terms of their licenses."
+            "Copyright © 2015-2017 MetÆducation, GPL License<br><br>"
+            "Rebol and Qt are governed by the terms of their licenses."
         )
     );
 }
@@ -470,7 +470,7 @@ void MainWindow::switchLayoutDirection()
 //
 void MainWindow::onFadeOutToQuit(bool escaping)
 {
-    if (not escaping) {
+    if (!escaping) {
         // Timer should have been started by the original request to escape,
         // we leave it running but let it count the opacity up.  (There is
         // probably a usability design thing for making this all nonlinear.)
@@ -488,7 +488,7 @@ void MainWindow::onFadeOutToQuit(bool escaping)
     // function because this little piece of functionality is nicely tied
     // up all in this one slot handler).
 
-    if (not fadeTimer) {
+    if (!fadeTimer) {
         fadeTimer = new QTimer {this};
         connect(
             fadeTimer, &QTimer::timeout,
@@ -568,7 +568,7 @@ void MainWindow::cppExceptionNotice(char const * what) {
 
 MainWindow::~MainWindow() {
     workerThread.quit();
-    if ((not workerThread.wait(1000)) and (not forcingQuit)) {
+    if (!workerThread.wait(1000) && !forcingQuit) {
         // How to print to console about quitting
         QMessageBox::information(
             nullptr,

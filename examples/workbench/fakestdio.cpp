@@ -1,7 +1,7 @@
 //
 // fakestdio.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -123,7 +123,13 @@ std::streambuf::int_type FakeStdinBuffer::underflow() {
     if (eback() == base) // true when this isn't the first fill
     {
         // Make arrangements for putback characters
-        std::copy(egptr() - put_back_, egptr(), base);
+
+        // Note MSVC doesn't like using std::copy here withuot its own non
+        // standard iterator.
+        //
+        /* std::copy(egptr() - put_back_, egptr(), base); */
+        memcpy(base, egptr() - put_back_, put_back_);
+
         start += put_back_;
     }
 
@@ -140,7 +146,12 @@ std::streambuf::int_type FakeStdinBuffer::underflow() {
     repl.inputAvailable.wait(lock.mutex());
 
     std::size_t n = std::min(readCapacity, repl.input.size());
-    std::copy(repl.input.data(), repl.input.data() + n, start);
+
+    // MSVC does not like using std::copy here without it's own non-standard
+    // safe iterator format.
+    //
+    memcpy(start, repl.input.data(), n);
+
     repl.input.right(repl.input.size() - n);
 
     if (n == 0)

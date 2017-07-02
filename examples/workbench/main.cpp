@@ -1,7 +1,7 @@
 //
 // main.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -49,16 +49,18 @@ void noisyFailureMsgHandler(
     // prevents problems, but there may be a mixture of code (or even cases
     // inside of Qt itself?) which still uses the old string-based style.
 
-    if ((type == QtDebugMsg) and msg.contains("::connect"))
+    if ((type == QtDebugMsg) && msg.contains("::connect"))
         type = QtWarningMsg;
 
 
     // this is another one that doesn't make sense as just a debug message.
     // It's a pretty serious sign of a problem.  See link in blog entry.
 
-    if ((type == QtDebugMsg)
-            and msg.contains("QPainter::begin")
-            and msg.contains("Paint device returned engine")) {
+    if (
+        (type == QtDebugMsg)
+        && msg.contains("QPainter::begin")
+        && msg.contains("Paint device returned engine")
+    ){
         type = QtWarningMsg;
     }
 
@@ -70,7 +72,7 @@ void noisyFailureMsgHandler(
 
     if (
         QString(msg).contains("Cowardly refusing to send clipboard message")
-    ) {
+    ){
         type = QtDebugMsg;
     }
 
@@ -80,8 +82,10 @@ void noisyFailureMsgHandler(
     // a non-GUI thread, you'll have to queue the message to the GUI
 
     QCoreApplication * instance = QCoreApplication::instance();
-    const bool isGuiThread =
-        instance and (QThread::currentThread() == instance->thread());
+    const bool isGuiThread = (
+        (instance != nullptr)
+        && (QThread::currentThread() == instance->thread())
+    );
 
     if (isGuiThread) {
         QMessageBox box;

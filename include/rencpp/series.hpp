@@ -107,7 +107,7 @@ public:
         bool operator==(iterator const & other) const
             { return state.isSameAs(other.state); }
         bool operator!=(iterator const & other) const
-            { return not state.isSameAs(other.state); }
+            { return !state.isSameAs(other.state); }
 
         AnyValue operator * () const { return *state; }
         AnyValue operator-> () const { return state.operator->(); }

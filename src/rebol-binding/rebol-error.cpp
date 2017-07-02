@@ -28,11 +28,11 @@ Error::Error (const char * msg, Engine * engine) :
 {
     VAL_RESET_HEADER(AS_REBVAL(cell), REB_ERROR);
 
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     std::string array (
-        "#[error! [code: 10000 type: 'User id: 'message message: "
+        "#[error! [code: _ type: 'User id: 'message message: "
     );
 
     array += '{';

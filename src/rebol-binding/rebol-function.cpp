@@ -42,19 +42,22 @@ bool Function::isValid(RenCell const * cell) {
 
 static REB_R Ren_Cpp_Dispatcher(struct Reb_Frame *f)
 {
-    REBARR *info = VAL_ARRAY(FUNC_BODY(f->func));
+    REBARR *info = VAL_ARRAY(FUNC_BODY(f->original));
 
     RenEngineHandle engine;
-    engine.data = cast(int, cast(REBUPT, VAL_HANDLE_POINTER(ARR_AT(info, 0))));
+    engine.data = cast(int,
+        cast(REBUPT, VAL_HANDLE_POINTER(void, ARR_AT(info, 0)))
+    );
 
-    internal::RenShimPointer shim
-        = cast(internal::RenShimPointer, VAL_HANDLE_POINTER(ARR_AT(info, 1)));
+    internal::RenShimPointer shim = cast(internal::RenShimPointer,
+        VAL_HANDLE_POINTER(void, ARR_AT(info, 1))
+    );
 
     // Note that this is a raw pointer to a C++ object.  The only code that
     // knows how to free it is the "freer" function (held in the handle's
     // code pointer), and this freeing occurs when the handle is GC'd
     //
-    void *cppfun = VAL_HANDLE_POINTER(ARR_AT(info, 2));
+    void *cppfun = VAL_HANDLE_POINTER(void, ARR_AT(info, 2));
 
     // f->arg has the 0-based arguments, f->out is the return
     //
@@ -77,7 +80,7 @@ static void CppFunCleaner(const REBVAL *v) {
     // The "freer" knows how to `delete` the specific C++ std::function subtype
     // that was being held onto by the handle's data pointer
     //
-    (freer)(VAL_HANDLE_POINTER(v));
+    (freer)(VAL_HANDLE_POINTER(void, v));
 }
 
 
@@ -98,7 +101,8 @@ void Function::finishInitSpecial(
             MKF_KEYWORDS
         ),
         &Ren_Cpp_Dispatcher,
-        NULL // no underlying function, this is fundamental
+        NULL, // no underlying function, this is fundamental,
+        NULL // no exemplar
     );
 
     // The C++ function interface that is generated is typed specifically to
@@ -131,7 +135,7 @@ void Function::finishInitSpecial(
 
     Init_Block(FUNC_BODY(fun), info);
 
-    *AS_REBVAL(cell) = *FUNC_VALUE(fun);
+    Move_Value(AS_REBVAL(cell), FUNC_VALUE(fun));
 
     AnyValue::finishInit(engine);
 }

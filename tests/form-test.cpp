@@ -24,7 +24,8 @@ TEST_CASE("form test", "[rebol] [form]")
     CHECK(String {"Hello World"}.isEqualTo("Hello World"));
 
     // one Unicode test is better than zero unicode tests :-)
+    // Smiley face: http://www.fileformat.info/info/unicode/char/263a/index.htm
 
-    CHECK(String {"\n\t\u0444"}.isEqualTo("\n\t\u0444"));
-    CHECK(String {"^/^-^(0444)"}.isEqualTo("\n\t\u0444"));
+    CHECK(String {"\n\t\xE2\x98\xBA"}.isEqualTo("\n\t\xE2\x98\xBA"));
+    CHECK(String {"^/^-^(9786)"}.isEqualTo("\n\t\xE2\x98\xBA"));
 }

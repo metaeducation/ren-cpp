@@ -465,7 +465,7 @@ private:
         catch (AnyValue const & v) {
             // In C++ `throw` is an error mechanism, and using it for general
             // non-localized control (as Rebol uses THROW) is considered abuse
-            if (not hasType<Error>(v))
+            if (!hasType<Error>(v))
                 throw std::runtime_error {
                     "Non-isError() Value thrown from ren::Function"
                 };
@@ -474,7 +474,7 @@ private:
             result = REN_APPLY_ERROR;
         }
         catch (optional<AnyValue> const & v) {
-            if (not hasType<Error>(v))
+            if (!hasType<Error>(v))
                 throw std::runtime_error {
                     "Non-isError() optional<AnyValue> thrown from ren::Function"
                 };

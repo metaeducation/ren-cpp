@@ -1,7 +1,7 @@
 //
 // evaluator.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@ void EvaluatorWorker::doWork(
         auto loaded = context.create<Block>(input.toUtf8().constData());
 
         if (meta) {
-            if (not runtime("find words-of quote", dialect, "/meta"))
+            if (!runtime("find words-of quote", dialect, "/meta"))
                 throw Error ("current dialect has no /meta refinement");
 
             result = context(Path {dialect, "meta"}, loaded);
@@ -132,6 +132,7 @@ void EvaluatorWorker::doWork(
     }
     catch (std::exception const & e) {
         const char * what = e.what();
+
         emit caughtNonRebolException(what);
 
         // !!! MainWindow will show a dialog box.  Should we make up an error?

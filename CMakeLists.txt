@@ -1,9 +1,9 @@
 # This is an input file for the CMake makefile generator
 
 #
-# REN (REadable Notation) C++ Binding for the Red and Rebol languages
+# REN (REadable Notation) C++ Binding for Rebol languages
 #
-# Copyright (C) 2015 HostileFork.com and contributors
+# Copyright (C) 2015-2017 HostileFork.com and contributors
 #
 # Licensed under the Boost License, Version 1.0 (the "License")
 #
@@ -294,12 +294,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 
     # using Visual Studio C++ (note C++11 and beyond support on by default)
 
-    # Though `not`, `and`, `or`, `xor`, etc. have been keywords in C++ since
-    # the beginning, MSVC somehow doesn't support them unless you "disable
-    # extensions"
-    
-    add_cxx_flags(/Za)
-
     # Historically, Rebol triggers its 64-bitness on either __LLP64__ or
     # __LP64__ being defined.  MSVC doesn't define this itself the way GCC
     # does, so the Rebol makefiles do it.  We're not using the Rebol makefile
@@ -316,6 +310,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         add_cxx_flags(/wd4180)
     endif()
 
+    add_cxx_flags(/wd4244)
+    add_cxx_flags(/wd4267)
+
 else()
 
     # !!! If you're not using GCC, Clang, or MSVC then you're pretty much on
@@ -325,6 +322,11 @@ else()
 
 endif()
 
+#
+# !!! Rebol needs to know the endianness.  For now assume all Ren Garden
+# builds are for little endian machines.
+#
+add_definitions(-DENDIAN_LITTLE)
 
 # Include files intended to be used by clients of the binding are under
 # %include/rencpp/ so that includes are prefixed as:
@@ -615,8 +617,6 @@ elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
     file(
         GLOB EXTRA_OBJS ${EXTRA_OBJ_PATH}/*.o # .obj
     )
-    message(STATUS "blah blah:" ${EXTRA_OBJ_PATH})
-    message(STATUS "glob glub: " ${EXTRA_OBJS})
     ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main.o) # .obj
     ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio.o) # .obj
 

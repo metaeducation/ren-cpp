@@ -12,7 +12,7 @@ env:
         # let the 32 bit build double as a "no runtime" test
         - REBOL=metaeducation/ren-c OS_ID=0.4.4 CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
         - RUNTIME=rebol REBOL=metaeducation/ren-c OS_ID=0.4.40
-        - RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
+#        - RUNTIME=red CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32
 
 matrix:
     exclude:

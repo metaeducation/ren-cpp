@@ -62,7 +62,7 @@ AnyString::AnyString (
 {
     (*cellfun)(cell);
 
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     std::string source;
@@ -142,7 +142,7 @@ AnyString::AnyString (
     QByteArray utf8 = source.toUtf8();
     internal::Loadable loadable (utf8.data());
 
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     constructOrApplyInitialize(

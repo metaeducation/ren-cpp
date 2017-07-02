@@ -83,9 +83,9 @@ namespace internal {
 
 #ifndef REN_RUNTIME
     class RebolHooks; // faking by borrowing Rebol as "no runtime"
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
     class FakeRedHooks;
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
     class RebolHooks;
 #else
     static_assert(false, "Invalid runtime setting");
@@ -221,9 +221,9 @@ protected:
 
 #ifndef REN_RUNTIME
     friend class internal::RebolHooks;
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_RED)
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
     friend class FakeRedHooks;
-#elif defined(REN_RUNTIME) and (REN_RUNTIME == REN_RUNTIME_REBOL)
+#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
     friend class internal::RebolHooks;
 #else
     static_assert(false, "Invalid runtime setting");
@@ -252,7 +252,7 @@ protected:
 
     //
     // There is a default constructor, and it initializes the RenCell to be
-    // a constructed value of type NONE!
+    // a constructed value of type BLANK!
     //
     // BUT as an implementation performance detail, if the default constructor
     // is bothering to initialize the 128 bits, what if a derived class
@@ -636,12 +636,12 @@ public:
         class T,
         typename = typename std::enable_if<
             std::is_base_of<AnyValue, T>::value
-            and not std::is_same<AnyValue, T>::value
+            && !std::is_same<AnyValue, T>::value
         >::type
     >
     explicit operator T () const
     {
-        if (not T::isValid(cell))
+        if (!T::isValid(cell))
             throw bad_value_cast("Invalid cast");
 
         // Here's the tough bit.  How do we throw exceptions on all the right
@@ -663,7 +663,7 @@ public:
 
     template <class T>
     bool isEqualTo(char const * spelling) const {
-        if (not T::isValid(cell))
+        if (!T::isValid(cell))
             return false;
 
         T result (Dont::Initialize);

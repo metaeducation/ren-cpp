@@ -46,7 +46,7 @@ public:
 //
 
     RenResult AllocEngine(RebolEngineHandle * engineOut) {
-        if (not (REBOL_IS_ENGINE_HANDLE_INVALID(theEngine)))
+        if (!REBOL_IS_ENGINE_HANDLE_INVALID(theEngine))
             throw std::runtime_error(
                 "Rebol does not have Engine memory isolation at this"
                 " point in time, and no VM sandboxing has been added"
@@ -87,7 +87,7 @@ public:
         RebolEngineHandle engine,
         char const * name
     ) {
-        assert(not REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
+        assert(!REBOL_IS_ENGINE_HANDLE_INVALID(theEngine));
         assert(engine.data == theEngine.data);
 
         REBCTX * context = nullptr;
@@ -169,7 +169,7 @@ public:
         // calls as long as the C stack is in control, as setjmp/longjmp will
         // subvert stack unwinding and just reset the processor state.
 
-        bool is_aggregate_managed = false;
+        REBOOL is_aggregate_managed = FALSE;
         REBARR * aggregate = Make_Array(numLoadables * 2);
 
         if (applicand) {
@@ -209,21 +209,26 @@ public:
                 // [[foo bar]] that discern the cases
 
                 auto loadText = reinterpret_cast<REBYTE*>(
-                    cell->payload.handle.pointer // not actually a REB_HANDLE
+                    cell->payload.handle.data.pointer // not really REB_HANDLE
                 );
 
                 // !!! Temporary: we can't let the GC see a REB_0 trash.
                 // There will be a REB_LOADABLE and ET_LOADABLE type, so use
                 // that when it arrives, but until then blank it.
                 //
-                SET_BLANK(cell);
+                Init_Unreadable_Blank(cell);
 
                 // CAN raise errors and longjmp backwards on the C stack to
                 // the `if (error)` case above!  These are the errors that
                 // happen if the input is bad (unmatched parens, etc...)
 
+                const char *rebol_hooks_utf8 = "rebol-hooks.cpp";
+                REBSTR *rebol_hooks_filename = Intern_UTF8_Managed(
+                    cb_cast(rebol_hooks_utf8), strlen(rebol_hooks_utf8)
+                );
+
                 REBARR * transcoded = Scan_UTF8_Managed(
-                    loadText, LEN_BYTES(loadText)
+                    loadText, LEN_BYTES(loadText), rebol_hooks_filename
                 );
 
                 if (context) {
@@ -240,13 +245,13 @@ public:
                         VAL_CONTEXT(context)
                     );
 
-                    REBVAL vali;
-                    SET_INTEGER(&vali, len);
+                    DECLARE_LOCAL (vali);
+                    Init_Integer(vali, len);
 
                     Resolve_Context(
                         VAL_CONTEXT(context),
                         Lib_Context,
-                        &vali,
+                        vali,
                         FALSE, // !all
                         FALSE // !expand
                     );
@@ -256,7 +261,7 @@ public:
                 // an #ifdef and apparently unused.  This is its definition.
 
                 Insert_Series(
-                    AS_SERIES(aggregate),
+                    SER(aggregate),
                     ARR_LEN(aggregate),
                     reinterpret_cast<REBYTE*>(ARR_HEAD(transcoded)),
                     ARR_LEN(transcoded)
@@ -300,9 +305,8 @@ public:
 
                 REBCTX * object = Make_Selfish_Context_Detect(
                     REB_OBJECT,
-                    nullptr,
                     ARR_HEAD(aggregate),
-                    nullptr
+                    nullptr // no parent
                 );
 
                 // This sets REB_OBJECT in the header, possibly redundantly
@@ -318,10 +322,12 @@ public:
                 if (len != 1) {
                     // Requested construct, but a singular item didn't come
                     // back (either 0 or more than 1 element in aggregate)
-                    Init_Error(
+                    /* Init_Error(
                         extraOut,
-                        ::Error(RE_MISC) // Make error code for this...
-                    );
+                        ::Error(RE_MISC);
+                    ); */
+                    panic (aggregate);
+
                     result = REN_CONSTRUCT_ERROR;
                     goto return_result;
                 }
@@ -338,7 +344,9 @@ public:
                     goto return_result;
                 }
                 else {
-                    *constructOutDatatypeIn = *KNOWN(ARR_HEAD(aggregate));
+                    Move_Value(
+                        constructOutDatatypeIn, KNOWN(ARR_HEAD(aggregate))
+                    );
                 }
             }
         }
@@ -432,11 +440,12 @@ public:
             result = REN_SUCCESS;
         }
 
-        std::copy(
-            SER_HEAD(REBYTE, utf8_series),
-            SER_HEAD(REBYTE, utf8_series) + len,
-            buffer
-        );
+        // Used to use std::copy, but MSVC complains unless you use their
+        // non-standard checked_array_iterator<>:
+        //
+        // https://stackoverflow.com/q/25716841/
+        //
+        memcpy(buffer, SER_HEAD(REBYTE, utf8_series), len);
 
         Free_Series(utf8_series);
 
@@ -450,9 +459,9 @@ public:
 
     void ShimInitThrown(REBVAL *out, REBVAL const *value, REBVAL const *name) {
         if (name)
-            *out = *name;
+            Move_Value(out, name);
         else
-            SET_VOID(out);
+            Init_Void(out);
 
         // !!! There is no way to throw an EXIT_FROM from Ren-C, at present,
         // other than by calling the natives that do it.

@@ -9,33 +9,34 @@
 
 #include "rebol-common.hpp"
 
+//#include "rebol/src/include/sys-ext.h"
+//#include "tmp-boot-extensions.h"
 
-extern "C" {
-#include "rebol/src/include/reb-ext.h"
-#include "rebol/src/include/reb-lib.h"
+EXTERN_C void RL_Version(REBYTE vers[]);
+EXTERN_C void RL_Shutdown(REBOOL clean);
+EXTERN_C void RL_Escape();
+
+EXTERN_C REBOL_HOST_LIB Host_Lib_Init;
 
 #ifdef TO_WINDOWS
-    #include <windows.h>
-
     // The object files from Rebol linked into Ren/C++ need a variable named
     // App_Instance when built for Windows.  This is used by the host code
     // to create an invisible HWND which handles events via its message
     // queue.  We thus have to initialize it if we want things like devices
     // and http/https to work, so we use GetModuleHandle(NULL).
     //
-    extern HINSTANCE App_Instance;
+    EXTERN_C HINSTANCE App_Instance;
     HINSTANCE App_Instance = 0;
 #else
     #include <unistd.h>
 #endif
 
-// Saphirion additions with commands for running https
-extern void Init_Core_Ext();
-extern void Shutdown_Core_Ext(void);
+/*extern "C" {
 
-// See comments in rebol-os-lib-table.cpp
-extern REBOL_HOST_LIB Host_Lib_Init;
-}
+#include "rebol/src/include/reb-ext.h"
+#include "rebol/src/include/reb-lib.h"
+
+}*/
 
 
 #ifndef MAX_PATH
@@ -125,31 +126,22 @@ namespace ren {
 
 RebolRuntime runtime {true};
 
-static REBVAL loadAndBindWord(
+static void loadAndBindWord(
+    REBVAL * out,
     REBCTX * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,
     enum Reb_Kind kind
 ) {
-    REBVAL word;
-    Init_Any_Word(&word, kind, Intern_UTF8_Managed(nameUtf8, lenBytes));
+    Init_Any_Word(out, kind, Intern_UTF8_Managed(nameUtf8, lenBytes));
 
     // The word is now well formed, but unbound.  If you supplied a
     // context we will bind it here.
 
     if (context) {
-        REBCNT index = Try_Bind_Word(context, &word);
+        REBCNT index = Try_Bind_Word(context, out);
         assert(index != 0);
     }
-
-    // Note that with C++11 move semantics, this is constructed in place;
-    // in other words, the caller's REBVAL that they process in the return
-    // was always the memory "result" used.  Quick evangelism note is that
-    // this means objects can *contain* pointers and manage the lifetime
-    // while not costing more to pass around.  If you want value semantics
-    // you just use them.
-
-    return word;
 }
 
 
@@ -195,7 +187,7 @@ RebolRuntime::RebolRuntime (bool) :
 
     // Make sure our opaque types stay in sync with their "real" variants
 
-    assert(sizeof(Reb_Value) == sizeof(RenCell));
+    assert(sizeof(Reb_Value) == sizeof(REBVAL));
 
     assert(sizeof(uint32_t) == sizeof(REBCNT));
     assert(sizeof(int32_t) == sizeof(REBINT));
@@ -219,7 +211,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     App_Instance = GetModuleHandle(NULL);
 #endif
 
-    Init_Core();
+    Startup_Core();
 
     initialized = true;
 
@@ -249,7 +241,9 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
 
     REBYTE test_name[] = "test-rencpp-low-level-hook";
 
-    REBVAL testWord = loadAndBindWord(
+    DECLARE_LOCAL (testWord);
+    loadAndBindWord(
+        testWord,
         Lib_Context, test_name, LEN_BYTES(test_name), REB_WORD
     );
 
@@ -265,27 +259,37 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
         REFINE(2, refine);
         PARAM(3, arg);
 
-        REBVAL * out = D_OUT;
-
         // Used to be APPLY replacement, but now just a placeholder if
         // something like that winds up being needed.
-        SET_BLANK(out);
+        //
+        Init_Blank(D_OUT);
 
         return R_OUT;
     };
 
-    REBVAL testSpec;
+    const char *rebol_runtime_utf8 = "rebol-runtime.cpp";
+    REBSTR *rebol_runtime_filename = Intern_UTF8_Managed(
+        cb_cast(rebol_runtime_utf8), strlen(rebol_runtime_utf8)
+    );
+
+    DECLARE_LOCAL (testSpec);
     Init_Block(
-        &testSpec,
-        Scan_UTF8_Managed(testSpecStr, LEN_BYTES(testSpecStr))
+        testSpec,
+        Scan_UTF8_Managed(
+            testSpecStr, LEN_BYTES(testSpecStr), rebol_runtime_filename
+        )
     );
 
     REBFUN *testNative = Make_Function(
-        Make_Paramlist_Managed_May_Fail(&testSpec, MKF_KEYWORDS),
+        Make_Paramlist_Managed_May_Fail(testSpec, MKF_KEYWORDS),
         testDispatcher,
-        NULL // no underlying function, this is foundational
+        NULL, // no underlying function, this is foundational
+        NULL // no exemplar, this isn't a specialization
     );
-    *Sink_Var_May_Fail(&testWord, SPECIFIED) = *FUNC_VALUE(testNative);
+    Move_Value(
+        Sink_Var_May_Fail(testWord, SPECIFIED),
+        FUNC_VALUE(testNative)
+    );
 
     return true;
 }

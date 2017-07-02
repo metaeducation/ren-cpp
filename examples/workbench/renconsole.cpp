@@ -1,7 +1,7 @@
 //
 // renconsole.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015 MetÆducation
+// Copyright (C) 2015-2017 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -88,9 +88,11 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
         "    {block to execute or other instruction (see documentation)}"
         "/meta {Interpret in 'meta mode' for controlling the dialect}",
 
-        [this](AnyValue const & arg, AnyValue const & meta) -> optional<AnyValue>
+        [this](AnyValue const & arg, AnyValue const & meta)
+            -> optional<AnyValue>
         {
-            if (not meta) {
+            if (!meta) {
+                //
                 // the case that the unmodified CONSOLE make *some* exceptions
                 // and throw in some kind of behavior unknown to DO, like
                 // a more clever version of HELP that breaks the arity rules
@@ -111,14 +113,14 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                     if (
                         blk.isEmpty()
-                        or not (
+                        || !(
                             hasType<Word>(blk[1])
-                            or hasType<LitWord>(blk[1])
-                            or hasType<GetWord>(blk[1])
+                            || hasType<LitWord>(blk[1])
+                            || hasType<GetWord>(blk[1])
                         )
-                        or (
+                        || (
                             (blk.length() > 1)
-                            and not hasType<Refinement>(blk[2])
+                            && !hasType<Refinement>(blk[2])
                         )
                     ) {
                         throw Error (
@@ -172,7 +174,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                     return String {""}; // doesn't add before >> prompt
 
                 if (arg.isEqualTo<Word>("banner")) {
-                    if (not bannerPrinted) {
+                    if (!bannerPrinted) {
                         printBanner();
                         bannerPrinted = true;
                         return {blank};
@@ -262,13 +264,13 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
             optional<Tag> label;
 
-            if (hasType<Block>(arg) or hasType<Group>(arg)) {
+            if (hasType<Block>(arg) || hasType<Group>(arg)) {
+                //
                 // If it's a block or a group, then if the first item is a
                 // tag we steal as a label.  `watch (<before> first foo)`
-
+                //
                 auto array = static_cast<AnyArray>(arg);
-
-                if (not array.isEmpty() && hasType<Tag>(array[1]))
+                if (!array.isEmpty() && hasType<Tag>(array[1]))
                     label = static_cast<Tag>(array[1]);
             }
 
@@ -285,9 +287,11 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                 // need a place to have it "written down" for you.)
 
                 if (
-                    hasType<Word>(arg) or hasType<GetWord>(arg)
-                    or hasType<Path>(arg) or hasType<ren::GetPath>(arg)
-                    or hasType<Group>(arg)
+                    hasType<Word>(arg)
+                    || hasType<GetWord>(arg)
+                    || hasType<Path>(arg)
+                    || hasType<ren::GetPath>(arg)
+                    || hasType<Group>(arg)
                 ) {
                     optional<AnyValue> result = arg.apply();
                     if (result == nullopt)
@@ -297,7 +301,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
                     arg = *result;
 
-                    if (hasType<Block>(arg) or hasType<Group>(arg)) {
+                    if (hasType<Block>(arg) || hasType<Group>(arg)) {
                         // If we already captured a label from the first
                         // element being a tag then don't override it with the
                         // watch dialect interpretation.
@@ -310,7 +314,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
                         if (label != nullopt) {
                             auto array = static_cast<AnyArray>(arg);
 
-                            if (not array.isEmpty() && hasType<Tag>(array[1]))
+                            if (!array.isEmpty() && hasType<Tag>(array[1]))
                                 label = static_cast<Tag>(array[1]);
                         }
                     }
@@ -342,14 +346,12 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
         nullopt // do not load into any context, just data
     );
 
-
-
     // Incubator routines for addressing as many design questions as
     // possible without modifying the Rebol code itself.  The COMBINE
     // assignment to JOIN is done here internally vs. in the proposal itself,
     // as a practical issue to co-evolve COMBINE-the-proposal even with
     // those who defender of the current JOIN.
-
+    //
     proposalsContext = userContext.copy(false);
 
     // !!! On MinGW 4.9.1 under Windows, there is an issue where if you pass
@@ -360,6 +362,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     // a compiler bug than an issue in Ren/C++ class design a workaround is
     // the best choice for the moment.  So we force to a reference to prevent
     // the choice of && from *proposalsContext;
+    //
     AnyContext const & proposalsRef = *proposalsContext;
 
     proposalsPackage = QSharedPointer<RenPackage>::create(
@@ -379,15 +382,13 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
     // This is how to include something even in the "non-proposals" user
     // context, e.g. COMBINE
-
+    //
     userContext(
         "combine: quote", (*proposalsContext)(":combine")
     );
 
-
     // The beginnings of a test...
     /* proposalsPackage->downloadLocally(); */
-
 
     // Load Rebol code from the helpers module.  See the description of the
     // motivations and explations in:
@@ -424,13 +425,12 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 
     // The shell relies on the helpers, so we couldn't initialize it until
     // this point...
-
+    //
     shell.reset(new RenShell(*helpersContext));
-
 
     // make it possible to get at the proposals context from both user
     // and proposals, and also install the console extensions in both
-
+    //
     for (auto context :
         std::vector<AnyContext>{*proposalsContext, userContext}
     ) {
@@ -448,7 +448,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     }
 
     // With everything set up, it's time to add our Repl(s)
-
+    //
     setTabsClosable(true); // close button per tab
     setTabBarAutoHide(true); // hide if < 2 tabs
 
@@ -462,7 +462,6 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
         }
     );
 
-
     connect(
         this, &QTabWidget::tabCloseRequested,
         [this](int index) {
@@ -474,9 +473,7 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
 }
 
 
-
 void RenConsole::createNewTab() {
-
     if (evaluatingRepl) {
         emit reportStatus(tr("Can't spawn tab during evaluation."));
         return;
@@ -589,9 +586,7 @@ void RenConsole::updateTabLabels() {
 //
 //    http://doc.qt.io/qt-5/richtext-html-subset.html
 //
-
 void RenConsole::printBanner() {
-
     repl().appendImage(QImage (":/images/banner-logo.png"), true);
 
     QTextCharFormat headerFormat;
@@ -616,16 +611,15 @@ void RenConsole::printBanner() {
     repl().pushFormat(subheadingFormat);
 
     std::vector<char const *> components = {
-        "<i><b>Red</b> is © 2015 Nenad Rakocevic, BSD License</i>",
+        "<i><b>Rebol</b> is © 2012 REBOL Technologies</i>",
 
-        "<i><b>Rebol</b> is © 2015 REBOL Technologies, Apache 2 License</i>",
+        "<i>© 2012-2017 Rebol Open Source Contributors, Apache2 License</i>",
 
         "<i><b>Ren</b> is a project by Humanistic Data Initiative</i>",
 
-        "<i><b>RenCpp</b></b> is © 2015 HostileFork.com, Boost License</i>",
+        "<i><b>RenCpp</b></b> is © 2015-2017 HostileFork, Boost License</i>",
 
-        "<i><b>Qt</b> is © 2015 Digia Plc, LGPL 2.1 or GPL 3 License</i>",
-
+        "<i><b>Qt</b> is © 2017 the Qt Company, LGPL2.1 or GPL3 License</i>",
     };
 
     for (auto & credit : components) {
@@ -665,7 +659,6 @@ void RenConsole::printBanner() {
     repl().pushFormat(repl().outputFormat);
     repl().appendText("\n");
 }
-
 
 
 //
@@ -738,7 +731,7 @@ void RenConsole::escape(ReplPad & pad) {
         return;
     }
 
-    if (not getTabInfo(pad).dialect.isEqualTo(consoleFunction)) {
+    if (!getTabInfo(pad).dialect.isEqualTo(consoleFunction)) {
 
         // give banner opportunity or other dialect switch code, which would
         // not be able to run if we just said dialect = consoleFunction
@@ -770,7 +763,6 @@ QString RenConsole::getPromptString(ReplPad & pad) {
 }
 
 
-
 //
 // EVALUATION RESULT HANDLER
 //
@@ -792,7 +784,7 @@ void RenConsole::handleResults(
 
     Engine::runFinder().getOutputStream().flush();
 
-    if (not success) {
+    if (!success) {
         pendingBuffer.clear();
 
         evaluatingRepl->pushFormat(repl().errorFormat);
@@ -848,7 +840,7 @@ void RenConsole::handleResults(
 
     evaluatingRepl->appendNewPrompt();
 
-    if (not pendingBuffer.isEmpty()) {
+    if (!pendingBuffer.isEmpty()) {
         evaluatingRepl->setBuffer(
             pendingBuffer, pendingPosition, pendingAnchor
         );
@@ -887,7 +879,6 @@ std::pair<int, int> RenConsole::rangeForWholeToken(
 ) const {
     if (buffer.isEmpty())
         return std::make_pair(0, 0);
-
 
     // Took a shot at using PARSE instead of the RegEx.  This code snippet
     // does not currently work, however.  Two reasons:
@@ -977,7 +968,9 @@ std::pair<QString, int> RenConsole::autoComplete(
         };
     }
     catch (std::exception const & e) {
+        //
         // Some error during the helper... tell user so (but don't crash)
+        //
         auto msg = e.what();
         QMessageBox::information(
             NULL,
@@ -992,7 +985,6 @@ std::pair<QString, int> RenConsole::autoComplete(
 
     return std::make_pair(text, index);
 }
-
 
 
 //

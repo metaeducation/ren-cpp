@@ -38,10 +38,10 @@ bool Blank::isValid(RenCell const * cell) {
 AnyValue::AnyValue (blank_t, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_BLANK(AS_REBVAL(cell));
+    Init_Blank(AS_REBVAL(cell));
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());
@@ -68,10 +68,10 @@ bool AnyValue::isFalse() const {
 AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_LOGIC(AS_REBVAL(cell), someBool ? TRUE : FALSE);
+    Init_Logic(AS_REBVAL(cell), someBool ? TRUE : FALSE);
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());
@@ -97,10 +97,10 @@ AnyValue::AnyValue (char c, Engine * engine) :
     if (c < 0)
         throw std::runtime_error("Non-ASCII char passed to AnyValue::AnyValue()");
 
-    SET_CHAR(AS_REBVAL(cell), static_cast<REBUNI>(c));
+    Init_Char(AS_REBVAL(cell), static_cast<REBUNI>(c));
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());
@@ -109,10 +109,10 @@ AnyValue::AnyValue (char c, Engine * engine) :
 AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_CHAR(AS_REBVAL(cell), wc);
+    Init_Char(AS_REBVAL(cell), wc);
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());
@@ -160,10 +160,10 @@ bool Integer::isValid(RenCell const * cell) {
 AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_INTEGER(AS_REBVAL(cell), someInt);
+    Init_Integer(AS_REBVAL(cell), someInt);
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());
@@ -188,10 +188,10 @@ bool Float::isValid(RenCell const * cell) {
 AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    SET_DECIMAL(AS_REBVAL(cell), someDouble);
+    Init_Decimal(AS_REBVAL(cell), someDouble);
 
     // !!! Should some types not need an engine field?
-    if (not engine)
+    if (engine == nullptr)
         engine = &Engine::runFinder();
 
     finishInit(engine->getHandle());

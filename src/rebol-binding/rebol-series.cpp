@@ -54,15 +54,15 @@ AnyValue ren::internal::AnySeries_::operator*() const {
     const REBVAL *v = AS_C_REBVAL(cell);
 
     if (0 == VAL_LEN_AT(v)) {
-        SET_VOID(AS_REBVAL(result.cell));
+        Init_Void(AS_REBVAL(result.cell));
     }
     else if (ANY_STRING(v)) {
         // from str_to_char in Rebol source
-        SET_CHAR(
+        Init_Char(
             AS_REBVAL(result.cell),
             GET_ANY_CHAR(VAL_SERIES(v), VAL_INDEX(v))
         );
-    } else if (Is_Array_Series(VAL_SERIES(v))) {
+    } else if (GET_SER_FLAG(VAL_SERIES(v), SERIES_FLAG_ARRAY)) {
         Derelativize(
             AS_REBVAL(result.cell),
             ARR_AT(VAL_ARRAY(v), VAL_INDEX(v)), VAL_SPECIFIER(v)

@@ -1,7 +1,7 @@
 //
 // value.cpp
 // This file is part of RenCpp
-// Copyright (C) 2015 HostileFork.com
+// Copyright (C) 2015-2017 HostileFork.com
 //
 // Licensed under the Boost License, Version 1.0 (the "License")
 //
@@ -32,7 +32,7 @@ namespace ren {
 
 
 AnyValue::operator bool() const {
-    return not (hasType<Blank>(*this) or isFalse());
+    return !(hasType<Blank>(*this) || isFalse());
 }
 
 

@@ -41,11 +41,11 @@ bool LitPath::isValid(RenCell const * cell) {
 
 bool AnyArray::isValid(RenCell const * cell) {
     return IS_BLOCK(AS_C_REBVAL(cell))
-        or IS_GROUP(AS_C_REBVAL(cell))
-        or IS_PATH(AS_C_REBVAL(cell))
-        or IS_SET_PATH(AS_C_REBVAL(cell))
-        or IS_GET_PATH(AS_C_REBVAL(cell))
-        or IS_LIT_PATH(AS_C_REBVAL(cell));
+        || IS_GROUP(AS_C_REBVAL(cell))
+        || IS_PATH(AS_C_REBVAL(cell))
+        || IS_SET_PATH(AS_C_REBVAL(cell))
+        || IS_GET_PATH(AS_C_REBVAL(cell))
+        || IS_LIT_PATH(AS_C_REBVAL(cell));
 }
 
 

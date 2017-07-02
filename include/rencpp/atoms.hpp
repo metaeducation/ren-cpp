@@ -134,8 +134,8 @@ public:
         const T & b,
         Engine * engine = nullptr,
         typename std::enable_if<
-            not std::is_same<T, bool>::value
-            and std::is_convertible<T, bool>::value,
+            !std::is_same<T, bool>::value
+            && std::is_convertible<T, bool>::value,
             void *
         >::type = nullptr
     ) :
