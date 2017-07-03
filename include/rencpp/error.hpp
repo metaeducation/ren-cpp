@@ -126,8 +126,6 @@ public:
 };
 
 
-
-#ifdef REN_RUNTIME
 class evaluation_error : public std::exception {
 private:
     Error errorValue;
@@ -148,7 +146,6 @@ public:
         return errorValue;
     }
 };
-#endif
 
 
 //

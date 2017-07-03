@@ -127,10 +127,6 @@ protected:
     // If you use the apply operation in a context, then it means "do this
     // code in this context"
     //
-    // !!! Should this be under #ifdef REN_RUNTIME or trust it to be taken
-    // care of otherwise?  Might a better error message be delivered if
-    // there is a static assert here?
-    //
 public:
     template <typename... Ts>
     inline optional<AnyValue> operator()(Ts &&... args) const {

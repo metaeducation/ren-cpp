@@ -16,7 +16,7 @@
 
 #include <thread>
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 namespace ren {

@@ -43,34 +43,18 @@
 // !!! Even non-GUI builds want to be able to process images.  Yet this
 // probably should be in the category of things done with a plug-in,
 // (once plug-ins can act like fairly natural types)
+//
 #include "image.hpp"
 
 
 //
 // INCLUDE REBOL OR RED RUNTIME INSTANCE
 //
-
-//
 // They will define an object derived from ren::Runtime, named ren::runtime
 //
 
-#ifndef REN_RUNTIME
 
 #include "rencpp/rebol.hpp" // cheating for now, no C++ version...
-
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
-
-#include "rencpp/rebol.hpp"
-
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
-
-static_assert(false, "Red runtime not currently supported");
-
-#else
-
-static_assert(false, "Unsupported runtime defined");
-
-#endif
 
 
 //

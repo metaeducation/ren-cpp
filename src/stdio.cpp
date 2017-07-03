@@ -25,7 +25,7 @@
 #include "rencpp/rebol.hpp"
 #include "rencpp/engine.hpp"
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 #define SF_DEV_NULL 31        // local flag to mark NULL device

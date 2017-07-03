@@ -6,7 +6,7 @@
 
 #include "rencpp/rebol.hpp"
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 namespace ren {

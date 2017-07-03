@@ -64,15 +64,6 @@
 
 
 /*
- * Defines for the runtimes.  Strings are awkward for the preprocessor and
- * can only be used in a limited sense.
- */
-#define REN_RUNTIME_RED 304
-#define REN_RUNTIME_REBOL 1020
-
-#if (!defined(REN_RUNTIME)) || (REN_RUNTIME == REN_RUNTIME_REBOL)
-
-/*
  * The RenResult does double duty as the result code from functions and the
  * Rebol NATIVE! function return type, so it has to match the latter.  Rebol
  * uses fixed size types to get <stdint.h>-style compatibility.  This may
@@ -118,14 +109,6 @@ const RebolEngineHandle REBOL_ENGINE_HANDLE_INVALID = {-1};
 typedef RebolEngineHandle RenEngineHandle;
 #define REN_ENGINE_HANDLE_INVALID REBOL_ENGINE_HANDLE_INVALID
 #define REN_IS_ENGINE_HANDLE_INVALID REBOL_IS_ENGINE_HANDLE_INVALID
-
-
-#else
-
-CASSERT(0, hooks_h)
-
-#endif
-
 
 
 /*

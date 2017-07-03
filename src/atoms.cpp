@@ -4,7 +4,7 @@
 #include "rencpp/atoms.hpp"
 #include "rencpp/engine.hpp"
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 namespace ren {

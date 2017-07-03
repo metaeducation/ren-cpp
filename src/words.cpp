@@ -4,7 +4,7 @@
 #include "rencpp/words.hpp"
 #include "rencpp/context.hpp"
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 namespace ren {

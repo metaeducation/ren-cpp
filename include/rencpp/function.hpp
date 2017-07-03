@@ -111,7 +111,6 @@ protected:
     Function (Dont) : AnyValue (Dont::Initialize) {}
     static bool isValid(RenCell const * cell);
 
-#ifdef REN_RUNTIME
 private:
     // Most classes can get away with setting up cell bits all in the
     // implementation files, but FunctionGenerator is a template.  It
@@ -308,11 +307,8 @@ public:
     inline optional<AnyValue> operator()(Ts &&... args) const {
         return apply(std::forward<Ts>(args)...);
     }
-#endif
 };
 
-
-#ifdef REN_RUNTIME
 
 //
 // EXTENSION FUNCTION TEMPLATE
@@ -608,9 +604,6 @@ public:
 
 } // end namespace internal
 
-
-#endif
-
-}
+} // end namespace ren
 
 #endif

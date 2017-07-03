@@ -18,9 +18,9 @@
 
 # NOTE: 9 times out of 10 these days, people working on this project want:
 #
-#    -DCMAKE_BUILD_TYPE=Debug -DRUNTIME=rebol -DCLASSLIB_QT=1
-#    -DGARDEN=yes -DCMAKE_VERBOSE_MAKEFILE=ON
-#
+#    -DCMAKE_BUILD_TYPE=Debug -DCLASSLIB_QT=1 -DGARDEN=yes
+#        -DCMAKE_VERBOSE_MAKEFILE=ON
+
 # ...as the CMake build parameters.  So putting these up top.  Qt Creator
 # has a bad habit of losing the cache of this, so we keep needing it.  :-/
 #
@@ -47,41 +47,15 @@
 #     http://www.ddj.com/cpp/184405251
 #     http://www.elpauer.org/stuff/learning_cmake.pdf
 #
-# If you just want to get a debug build (e.g. running from a CMake
-# project in QtCreator) then open the CMakeLists.txt file in the
-# IDE, and when asked to provide command-line options provide either:
-#
-#     -DRUNTIME=red
-#
-# Or if you want the binding for Rebol support instead of Red, then use:
-#
-#     -DRUNTIME=rebol
-#
-# You may also not define a runtime at all ("[U]ndefine it):
-#
-#     -URUNTIME
-#
-# Future implementations will hopefully allow you to build without either
-# Rebol or Red for a "JSON-style" interface that can manipulate Ren structure
-# but not perform evaluations.  As it stands, this is really done at the
-# moment by a crippling of the Rebol version.
-#
-# (Note: Due to a schedule pacing issue, Ren/C++ has been pre-released in a
-# mode with Rebol functionality, while the Red function is unfinished. This
-# will hopefully be remedied soon; but until then, these instructions will
-# only work with `-DRUNTIME=rebol`)
-#
-# The default heuristic of this makefile is to look for a directory named red
-# or rebol which is in the same directory that the rencpp main directory
+# The default heuristic of this makefile is to look for a directory named
+# `rebol` which is in the same directory that the rencpp main directory
 # can be found.  If you wish to override this, specify:
 #
 #     -DRUNTIME_PATH=/wherever/you/put/runtime-source
 #
-# Clone your repository for red from:
+# Clone your repository for rebol from:
 #
-#     https://github.com/red/red
-#
-# ...or if using Rebol, https://github.com/rebol/rebol
+#     https://github.com/metaeducation/ren-c
 #
 # (Note: If you are using Qt Creator, it can be helpful if the project indexes
 # the Rebol include directories, so you can "jump to definition" on Rebol code.
@@ -185,11 +159,7 @@ endmacro()
 # can "fake it" for today by subsetting the Rebol code so that there is no
 # evaluator offered...
 
-if(DEFINED RUNTIME AND NOT RUNTIME_PATH)
-    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${RUNTIME})
-endif()
-
-if(NOT DEFINED(RUNTIME) AND NOT RUNTIME_PATH)
+if(NOT RUNTIME_PATH)
     set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../rebol)
 endif()
 
@@ -673,7 +643,7 @@ endif()
 
 add_library(
     RenCpp STATIC
-    ${EXTRA_OBJS} ${SRC_LIST} ${SRC_BINDING_LIST} ${INC_LIST}
+    ${EXTRA_OBJS} ${SRC_LIST} ${INC_LIST}
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

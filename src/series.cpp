@@ -6,7 +6,7 @@
 #include "rencpp/series.hpp"
 #include "rencpp/arrays.hpp" // For Path evaluation in operator[]
 
-#include "rebol-common.hpp"
+#include "common.hpp"
 
 
 namespace ren {
@@ -140,7 +140,7 @@ const {
     AnyValue result {Dont::Initialize};
 
     // Need to wrap this in a try, and figure out a way to translate the
-    // errors based on whether you have REN_RUNTIME or not
+    // errors...
 
     constructOrApplyInitialize(
         origin, // use our engine handle

@@ -81,15 +81,7 @@ namespace internal {
 
     class AnySeries_;
 
-#ifndef REN_RUNTIME
-    class RebolHooks; // faking by borrowing Rebol as "no runtime"
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
-    class FakeRedHooks;
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
     class RebolHooks;
-#else
-    static_assert(false, "Invalid runtime setting");
-#endif
 
     template <class R, class... Ts>
     class FunctionGenerator;
@@ -219,15 +211,7 @@ protected:
 
     RenCell *cell;
 
-#ifndef REN_RUNTIME
     friend class internal::RebolHooks;
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_RED)
-    friend class FakeRedHooks;
-#elif defined(REN_RUNTIME) && (REN_RUNTIME == REN_RUNTIME_REBOL)
-    friend class internal::RebolHooks;
-#else
-    static_assert(false, "Invalid runtime setting");
-#endif
 
     //
     // While "adding a few more bytes here and there" in Red and Rebol culture
@@ -568,7 +552,6 @@ public:
     // being anywhere to put a boolean in the call because it would be
     // assumed as a parameter...is a separate printOnly required?
     //
-#ifdef REN_RUNTIME
 protected:
     optional<AnyValue> apply_(
         internal::Loadable const loadables[],
@@ -592,7 +575,6 @@ public:
     inline optional<AnyValue> apply(Ts const &... args) const {
         return apply({ args... });
     }
-#endif
 
     // This is needed by the global free function `ren::hasTyPe()` to sneak
     // past non-friendedness status of it to derived-from-AnyValue classes to
@@ -738,7 +720,6 @@ bool hasType(optional<V> const & value) {
 }
 
 
-#ifdef REN_RUNTIME
 //
 // NON-LOCAL-CONTROL REN-STYLE THROW
 //
@@ -801,8 +782,6 @@ public:
         return throwName;
     }
 };
-#endif
-
 
 
 namespace internal {
