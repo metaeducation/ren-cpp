@@ -1,5 +1,5 @@
-#ifndef RENCPP_EXTENSION_HPP
-#define RENCPP_EXTENSION_HPP
+#ifndef RENCPP_FUNCTION_HPP
+#define RENCPP_FUNCTION_HPP
 
 //
 // function.hpp
@@ -17,6 +17,59 @@
 // permissions and limitations under the License.
 //
 // See http://rencpp.hostilefork.com for more information on this project
+//
+//=////////////////////////////////////////////////////////////////////////=//
+//
+// `ren::Function` can be used to refer to any Rebol FUNCTION!, which is
+// interesting (such as to accomplish tasks like "running PARSE from C++").
+//
+// Another goal of this class is to allow the generation of *new* FUNCTION!s,
+// which are backed by a C++ implementation.  This is a "modern" C++11 take on
+// that process, which uses template metaprogramming to analyze the type
+// signature of a lambda function (or, if you prefer, any "callable" object
+// with an `operator()`) to be triggered by the interpreter.
+//
+// Making it possible to call an arbitrary-arity C++ function from the C
+// code of Rebol is somewhat tricky.  :-/  When a Rebol FUNCTION! is called,
+// the native code that runs is dispatched through an ordinary C protocol,
+// where all the dispatchers look like:
+//
+//     REB_R Some_Dispatcher(struct Reb_Frame *f)
+//
+// The single input parameter is a Rebol "frame", which contains the state
+// of the evaluator at the moment of that function call.  That includes the
+// computed arguments from the callsite, the label (if any) of the word via
+// which the function was invoked, and the cell address where the dispatcher
+// is supposed to write its return result.
+//
+// The C sources for Rebol itself use a preprocessing phase to generate
+// convenience macros that are #include'd into the files that implement
+// dispatchers.  These macros make argument extraction into named local
+// variables easier.  (See ARG(), REF(), and `INCLUDE_PARAMS_OF_XXX` macros)
+//
+// But RenCpp experiments with the use of "modern C++" to make templates that
+// automatically analyze multiple-arity lambda functions which take
+// `ren::AnyValue` subclasses.  Without any separate preprocessing phase,
+// it can generate a unique single-arity "shim" for each.  Rebol then calls
+// the shim, which unpacks the arguments and proxies the return result.
+//
+// By contrast, the Red language's "libRed" reaches underneath the level of C
+// to implement natural-looking calls variadically:
+//
+// https://doc.red-lang.org/en/libred.html#_registering_a_callback_function
+//
+// The effect is similar, although it makes an assumption about the ABI:
+//
+// https://en.wikipedia.org/wiki/Application_binary_interface
+//
+// ...and because the technique is tied to plain C function pointers, it can't
+// wrap up `std::function` instances the way this template code can.  That
+// means you can dynamically generate Rebol FUNCTION!s based on std::function
+// objects which have been bound with instance data dynamically.
+//
+// All that said--this was a largely experimental C++11 codebase to see what
+// was technically possible.  It may be that simpler techniques would be
+// preferable.  Yet this does work!
 //
 
 #include <cassert>
@@ -44,40 +97,32 @@ namespace internal {
 //
 // RenShimPointer
 //
-// The dispatch for Rebol functions is through an ordinary C protocol, where
-// all the dispatchers look like:
+// As far as clients of RenCpp are concerned, struct Reb_Frame is an opaque
+// type, and the REB_R values are not published.  Ideally, no dispatcher code
+// or the data types they depend on would appear to pollute header files.  Yet
+// there is a constraint in C++ that templates must be in the headers:
 //
-//     REB_R Some_Dispatcher(struct Reb_Frame *f)
+// https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
 //
-// Dispatchers can get a pointer to the REBFUN (if they need it) via f->func,
-// and extract properties from it.  They can also read the argument cells out
-// of the frame, through f->arg[N].
-//
-// One concept in Ren-Cpp is to build a facade that is an actual type-correct
-// C++-style signature for functions (that can also be invoked from Rebol).
-// This means that when they are called from C++, they can be checked at
-// compile time for the right types and number of parameters.  In fact, the
-// idea is to be able to implement this for anything that can be operator()
-// overloaded.  (e.g. any "Callable")
-//
-// Yet there has to be some translation between the dispatcher and the C++
-// "callable" object.  The code needed to do that translation will be
-// different based on the type signature of the C++ object, and has to be
-// generated at compile time.  These "shims" are all templated variations on
-// a static method of FunctionGenerator.
+// As a consequence, if you define a RenCpp function taking ren::Integer and
+// another that takes a ren::Block and a ren::String...they will require
+// distinct C function "shims" to unpack a single parameter and type check it
+// vs. one that takes two parameters and type checks that.  This is the price
+// of working with "template magic".
 //
 // Because this common archetype is used by varying types of C++ function
 // objects, the `cppfun` is a void pointer.  But the specific implementation
 // of the shim in the template knows which type to cast to when it runs.
 //
 // !!! Should the engine handle come implicitly from the frame?  It seems
-// that a frame needs to know this.
+// that a frame needs to know this.  For that matter, ->out can be derived
+// from the frame as well, and doesn't need to be a separate parameter.
 //
-using RenShimPointer = RenResult (*)(
-    RenCell *out,
+using RenShimPointer = void (*)(
+    REBVAL *out,
     RenEngineHandle engine,
     const void *cppfun, // each function type signature has its own shim
-    RenCell args[] // args passed as contiguous array of cells
+    struct Reb_Frame *f // frame gives access to args and other properties
 );
 
 //
@@ -104,14 +149,25 @@ using RenCppfunFreer = void (*)(void *cppfun);
 // working with ordinary function values.  The FunctionGenerator is then
 // hidden behind Function::construct.
 //
+// !!! Should it be Function::make, or does that interfere with potential
+// other meanings for MAKE?
+//
 
 class Function : public AnyValue {
 protected:
     friend class AnyValue;
     Function (Dont) : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 private:
+    //
+    // This static function can't be a member of FunctionGenerator and moved
+    // to the implementation file, because FunctionGenerator is a template.
+    // But it's the "real" dispatcher which is used, that then delegates to
+    // the specific templated "shim" function to unpack the arguments.
+    //
+    static int32_t Ren_Cpp_Dispatcher(struct Reb_Frame *f);
+
     // Most classes can get away with setting up cell bits all in the
     // implementation files, but FunctionGenerator is a template.  It
     // needs to be able to finalize "in view".  We might consider another
@@ -131,7 +187,6 @@ private:
     );
 
 
-    //
     // The FunctionGenerator is an internal class.  One reason why the
     // interface is exposed as a function instead of as a class is because
     // of a problem: C++11 is missing the feature of a convenient way to use
@@ -150,10 +205,10 @@ private:
     //
     //     http://stackoverflow.com/a/19934080/211160
     //
-    // It will not work in the general case with "Callables", e.g. objects that
+    // It will not work in general cases with "Callables", e.g. objects that
     // have operator() overloading.  (There could be multiple overloads, which
     // one to pick?  For a similar reason it will not work with "Generic
-    // Lambdas" from C++14.)  However, it works for ordinary lambdas...and that
+    // Lambdas" from C++14.)  But it works for ordinary lambdas...and that
     // is the common case and hence worth addressing.
     //
 
@@ -315,18 +370,6 @@ public:
 //
 
 //
-// While calling Ren and the runtime from C++ is interesting (such as to
-// accomplish tasks like "running PARSE from C++"), a potentially even
-// more relevant task is to make it simple to call C++ code from inside
-// the Rebol or Red system.  Goals for such an interface would be type-safety,
-// brevity, efficiency, etc.
-//
-// This is a "modern" C++11 take on that process.  It uses template
-// metaprogramming to analyze the type signature of a lambda function (or,
-// if you prefer, anything else with an operator()) to be called for the
-// implementation, and unpacks the parameters to call it with.  See the
-// tests for the notation, but it is rather pretty.
-//
 // There may be ways of making the spec block automatically, but naming
 // the parameters would be difficult.  A version that took a single
 // argument and just called them arg1 arg2 etc and built the type
@@ -348,10 +391,8 @@ class FunctionGenerator : public Function {
 private:
 
     //
-    // Rebol natives take in a pointer to the stack of REBVALs.  This stack
-    // has protocol for the offsets of arguments, offsets for other
-    // information (like where the value for the function being called is
-    // written), and an offset where to write the return value:
+    // Rebol natives take in a pointer to the frame.  Today, we extract a
+    // value pointer for a given frame argument using RL_Arg().
     //
 
     using FunType = std::function<R(Ts...)>;
@@ -365,7 +406,7 @@ private:
     static auto applyCppFunImpl(
         RenEngineHandle engine,
         FunType const & cppfun,
-        RenCell *args,
+        struct Reb_Frame *f,
         utility::indices<Indices...>
     )
         -> decltype(
@@ -375,7 +416,7 @@ private:
                         typename utility::type_at<Indices, Ts...>::type
                     >::type
                 >(
-                    &args[Indices],
+                    RL_Arg(f, Indices + 1), // Indices are 0-based
                     engine
                 )...
             )
@@ -387,7 +428,7 @@ private:
                     typename utility::type_at<Indices, Ts...>::type
                 >::type
             >(
-                &args[Indices],
+                RL_Arg(f, Indices + 1), // Indices are 0 based
                 engine
             )...
         );
@@ -395,179 +436,46 @@ private:
 
     template <typename Indices = utility::make_indices<sizeof...(Ts)>>
     static auto applyCppFun(
-        RenEngineHandle engine, FunType const & cppfun, RenCell *args
+        RenEngineHandle engine, FunType const & cppfun, struct Reb_Frame *f
     ) ->
-        decltype(applyCppFunImpl(engine, cppfun, args, Indices {}))
+        decltype(applyCppFunImpl(engine, cppfun, f, Indices {}))
     {
-        return applyCppFunImpl(engine, cppfun, args, Indices {});
+        return applyCppFunImpl(engine, cppfun, f, Indices {});
     }
 
 private:
-    static RenResult shim(
-        RenCell *out,
+    static void shim(
+        REBVAL *out,
         RenEngineHandle engine,
         const void *cppfun,
-        RenCell args[]
+        struct Reb_Frame * f
     ){
-        // To be idiomatic for C++, we want to be able to throw a ren::Error
-        // using C++ exceptions from within a ren::Function.  Yet since the
-        // ren runtimes cannot catch C++ exceptions, we have to translate it
-        // here...as well as make decisions about any non-ren::Error
-        // exceptions the C++ code has thrown.
+        // Our applyCppFun helper does the magic to recursively forward
+        // the AnyValue classes that we generate to the function that
+        // interfaces us with the Callable the extension author wrote
+        // (who is blissfully unaware of the call frame convention and
+        // writing using high-level types...)
+        //
+        // Note: All the logic for handling exceptions is contained in the
+        // Ren_Cpp_Dispatcher(), which wraps this in a `try` (the code here
+        // is minimal to reduce the amount of internals that are exposed in
+        // the header to just what's necessary to get the template working)
 
-        // Only initialized if `success and exiting`, and we don't really need
-        // to initialize it and would rather not; but Clang complains as it
-        // cannot prove it's always initialized when used.  Revisit.
+        auto && temp = applyCppFun(
+            engine,
+            *reinterpret_cast<const FunType*>(cppfun),
+            f
+        );
 
-        RenResult result;
+        // The return result is written into a location that is known
+        // according to the protocol of the call frame
 
-        try {
-            // Our applyCppFun helper does the magic to recursively forward
-            // the AnyValue classes that we generate to the function that
-            // interfaces us with the Callable the extension author wrote
-            // (who is blissfully unaware of the call frame convention and
-            // writing using high-level types...)
-
-            auto && temp = applyCppFun(
-                engine,
-                *reinterpret_cast<const FunType*>(cppfun),
-                args
-            );
-
-            // The return result is written into a location that is known
-            // according to the protocol of the call frame
-
-            AnyValue::toCell_(out, temp); // temp may be ren::optional
-            result = REN_SUCCESS;
-        }
-        catch (bad_optional_access const &) {
-            throw std::runtime_error {
-                "C++ code dereferenced empty optional, no further details"
-                " (try setting a breakpoint in optional.hpp)"
-            };
-        }
-        catch (Error const & e) {
-            *out = e;
-            result = REN_APPLY_ERROR;
-        }
-        catch (optional<Error> const & e) {
-            if (e == nullopt)
-                throw std::runtime_error {
-                    "ren::nullopt optional<Error> thrown from ren::Function"
-                };
-            *out = (*e);
-            result = REN_APPLY_ERROR;
-        }
-        catch (AnyValue const & v) {
-            // In C++ `throw` is an error mechanism, and using it for general
-            // non-localized control (as Rebol uses THROW) is considered abuse
-            if (!hasType<Error>(v))
-                throw std::runtime_error {
-                    "Non-isError() Value thrown from ren::Function"
-                };
-
-            *out = v;
-            result = REN_APPLY_ERROR;
-        }
-        catch (optional<AnyValue> const & v) {
-            if (!hasType<Error>(v))
-                throw std::runtime_error {
-                    "Non-isError() optional<AnyValue> thrown from ren::Function"
-                };
-
-            *out = *(v->cell);
-            result = REN_APPLY_ERROR;
-        }
-        catch (evaluation_error const & e) {
-            // Ren runtime code throws non-std::exception errors, and so
-            // we tolerate C++ code doing the same if it's running as if it
-            // were the runtime.  But we also allow the evaluation_error that
-            // bubbles up through C++ to be extracted as an error to thread
-            // back into the Ren runtime.  This way you can write a C++
-            // routine that doesn't know if it's being called by other C++
-            // code (hence having std::exception expectations) or just as
-            // the implementation of a ren::Function
-
-            *out = (e.error());
-            result = REN_APPLY_ERROR;
-        }
-        catch (evaluation_throw const & t) {
-            // We have to fabricate a THROWN() name label with the actual
-            // thrown value stored aside.  Making pointer reference
-            // temporaries is needed to suppress a compiler warning:
-            //
-            //    http://stackoverflow.com/a/2281928/211160
-
-            const RenCell * thrown_value =
-                t.value() == nullopt
-                    ? nullptr
-                    : t.value()->cell;
-
-            const RenCell * thrown_name =
-                t.name() == nullopt
-                    ? nullptr
-                    : t.name()->cell;
-
-            RenShimInitThrown(out, thrown_value, thrown_name);
-            result = REN_APPLY_THREW;
-        }
-        catch (load_error const & e) {
-            *out = e.error();
-            result = REN_CONSTRUCT_ERROR;
-        }
-        catch (evaluation_halt const &) {
-            result = REN_EVALUATION_HALTED;
-        }
-        catch (std::exception const & e) {
-
-            std::string what = e.what();
-
-            // Theoretically we could catch the C++ exception, poke its
-            // string into a cell, and tell the ren runtime that's what
-            // happened.  For now we just rethrow
-
-            throw;
-        }
-        catch (...) {
-
-            // Mystery error.  No string available.  Again, we could say
-            // "mystery C++ object thrown" and write it into an error we
-            // pass back to the ren runtime, but for now we rethrow
-
-            throw std::runtime_error {
-                "Exception from ren::Function not std::Exception or Error"
-            };
-        }
-
-        // We now should have all the C++ objects cleared from this stack,
-        // so at least as far as THIS function is concerned, a longjmp
-        // should be safe (which is what Rebol will do if we call RenShimError
-        // or RenShimExit).
-
-        switch (result) {
-        case REN_SUCCESS:
-            // !!! R_OUT is 5 in Rebol and so is REN_SUCCESS
-            return REN_SUCCESS;
-
-        case REN_APPLY_THREW:
-            // !!! R_OUT_THREW is 1 in Rebol and so is REN_APPLY_THREW
-            return REN_APPLY_THREW;
-
-        case REN_EVALUATION_HALTED:
-            return RenShimHalt();
-
-        case REN_APPLY_ERROR:
-        case REN_CONSTRUCT_ERROR:
-            return RenShimFail(out);
-
-        default:
-            UNREACHABLE_CODE();
-        }
+        AnyValue::toCell_(out, temp); // temp may be ren::optional
     }
 
-    // Note this is a template, and so there is a different "freer" function generated for each
-    // instance.  That means the `delete` has to be against this `FunType`, and it has to
-    // happen in the header file.
+    // Note this is a template, and so there is a different "freer" function
+    // generated for each instance.  That means the `delete` has to be against
+    // this `FunType`, and it has to happen in the header file.
     //
     static void freer(void *cppfun) {
         delete reinterpret_cast<FunType*>(cppfun); 

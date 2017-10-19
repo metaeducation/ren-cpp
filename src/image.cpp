@@ -13,8 +13,8 @@ namespace ren {
 // IMAGE
 //
 
-bool Image::isValid(RenCell const * cell) {
-    return IS_IMAGE(AS_C_REBVAL(cell));
+bool Image::isValid(REBVAL const * cell) {
+    return IS_IMAGE(cell);
 }
 
 #if REN_CLASSLIB_QT == 1
@@ -26,7 +26,7 @@ Image::Image (QImage const & image, Engine * engine) {
     REBCNT width = static_cast<REBCNT>(image.width());
     REBCNT height = static_cast<REBCNT>(image.height());
 
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_IMAGE);
+    VAL_RESET_HEADER(cell, REB_IMAGE);
     REBSER * img = Make_Image(width, height, FALSE);
 
     // Was using std::copy, but MSVC complained unless you used a safe
@@ -34,16 +34,16 @@ Image::Image (QImage const & image, Engine * engine) {
     //
     memcpy(IMG_DATA(img), image.bits(), sizeof(char[4]) * width * height);
 
-    Init_Image(AS_REBVAL(cell), img);
+    Init_Image(cell, img);
     finishInit(engine->getHandle());
 }
 
 
 Image::operator QImage () const {
     QImage result {
-        VAL_IMAGE_DATA(AS_C_REBVAL(cell)),
-        static_cast<int>(VAL_IMAGE_WIDE(AS_C_REBVAL(cell))),
-        static_cast<int>(VAL_IMAGE_HIGH(AS_C_REBVAL(cell))),
+        VAL_IMAGE_DATA(cell),
+        static_cast<int>(VAL_IMAGE_WIDE(cell)),
+        static_cast<int>(VAL_IMAGE_HIGH(cell)),
         QImage::Format_ARGB32
     };
 

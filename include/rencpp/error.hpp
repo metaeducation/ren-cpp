@@ -86,7 +86,7 @@ class Error
     using AnyContext::initError;
 
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;

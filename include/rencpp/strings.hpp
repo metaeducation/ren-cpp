@@ -34,17 +34,17 @@ class AnyString : public AnySeries
 protected:
     friend class AnyValue;
     AnyString (Dont) noexcept : AnySeries (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
     // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
     //    http://stackoverflow.com/questions/32983193/
 public:
     friend class String;
-    static void initString(RenCell * cell);
+    static void initString(REBVAL *cell);
     friend class Tag;
-    static void initTag(RenCell * cell);
+    static void initTag(REBVAL *cell);
     friend class Filename;
-    static void initFilename(RenCell * cell);
+    static void initFilename(REBVAL *cell);
 
 protected:
     AnyString(
@@ -227,7 +227,7 @@ class String
     : public internal::AnyString_<String, &AnyString::initString>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 protected:
     String (Dont) noexcept : AnyString_ (Dont::Initialize) {}
@@ -272,7 +272,7 @@ class Tag
     : public internal::AnyString_<Tag, &AnyString::initTag>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -284,7 +284,7 @@ class Filename :
     public internal::AnyString_<Filename, &AnyString::initFilename>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;

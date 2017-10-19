@@ -9,19 +9,19 @@
 
 namespace ren {
 
-bool Atom::isValid(RenCell const * cell) {
+bool Atom::isValid(REBVAL const * cell) {
     // Will be more efficient when atom makes it formally into the
     // Rebol base typesets.
     //
     // !!! Review handling of void.  It is not considered an atom, correct?
     //
     return (
-        IS_BLANK(AS_C_REBVAL(cell))
-        || IS_LOGIC(AS_C_REBVAL(cell))
-        || IS_CHAR(AS_C_REBVAL(cell))
-        || IS_INTEGER(AS_C_REBVAL(cell))
-        || IS_DECIMAL(AS_C_REBVAL(cell))
-        || IS_DATE(AS_C_REBVAL(cell))
+        IS_BLANK(cell)
+        || IS_LOGIC(cell)
+        || IS_CHAR(cell)
+        || IS_INTEGER(cell)
+        || IS_DECIMAL(cell)
+        || IS_DATE(cell)
     );
 }
 
@@ -31,14 +31,14 @@ bool Atom::isValid(RenCell const * cell) {
 // BLANK
 //
 
-bool Blank::isValid(RenCell const * cell) {
-    return IS_BLANK(AS_C_REBVAL(cell));
+bool Blank::isValid(REBVAL const * cell) {
+    return IS_BLANK(cell);
 }
 
 AnyValue::AnyValue (blank_t, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    Init_Blank(AS_REBVAL(cell));
+    Init_Blank(cell);
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -53,22 +53,22 @@ AnyValue::AnyValue (blank_t, Engine * engine) noexcept :
 // LOGIC
 //
 
-bool Logic::isValid(RenCell const * cell) {
-    return IS_LOGIC(AS_C_REBVAL(cell));
+bool Logic::isValid(REBVAL const * cell) {
+    return IS_LOGIC(cell);
 }
 
-bool AnyValue::isTrue() const {
-    return IS_CONDITIONAL_TRUE(AS_C_REBVAL(cell));
+bool AnyValue::isTruthy() const {
+    return IS_TRUTHY(cell);
 }
 
-bool AnyValue::isFalse() const {
-    return IS_CONDITIONAL_FALSE(AS_C_REBVAL(cell));
+bool AnyValue::isFalsey() const {
+    return IS_FALSEY(cell);
 }
 
 AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    Init_Logic(AS_REBVAL(cell), someBool ? TRUE : FALSE);
+    Init_Logic(cell, someBool ? TRUE : FALSE);
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -78,7 +78,7 @@ AnyValue::AnyValue (bool someBool, Engine * engine) noexcept :
 }
 
 Logic::operator bool() const {
-    return VAL_INT32(AS_C_REBVAL(cell));
+    return VAL_LOGIC(cell);
 }
 
 
@@ -87,8 +87,8 @@ Logic::operator bool() const {
 // CHARACTER
 //
 
-bool Character::isValid(RenCell const * cell) {
-    return IS_CHAR(AS_C_REBVAL(cell));
+bool Character::isValid(REBVAL const * cell) {
+    return IS_CHAR(cell);
 }
 
 AnyValue::AnyValue (char c, Engine * engine) :
@@ -97,7 +97,7 @@ AnyValue::AnyValue (char c, Engine * engine) :
     if (c < 0)
         throw std::runtime_error("Non-ASCII char passed to AnyValue::AnyValue()");
 
-    Init_Char(AS_REBVAL(cell), static_cast<REBUNI>(c));
+    Init_Char(cell, static_cast<REBUNI>(c));
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -109,7 +109,7 @@ AnyValue::AnyValue (char c, Engine * engine) :
 AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    Init_Char(AS_REBVAL(cell), wc);
+    Init_Char(cell, wc);
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -119,7 +119,7 @@ AnyValue::AnyValue (wchar_t wc, Engine * engine) noexcept :
 }
 
 Character::operator char () const {
-    REBUNI uni = VAL_CHAR(AS_C_REBVAL(cell));
+    REBUNI uni = VAL_CHAR(cell);
     if (uni > 127)
         throw std::runtime_error("Non-ASCII codepoint cast to char");
     return static_cast<char>(uni);
@@ -127,14 +127,14 @@ Character::operator char () const {
 
 
 Character::operator wchar_t () const {
-    REBUNI uni = VAL_CHAR(AS_C_REBVAL(cell));
+    REBUNI uni = VAL_CHAR(cell);
     // will throw in Red for "astral plane" unicode codepoints
     return static_cast<wchar_t>(uni);
 }
 
 
 unsigned long Character::codepoint() const {
-    REBUNI uni = VAL_CHAR(AS_C_REBVAL(cell));
+    REBUNI uni = VAL_CHAR(cell);
     // will probably not throw in Red, either
     return uni;
 }
@@ -142,7 +142,7 @@ unsigned long Character::codepoint() const {
 
 #if REN_CLASSLIB_QT
 Character::operator QChar () const {
-    REBUNI uni = VAL_CHAR(AS_C_REBVAL(cell));
+    REBUNI uni = VAL_CHAR(cell);
     return QChar(uni);
 }
 #endif
@@ -153,14 +153,14 @@ Character::operator QChar () const {
 // INTEGER
 //
 
-bool Integer::isValid(RenCell const * cell) {
-    return IS_INTEGER(AS_C_REBVAL(cell));
+bool Integer::isValid(REBVAL const * cell) {
+    return IS_INTEGER(cell);
 }
 
 AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    Init_Integer(AS_REBVAL(cell), someInt);
+    Init_Integer(cell, someInt);
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -171,7 +171,7 @@ AnyValue::AnyValue (int someInt, Engine * engine) noexcept :
 
 Integer::operator int() const {
     // !!! How to correctly support 64-bit coercions?  Throw if out of range?
-    int i = VAL_INT32(AS_C_REBVAL(cell));
+    int i = VAL_INT32(cell);
     return i;
 }
 
@@ -181,14 +181,14 @@ Integer::operator int() const {
 // FLOAT
 //
 
-bool Float::isValid(RenCell const * cell) {
-    return IS_DECIMAL(AS_C_REBVAL(cell));
+bool Float::isValid(REBVAL const * cell) {
+    return IS_DECIMAL(cell);
 }
 
 AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
     AnyValue (Dont::Initialize)
 {
-    Init_Decimal(AS_REBVAL(cell), someDouble);
+    Init_Decimal(cell, someDouble);
 
     // !!! Should some types not need an engine field?
     if (engine == nullptr)
@@ -198,7 +198,7 @@ AnyValue::AnyValue (double someDouble, Engine * engine) noexcept :
 }
 
 Float::operator double() const {
-    return VAL_DECIMAL(AS_C_REBVAL(cell));
+    return VAL_DECIMAL(cell);
 }
 
 
@@ -207,8 +207,8 @@ Float::operator double() const {
 // DATE
 //
 
-bool Date::isValid(RenCell const * cell) {
-    return IS_DATE(AS_C_REBVAL(cell));
+bool Date::isValid(REBVAL const * cell) {
+    return IS_DATE(cell);
 }
 
 

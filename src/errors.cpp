@@ -13,8 +13,8 @@ namespace ren {
 // TYPE DETECTION AND INITIALIZATION
 //
 
-bool Error::isValid(RenCell const * cell) {
-    return IS_ERROR(AS_C_REBVAL(cell));
+bool Error::isValid(REBVAL const * cell) {
+    return IS_ERROR(cell);
 }
 
 
@@ -26,7 +26,7 @@ bool Error::isValid(RenCell const * cell) {
 Error::Error (const char * msg, Engine * engine) :
     AnyContext_ (Dont::Initialize)
 {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_ERROR);
+    VAL_RESET_HEADER(cell, REB_ERROR);
 
     if (engine == nullptr)
         engine = &Engine::runFinder();

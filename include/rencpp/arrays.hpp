@@ -28,23 +28,23 @@ class AnyArray : public AnySeries {
 protected:
     friend class AnyValue;
     AnyArray (Dont) noexcept : AnySeries (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
     // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
     //    http://stackoverflow.com/questions/32983193/
 public:
     friend class Block;
-    static void initBlock(RenCell * cell);
+    static void initBlock(REBVAL *cell);
     friend class Group;
-    static void initGroup(RenCell * cell);
+    static void initGroup(REBVAL *cell);
     friend class Path;
-    static void initPath(RenCell * cell);
+    static void initPath(REBVAL *cell);
     friend class GetPath;
-    static void initGetPath(RenCell * cell);
+    static void initGetPath(REBVAL *cell);
     friend class SetPath;
-    static void initSetPath(RenCell * cell);
+    static void initSetPath(REBVAL *cell);
     friend class LitPath;
-    static void initLitPath(RenCell * cell);
+    static void initLitPath(REBVAL *cell);
 
 protected:
     //
@@ -199,7 +199,7 @@ class Block
     using AnyArray::initBlock;
 
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -211,7 +211,7 @@ class Group
     : public internal::AnyArray_<Group, &AnyArray::initGroup>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -223,8 +223,8 @@ class Path
     : public internal::AnyArray_<Path, &AnyArray::initPath>
 {
 protected:
-    static void initCell(RenCell * cell);
-    static bool isValid(RenCell const * cell);
+    static void initCell(REBVAL *cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -242,8 +242,8 @@ class SetPath
     : public internal::AnyArray_<SetPath, &AnyArray::initSetPath>
 {
 protected:
-    static void initCell(RenCell * cell);
-    static bool isValid(RenCell const * cell);
+    static void initCell(REBVAL *cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -263,8 +263,8 @@ class GetPath
     : public internal::AnyArray_<GetPath, &AnyArray::initGetPath>
 {
 protected:
-    static void initCell(RenCell * cell);
-    static bool isValid(RenCell const * cell);
+    static void initCell(REBVAL *cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -286,8 +286,8 @@ class LitPath
     : public internal::AnyArray_<LitPath, &AnyArray::initLitPath>
 {
 protected:
-    static void initCell(RenCell * cell);
-    static bool isValid(RenCell const * cell);
+    static void initCell(REBVAL *cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;

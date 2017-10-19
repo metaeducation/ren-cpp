@@ -31,21 +31,21 @@ class AnyWord : public AnyValue {
 protected:
     friend class AnyValue;
     AnyWord (Dont) : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
     // Friending doesn't seem to be enough for gcc 4.6, see SO writeup:
     //    http://stackoverflow.com/questions/32983193/
 public:
     friend class Word;
-    static void initWord(RenCell * cell);
+    static void initWord(REBVAL *cell);
     friend class GetWord;
-    static void initGetWord(RenCell * cell);
+    static void initGetWord(REBVAL *cell);
     friend class SetWord;
-    static void initSetWord(RenCell * cell);
+    static void initSetWord(REBVAL *cell);
     friend class LitWord;
-    static void initLitWord(RenCell * cell);
+    static void initLitWord(REBVAL *cell);
     friend class Refinement;
-    static void initRefinement(RenCell * cell);
+    static void initRefinement(REBVAL *cell);
 
 protected:
     explicit AnyWord (
@@ -202,7 +202,7 @@ class Word
     : public internal::AnyWord_<Word, &AnyWord::initWord>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -220,7 +220,7 @@ class SetWord
     : public internal::AnyWord_<SetWord, &AnyWord::initSetWord>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -240,7 +240,7 @@ class GetWord
     : public internal::AnyWord_<GetWord, &AnyWord::initGetWord>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -261,7 +261,7 @@ class LitWord
     : public internal::AnyWord_<LitWord, &AnyWord::initLitWord>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;
@@ -277,7 +277,7 @@ class Refinement
     : public internal::AnyWord_<Refinement, &AnyWord::initRefinement>
 {
 protected:
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     friend class AnyValue;

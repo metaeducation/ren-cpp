@@ -160,7 +160,7 @@ endmacro()
 # evaluator offered...
 
 if(NOT RUNTIME_PATH)
-    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../rebol)
+    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../ren-c)
 endif()
 
 
@@ -425,216 +425,173 @@ else()
 endif()
 
 
-if(RUNTIME STREQUAL "red")
+# We need to get at the C includes from Rebol to call its internal
+# functions to initialize the interpreter and implement the necessary
+# hooks by calls to those internal functions.  This does not use the
+# "RL_" API,
 
-    message(STATUS "Configuring Binding for Red")
+message(STATUS "Runtime path is ${RUNTIME_PATH}")
 
-    # Include all the sources specific to the Red Binding
+# Though an initiative for the Red project, this is the grand binding
+# attempt for C++.  And it should be able to recompile and work just as
+# effectively for Rebol, just substituting a different cell type into
+# the structure.  Gives a broader base for testing as well...
 
-    aux_source_directory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding
-        SRC_BINDING_LIST
-    )
+message(STATUS "Configuring Binding for Rebol")
 
-    # The CMake variable for "RUNTIME" is distinct from the flag we use in
-    # the headers, and controls more things (as you can see)
+# We want to be able to #include "rebol/include/whatever.h", but to get
+# that to work we have to add an include path which has rebol as a
+# subdirectory.  This might wreak havoc if your parent directory contains
+# other stuff, and you could wind up with something like this:
+#
+#     http://stackoverflow.com/questions/1621396/
+#
+# Apologies if that happens to you.  The best way to sandbox the whole
+# thing is to put your runtime path as a subdirectory of something, so
+# like putting rebol under a rebol directory and then having the outer
+# rebol in the include directory.  So worst case scenario, do that.
+# This should work for most cases.
 
-    add_definitions("-DREN_RUNTIME=REN_RUNTIME_RED")
+add_cxx_flags(-I${RUNTIME_PATH}/../)
 
-    # Add any extra includes for the project browser
+# Put the Rebol headers in so you can search them in the project
 
-    file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/src/red-binding/*.h*)
-    set(INC_LIST ${INC_LIST} ${INC_BINDING})
+file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
 
-elseif((RUNTIME STREQUAL "rebol") OR (NOT DEFINED RUNTIME))
+# Add any extra includes for the project browser
 
-    # We need to get at the C includes from Rebol to call its internal
-    # functions to initialize the interpreter and implement the necessary
-    # hooks by calls to those internal functions.  This does not use the
-    # "RL_" API,
+file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
+set(INC_LIST ${INC_LIST} ${INC_BINDING} ${INC_REBOL})
 
-    message(STATUS "Runtime path is ${RUNTIME_PATH}")
+# It's important to make sure you're set to the right platform, as it
+# affects endianness and other things.  These flags were largely moved
+# in Ren/C to being auto-generated, hence they're not set in the
+# %reb-config.h any longer.  Review the ramifications of this.
 
-    # Though an initiative for the Red project, this is the grand binding
-    # attempt for C++.  And it should be able to recompile and work just as
-    # effectively for Rebol, just substituting a different cell type into
-    # the structure.  Gives a broader base for testing as well...
+add_definitions(-DENDIAN_LITTLE)
 
-    message(STATUS "Configuring Binding for Rebol")
+if(WIN32)
+    add_definitions(-DTO_WINDOWS)
 
-    # We want to be able to #include "rebol/include/whatever.h", but to get
-    # that to work we have to add an include path which has rebol as a
-    # subdirectory.  This might wreak havoc if your parent directory contains
-    # other stuff, and you could wind up with something like this:
-    #
-    #     http://stackoverflow.com/questions/1621396/
-    #
-    # Apologies if that happens to you.  The best way to sandbox the whole
-    # thing is to put your runtime path as a subdirectory of something, so
-    # like putting rebol under a rebol directory and then having the outer
-    # rebol in the include directory.  So worst case scenario, do that.
-    # This should work for most cases.
+    # Windows natively supports wide characters, and UNICODE signals that
+    # to the Rebol build.
 
-    add_cxx_flags(-I${RUNTIME_PATH}/../)
+    add_definitions(-DUNICODE)
 
-    # Include all the sources specific to the Rebol Binding
+    # CMake is able to detect whether you are compiling for a 64-bit or
+    # 32-bit platform using this test.
 
-    aux_source_directory(
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/rebol-binding
-        SRC_BINDING_LIST
-    )
-
-    # Put the Rebol headers in so you can search them in the project
-
-    file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
-
-    # Add any extra includes for the project browser
-
-    file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
-    set(INC_LIST ${INC_LIST} ${INC_BINDING} ${INC_REBOL})
-
-    # The CMake variable for "RUNTIME" is distinct from the flag we use in
-    # the headers, and controls more things (as you can see)
-
-    if(RUNTIME STREQUAL "rebol")
-        add_definitions("-DREN_RUNTIME=REN_RUNTIME_REBOL")
-    endif()
-
-    # It's important to make sure you're set to the right platform, as it
-    # affects endianness and other things.  These flags were largely moved
-    # in Ren/C to being auto-generated, hence they're not set in the
-    # %reb-config.h any longer.  Review the ramifications of this.
-
-    add_definitions(-DENDIAN_LITTLE)
-
-    if(WIN32)
-        add_definitions(-DTO_WINDOWS)
-
-        # Windows natively supports wide characters, and UNICODE signals that
-        # to the Rebol build.
-
-        add_definitions(-DUNICODE)
-
-        # CMake is able to detect whether you are compiling for a 64-bit or
-        # 32-bit platform using this test.
-
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            add_definitions(-DTO_WINDOWS_X64)
-        else()
-            add_definitions(-DTO_WINDOWS_X86)
-        endif()
-
-        # Rebol defines a number of macros for testing types, like `IS_BLOCK()`
-        # and `IS_SET_WORD()`.  One of those is `IS_ERROR()`, and it happens
-        # that %Winerror.h defines that too:
-        #
-        #     BOOL IS_ERROR(HRESULT Status);
-        #
-        # Rebol worked around this basically by `#undef IS_ERROR`, and for
-        # some reason signals the workaround with the define `OS_DEFS`.
-        # Including this for now, but mentioning why it's here in case some
-        # better solution has arisen and is looked into later.
-
-        add_definitions(-DOS_DEFS)
-
-        # Something about how CMake includes Qt seems to throw in a -fPIC
-        # flag to the compiler options, which is meaningless on Windows and
-        # MinGW complains...many have deemed it a "useless warning":
-        #
-        #     http://stackoverflow.com/questions/16708148/
-        #
-        # Because it's not this CMake file that's adding `-fPIC`, it's hard
-        # to guarantee that this removal is going to be "timed" after the
-        # addition, but it seems to work.  If it does not work, your only
-        # option is probably to comment out the add_definitions(-Werror)
-        # earlier in this file, as MinGW has no disable code for the warning.
-
-        try_remove_cxx_flag(-fPIC)
-
-    elseif(APPLE)
-
-        add_definitions(-DTO_OSX)
-
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            add_definitions(-DTO_OSX_X64)
-        else()
-            add_definitions(-DTO_OSX_X86)
-        endif()
-
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_definitions(-DTO_WINDOWS_X64)
     else()
-
-        add_definitions(-DTO_LINUX)
-
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            add_definitions(-DTO_LINUX_X64)
-        else()
-            add_definitions(-DTO_LINUX_X86)
-        endif()
-
+        add_definitions(-DTO_WINDOWS_X86)
     endif()
 
-    # Try and get all the guts out of the Rebol Core executable to
-    # include in the binding.  Take out the main and Host_Lib
-    # instance so that the program you link with the binding is
-    # the entry point.
+    # Rebol defines a number of macros for testing types, like `IS_BLOCK()`
+    # and `IS_SET_WORD()`.  One of those is `IS_ERROR()`, and it happens
+    # that %Winerror.h defines that too:
     #
-    # Note: there is a GLOB RELATIVE in CMake to do it relative to a path, but
-    # it doesn't work on Windows.
-
-    get_filename_component(EXTRA_OBJ_PATH ${RUNTIME_PATH}/make/objs/ REALPATH)
-    #set(EXTRA_OBJ_PATH ${CMAKE_CURRENT_SOURCE_DIR}//tests/)
-    
-    file(
-        GLOB EXTRA_OBJS ${EXTRA_OBJ_PATH}/*.o # .obj
-    )
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main.o) # .obj
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio.o) # .obj
-
-    # One of the goals of Ren/C was to replace the RL_LIB host library, which
-    # is how extension code would "call into" Rebol.  It cannot however be
-    # fully removed from the build so long as `RL_Init()`, `RL_Start()`,
-    # and `RL_Shutdown()` are used as shared code with the console host.
-
-    if(FALSE)
-        # !!! Can't remove it yet...and it's not that much code to lose
-        # sleep about having exist anyway.
-        ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/a-lib.o) # .obj
-    endif()
-
-    # R3-Alpha had an an extension system called "host kit", which was a way
-    # of providing I/O or GUI services that Rebol would call out to.  This
-    # meant the core did not have things hardcoded into it like how to
-    # print to the screen or speak to the network.
+    #     BOOL IS_ERROR(HRESULT Status);
     #
-    # The system was a sort of grab-bag of "ioctl"-like functions with no
-    # particularly interesting design.  However, these services were
-    # implemented by REBOL Technologies and others for several platforms and
-    # have been used in deployment.  These provide services ranging from
-    # sockets and HTTPS to the windows clipboard and serial ports.
+    # Rebol worked around this basically by `#undef IS_ERROR`, and for
+    # some reason signals the workaround with the define `OS_DEFS`.
+    # Including this for now, but mentioning why it's here in case some
+    # better solution has arisen and is looked into later.
+
+    add_definitions(-DOS_DEFS)
+
+    # Something about how CMake includes Qt seems to throw in a -fPIC
+    # flag to the compiler options, which is meaningless on Windows and
+    # MinGW complains...many have deemed it a "useless warning":
     #
-    # Ren/C++ doesn't get involved in overriding these, but it has to get
-    # involved in hooking the stdio.  So we remove the OBJ containing Rebol's
-    # implementation of talking to STDIN/STDOUT so that it may be replaced
-    # with one that bridges to C++ <iostream> classes.
+    #     http://stackoverflow.com/questions/16708148/
+    #
+    # Because it's not this CMake file that's adding `-fPIC`, it's hard
+    # to guarantee that this removal is going to be "timed" after the
+    # addition, but it seems to work.  If it does not work, your only
+    # option is probably to comment out the add_definitions(-Werror)
+    # earlier in this file, as MinGW has no disable code for the warning.
 
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/dev-stdio.o) # .obj
+    try_remove_cxx_flag(-fPIC)
 
-    # Rebol depends on dlopen and other calls in "libDl".  Cmake can
-    # supposedly find that for you automatically with this variable.
-    # http://en.wikipedia.org/wiki/Dynamic_loading
+elseif(APPLE)
 
-    set(LIBS_ALL ${LIBS_ALL} ${CMAKE_DL_LIBS})
+    add_definitions(-DTO_OSX)
 
-    # Rebol depends on WinSock 2 sockets library when built on Windows.
-
-    if(WIN32)
-        set(LIBS_ALL ${LIBS_ALL} ws2_32)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_definitions(-DTO_OSX_X64)
+    else()
+        add_definitions(-DTO_OSX_X86)
     endif()
 
 else()
 
-    message(FATAL_ERROR "Bad runtime, use -DRUNTIME=red or -DRUNTIME=rebol")
+    add_definitions(-DTO_LINUX)
 
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_definitions(-DTO_LINUX_X64)
+    else()
+        add_definitions(-DTO_LINUX_X86)
+    endif()
+
+endif()
+
+# Try and get all the guts out of the Rebol Core executable to
+# include in the binding.  Take out the main and Host_Lib
+# instance so that the program you link with the binding is
+# the entry point.
+#
+# Note: there is a GLOB RELATIVE in CMake to do it relative to a path, but
+# it doesn't work on Windows.
+
+get_filename_component(EXTRA_OBJ_PATH ${RUNTIME_PATH}/make/objs/ REALPATH)
+#set(EXTRA_OBJ_PATH ${CMAKE_CURRENT_SOURCE_DIR}//tests/)
+    
+file(
+    GLOB_RECURSE EXTRA_OBJS ${EXTRA_OBJ_PATH}/*.obj # .obj
+)
+ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main.obj) # .obj
+ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio.obj) # .obj
+
+# One of the goals of Ren/C was to replace the RL_LIB host library, which
+# is how extension code would "call into" Rebol.  It cannot however be
+# fully removed from the build so long as `RL_Init()`, `RL_Start()`,
+# and `RL_Shutdown()` are used as shared code with the console host.
+
+if(FALSE)
+    # !!! Can't remove it yet...and it's not that much code to lose
+    # sleep about having exist anyway.
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/a-lib.o) # .obj
+endif()
+
+# R3-Alpha had an an extension system called "host kit", which was a way
+# of providing I/O or GUI services that Rebol would call out to.  This
+# meant the core did not have things hardcoded into it like how to
+# print to the screen or speak to the network.
+#
+# The system was a sort of grab-bag of "ioctl"-like functions with no
+# particularly interesting design.  However, these services were
+# implemented by REBOL Technologies and others for several platforms and
+# have been used in deployment.  These provide services ranging from
+# sockets and HTTPS to the windows clipboard and serial ports.
+#
+# Ren/C++ doesn't get involved in overriding these, but it has to get
+# involved in hooking the stdio.  So we remove the OBJ containing Rebol's
+# implementation of talking to STDIN/STDOUT so that it may be replaced
+# with one that bridges to C++ <iostream> classes.
+
+ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/windows/dev-stdio.obj) # .obj
+
+# Rebol depends on dlopen and other calls in "libDl".  Cmake can
+# supposedly find that for you automatically with this variable.
+# http://en.wikipedia.org/wiki/Dynamic_loading
+
+set(LIBS_ALL ${LIBS_ALL} ${CMAKE_DL_LIBS})
+
+# Rebol depends on WinSock 2 sockets library when built on Windows.
+
+if(WIN32)
+    set(LIBS_ALL ${LIBS_ALL} ws2_32)
 endif()
 
 

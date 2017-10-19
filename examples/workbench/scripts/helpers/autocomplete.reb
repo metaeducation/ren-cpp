@@ -344,9 +344,9 @@ autocomplete-helper: function [
 
                 if take-next [
                     return reduce [
-                        combine [base spelling]
+                        unspaced [base spelling]
                         index
-                        any [:scope (in ctx word)]
+                        any [:scope | in ctx word]
                     ]
                 ]
             ]
@@ -359,14 +359,14 @@ autocomplete-helper: function [
                 first-candidate-ctx: ctx
             ]
         ]
-    ] 
+    ]
 
     ; If we get to the end, then we just take the first candidate for
     ; completion if there was one (whether take-next was set or not)
     ;
     if first-candidate-word [
         return reduce [
-            combine [base spelling-of first-candidate-word]
+            unspaced [base _ spelling-of first-candidate-word]
             index
             any [:scope (in first-candidate-ctx first-candidate-word)]
         ]

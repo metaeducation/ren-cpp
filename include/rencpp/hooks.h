@@ -37,16 +37,6 @@
 
 
 /*
- * Portable compile-time assert for C
- * http: *stackoverflow.com/a/809465/211160
- */
-#define CASSERT(predicate, file) _impl_CASSERT_LINE(predicate,__LINE__,file)
-#define _impl_PASTE(a,b) a##b
-#define _impl_CASSERT_LINE(predicate, line, file) \
-    typedef char _impl_PASTE(assertion_failed_##file##_,line)[2*!!(predicate)-1];
-
-
-/*
  * Return codes used by the binding.  They start at 10 at present due to
  * the hack to use the equal value of R_OUT and REN_SUCCESS to avoid
  * trying to force Red to have R_XXX return conventions from RenShimPointer
@@ -74,24 +64,24 @@ typedef uint32_t RenResult; // REBCNT-compatible
 
 
 /*
- * The original concept of Ren-Cpp was to work with raw REBVAL or Red cells,
- * which are structs that are 4 platform pointers in size.  The practical
- * issues of GC extension for this model, included with the advent of
- * "singular" REBSER nodes that could hold a single value, led to switching
- * so that the responsibility for the cell's memory is on the engine side.
+ * The original concept of RenCpp was to work with raw REBVAL cells, which
+ * are structs that are 4 platform pointers in size.  Practical issues of GC
+ * extension for this model, included with the advent of "singular" REBSER
+ * nodes that could hold a single value, led to switching so that the
+ * responsibility for the cell's memory is on the engine side.  This idea
+ * was replicated in "libRebol".
  *
  * In order to avoid pulling in all of the Rebol includes to every client
  * of Ren/C++, we make an "opaque type":
  *
  * https://en.wikipedia.org/wiki/Opaque_data_type
  *
- * Rebol values are four times the size of the platform word size.
  */
 
-typedef struct {
-    uintptr_t data[4];
-} RenCell; // actually a REBSER node--a "singular array" w/1 REBVAL
+struct Reb_Specific_Value; // actually lives in a REBSER node "pairing"
+typedef struct Reb_Specific_Value REBVAL;
 
+struct Reb_Frame;
 
 typedef struct {
     int data;
@@ -115,23 +105,10 @@ typedef RebolEngineHandle RenEngineHandle;
  * If the evaluator is cancelled by a signal from outside, and the exception
  * makes it to the shim, it will be processed by this function in the shim
  */
-RenResult RenShimHalt();
 
+void RL_Move(REBVAL *out, REBVAL const *v);
 
-/*
- * When a throw happens, it has two RenCells to work with...the thrown value
- * and a value representing a label.  They can't both fit into a single
- * RenCell of size for the function's output slot, so some lookaside is
- * needed.  This initializes a value to indicate both parts of the result.
- */
-void RenShimInitThrown(RenCell *out, RenCell const *value, RenCell const *name);
-
-
-/*
- * Like RenShimExit but when an error happens.  In Rebol, at least, the return
- * value will be ignored because the routine longjmps as an "exception"
- */
-RenResult RenShimFail(RenCell const * error);
+REBVAL *RL_Arg(void *frame, int index);
 
 
 /*
@@ -154,36 +131,9 @@ RenResult RenFreeEngine(RenEngineHandle engine);
  */
 
 RenResult RenFindContext(
-    RenCell * out,
+    REBVAL *out,
     RenEngineHandle engine,
     char const * name
-);
-
-
-/*
- * Unified workhorse bridge function.  It can LOAD, splice blocks, evaluate
- * without making a block out of the result, etc.  The two main tricks at
- * work are that it accepts a pointer to an array of values which have a
- * RedCell at the head but might be larger than a RedCell, and it uses an
- * invalid RedCell bitpattern of TYPE_VALUE for instances of string text
- * that need to be loaded.  If you do pass in a constructOut, it should
- * have the datatype field already set in the header that you want.
- *
- * If the RedCell represents a series, then inside the guts of the hook it
- * will remember that there is a reference being used by the binding.  A
- * reference count will be added by the runtime.
- */
-
-RenResult RenConstructOrApply(
-    RenEngineHandle engine,
-    RenCell const * context,
-    RenCell const * applicand,
-    RenCell * const * loadablesCell,
-    size_t numLoadables,
-    size_t sizeofLoadable,
-    RenCell * constructOutDatatypeIn,
-    RenCell * applyOut,
-    RenCell * errorOut
 );
 
 
@@ -202,7 +152,7 @@ RenResult RenConstructOrApply(
 
 RenResult RenFormAsUtf8(
     RenEngineHandle engine,
-    RenCell const * cell,
+    REBVAL const * cell,
     unsigned char * buffer,
     size_t bufSize,
     size_t * numBytesOut

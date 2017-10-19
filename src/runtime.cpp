@@ -149,7 +149,7 @@ namespace ren {
 RebolRuntime runtime {true};
 
 static void loadAndBindWord(
-    REBVAL * out,
+    REBVAL *out,
     REBCTX * context,
     unsigned char const * nameUtf8,
     size_t lenBytes,

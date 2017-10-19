@@ -46,9 +46,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
     result: make block! 1
     str: make string! (5 * length arg)
 
-    ;-- FORALL definitely needs a better name.  for-next ?
-
-    forall arg [
+    for-next arg [
         case [
             group? arg/1 [
                 evaluated: do arg/1
@@ -56,38 +54,30 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
             ]
 
             set-word? arg/1 [
-                append str combine [
-                    (either windows {set} {export})
-                    space spelling-of arg/1 {=}
-                    either windows [
-                        form either group? arg/2 [do arg/2] [arg/2]
-                    ][
-                        [
-                            {"}
-                            either group? arg/2 [do arg/2] [arg/2]
-                            {"}
-                        ]
-                    ]
+                append str unspaced [
+                    windows ?? {set} !! {export}
+                    space
+                    spelling-of arg/1 {=}
+                    not windows ?? {"}
+                    form either group? arg/2 [do arg/2] [arg/2]
+                    not windows ?? {"}
                 ]
                 arg: next arg
             ]
 
             get-word? arg/1 [
-                append str combine [
-                    either windows [
-                        [{%} spelling-of arg/1 {%}]
-                    ][
-                        [{$} spelling-of arg/1]
-                    ]
+                append str unspaced [
+                    windows ?? {%} !! {$}
+                    spelling-of arg/1
+                    windows ?? {%}
                 ]
             ]
 
             block? arg/1 [
-                ; A formality issue... should a shell dialect
-                ; have to either be all block elements or no
-                ; block elements?  We allow the flip for the
-                ; moment but end the previous command; the implementation
-                ; leaves a trailing space in that case as written now
+                ; A formality issue... should a shell dialect have to either
+                ; be all block elements or no block elements?  We allow the
+                ; flip for the moment but end the previous command; the
+                ; implementation leaves a trailing space in that case ATM
 
                 unless empty? str [
                     append result str
@@ -97,13 +87,11 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
 
                 str: make string! (5 * length arg/1)
             ]
-
-            true [
-                append str form arg/1
-            ]
+        ] else [
+            append str form arg/1
         ]
 
-        unless any [block? arg/1  last? arg] [
+        unless any [block? arg/1 | last? arg] [
             append str space
         ]
     ]

@@ -32,7 +32,7 @@ class AnySeries_ : public AnyValue {
 protected:
     friend class AnyValue;
     AnySeries_ (Dont) noexcept : AnyValue (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
 public:
     // We don't return values here because that would leak the internal
@@ -62,7 +62,7 @@ class AnySeries : public ren::internal::AnySeries_ {
 protected:
     friend class AnyValue;
     AnySeries (Dont) noexcept : AnySeries_ (Dont::Initialize) {}
-    static bool isValid(RenCell const * cell);
+    static bool isValid(REBVAL const * cell);
 
     //
     // If you wonder why C++ would need a separate iterator type for a Series

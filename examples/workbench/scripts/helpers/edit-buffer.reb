@@ -39,7 +39,7 @@ console-buffer-helper: function [value [block! string!]] [
     ; (position = anchor)
 
     if string? value [
-        return reduce [value (1 + length value) (1 + length value)]
+        return reduce [(value) (1 + length value) (1 + length value)]
     ]
 
 
@@ -71,31 +71,29 @@ console-buffer-helper: function [value [block! string!]] [
 
     case [
 
-        ; simple case: a block with no selection markers is run
-        ; through combine, with cursor at the end of the generated string
-        ; For a description of combine and how it works, see:
+        ; simple case: a block with no selection markers is stringified
+        ; with cursor at the end of the generated string
         ;
-        ;    http://blog.hostilefork.com/combine-alternative-rebol-red-rejoin/
         not any [position anchor] [
-            buffer: combine value
-            position-index: anchor-index: 1 + length buffer
+            buffer: unspaced value
+            position-index: anchor-index: 1 + length-of buffer
         ]
 
 
-        ; If there's only one mark, then we do the combine in two phases:
+        ; If there's only one mark, then we do stringification in two phases:
         ; the part before it, and the part after it.  We use the length
         ; of the first half of the combination to find the cursor position
 
-        all [position (not anchor)] [
-            buffer: combine/part value position
-            position-index: anchor-index: 1 + length buffer
+        all [position | not anchor] [
+            buffer: unspaced copy/part value position
+            position-index: anchor-index: 1 + length-of buffer
 
-            combine/into (next position) (tail buffer)
+            append buffer unspaced (next position)
         ]
 
 
         ; Two marks...a similar method to before, just with three divisions
-        ; for the combine instead of two
+        ; for the stringification instead of two
 
         true [
             ; The only difference between the marks being | then || vs
@@ -117,13 +115,13 @@ console-buffer-helper: function [value [block! string!]] [
                 anchor: temp
             ]
 
-            buffer: combine/part value anchor
-            anchor-index: 1 + length buffer
+            buffer: unspaced copy/part value anchor
+            anchor-index: 1 + length-of buffer
 
-            combine/part/into (next anchor) position (tail buffer)
-            position-index: 1 + length buffer
+            append buffer unspaced copy/part (next anchor) position
+            position-index: 1 + length-of buffer
 
-            combine/into (next position) (tail buffer)
+            append buffer unspaced [next position]
 
             ; If necessary, reverse the index results to account for our
             ; earlier reversal of marker positions

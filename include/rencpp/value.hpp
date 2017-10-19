@@ -170,7 +170,7 @@ QString to_QString(AnyValue const & value);
 
 namespace internal {
 
-using CellFunction = void (*)(RenCell *);
+using CellFunction = void (*)(REBVAL *);
 
 }
 
@@ -197,6 +197,23 @@ using CellFunction = void (*)(RenCell *);
 //
 
 class AnyValue {
+    //
+    // The methods used by Ren-C's internal codebase to implement Rebol in C
+    // are not easily miscible with generic C++ code.  As one simple example:
+    // it defines global macros with names like fail(), and is hence
+    // incompatible with any iostream code.
+    //
+    // Therefore the Ren-C internal headers (%sys-core.h) cannot be included
+    // outside of carefully written code in the wrapper.  In time, RenCpp may
+    // become based on the external C API (libRebol) as that fleshes out.
+    // Until then, methods like these are used to expose common debug tools.
+    //
+#if !defined(NDEBUG)
+public:
+    void probe() const; // PROBE()
+    void validate() const; // ASSERT_CONTEXT, etc.
+#endif
+
     // Function needs access to the spec block's series cell in its creation.
     // Series_ wants to be able to just tweak the index of the cell
     // as it enumerates and leave the rest alone.  Etc.
@@ -209,7 +226,7 @@ protected:
     friend class Function; // needs to extract series from spec block
     friend class ren::internal::AnySeries_; // iterator state
 
-    RenCell *cell;
+    REBVAL *cell;
 
     friend class internal::RebolHooks;
 
@@ -235,7 +252,7 @@ protected:
 
 
     //
-    // There is a default constructor, and it initializes the RenCell to be
+    // There is a default constructor, and it initializes the REBVAL to be
     // a constructed value of type BLANK!
     //
     // BUT as an implementation performance detail, if the default constructor
@@ -283,7 +300,7 @@ protected:
     template <class R, class... Ts>
     friend class internal::FunctionGenerator;
 
-    explicit AnyValue (RenCell * cell, RenEngineHandle engine) noexcept {
+    explicit AnyValue (REBVAL *cell, RenEngineHandle engine) noexcept {
         this->cell = cell;
         finishInit(engine);
     }
@@ -295,7 +312,7 @@ protected:
         >::type
     >
     static T fromCell_(
-        RenCell const * cell, RenEngineHandle engine
+        REBVAL const * cell, RenEngineHandle engine
     ) noexcept {
         // Do NOT use {} construction!
         T result (Dont::Initialize);
@@ -303,7 +320,7 @@ protected:
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
-        *result.cell = *cell;
+        RL_Move(result.cell, cell);
         result.finishInit(engine);
         return result;
     }
@@ -315,7 +332,7 @@ protected:
         >::type
     >
     static optional<utility::extract_optional_t<T>> fromCell_(
-        RenCell const * cell, RenEngineHandle engine
+        REBVAL const * cell, RenEngineHandle engine
     ) noexcept {
         // Do NOT use {} construction!
         utility::extract_optional_t<T> result (Dont::Initialize);
@@ -323,7 +340,7 @@ protected:
         // access to the Dont constructor, it will make a block with an
         // uninitialized value *in the block*!  :-/
 
-        *result.cell = *cell;
+        RL_Move(result.cell, cell);
         if (!result.tryFinishInit(engine))
             return nullopt;
         return result;
@@ -332,23 +349,14 @@ protected:
 
 public:
     static void toCell_(
-        RenCell * cell, AnyValue const & value
+        REBVAL *out, AnyValue const & value
     ) noexcept {
-        *cell = *value.cell;
+        RL_Move(out, value.cell);
     }
 
     static void toCell_(
-        RenCell * cell, optional<AnyValue> const & value
+        REBVAL *out, optional<AnyValue> const & value
     ) noexcept;
-
-    operator RenCell const & () const {
-        return *cell;
-    }
-
-    operator RenCell & () {
-        return *cell;
-    }
-
 
 public:
     //
@@ -402,9 +410,9 @@ public:
     //
     AnyValue (bool b, Engine * engine = nullptr) noexcept;
 
-    bool isTrue() const;
+    bool isTruthy() const;
 
-    bool isFalse() const;
+    bool isFalsey() const;
 
     // http://stackoverflow.com/q/6242768/211160
     explicit operator bool() const;
@@ -445,7 +453,7 @@ public:
     AnyValue (AnyValue const & other) noexcept :
         AnyValue (Dont::Initialize)
     {
-        *cell = *other.cell;
+        RL_Move(cell, other.cell);
         finishInit(other.origin);
     }
 
@@ -465,7 +473,7 @@ public:
     }
 
     AnyValue & operator=(AnyValue const & other) noexcept {
-        *cell = *other.cell;
+        RL_Move(cell, other.cell);
         finishInit(other.origin); // increase new refcount
         return *this;
     }
@@ -631,7 +639,7 @@ public:
         // the instance, with the bits, but then throws if it's bad...and it's
         // not virtual.
         T result (Dont::Initialize);
-        *result.cell = *cell;
+        RL_Move(result.cell, cell);
         result.finishInit(origin);
         return result;
     }
@@ -649,7 +657,7 @@ public:
             return false;
 
         T result (Dont::Initialize);
-        *result.cell = *cell;
+        RL_Move(result.cell, cell);
         result.finishInit(origin);
 
         return result.hasSpelling(spelling);

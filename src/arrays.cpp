@@ -15,37 +15,37 @@ namespace ren {
 // TYPE DETECTION
 //
 
-bool Block::isValid(RenCell const * cell) {
-    return IS_BLOCK(AS_C_REBVAL(cell));
+bool Block::isValid(REBVAL const * cell) {
+    return IS_BLOCK(cell);
 }
 
-bool Group::isValid(RenCell const * cell) {
-    return IS_GROUP(AS_C_REBVAL(cell));
+bool Group::isValid(REBVAL const * cell) {
+    return IS_GROUP(cell);
 }
 
-bool Path::isValid(RenCell const * cell) {
-    return IS_PATH(AS_C_REBVAL(cell));
+bool Path::isValid(REBVAL const * cell) {
+    return IS_PATH(cell);
 }
 
-bool GetPath::isValid(RenCell const * cell) {
-    return IS_GET_PATH(AS_C_REBVAL(cell));
+bool GetPath::isValid(REBVAL const * cell) {
+    return IS_GET_PATH(cell);
 }
 
-bool SetPath::isValid(RenCell const * cell) {
-    return IS_SET_PATH(AS_C_REBVAL(cell));
+bool SetPath::isValid(REBVAL const * cell) {
+    return IS_SET_PATH(cell);
 }
 
-bool LitPath::isValid(RenCell const * cell) {
-    return IS_LIT_PATH(AS_C_REBVAL(cell));
+bool LitPath::isValid(REBVAL const * cell) {
+    return IS_LIT_PATH(cell);
 }
 
-bool AnyArray::isValid(RenCell const * cell) {
-    return IS_BLOCK(AS_C_REBVAL(cell))
-        || IS_GROUP(AS_C_REBVAL(cell))
-        || IS_PATH(AS_C_REBVAL(cell))
-        || IS_SET_PATH(AS_C_REBVAL(cell))
-        || IS_GET_PATH(AS_C_REBVAL(cell))
-        || IS_LIT_PATH(AS_C_REBVAL(cell));
+bool AnyArray::isValid(REBVAL const * cell) {
+    return IS_BLOCK(cell)
+        || IS_GROUP(cell)
+        || IS_PATH(cell)
+        || IS_SET_PATH(cell)
+        || IS_GET_PATH(cell)
+        || IS_LIT_PATH(cell);
 }
 
 
@@ -53,28 +53,28 @@ bool AnyArray::isValid(RenCell const * cell) {
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyArray::initBlock(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_BLOCK);
+void AnyArray::initBlock(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_BLOCK);
 }
 
-void AnyArray::initGroup(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_GROUP);
+void AnyArray::initGroup(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_GROUP);
 }
 
-void AnyArray::initPath(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_PATH);
+void AnyArray::initPath(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_PATH);
 }
 
-void AnyArray::initGetPath(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_GET_PATH);
+void AnyArray::initGetPath(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_GET_PATH);
 }
 
-void AnyArray::initSetPath(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_SET_PATH);
+void AnyArray::initSetPath(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_SET_PATH);
 }
 
-void AnyArray::initLitPath(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_LIT_PATH);
+void AnyArray::initLitPath(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_LIT_PATH);
 }
 
 

@@ -68,8 +68,8 @@ AnyContext AnyContext::current(Engine * engine) {
 // TYPE DETECTION
 //
 
-bool AnyContext::isValid(RenCell const * cell) {
-    return IS_OBJECT(AS_C_REBVAL(cell));
+bool AnyContext::isValid(REBVAL const * cell) {
+    return IS_OBJECT(cell);
 }
 
 
@@ -141,12 +141,12 @@ AnyContext::AnyContext (
 // TYPE HEADER INITIALIZATION
 //
 
-void AnyContext::initObject(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_OBJECT);
+void AnyContext::initObject(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_OBJECT);
 }
 
-void AnyContext::initError(RenCell * cell) {
-    VAL_RESET_HEADER(AS_REBVAL(cell), REB_ERROR);
+void AnyContext::initError(REBVAL *cell) {
+    VAL_RESET_HEADER(cell, REB_ERROR);
 }
 
 
