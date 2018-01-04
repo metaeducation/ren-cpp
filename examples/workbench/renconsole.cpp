@@ -83,10 +83,10 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     // constructor like this.  Research better debug methods.
 
     consoleFunction = Function::construct(
-        "{Default CONSOLE dialect for executing commands in Ren Garden}"
-        "arg [block! function! string! word! image! object!]"
-        "    {block to execute or other instruction (see documentation)}"
-        "/meta {Interpret in 'meta mode' for controlling the dialect}",
+        " {Default CONSOLE dialect for executing commands in Ren Garden}"
+        " arg [block! function! string! word! image! object!]"
+        "     {block to execute or other instruction (see documentation)}"
+        " /meta {Interpret in 'meta mode' for controlling the dialect}",
 
         [this](AnyValue const & arg, AnyValue const & meta)
             -> optional<AnyValue>
@@ -248,10 +248,10 @@ RenConsole::RenConsole (EvaluatorWorker * worker, QWidget * parent) :
     // as well.
 
     auto watchFunction = Function::construct(
-        "{WATCH dialect for monitoring and un-monitoring in the workbench} "
-        ":arg [word! get-word! path! get-path! block! group! integer! tag!] "
-            "{word to watch or other legal parameter, see documentation)} "
-        "/dialect {Interpret as instruction to WATCH vs. raw value} ",
+        " {WATCH dialect for monitoring and un-monitoring in the workbench}"
+        " :arg [word! get-word! path! get-path! block! group! integer! tag!]"
+        "     {word to watch or other legal parameter, see documentation)}"
+        " /dialect {Interpret as instruction to WATCH vs. raw value}",
 
         [this](
             AnyValue const & argOriginal, AnyValue const & dialect

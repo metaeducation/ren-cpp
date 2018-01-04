@@ -8,8 +8,8 @@ using namespace ren;
 int main(int, char **) {
 
     auto printBlockString = Function::construct(
-        "{Demonstration of the C++ Extension mechanism}"
-        "blk [block!] {The block to print}",
+        " {Demonstration of the C++ Extension mechanism}"
+        " blk [block!] {The block to print}",
 
         [](Block const & blk) -> Logic {
             print("blk is", blk);

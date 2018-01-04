@@ -93,20 +93,40 @@ cmake_minimum_required(VERSION 2.8)
 #
 # Note that this *should* work:
 #
-#     set (CMAKE_CXX_STANDARD 11)
+#     set(CMAKE_CXX_STANDARD 11)
 #
 # But for some reason it isn't working on the CMake with Travis CI.
 #
 # http://stackoverflow.com/questions/40877744/
 #
-set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 
-# Simplify appending additional flags to CMAKE_CXX_FLAGS.
+# Unfortunately, the way this is written right now needs to explicitly call
+# out the names of OBJ files, which vary between compilers.  To make this less
+# long winded, make the variable OBJ a shortcut for the extension.
+#
+set(.OBJ ${CMAKE_C_OUTPUT_EXTENSION})
+
+
+# Simplify appending flags to CMAKE_CXX_FLAGS
 
 macro(add_cxx_flags flags)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flags}")
 endmacro()
+
+
+# Simplify appending flags to CMAKE_LINKER_FLAGS_DEBUG (for address sanitizer)
+#
+# https://stackoverflow.com/q/44320465/
+
+macro(add_link_debug_flags flags)
+    set(
+        CMAKE_LINKER_FLAGS_DEBUG
+        "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} ${flags}"
+    )
+endmacro()
+
 
 
 # Removing a flag string from CMAKE_CXX_FLAGS, fail silently if not present
@@ -164,6 +184,15 @@ if(NOT RUNTIME_PATH)
 endif()
 
 
+# If Ren-C was built with address sanitizer, it has to be linked with address
+# sanitizer when executables are built with it.
+
+if(SANITIZE MATCHES "yes")
+    add_cxx_flags(-fno-omit-frame-pointer -fsanitize=address)
+    add_link_debug_flags(-fno-omit-frame-pointer -fsanitize=address)
+endif()
+
+
 # Turn up the warnings very high.
 #
 #     http://stackoverflow.com/a/9862800/211160
@@ -183,7 +212,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_cxx_flags(-Wsign-conversion)
     add_cxx_flags(-Wextra)
     add_cxx_flags(-Wcast-align)
-    add_cxx_flags(-Wcast-qual)
     add_cxx_flags(-Wctor-dtor-privacy)
     add_cxx_flags(-Wdisabled-optimization)
     add_cxx_flags(-Wformat=2)
@@ -198,6 +226,30 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_cxx_flags(-Wundef)
     add_cxx_flags(-Wno-unused)
     add_cxx_flags(-pedantic)
+
+    # Ren-C uses "Casts for the Masses" to get a literate, checkable cast for
+    # both C and C++:
+    #
+    # http://blog.hostilefork.com/c-casts-for-the-masses/
+    #
+    # However, they're annoying to step through in debug code, and don't get
+    # inlined in a debug build either...so they're slow too.  Hence the extra
+    # "magic" is only in the *release* C++ builds, to catch mistakes which C
+    # would not.  Hence they appear to break the rules in the debug build
+    # when casting qualifiers are heeded, but are checked in release to be ok.
+    #
+    if(CMAKE_BUILD_TYPE MATCHES Debug)
+        add_cxx_flags(-Wno-cast-qual)
+    else()
+        add_cxx_flags(-Wcast-qual)
+    endif()
+
+    # !!! These are new warnings being triggered by static_cast<bool> of an
+    # Any_Value and it's not clear why they are happening.  Needs to be
+    # tracked down and generate a MCVE.
+    #
+    add_cxx_flags(-Wno-address)
+    add_cxx_flags(-Wno-nonnull-compare)
 
     # The C headers for Rebol use old-style C casts in some places, for
     # reasons of performance in the debug build (since there's a templated
@@ -372,19 +424,21 @@ elseif(CLASSLIB_QT EQUAL 1)
 
     add_definitions(-DREN_CLASSLIB_QT=1)
 
-    # Find the QtCore library, which is needed for types like `QString` and
+    # According to this page, this is how to use find_package with Qt
+    #
+    # https://blog.kitware.com/cmake-finding-qt5-the-right-way/ 
+    #
+    # We use the Core library, which is needed for types like `QString` and
     # `QByteArray` and other basics:
     #
     #     http://www.kdab.com/using-cmake-with-qt-5/
-
-    find_package(Qt5Core REQUIRED)
-
-    # Find Qt5Gui, which has the basic windowing and graphics services but
+    #
+    # Also Gui, which has the basic windowing and graphics services but
     # not the widgets (those are in Qt5Widgets).  It is currently used for
     # the experiment of `QImage` conversions of Ren image values, which has
     # only very primitive support at time of writing.
-
-    find_package(Qt5Gui REQUIRED)
+    #
+    find_package(Qt5 COMPONENTS Core Gui REQUIRED)
 
     # If the `find_package()` calls above succeed then CMake will not stop
     # running, but rather we get to this point with several Qt-related
@@ -432,12 +486,6 @@ endif()
 
 message(STATUS "Runtime path is ${RUNTIME_PATH}")
 
-# Though an initiative for the Red project, this is the grand binding
-# attempt for C++.  And it should be able to recompile and work just as
-# effectively for Rebol, just substituting a different cell type into
-# the structure.  Gives a broader base for testing as well...
-
-message(STATUS "Configuring Binding for Rebol")
 
 # We want to be able to #include "rebol/include/whatever.h", but to get
 # that to work we have to add an include path which has rebol as a
@@ -454,14 +502,17 @@ message(STATUS "Configuring Binding for Rebol")
 
 add_cxx_flags(-I${RUNTIME_PATH}/../)
 
+
 # Put the Rebol headers in so you can search them in the project
 
 file(GLOB INC_REBOL ${RUNTIME_PATH}/src/include/*.h)
+
 
 # Add any extra includes for the project browser
 
 file(GLOB INC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/rebol-binding/*.h*)
 set(INC_LIST ${INC_LIST} ${INC_BINDING} ${INC_REBOL})
+
 
 # It's important to make sure you're set to the right platform, as it
 # affects endianness and other things.  These flags were largely moved
@@ -536,33 +587,21 @@ else()
 
 endif()
 
-# Try and get all the guts out of the Rebol Core executable to
-# include in the binding.  Take out the main and Host_Lib
-# instance so that the program you link with the binding is
-# the entry point.
+
+# Try and get all the guts out of the Rebol Core executable to include in the
+# binding.  Take out the main() so that the program you link with the binding
+# is the entry point.
 #
 # Note: there is a GLOB RELATIVE in CMake to do it relative to a path, but
 # it doesn't work on Windows.
 
 get_filename_component(EXTRA_OBJ_PATH ${RUNTIME_PATH}/make/objs/ REALPATH)
-#set(EXTRA_OBJ_PATH ${CMAKE_CURRENT_SOURCE_DIR}//tests/)
-    
-file(
-    GLOB_RECURSE EXTRA_OBJS ${EXTRA_OBJ_PATH}/*.obj # .obj
-)
-ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main.obj) # .obj
-ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio.obj) # .obj
 
-# One of the goals of Ren/C was to replace the RL_LIB host library, which
-# is how extension code would "call into" Rebol.  It cannot however be
-# fully removed from the build so long as `RL_Init()`, `RL_Start()`,
-# and `RL_Shutdown()` are used as shared code with the console host.
+file(GLOB_RECURSE EXTRA_OBJS ${EXTRA_OBJ_PATH}/*${.OBJ})
 
-if(FALSE)
-    # !!! Can't remove it yet...and it's not that much code to lose
-    # sleep about having exist anyway.
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/a-lib.o) # .obj
-endif()
+ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main${.OBJ})
+ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio${.OBJ})
+
 
 # R3-Alpha had an an extension system called "host kit", which was a way
 # of providing I/O or GUI services that Rebol would call out to.  This
@@ -580,13 +619,19 @@ endif()
 # implementation of talking to STDIN/STDOUT so that it may be replaced
 # with one that bridges to C++ <iostream> classes.
 
-ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/windows/dev-stdio.obj) # .obj
+if(WIN32)
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/windows/dev-stdio${.OBJ})
+else()
+    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/posix/dev-stdio${.OBJ})
+endif()
+
 
 # Rebol depends on dlopen and other calls in "libDl".  Cmake can
 # supposedly find that for you automatically with this variable.
 # http://en.wikipedia.org/wiki/Dynamic_loading
 
 set(LIBS_ALL ${LIBS_ALL} ${CMAKE_DL_LIBS})
+
 
 # Rebol depends on WinSock 2 sockets library when built on Windows.
 
@@ -608,6 +653,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 else()
     target_link_libraries(RenCpp ${LIBS_ALL} -lstdc++ -lm)
 endif()
+
 
 # %examples/ has its own CMakeLists.txt, with settings pertinent to each
 # case (e.g. OpenGL configuration, etc.), but inherits the settings

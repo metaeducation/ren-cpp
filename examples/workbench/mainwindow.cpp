@@ -447,10 +447,22 @@ void MainWindow::writeSettings()
 
 void MainWindow::switchLayoutDirection()
 {
-    if (layoutDirection() == Qt::LeftToRight)
+    if (layoutDirection() == Qt::LeftToRight) {
         qApp->setLayoutDirection(Qt::RightToLeft);
-    else
+
+        QTextOption rightToLeft;
+        rightToLeft.setTextDirection(Qt::RightToLeft);
+
+        console->repl().document()->setDefaultTextOption(rightToLeft);
+    }
+    else {
         qApp->setLayoutDirection(Qt::LeftToRight);
+
+        QTextOption leftToRight;
+        leftToRight.setTextDirection(Qt::LeftToRight);
+
+        console->repl().document()->setDefaultTextOption(leftToRight);
+    }
 }
 
 

@@ -45,7 +45,7 @@ extern REBDEV *Devices[];
 {
     REBDEV *dev = (REBDEV*)dr; // just to keep compiler happy above
 
-    CLR_FLAG(dev->flags, RDF_OPEN);
+    dev->flags &= ~cast(unsigned int, RDF_OPEN);
     return DR_DONE;
 }
 
@@ -61,19 +61,19 @@ extern REBDEV *Devices[];
     dev = Devices[req->device];
 
     // Avoid opening the console twice (compare dev and req flags):
-    if (GET_FLAG(dev->flags, RDF_OPEN)) {
+    if (dev->flags & RDF_OPEN) {
         // Device was opened earlier as null, so req must have that flag:
-        if (GET_FLAG(dev->flags, SF_DEV_NULL))
-            SET_FLAG(req->modes, RDM_NULL);
-        SET_FLAG(req->flags, RRF_OPEN);
+        if (dev->flags & SF_DEV_NULL)
+            req->modes |= RDM_NULL;
+        req->flags |= RRF_OPEN;
         return DR_DONE; // Do not do it again
     }
 
-    if (GET_FLAG(req->modes, RDM_NULL))
-        SET_FLAG(dev->flags, SF_DEV_NULL);
+    if (req->modes & RDM_NULL)
+        dev->flags|= SF_DEV_NULL;
 
-    SET_FLAG(req->flags, RRF_OPEN);
-    SET_FLAG(dev->flags, RDF_OPEN);
+    req->flags |= RRF_OPEN;
+    dev->flags |= RDF_OPEN;
 
     return DR_DONE;
 }
@@ -87,7 +87,7 @@ extern REBDEV *Devices[];
 {
     REBDEV *dev = Devices[req->device];
 
-    CLR_FLAG(req->flags, RRF_OPEN);
+    req->flags &= ~cast(unsigned int, RRF_OPEN);
 
     return DR_DONE;
 }
@@ -105,7 +105,7 @@ extern REBDEV *Devices[];
 **
 ***********************************************************************/
 {
-    if (GET_FLAG(req->modes, RDM_NULL)) {
+    if (req->modes & RDM_NULL) {
         req->actual = req->length;
         return DR_DONE;
     }
@@ -161,7 +161,7 @@ extern REBDEV *Devices[];
 {
     u32 length = req->length;
 
-    if (GET_FLAG(req->modes, RDM_NULL)) {
+    if (req->modes & RDM_NULL) {
         req->common.data[0] = 0;
         return DR_DONE;
     }

@@ -190,26 +190,7 @@ RebolRuntime::RebolRuntime (bool) :
     Host_Lib = &Host_Lib_Init; // OS host library (dispatch table)
 
     // We don't want to rewrite the entire host lib here, but we can
-    // hook functions in.  It's good to have a debug hook point here
-    // for when things crash, rather than sending to the default
-    // host lib implementation.
-
-    Host_Lib->os_crash =
-        [](REBYTE const * title, REBYTE const * content) {
-            // This is our only error hook for certain types of "crashes"
-            // (evaluation_error is caught elsewhere).  If we want to
-            // break crashes down more specifically (without touching Rebol
-            // source) we'd have to parse the error strings to translate them
-            // into exception classes.  Left as an exercise for the reader
-
-            throw std::runtime_error(
-                std::string(cs_cast(title)) + " : " + cs_cast(content)
-            );
-        };
-
-    // Make sure our opaque types stay in sync with their "real" variants
-
-    assert(sizeof(Reb_Value) == sizeof(REBVAL));
+    // hook functions in, if we wanted, e.g. Host_Lib->xxx_yyy = [...]
 
     assert(sizeof(uint32_t) == sizeof(REBCNT));
     assert(sizeof(int32_t) == sizeof(REBINT));
@@ -298,7 +279,7 @@ bool RebolRuntime::lazyInitializeIfNecessary() {
     Init_Block(
         testSpec,
         Scan_UTF8_Managed(
-            testSpecStr, LEN_BYTES(testSpecStr), rebol_runtime_filename
+            rebol_runtime_filename, testSpecStr, LEN_BYTES(testSpecStr)
         )
     );
 

@@ -520,10 +520,10 @@ RenShell::RenShell (AnyContext const & helpers, QObject * parent) :
     // I keep saying it but... magic!
 
     shellFunction = Function::construct(
-        "{SHELL dialect for interacting with an OS shell process}"
-        "'arg [<end> word! lit-word! block! paren! string!]"
-        "    {block in dialect or other instruction (see documentation)}"
-        "/meta {Interpret in 'meta mode' for controlling the dialect}",
+        " {SHELL dialect for interacting with an OS shell process}"
+        " 'arg [<end> word! lit-word! block! paren! string!]"
+        "     {block in dialect or other instruction (see documentation)}"
+        " /meta {Interpret in 'meta mode' for controlling the dialect}",
 
         [this, worker](optional<AnyValue> const & arg, AnyValue const & meta)
             -> optional<AnyValue>

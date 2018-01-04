@@ -235,7 +235,7 @@ bool AnyValue::constructOrApplyInitialize(
             );
 
             REBARR * transcoded = Scan_UTF8_Managed(
-                loadText, LEN_BYTES(loadText), rebol_hooks_filename
+                rebol_hooks_filename, loadText, LEN_BYTES(loadText)
             );
 
             if (context) {
@@ -252,24 +252,6 @@ bool AnyValue::constructOrApplyInitialize(
 
                 DECLARE_LOCAL (vali);
                 Init_Integer(vali, len);
-
-                if (TG_Do_Count == 24503) {
-                   REBARR *varlist = CTX_VARLIST(c);
-                   assert(NOT_SER_FLAG(varlist, NODE_FLAG_CELL));
-                   assert(GET_SER_FLAG(varlist, SERIES_FLAG_ARRAY));
-                   assert(GET_SER_FLAG(varlist, ARRAY_FLAG_VARLIST));
-
-                   REBARR *keylist = CTX_KEYLIST(c);
-                   assert(NOT_SER_FLAG(keylist, NODE_FLAG_CELL));
-                   assert(GET_SER_FLAG(keylist, SERIES_FLAG_ARRAY));
-
-                   REBCNT varlist_len = ARR_LEN(varlist);
-                   REBCNT keylist_len = ARR_LEN(keylist);
-
-                   enum Reb_Kind kind = VAL_TYPE(CTX_VALUE(c));
-
-                   ASSERT_CONTEXT(c);
-                }
 
                 Resolve_Context(
                     c,
@@ -315,7 +297,7 @@ bool AnyValue::constructOrApplyInitialize(
             Init_Any_Array(constructOutDatatypeIn, resultType, aggregate);
 
             // Val_Init makes aggregate a managed series, can't free it
-            is_aggregate_managed = true;
+            is_aggregate_managed = TRUE;
         }
         else if (IS_OBJECT(constructOutDatatypeIn)) {
             // They want to create a "Context"; so we need to execute

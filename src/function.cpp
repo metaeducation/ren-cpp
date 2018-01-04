@@ -197,7 +197,7 @@ int32_t Function::Ren_Cpp_Dispatcher(struct Reb_Frame *f)
         // catch it.  But for now, just extract the string.
 
         DECLARE_LOCAL (what);
-        Init_String(what, Make_UTF8_May_Fail(exception->what()));
+        Init_String(what, Make_UTF8_May_Fail(cb_cast(exception->what())));
         
         fail (::Error(RE_USER, what));
     }

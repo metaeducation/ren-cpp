@@ -6,7 +6,7 @@
 #
 # We set up tests to run with Catch test framework:
 #
-#   https://github.com/philsquared/Catch
+#   https://github.com/catchorg/Catch2
 #
 # Catch itself is set up as an external, CMake-managed dependency in the root
 # ext/catch/ directory. This dependency is included in the main CMake file. A

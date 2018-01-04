@@ -201,7 +201,10 @@ RenResult RenFormAsUtf8(
 
 REBVAL *RL_Arg(void *frame, int index)
 {
-    return FRM_ARG(reinterpret_cast<struct Reb_Frame *>(frame), index);
+    return FRM_ARG(
+        reinterpret_cast<struct Reb_Frame *>(frame),
+        static_cast<REBCNT>(index)
+    );
 }
 
 void RL_Move(REBVAL *out, REBVAL const * v)

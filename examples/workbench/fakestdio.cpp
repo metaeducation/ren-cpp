@@ -152,7 +152,10 @@ std::streambuf::int_type FakeStdinBuffer::underflow() {
     //
     memcpy(start, repl.input.data(), n);
 
-    repl.input.right(repl.input.size() - n);
+    // !!! This was just sitting here, but it has no side effect...and a
+    // raised compiler warning caught that.  What was it here for?
+    //
+    /* repl.input.right(repl.input.size() - n); */
 
     if (n == 0)
         return traits_type::eof();
