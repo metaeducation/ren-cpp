@@ -93,61 +93,23 @@ size_t AnySeries::length() const {
 }
 
 
-AnyValue AnySeries::operator[](AnyValue const & index)
-const {
-    // See notes on semantic questions about SELECT vs PICK for the meaning
-    // of operator[] here, and why we go with "whatever path selection does"
+AnyValue AnySeries::operator[](AnyValue const & picker) const {
+    //
+    // See notes on semantic questions of operator[] here, and why we go with
+    // "whatever GET-PATH! selection does", e.g. PICK.
     //
     //    https://github.com/hostilefork/rencpp/issues/64
     //
-    // If there are complaints about this choice, it probably points to the
-    // idea that Path selection needs to be addressed.  (Not that the
-    // operator[] in the C++ binding needs to outsmart it.  :-P)
-
-    // Note this code isn't as simple as:
-    //
-    //    return GetPath {*this, index, origin}.apply();
-    //
-    // Because there is a difference between an Engine object and a
-    // RenEngineHandle...and as an internal all we know for this object
-    // is its handle.  Finding the engine for that handle hasn't been
-    // necessary anywhere else, and would involve some kind of tracking map.
-    // So we do what building a path would do here.
-
-    AnyValue getPath {Dont::Initialize};
-    VAL_RESET_HEADER(getPath.cell, REB_GET_PATH);
-
-    std::array<internal::Loadable, 2> loadables {{
-        *this, index
-    }};
-
-    constructOrApplyInitialize(
-        origin, // use our engine handle
-        nullptr, // no context
-        nullptr, // no applicand
-        loadables.data(),
-        loadables.size(),
-        &getPath, // Do construct
-        nullptr // Don't apply
+    REBVAL *picked = rebDo(
+        BLANK_VALUE, // superflous blank not needed in UTF-8 Everywhere branch
+        rebEval(NAT_VALUE(pick_p)),
+        cell,
+        picker.cell,
+        END
     );
 
-    ASSERT_VALUE_MANAGED(getPath.cell);
-
-    AnyValue result {Dont::Initialize};
-
-    // Need to wrap this in a try, and figure out a way to translate the
-    // errors...
-
-    constructOrApplyInitialize(
-        origin, // use our engine handle
-        nullptr, // no context
-        &getPath, // path is the applicand
-        nullptr,
-        0,
-        nullptr, // Don't construct
-        &result // Do apply
-    );
-
+    AnyValue result = AnyValue::fromCell_<AnyValue>(picked, origin);
+    rebFree(picked);
     return result;
 }
 

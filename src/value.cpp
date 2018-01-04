@@ -1,7 +1,7 @@
 //
 // value.cpp
 // This file is part of RenCpp
-// Copyright (C) 2015-2017 HostileFork.com
+// Copyright (C) 2015-2018 HostileFork.com
 //
 // Licensed under the Boost License, Version 1.0 (the "License")
 //
@@ -645,6 +645,22 @@ AnyValue AnyValue::copy(bool deep) const {
 //
 
 std::string to_string(AnyValue const & value) {
+
+    // Currently, PUSH_UNHALTABLE_TRAP sets up the stack limit.  Anything that
+    // calls C_STACK_OVERFLOWING(), e.g. MOLD, must have the Stack_Limit set
+    // correctly for the running thread.
+
+    REBCTX *error;
+    struct Reb_State state;
+
+    PUSH_UNHALTABLE_TRAP(&error, &state);
+
+// The first time through the following code 'error' will be NULL, but...
+// `fail` can longjmp here, so 'error' won't be NULL *if* that happens!
+
+    if (error != NULL)
+        throw std::runtime_error("Error during to_QString (stack overflow?)");
+
     const size_t defaultBufLen = 100;
 
     // Note .data() method is const on std::string.
@@ -653,7 +669,6 @@ std::string to_string(AnyValue const & value) {
     std::vector<REBYTE> buffer (defaultBufLen);
 
     size_t numBytes;
-
 
     switch (
         RenFormAsUtf8(
@@ -677,7 +692,8 @@ std::string to_string(AnyValue const & value) {
                     numBytes,
                     &numBytesNew
                 ) != REN_SUCCESS
-            ) {
+            ){
+                DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
                 throw std::runtime_error("Expansion failure in RenFormAsUtf8");
             }
             assert(numBytesNew == numBytes);
@@ -685,8 +701,11 @@ std::string to_string(AnyValue const & value) {
         }
 
         default:
+            DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
             throw std::runtime_error("Unknown error in RenFormAsUtf8");
     }
+
+    DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
 
     auto result = std::string(cs_cast(buffer.data()), numBytes);
     return result;
@@ -728,8 +747,8 @@ QString to_QString(AnyValue const & value) {
             b_cast(buffer.data()),
             defaultBufLen,
             &numBytes
-        ))
-    {
+        )
+    ){
         case REN_SUCCESS:
             assert(numBytes <= defaultBufLen);
             break;
@@ -747,7 +766,8 @@ QString to_QString(AnyValue const & value) {
                     numBytes,
                     &numBytesNew
                 ) != REN_SUCCESS
-            ) {
+            ){
+                DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
                 throw std::runtime_error("Expansion failure in RenFormAsUtf8");
             }
             assert(numBytesNew == numBytes);
@@ -755,6 +775,7 @@ QString to_QString(AnyValue const & value) {
         }
 
         default:
+            DROP_TRAP_SAME_STACKLEVEL_AS_PUSH(&state);
             throw std::runtime_error("Unknown error in RenFormAsUtf8");
     }
 

@@ -2,11 +2,12 @@ Rebol [
     Title: {Ren Garden Autocomplete Helper}
 
     Description: {
-        Autocomplete logic is based on the taking a single (possibly
-        partial) piece of the text for a Ren token--along with a 
-        bit of selection state...and deciding how to complete it
-        within a context.  So if | represents the cursor position
-        and || a possible starting point, we might start like this:
+        Autocomplete logic is based on the taking a single (possibly partial)
+        piece of the text for a Ren token--along with a bit of selection state
+        and deciding how to complete it within a context.
+        
+        So if | represents the cursor position and || a possible starting
+        point, we might start like this:
 
             app| 
 
@@ -35,14 +36,13 @@ Rebol [
 
             /backward [ctx1 ctx2 ...] {apply} 4
 
-        (Note: There are 4 selection positions when dealing with a 3
-        character string...the first position is *before* the first
-        character!)
+        (Note: There are 4 selection positions when dealing with a 3 character
+        string...the first position is *before* the first character!)
            
-        Currently each completion call rediscovers the state...which 
-        is hopefully deterministic.  This means that the WORDS-OF for the
-        contexts should give the same answers in the same order each time
-        if nothing is added or removed.
+        Currently each completion call rediscovers the state...which is
+        hopefully deterministic.  This means that the WORDS OF for contexts
+        should give the same answers in the same order each time if nothing is
+        added or removed.
 
         Presently, Ren Garden leaves it open ended to be given something like:
 
@@ -67,7 +67,6 @@ Rebol [
 ]
 
 
-;
 ; We want to be able to complete things that are "pathy" in the simple case
 ; that the path is a chain of one or more objects.  But we don't want to
 ; use the evaluator and run the risk of side-effects or infinite loops!
@@ -83,9 +82,11 @@ Rebol [
 ; The thing we find--be it a function or an object--is shown in the explorer
 ; as the thing you're given "help" about.
 ;
-
-try-get-scope-from-path: function [path [path!]] [
-    obj: _
+try-get-scope-from-path: function [
+    return: [blank! function! any-context!]
+    path [path!]
+][
+    context: _
 
     for-each element path [
 
@@ -93,21 +94,19 @@ try-get-scope-from-path: function [path [path!]] [
 
         unless word? :element [return _]
 
+        ; If we have a context in progress, look up the word in it, otherwise
+        ; get the word.
 
-        ; If we have an object in progress, look up the word in it,
-        ; otherwise get the word.
-
-        value: either obj [
-            unless in obj element [return _]
-            select obj element
-        ][
-            get/any element
+        value: if context [
+            unless in context element [return _]
+            select context element
+        ] else [
+            get* element
         ]
 
-        if any-function? :value [
+        if function? :value [
             return :value
         ]
-
 
         ; Completing other types besides object requires mind-reading, and
         ; will be in a future version, probably starting with integer
@@ -118,14 +117,13 @@ try-get-scope-from-path: function [path [path!]] [
         ;
         ; How did it know?
 
-        unless object? :value [return _]
+        unless any-context? :value [return _]
 
         obj: value
     ]
 
     return obj
 ]
-
 
 
 ; We can complete in a function by letting you autocomplete
@@ -136,9 +134,9 @@ try-get-scope-from-path: function [path [path!]] [
 ;
 ; ...and get it to complete with only, despite no /banana refinement
 
-fake-context-from-function: function [fun [any-function!]] [
+fake-context-from-function: function [fun [function!]] [
     spec: copy []
-    for-each word words-of :fun [
+    for-each word words of :fun [
         if refinement? word [
             append spec to-set-word word
         ]
@@ -148,17 +146,12 @@ fake-context-from-function: function [fun [any-function!]] [
 ]
 
 
-
-;
-; The exported hook called by Ren Garden; needs to return three values in
-; a block:
-;
-;    - completed text string
-;    - index position for start of completion
-;    - value to browse in the explorer
-;
-
 autocomplete-helper: function [
+    {Exported autocomplete hook, called from Ren Garden C++ code}
+
+    return: [block!]
+        {[(complete STRING!) (completion start INTEGER!) (browse ANY-VALUE!)]}
+
     contexts [block!] 
         {List of contexts (object!) to be searched, in priority order}
 
@@ -169,7 +162,7 @@ autocomplete-helper: function [
         {Cursor position (or anchor position) in text, indicates "stem"}
 
     /backward
-        {If we should search backward in the enumeration}
+        {If we should search backward (e.g. shift-TAB vs. normal TAB)}
 ][
     ; If you are at the beginning of a word and hit "tab", what are you
     ; asking to have completed?  :-/  Leave it alone for now.
@@ -178,19 +171,17 @@ autocomplete-helper: function [
         return reduce [text index _]
     ]
 
-
     ; What we do here is see if the thing we're trying to complete looks
     ; "pathy", and if we're completing it somewhere after the last slash.
     ; If so we try some interpretation on the path to get object fields
     ; or function refinements to complete.
 
-    last-slash: find/last text "/"
     if all [
-        last-slash
-        index > index-of last-slash
+        last-slash: find/last text "/"
+        index > index of last-slash
     ][
         fragment: next last-slash
-        stem: copy/part (next last-slash) (index - index-of next last-slash)
+        stem: copy/part (next last-slash) (index - index of next last-slash)
         base: copy/part text last-slash
 
         success: false
@@ -202,10 +193,10 @@ autocomplete-helper: function [
         ; Now that we've loaded the path, put the trailing slash back on the
         ; autocomplete base.  (If we autocompleted to actual ANY-VALUE!, this
         ; stuff won't be necessary...)
-        ;
+
         append base "/"
 
-        if all [success any [path? loaded word? loaded]] [
+        if success and (maybe [path! word!] loaded) [
             path: to-path loaded
 
             ; We loaded the path (or the word that would have been the head
@@ -246,7 +237,7 @@ autocomplete-helper: function [
     ; Ren Garden typically passes us two right now...the context for the tab
     ; window you are in, followed by LIB.  There seems to be a strong need
     ; for a notion of inheritance in contexts that is more general.  :-/
-    ;
+
     unless set? 'completion-contexts [
         completion-contexts: copy contexts
         fragment: text
@@ -258,15 +249,15 @@ autocomplete-helper: function [
     ; enumerate backward.  But we still need to keep the completion-contexts
     ; intact, because even if our enumeration is backwards the priority
     ; of which context "wins" in lookup is still forwards!
-    ;
-    adjusted-contexts: either backward [
+
+    adjusted-contexts: if backward [
         reverse copy completion-contexts
-    ][
+    ] else [
         completion-contexts
     ]
 
     ; We track the first candidate we have seen for completion, but do not
-    ; take it immediately.  That's because we might find an word corresponding
+    ; take it immediately.  That's because we might find a word corresponding
     ; to the current complete "state" embodied by the selection, and want
     ; whichever one is after that instead.
 
@@ -287,7 +278,7 @@ autocomplete-helper: function [
             ;
             ; Is there a more efficient COMPARE/PART technique vs. copying?
 
-            if stem != copy/part spelling (length stem) [
+            if stem <> copy/part spelling (length of stem) [
                 continue
             ]
 
@@ -324,39 +315,39 @@ autocomplete-helper: function [
                 ]
             ]
 
-            if outranked [
-                continue
-            ]
+            case [
+                outranked [
+                    continue
+                ]
 
-            ; If we see an exact match of the spelling, then it is effectively
-            ; thought of as a "state of prior completion".  Yet it may not
-            ; have been supplied by a previous autocomplete; the user might
-            ; just have typed it in!  But we handle it the same either way,
-            ; by interpreting it as an instruction to take the next
-            ; candidate that we see.
-            ;
-            either spelling = fragment [
-                assert [not take-next]
-                take-next: true
-            ][
+                ; Exact matches are modeled as a "state of prior completion".
+                ; Yet it may not have been supplied by a autocomplete; the
+                ; user might have just typed it in!  It's handled the same
+                ; either way, as an instruction to take the next candidate.
+
+                spelling = fragment [
+                    assert [not take-next]
+                    take-next: true
+                ]
+
                 ; As long as this word wasn't outranked, we can use it if we
                 ; were told to take the next one we see.
 
-                if take-next [
+                take-next [
                     return reduce [
                         unspaced [base spelling]
                         index
                         any [:scope | in ctx word]
                     ]
                 ]
-            ]
 
-            ; This still might be a candidate for completion, if we reach
-            ; the end of the loops.
-            ;
-            unless first-candidate-word [
-                first-candidate-word: word
-                first-candidate-ctx: ctx
+                ; This still might be a candidate for completion, if we reach
+                ; the end of the loops.
+                ;
+                not first-candidate-word [
+                    first-candidate-word: word
+                    first-candidate-ctx: ctx
+                ]
             ]
         ]
     ]

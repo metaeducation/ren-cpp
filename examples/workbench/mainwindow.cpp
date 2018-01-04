@@ -1,7 +1,7 @@
 //
 // mainwindow.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015-2017 MetÆducation
+// Copyright (C) 2015-2018 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -230,7 +230,7 @@ void MainWindow::about()
             "The <b>Ren Garden</b> workbench integrates Rebol language"
             " evaluators into a Qt-based environment, by utilizing the RenCpp"
             " binding.<br><br>"
-            "Copyright © 2015-2017 MetÆducation, GPL License<br><br>"
+            "Copyright © 2015-2018 MetÆducation, GPL License<br><br>"
             "Rebol and Qt are governed by the terms of their licenses."
         )
     );

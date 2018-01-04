@@ -121,10 +121,7 @@ endmacro()
 # https://stackoverflow.com/q/44320465/
 
 macro(add_link_debug_flags flags)
-    set(
-        CMAKE_LINKER_FLAGS_DEBUG
-        "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} ${flags}"
-    )
+    set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} ${flags}")
 endmacro()
 
 
@@ -188,8 +185,11 @@ endif()
 # sanitizer when executables are built with it.
 
 if(SANITIZE MATCHES "yes")
-    add_cxx_flags(-fno-omit-frame-pointer -fsanitize=address)
-    add_link_debug_flags(-fno-omit-frame-pointer -fsanitize=address)
+    add_cxx_flags(-fno-omit-frame-pointer)
+    add_cxx_flags(-fsanitize=address)
+
+    add_link_debug_flags(-fno-omit-frame-pointer)
+    add_link_debug_flags(-fsanitize=address)
 endif()
 
 

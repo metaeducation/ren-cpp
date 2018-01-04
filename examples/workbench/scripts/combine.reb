@@ -64,7 +64,7 @@ combine: function [
 
     unless set? 'delimiter [delimiter: _]
 
-    unless any-function? :delimiter [
+    unless function? :delimiter [
         unless block? delimiter [
             delimiter: reduce [delimiter]
         ]
@@ -194,7 +194,7 @@ combine: function [
             ; The existence of a /SAFE option made this seem less insane.
 
             any [
-                any-function? :value
+                function? :value
                 group? value
             ][
                 if safe [

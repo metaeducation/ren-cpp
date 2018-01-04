@@ -1,7 +1,7 @@
 //
 // context.cpp
 // This file is part of RenCpp
-// Copyright (C) 2015-2017 HostileFork.com
+// Copyright (C) 2015-2018 HostileFork.com
 //
 // Licensed under the Boost License, Version 1.0 (the "License")
 //

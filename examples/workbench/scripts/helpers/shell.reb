@@ -44,7 +44,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
     ; get words are used for retrieving them
 
     result: make block! 1
-    str: make string! (5 * length arg)
+    str: make string! (5 * length of arg)
 
     for-next arg [
         case [
@@ -85,7 +85,7 @@ block-to-shell-strings: function [arg [block!] windows [logic!]] [
 
                 append result block-to-shell-strings arg/1 windows
 
-                str: make string! (5 * length arg/1)
+                str: make string! (5 * length of arg/1)
             ]
         ] else [
             append str form arg/1

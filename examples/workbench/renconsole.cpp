@@ -1,7 +1,7 @@
 //
 // renconsole.cpp
 // This file is part of Ren Garden
-// Copyright (C) 2015-2017 MetÆducation
+// Copyright (C) 2015-2018 MetÆducation
 //
 // Ren Garden is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -612,14 +612,7 @@ void RenConsole::printBanner() {
 
     std::vector<char const *> components = {
         "<i><b>Rebol</b> is © 2012 REBOL Technologies</i>",
-
-        "<i>© 2012-2017 Rebol Open Source Contributors, Apache2 License</i>",
-
-        "<i><b>Ren</b> is a project by Humanistic Data Initiative</i>",
-
-        "<i><b>RenCpp</b></b> is © 2015-2017 HostileFork, Boost License</i>",
-
-        "<i><b>Qt</b> is © 2017 the Qt Company, LGPL2.1 or GPL3 License</i>",
+        "<i>© 2012-2018 Rebol Open Source Contributors, Apache2 License</i>"
     };
 
     for (auto & credit : components) {
