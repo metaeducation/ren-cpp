@@ -113,7 +113,8 @@ void MainWindow::finishInitializing() {
 
     dockWatch = new QDockWidget(tr("watch"), this);
     dockWatch->setAllowedAreas(
-        Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea
+        Qt::LeftDockWidgetArea| Qt::RightDockWidgetArea
+        | Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea
     );
 
     connect(
@@ -423,6 +424,16 @@ void MainWindow::createStatusBar()
 void MainWindow::readSettings()
 {
     QSettings settings("Metaeducation", "Ren Garden");
+
+    // Qt has a habit of opening teeny windows by default.  If a previous
+    // session did not save a size and location, then use 70% of the available
+    // desktop space.
+    //
+    // https://stackoverflow.com/a/26742685/211160
+    //
+    if (!settings.contains("pos") || !settings.contains("size"))
+        resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
+
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
     int zoom = settings.value("zoom", 0).toInt();

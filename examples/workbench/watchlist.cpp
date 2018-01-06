@@ -34,6 +34,23 @@
 using namespace ren;
 
 
+// I am baffled why QTableWidget does not have this as its default
+// behavior for sizeHint().  :-/
+//
+// https://stackoverflow.com/a/40300974/211160
+//
+QSize WatchList::sizeHint() const {
+    return QSize (
+        verticalHeader()->width()
+            + horizontalHeader()->length()
+            + frameWidth() * 2,
+        horizontalHeader()->height()
+            + verticalHeader()->length()
+            + frameWidth() * 2
+    );
+}
+
+
 //
 // WATCH WIDGET ITEM REPRESENTING A SINGLE CELL IN THE WATCH TABLE
 //
@@ -166,12 +183,29 @@ QString WatchList::Watcher::getValueString() const {
 WatchList::WatchList(QWidget * parent) :
     QTableWidget (0, 2, parent)
 {
-    setHorizontalHeaderLabels(QStringList() << "name" << "value");
+    QStringList headers;
+    headers << "name" << "value";
+    setColumnCount(headers.size());
+    setHorizontalHeaderLabels(headers);
+
+    int x = columnCount();
 
     // We want the value column of TableWidget to get wider if the splitter
-    // or dock widget give it more space
+    // or dock widget give it more space (vs. just leave the columns at their
+    // current width and have a blank area to the right in the dock)
 
     horizontalHeader()->setStretchLastSection(true);
+
+    // If you don't set the size policy, then every time the window is
+    // resized, any user resizing of the watchlist via the splitter will be
+    // thrown away--and the dock will snap to an automatic size.  "jarring".
+    //
+    // https://stackoverflow.com/q/34553069/
+
+    setSizePolicy(
+        QSizePolicy::Preferred, // horizontal (see sizeHint() override)
+        QSizePolicy::Expanding // vertical
+    );
 
     // Lots of interesting options for right click menus on watch items,
     // although we are exploring what can be done with the "watch dialect"

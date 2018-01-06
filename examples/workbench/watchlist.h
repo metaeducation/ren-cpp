@@ -115,6 +115,8 @@ private slots:
 protected:
     void mousePressEvent(QMouseEvent * event) override;
 
+    QSize sizeHint() const override; // see comment on implementation
+
 public:
     // aaaand... magic! :-)
     ren::optional<ren::AnyValue> watchDialect(

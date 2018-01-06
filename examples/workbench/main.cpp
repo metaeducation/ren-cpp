@@ -308,6 +308,15 @@ using namespace ren;
 
 int main_core(int argc, char *argv[])
 {
+    // There are various complications with the search logic for where the
+    // "platforms" are found, this lets you put qwindows.dll (or qwindowsd.dll
+    // if a debug build) in a subdirectroy %platforms/ of the same directory
+    // where the executable lives.
+    //
+    // https://stackoverflow.com/a/42767666/211160
+
+    QCoreApplication::addLibraryPath(".");
+
     // Sometimes you use Q_INIT_RESOURCE, don't think it's applicable ATM
     // Q_INIT_RESOURCE(ren-garden);
 
