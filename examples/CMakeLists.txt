@@ -1,5 +1,7 @@
 # This is an input file for the CMake makefile generator
 
+cmake_minimum_required(VERSION 2.8.12)
+
 # See notes in root directory, where this is added via add_subdirectory
 
 if(DEFINED RUNTIME)

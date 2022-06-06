@@ -16,6 +16,14 @@
 # permissions and limitations under the License.
 #
 
+# NOTE: Before building this you not only need to have Qt installed, but
+# on Linux you need the dependent package WrapOpenGL.  It isn't clear
+# if there's any way to avoid it, or if it's actually required for a
+# basic windowing example, but you need it:
+#
+#     sudo apt-get install libgl1-mesa-dev
+
+#
 # NOTE: 9 times out of 10 these days, people working on this project want:
 #
 #    -DCMAKE_BUILD_TYPE=Debug -DCLASSLIB_QT=1 -DGARDEN=yes
@@ -84,7 +92,7 @@
 
 project(rencpp)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 
 # This is a C++11 project, but it should work on pre-2011 compilers
@@ -177,7 +185,7 @@ endmacro()
 # evaluator offered...
 
 if(NOT RUNTIME_PATH)
-    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../ren-c)
+    set(RUNTIME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ren-c-linux)
 endif()
 
 
@@ -385,8 +393,11 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src SRC_LIST)
 
 file(
     GLOB INC_LIST
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/rencpp/*.h*
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h*
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/rencpp/rebol.hpp
+
+#    ${CMAKE_CURRENT_SOURCE_DIR}/include/rencpp/*.h*
+#    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h*
 )
 
 
@@ -434,27 +445,27 @@ elseif(CLASSLIB_QT EQUAL 1)
     #     http://www.kdab.com/using-cmake-with-qt-5/
     #
     # Also Gui, which has the basic windowing and graphics services but
-    # not the widgets (those are in Qt5Widgets).  It is currently used for
+    # not the widgets (those are in Qt6Widgets).  It is currently used for
     # the experiment of `QImage` conversions of Ren image values, which has
     # only very primitive support at time of writing.
     #
-    find_package(Qt5 COMPONENTS Core Gui REQUIRED)
+    find_package(Qt6 COMPONENTS Core Gui REQUIRED)
 
     # If the `find_package()` calls above succeed then CMake will not stop
     # running, but rather we get to this point with several Qt-related
     # variables defined.  We add some of those automagically defined things
     # to our include and library paths.
 
-    include_directories(${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS})
+    include_directories(${Qt6Core_INCLUDE_DIRS} ${Qt6Gui_INCLUDE_DIRS})
 
     add_cxx_flags(
-        "${Qt5Core_EXECUTABLE_COMPILE_FLAGS}"
-        "${Qt5Gui_EXECUTABLE_COMPILE_FLAGS}"
+        "${Qt6Core_EXECUTABLE_COMPILE_FLAGS}"
+        "${Qt6Gui_EXECUTABLE_COMPILE_FLAGS}"
     )
 
-    set(LIBS_ALL ${LIBS_ALL} Qt5::Core Qt5::Gui)
+    set(LIBS_ALL ${LIBS_ALL} Qt6::Core Qt6::Gui)
 
-    # Behavior since CMake 2.8.11 is to automatically include Qt5::WinMain when
+    # Behavior since CMake 2.8.11 is to automatically include Qt6::WinMain when
     # the `add_executable()` has been configured to a WIN32 graphical target:
     #
     #     https://cmake.org/cmake/help/git-master/policy/CMP0020.html
@@ -599,8 +610,9 @@ get_filename_component(EXTRA_OBJ_PATH ${RUNTIME_PATH}/make/objs/ REALPATH)
 
 file(GLOB_RECURSE EXTRA_OBJS ${EXTRA_OBJ_PATH}/*${.OBJ})
 
-ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main${.OBJ})
-ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio${.OBJ})
+# !!! REMOVED
+# ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-main${.OBJ})
+# ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio${.OBJ})
 
 
 # R3-Alpha had an an extension system called "host kit", which was a way
@@ -619,11 +631,13 @@ ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/host-stdio${.OBJ})
 # implementation of talking to STDIN/STDOUT so that it may be replaced
 # with one that bridges to C++ <iostream> classes.
 
-if(WIN32)
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/windows/dev-stdio${.OBJ})
-else()
-    ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/posix/dev-stdio${.OBJ})
-endif()
+# !!! Removed
+
+# if(WIN32)
+#     ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/windows/dev-stdio${.OBJ})
+# else()
+#     ensure_remove_item("EXTRA_OBJS" ${EXTRA_OBJ_PATH}/posix/dev-stdio${.OBJ})
+# endif()
 
 
 # Rebol depends on dlopen and other calls in "libDl".  Cmake can

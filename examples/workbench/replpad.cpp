@@ -765,7 +765,7 @@ void ReplPad::keyPressEvent(QKeyEvent * event) {
     // Ctrl and = or Ctrl and Shift and = (to get a textual plus) isn't
     // showing up.  However, ZoomOut works?  That's on KDE and a small apple
     // keyboard, despite the key code being correct and control key hit.
-    // Would need a debug build of Qt5 to know why.  In any case, this is
+    // Would need a debug build of Qt to know why.  In any case, this is
     // even better because we allow for Ctrl = to work which saves you on
     // the shifting if the + and - aren't on the same keys.
 

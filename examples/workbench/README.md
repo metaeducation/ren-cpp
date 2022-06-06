@@ -14,7 +14,7 @@
 # Ren Garden
 
 Ren Garden is a pre-release demo of a novel console for working with Rebol and
-Red code evaluation, which uses widgets from the Qt5 toolkit.
+Red code evaluation, which uses widgets from the Qt6 toolkit.
 
 Under the hood, the console is implemented as a QTextEdit; and it has
 many features including:

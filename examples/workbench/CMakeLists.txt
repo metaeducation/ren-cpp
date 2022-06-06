@@ -31,7 +31,7 @@ set(CMAKE_AUTOMOC ON)
 # Ren Garden needs the Qt Widgets (tab controls, list controls) which will
 # automatically bring in the GUI and Qt Core.
 
-find_package(Qt5Widgets REQUIRED)
+find_package(Qt6Widgets REQUIRED)
 
 
 # Qt's network is only being used experimentally in Ren Garden.  Linkage to
@@ -43,10 +43,10 @@ find_package(Qt5Widgets REQUIRED)
 # useful in implementing (for instance) an experimental alternative port
 # system to replace the existing code.
 
-find_package(Qt5Network REQUIRED)
+find_package(Qt6Network REQUIRED)
 
 
-# These rigid warnings from Ren/C++ are too strict for building Qt5 projects
+# These rigid warnings from Ren/C++ are too strict for building Qt6 projects
 
 try_remove_cxx_flag("-Wsign-conversion")
 try_remove_cxx_flag("-Wctor-dtor-privacy")
@@ -76,7 +76,7 @@ endif()
 # Resource files need to be compiled, and then the compiled resource is set
 # into the ${RESOURCE_ADDED} variable
 
-qt5_add_resources(RESOURCE_ADDED workbench.qrc)
+qt6_add_resources(RESOURCE_ADDED workbench.qrc)
 
 
 # CMake is able to automatically do configuration for the linker in order
@@ -147,7 +147,7 @@ add_executable(
 target_link_libraries(
     workbench 
     RenCpp
-    Qt5::Widgets
-    Qt5::Network
+    Qt6::Widgets
+    Qt6::Network
 )
 
