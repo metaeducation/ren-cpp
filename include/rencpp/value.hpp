@@ -26,6 +26,9 @@
 #include <stdexcept>
 #include <utility> // std::forward
 
+#include <memory>  // for std::shared_ptr<>
+
+
 #include <atomic>
 #include <type_traits>
 
@@ -33,7 +36,8 @@
 
 #include "common.hpp"
 
-#include "hooks.h"
+#include "../../ren-c-linux/prep/include/rebol.h"
+
 
 
 
@@ -181,38 +185,33 @@ using CellFunction = void (*)(REBVAL *);
 //
 
 //
-// In the encapsulation as written, we pay additional costs for a reference
-// count, plus a handle to which runtime instance the value belongs to.  While
-// it may seem that adding another 64-bits is a lot to add to a cell...remember
-// this is only for values that get bridged.  A series with a million elements
-// in it is not suddenly costing 64-bits per element; the internals are
-// managing the 128-bit cells and the series reference itself is the only
-// one value that needs the overhead in the binding.
-//
-// !!! The new economics of Ren-C allows each AnyValue to become a REBSER,
-// stored as a "singular array".  This will drastically change the behavior
-// and is a pending change, but the short-term choice is to add a virtual
-// destructor--as it is no longer a goal to have a cell footprint matching
-// the cells of the language.
+// For starters, we leverage the existing reference counting of shared_ptr.
+// This has the disadvantage of needing an additional allocation on top of
+// the allocated API handle, but the advantage of already being part of the
+// C++ standard and being thread-safe.
 //
 
-class AnyValue {
-    //
-    // The methods used by Ren-C's internal codebase to implement Rebol in C
-    // are not easily miscible with generic C++ code.  As one simple example:
-    // it defines global macros with names like fail(), and is hence
-    // incompatible with any iostream code.
-    //
-    // Therefore the Ren-C internal headers (%sys-core.h) cannot be included
-    // outside of carefully written code in the wrapper.  In time, RenCpp may
-    // become based on the external C API (libRebol) as that fleshes out.
-    // Until then, methods like these are used to expose common debug tools.
-    //
-#if !defined(NDEBUG)
-public:
+class AnyValue : public std::shared_ptr<REBVAL> {
+  public:
+    template <typename... Ts>
+    AnyValue (const Ts &... args) {
+        LIBREBOL_PACK_CPP_ARGS;
+        REBVAL *v = LIBREBOL_PREFIX(rebValue)(packed, nullptr);
+
+        // rebRelease is put in the smart pointer as the "deleter"
+        // in shared_ptr, the deleter is stored on a per-shared-pointer basis
+        // as part of the common heap allocated portion of the pointer.
+        //
+        // https://geidav.wordpress.com/2017/10/29/custom-deleters-for-smart-pointers-in-modern-c/
+        //
+        this->reset(v, &LIBREBOL_PREFIX(rebRelease));
+    }
+
+  #if !defined(NDEBUG)
+  public:
     void probe() const; // PROBE()
     void validate() const; // ASSERT_CONTEXT, etc.
-#endif
+  #endif
 
     // Function needs access to the spec block's series cell in its creation.
     // Series_ wants to be able to just tweak the index of the cell
@@ -225,8 +224,6 @@ protected:
     friend class AnySeries; // !!! needs to write path cell in operator[] ?
     friend class Function; // needs to extract series from spec block
     friend class ren::internal::AnySeries_; // iterator state
-
-    REBVAL *cell;
 
     friend class internal::RebolHooks;
 
@@ -677,16 +674,6 @@ protected:
 
     friend class Runtime;
     friend class Engine;
-
-    static bool constructOrApplyInitialize(
-        RenEngineHandle engine,
-        AnyContext const * context,
-        AnyValue const * applicand,
-        internal::Loadable const loadables[],
-        size_t numLoadables,
-        AnyValue * constructOutTypeIn,
-        AnyValue * applyOut
-    );
 };
 
 inline std::ostream & operator<<(std::ostream & os, AnyValue const & value) {
@@ -792,118 +779,45 @@ public:
 };
 
 
-namespace internal {
-
+// A new concept of generators is that they offer up iterators; we do not
+// try and build them in.  There are many ways to traverse a block, and
+// it's less cool to bless any one of them than to let you say:
 //
-// LAZY LOADING TYPE USED BY VARIADIC BLOCK CONSTRUCTORS
+//     auto g = Generator<int
+
+template<class R>
+class Generator : public AnyValue
+
+
+// With Do() you just ask for the return type you want.  You avoid typing
+// with use of the auto convention.
 //
-
+// auto x = Do<bool>(blah blah)
 //
-// Loadable is a "lazy-loading type" distinct from AnyValue, which unlike a
-// ren::AnyValue can be implicitly constructed from a string and loaded as a
-// series of values.  It's lazy so that it won't wind up being forced to
-// interpret "foo baz bar" immediately as [foo baz bar], but to be able
-// to decide if the programmer intent was to compose it together to form
-// a single level of block hierarchy.
+// It's briefer if you want a full value to just say Value().
 //
-// There are subclasses of Loadable which are used to handle behavior of
-// nested initializer lists, e.g. `ren::Block {1, {2, 3}, 4};`.  See the
-// discussion and controversy about that feature here:
+// Logical testing can be handled with the standard boolean conversion if
+// in conditions.  There are some coercion problems (?) which mean you
+// can't write `bool x = Value( )`, maybe?  Research.
 //
-//     https://github.com/hostilefork/rencpp/issues/1
-//
-// Loadable does not publicly inherit from AnyValue, and is not currently
-// intended to be a user-facing type (hence internal:: namespace).  They
-// are implicitly constructed only.
-//
+template <typename R = AnyValue, typename... Ts>
+R Do(const Ts &... args) {
+    LIBREBOL_PACK_CPP_ARGS;
+    REBVAL *v = LIBREBOL_PREFIX(rebValue)(packed, nullptr);
 
-class Loadable : public AnyValue {
-private:
-    friend class AnyValue;
-
-    // These constructors *must* be public, although we really don't want
-    // users of the binding instantiating loadables explicitly.
-public:
-    using AnyValue::AnyValue;
-
-    // Constructor inheritance does not inherit move or copy constructors
-
-    Loadable () = delete;
-
-    Loadable (AnyValue const & value) :
-        AnyValue (value)
-    {
-    }
-
-    Loadable (AnyValue && value) :
-        AnyValue (value)
-    {
-    }
-
-    // !!! Review implications of when optional<AnyValue> is a specialization
-    // that is the same size under the hood as AnyValue...could it be moved
-    // efficiently?  For now encode unsetness in the runtime-specific info.
-    Loadable (optional<AnyValue> const & value);
-
-    Loadable (char const * source);
-
-    template <typename T>
-    Loadable (std::initializer_list<T> loadables) = delete;
-
-    // After trying for a while with the assumption that a std::string or
-    // a QString would be handled as source, the bias was shifted.  We
-    // assume that if you were using a string *class*, then you default
-    // to getting a ren::String value from it...while const char * continues
-    // to be loaded as a run of source.
-
-    Loadable (std::string const & source);
-
-#if REN_CLASSLIB_QT == 1
-    Loadable (QString const & source);
-#endif
-};
-
-//
-// This class is to be used instead of Loadable when one
-// want to give semantics to untyped curly braces where
-// Loadable is generally used. It does allow to write
-// this kind of things:
-//
-// ren::Block {1, {2, 3}, 4};
-//
-// Block is configured so that it can be constructed from
-// a list of BlockLoadable<Block>, which means that every
-// untyped curly braces in a Block constructor will construct
-// new instances of Block.
-//
-
-template <typename BracesT>
-class BlockLoadable : public Loadable {
-private:
-    friend class AnyValue;
-
-public:
-    using Loadable::Loadable;
-
-    BlockLoadable () :
-        Loadable(BracesT{})
-    {
-    }
-
+    // rebRelease is put in the smart pointer as the "deleter"
+    // in shared_ptr, the deleter is stored on a per-shared-pointer basis
+    // as part of the common heap allocated portion of the pointer.
     //
-    // If you get an error here such as "invalid use of
-    // void expression", it means that you tried to use
-    // a block type which does not support any implicit
-    // construction from curly braces.
+    // https://geidav.wordpress.com/2017/10/29/custom-deleters-for-smart-pointers-in-modern-c/
     //
-
-    BlockLoadable (std::initializer_list<BlockLoadable<BracesT>> loadables) :
-        Loadable(BracesT(loadables))
-    {
-    }
-};
-
-} // end namespace internal
+    // Using shared_ptr is somewhat wasteful compared to just poking the
+    // share count in to the REBSER node that holds the handle.  It's
+    // twice the size of the cell and probably has enough room for the
+    // sharing count.  However, this is a lazy first take.
+    //
+    return static_cast<R>(AnyValue ("testing"));
+}
 
 } // end namespace ren
 

@@ -37,17 +37,6 @@
     #include <signal.h> // needed for SIGINT, SIGTERM, SIGHUP
 #endif
 
-#include "rebol/src/include/sys-core.h"
 
-
-// !!! This functionality will likely be added to make APPLY work in a more
-// general fashion (and not just on functions).
-
-extern REBOOL Generalized_Apply_Throws(
-    REBVAL *out,
-    const REBVAL *applicand,
-    REBARR *args,
-    REBSPC *specifier
-);
 
 #endif // RENCPP_REBOL_COMMON_HPP

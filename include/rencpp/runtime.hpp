@@ -50,54 +50,7 @@ namespace ren {
 //
 
 class Runtime {
-protected:
-    friend class AnyArray;
-    friend class AnyValue;
-    friend class AnyString;
-    friend class AnyWord;
-    friend class Engine;
-
-    static optional<AnyValue> evaluate(
-        internal::Loadable const loadables[],
-        size_t numLoadables,
-        AnyContext const * contextPtr,
-        Engine * engine
-    );
-
-public:
-    static optional<AnyValue> evaluate(
-        std::initializer_list<internal::Loadable> loadables,
-        Engine * engine = nullptr
-    ) {
-        return evaluate(loadables.begin(), loadables.size(), nullptr, engine);
-    }
-
-    static optional<AnyValue> evaluate(
-        std::initializer_list<internal::BlockLoadable<Block>> loadables,
-        internal::ContextWrapper const & wrapper
-    ) {
-        return evaluate(
-            loadables.begin(),
-            loadables.size(),
-            &wrapper.context,
-            nullptr
-        );
-    }
-
-    // Has ambiguity error from trying to turn the nullptr into a Loadable;
-    // investigate what it is about the static method that has this problem
-
-    /*template <typename... Ts>
-    static inline AnyValue evaluate(Ts const &... args) {
-        return evaluate({args...}, static_cast<Engine *>(nullptr));
-    }*/
-
-    template <typename... Ts>
-    inline optional<AnyValue> operator()(Ts const &... args) const {
-        return evaluate({args...}, static_cast<Engine *>(nullptr));
-    }
-
-
+  protected:
     //
     // How to do a cancellation interface properly in threading environments
     // which may be making many requests?  This simple interface assumes one
@@ -107,7 +60,7 @@ public:
     //
     //     https://github.com/hostilefork/rencpp/issues/19
     //
-public:
+  public:
     virtual void cancel() = 0;
 
     virtual ~Runtime () {
